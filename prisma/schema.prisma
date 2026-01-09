@@ -20,8 +20,11 @@ model User {
   phoneVerified     Boolean            @default(false) @map("phone_verified")
   isGuest           Boolean            @default(false) @map("is_guest")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shoppingCarts     ShoppingCart[]
+  updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  twoFactorSecret      String?            @map("two_factor_secret")
+  twoFactorEnabled     Boolean            @default(false) @map("two_factor_enabled")
+  twoFactorBackupCodes String[]           @default([]) @map("two_factor_backup_codes")
+  shoppingCarts        ShoppingCart[]
   checkouts         Checkout[]
   chat_sessions     ChatSession[]
   customer_feedback CustomerFeedback[]
@@ -1102,9 +1105,11 @@ enum UserStatus {
 enum UserRole {
   GUEST
   CUSTOMER
-  STAFF
-  VENDOR
   ADMIN
+  INVENTORY_STAFF
+  CUSTOMER_SERVICE
+  ANALYST
+  VENDOR
 
   @@map("user_role_enum")
   @@schema("user_management")
