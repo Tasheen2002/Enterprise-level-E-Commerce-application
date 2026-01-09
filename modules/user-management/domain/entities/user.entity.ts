@@ -1,13 +1,16 @@
 import { UserId } from "../value-objects/user-id.vo";
 import { Email } from "../value-objects/email.vo";
 import { Phone } from "../value-objects/phone.vo";
+import { Password } from "../value-objects/password.vo";
 
 export enum UserRole {
   GUEST = "GUEST",
   CUSTOMER = "CUSTOMER",
-  STAFF = "STAFF",
-  VENDOR = "VENDOR",
   ADMIN = "ADMIN",
+  INVENTORY_STAFF = "INVENTORY_STAFF",
+  CUSTOMER_SERVICE = "CUSTOMER_SERVICE",
+  ANALYST = "ANALYST",
+  VENDOR = "VENDOR",
 }
 
 export class User {
@@ -38,7 +41,7 @@ export class User {
     return new User(
       userId,
       email,
-      data.passwordHash,
+      data.passwordHash, // Should already be hashed by password service
       phone,
       data.role || UserRole.CUSTOMER, // Default to CUSTOMER role
       UserStatus.ACTIVE,
@@ -47,8 +50,8 @@ export class User {
       data.isGuest || false,
       now,
       now,
-      false,
-      null,
+      false, // twoFactorEnabled
+      null, // twoFactorSecret
       [] // twoFactorBackupCodes
     );
   }
@@ -63,16 +66,16 @@ export class User {
       guestEmail,
       "", // No password for guest
       null,
-      UserRole.GUEST,
+      UserRole.GUEST, // Guests have GUEST role
       UserStatus.ACTIVE,
       false,
       false,
       true, // Is guest
       now,
       now,
-      false,
-      null,
-      []
+      false, // twoFactorEnabled
+      null, // twoFactorSecret
+      [] // twoFactorBackupCodes
     );
   }
 
@@ -100,7 +103,7 @@ export class User {
     return new User(
       UserId.fromString(row.user_id),
       new Email(row.email),
-      row.password_hash || "",
+      row.password_hash || "", // Handle nullable password_hash for guests
       row.phone ? new Phone(row.phone) : null,
       row.role,
       row.status,
@@ -168,7 +171,8 @@ export class User {
     }
 
     this.email = email;
-    this.emailVerified = false;
+    this.emailVerified = false; // Reset verification when email changes
+    this.touch();
   }
 
   updatePhone(newPhone: string | null): void {
@@ -280,7 +284,7 @@ export class User {
     this.email = new Email(email);
     this.passwordHash = passwordHash;
     this.isGuest = false;
-    this.emailVerified = false;
+    this.emailVerified = false; // New email needs verification
     this.touch();
   }
 
@@ -405,7 +409,7 @@ export interface UserData {
 export interface UserRow {
   user_id: string;
   email: string;
-  password_hash: string | null;
+  password_hash: string | null; // Nullable for guest users
   phone: string | null;
   role: UserRole;
   status: UserStatus;
