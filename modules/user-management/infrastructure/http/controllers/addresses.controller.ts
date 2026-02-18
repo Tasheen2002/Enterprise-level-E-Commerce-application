@@ -845,6 +845,66 @@ export class AddressesController {
     }
   }
 
+  async setDefaultAddress(
+    request: FastifyRequest<{
+      Params: { addressId: string };
+    }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const userId = (request as any).user?.userId;
+      const { addressId } = request.params;
+
+      if (!userId) {
+        reply.status(HTTP_STATUS.UNAUTHORIZED).send({
+          success: false,
+          error: ERROR_MESSAGES.AUTH_REQUIRED,
+        });
+        return;
+      }
+
+      if (!this.validateUuidFormat(addressId)) {
+        reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          success: false,
+          error: ERROR_MESSAGES.INVALID_ADDRESS_ID,
+          errors: ["addressId"],
+        });
+        return;
+      }
+
+      const command: UpdateAddressCommand = {
+        addressId,
+        userId,
+        isDefault: true,
+        timestamp: new Date(),
+      };
+
+      const result = await this.updateAddressHandler.handle(command);
+
+      if (result.success) {
+        reply.status(HTTP_STATUS.OK).send({
+          success: true,
+          message: "Default address updated successfully",
+        });
+      } else {
+        reply.status(HTTP_STATUS.BAD_REQUEST).send({
+          success: false,
+          error: result.error,
+          errors: result.errors,
+        });
+      }
+    } catch (error) {
+      this.logError("setDefaultAddress", error, {
+        userId: (request as any).user?.userId,
+        addressId: request.params?.addressId,
+      });
+      reply.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send({
+        success: false,
+        error: `${ERROR_MESSAGES.INTERNAL_ERROR} while setting default address`,
+      });
+    }
+  }
+
   // NEW: Admin delete address
   async deleteAddress(
     request: FastifyRequest<{
