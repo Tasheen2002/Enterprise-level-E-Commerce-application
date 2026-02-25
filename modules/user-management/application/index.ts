@@ -1,9 +1,9 @@
 // modules/user-management/application/index.ts
-export * from "./commands/index.js";
-export * from "./queries/index.js";
-export * from "./services/authentication.service.js";
-export * from "./services/user-profile.service.js";
-export * from "./services/address-management.service.js";
-export * from "./services/payment-method.service.js";
-export * from "./services/password-hasher.service.js";
-export * from "./services/verification.service.js";
+export * from "./commands/index";
+export * from "./queries/index";
+export * from "./services/authentication.service";
+export * from "./services/user-profile.service";
+export * from "./services/address-management.service";
+export * from "./services/payment-method.service";
+export * from "./services/password-hasher.service";
+export * from "./services/verification.service";
