@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Address {
   private readonly firstName?: string;
   private readonly lastName?: string;
@@ -13,27 +15,27 @@ export class Address {
   constructor(data: AddressData) {
     // Validate required fields
     if (!data.addressLine1?.trim()) {
-      throw new Error("Address line 1 is required");
+      throw new DomainValidationError("Address line 1 is required");
     }
     if (!data.city?.trim()) {
-      throw new Error("City is required");
+      throw new DomainValidationError("City is required");
     }
     if (!data.country?.trim()) {
-      throw new Error("Country is required");
+      throw new DomainValidationError("Country is required");
     }
 
     // Validate field lengths
     if (data.firstName && data.firstName.length > 50) {
-      throw new Error("First name is too long (maximum 50 characters)");
+      throw new DomainValidationError("First name is too long (maximum 50 characters)");
     }
     if (data.lastName && data.lastName.length > 50) {
-      throw new Error("Last name is too long (maximum 50 characters)");
+      throw new DomainValidationError("Last name is too long (maximum 50 characters)");
     }
     if (data.addressLine1.length > 100) {
-      throw new Error("Address line 1 is too long (maximum 100 characters)");
+      throw new DomainValidationError("Address line 1 is too long (maximum 100 characters)");
     }
     if (data.addressLine2 && data.addressLine2.length > 100) {
-      throw new Error("Address line 2 is too long (maximum 100 characters)");
+      throw new DomainValidationError("Address line 2 is too long (maximum 100 characters)");
     }
 
     // Validate postal code format by country
@@ -41,7 +43,7 @@ export class Address {
       data.postalCode &&
       !this.isValidPostalCode(data.postalCode, data.country)
     ) {
-      throw new Error(`Invalid postal code format for ${data.country}`);
+      throw new DomainValidationError(`Invalid postal code format for ${data.country}`);
     }
 
     // Assign values (trimmed and properly formatted)
@@ -238,7 +240,7 @@ export namespace AddressType {
       case "shipping":
         return AddressType.SHIPPING;
       default:
-        throw new Error(
+        throw new DomainValidationError(
           `Invalid address type: '${type}'. Must be 'billing' or 'shipping'`
         );
     }

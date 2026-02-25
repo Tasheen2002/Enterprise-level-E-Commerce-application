@@ -1,15 +1,17 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Currency {
   private readonly value: string;
 
   constructor(currency: string) {
     if (!currency) {
-      throw new Error("Currency is required");
+      throw new DomainValidationError("Currency is required");
     }
 
     const normalizedCurrency = currency.trim().toUpperCase();
 
     if (!this.isValidCurrency(normalizedCurrency)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid currency code: ${currency}. Must be a valid ISO 4217 code`,
       );
     }
