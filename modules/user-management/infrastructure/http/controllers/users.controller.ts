@@ -156,7 +156,6 @@ export class UsersController {
         reply.status(200).send({
           success: true,
           data: {
-            id: result.data.userId,
             userId: result.data.userId,
             email: result.data.email,
             phone: result.data.phone,
