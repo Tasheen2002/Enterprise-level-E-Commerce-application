@@ -44,6 +44,28 @@ import {
   VariantMediaManagementService,
 } from "../../../modules/product-catalog/application/services";
 
+// Inventory Management — Repositories
+import {
+  StockRepositoryImpl,
+  LocationRepositoryImpl,
+  SupplierRepositoryImpl,
+  PurchaseOrderRepositoryImpl,
+  PurchaseOrderItemRepositoryImpl,
+  InventoryTransactionRepositoryImpl,
+  StockAlertRepositoryImpl,
+  PickupReservationRepositoryImpl,
+} from "../../../modules/inventory-management/infrastructure/persistence/repositories";
+
+// Inventory Management — Services
+import {
+  StockManagementService,
+  LocationManagementService,
+  SupplierManagementService,
+  PurchaseOrderManagementService,
+  StockAlertService,
+  PickupReservationService,
+} from "../../../modules/inventory-management/application/services";
+
 /**
  * Dependency Injection Container
  * Centralises all module wiring — repositories → services → ready to hand to routes.
@@ -223,6 +245,61 @@ export class Container {
       "variantMediaManagementService",
       variantMediaManagementService,
     );
+
+    // ============================================
+    // Inventory Management Module
+    // ============================================
+
+    // Repositories
+    const stockRepository = new StockRepositoryImpl(prisma);
+    const locationRepository = new LocationRepositoryImpl(prisma);
+    const supplierRepository = new SupplierRepositoryImpl(prisma);
+    const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma);
+    const purchaseOrderItemRepository = new PurchaseOrderItemRepositoryImpl(
+      prisma,
+    );
+    const inventoryTransactionRepository =
+      new InventoryTransactionRepositoryImpl(prisma);
+    const stockAlertRepository = new StockAlertRepositoryImpl(prisma);
+    const pickupReservationRepository = new PickupReservationRepositoryImpl(
+      prisma,
+    );
+
+    // Services
+    const stockManagementService = new StockManagementService(
+      stockRepository,
+      inventoryTransactionRepository,
+    );
+    const locationManagementService = new LocationManagementService(
+      locationRepository,
+    );
+    const supplierManagementService = new SupplierManagementService(
+      supplierRepository,
+    );
+    const purchaseOrderManagementService = new PurchaseOrderManagementService(
+      purchaseOrderRepository,
+      purchaseOrderItemRepository,
+      stockManagementService,
+    );
+    const stockAlertService = new StockAlertService(
+      stockAlertRepository,
+      stockRepository,
+    );
+    const pickupReservationService = new PickupReservationService(
+      pickupReservationRepository,
+      stockManagementService,
+    );
+
+    // Store Inventory Management services
+    this.services.set("stockManagementService", stockManagementService);
+    this.services.set("locationManagementService", locationManagementService);
+    this.services.set("supplierManagementService", supplierManagementService);
+    this.services.set(
+      "purchaseOrderManagementService",
+      purchaseOrderManagementService,
+    );
+    this.services.set("stockAlertService", stockAlertService);
+    this.services.set("pickupReservationService", pickupReservationService);
   }
 
   get<T>(name: string): T {
@@ -242,6 +319,25 @@ export class Container {
         "paymentMethodService",
       ),
       prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  getInventoryManagementServices() {
+    return {
+      stockService: this.get<StockManagementService>("stockManagementService"),
+      locationService: this.get<LocationManagementService>(
+        "locationManagementService",
+      ),
+      supplierService: this.get<SupplierManagementService>(
+        "supplierManagementService",
+      ),
+      poService: this.get<PurchaseOrderManagementService>(
+        "purchaseOrderManagementService",
+      ),
+      alertService: this.get<StockAlertService>("stockAlertService"),
+      reservationService: this.get<PickupReservationService>(
+        "pickupReservationService",
+      ),
     };
   }
 
