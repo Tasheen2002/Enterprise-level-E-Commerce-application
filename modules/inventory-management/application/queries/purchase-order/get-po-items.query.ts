@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
 export interface GetPOItemsQuery extends IQuery {
@@ -14,25 +14,16 @@ export interface POItemResult {
   isPartiallyReceived: boolean;
 }
 
-export class GetPOItemsQueryHandler implements IQueryHandler<
+export class GetPOItemsHandler implements IQueryHandler<
   GetPOItemsQuery,
-  CommandResult<POItemResult[]>
+  QueryResult<POItemResult[]>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(query: GetPOItemsQuery): Promise<CommandResult<POItemResult[]>> {
+  async handle(query: GetPOItemsQuery): Promise<QueryResult<POItemResult[]>> {
     try {
-      const errors: string[] = [];
-
       if (!query.poId || query.poId.trim().length === 0) {
-        errors.push("poId: Purchase Order ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<POItemResult[]>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("poId: Purchase Order ID is required");
       }
 
       const items = await this.poService.getPurchaseOrderItems(query.poId);
@@ -46,14 +37,11 @@ export class GetPOItemsQueryHandler implements IQueryHandler<
         isPartiallyReceived: item.isPartiallyReceived(),
       }));
 
-      return CommandResult.success(results);
+      return QueryResult.success(results);
     } catch (error) {
-      return CommandResult.failure<POItemResult[]>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetPOItemsQueryHandler as GetPOItemsHandler };

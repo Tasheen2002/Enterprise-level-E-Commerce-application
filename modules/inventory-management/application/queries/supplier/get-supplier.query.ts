@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 import { SupplierContact } from "../../../domain/entities/supplier.entity";
 
@@ -13,33 +13,24 @@ export interface SupplierResult {
   contacts: SupplierContact[];
 }
 
-export class GetSupplierQueryHandler implements IQueryHandler<
+export class GetSupplierHandler implements IQueryHandler<
   GetSupplierQuery,
-  CommandResult<SupplierResult | null>
+  QueryResult<SupplierResult | null>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
   async handle(
     query: GetSupplierQuery,
-  ): Promise<CommandResult<SupplierResult | null>> {
+  ): Promise<QueryResult<SupplierResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.supplierId || query.supplierId.trim().length === 0) {
-        errors.push("supplierId: Supplier ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<SupplierResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("supplierId: Supplier ID is required");
       }
 
       const supplier = await this.supplierService.getSupplier(query.supplierId);
 
       if (!supplier) {
-        return CommandResult.success<SupplierResult | null>(null);
+        return QueryResult.success<SupplierResult | null>(null);
       }
 
       const result: SupplierResult = {
@@ -49,14 +40,11 @@ export class GetSupplierQueryHandler implements IQueryHandler<
         contacts: supplier.getContacts(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<SupplierResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetSupplierQueryHandler as GetSupplierHandler };

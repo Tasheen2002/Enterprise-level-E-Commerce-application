@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockAlertService } from "../../services/stock-alert.service";
 
 export interface GetStockAlertQuery extends IQuery {
@@ -14,33 +14,24 @@ export interface StockAlertResult {
   isResolved: boolean;
 }
 
-export class GetStockAlertQueryHandler implements IQueryHandler<
+export class GetStockAlertHandler implements IQueryHandler<
   GetStockAlertQuery,
-  CommandResult<StockAlertResult | null>
+  QueryResult<StockAlertResult | null>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
   async handle(
     query: GetStockAlertQuery,
-  ): Promise<CommandResult<StockAlertResult | null>> {
+  ): Promise<QueryResult<StockAlertResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.alertId || query.alertId.trim().length === 0) {
-        errors.push("alertId: Alert ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<StockAlertResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("alertId: Alert ID is required");
       }
 
       const alert = await this.stockAlertService.getStockAlert(query.alertId);
 
       if (!alert) {
-        return CommandResult.success<StockAlertResult | null>(null);
+        return QueryResult.success<StockAlertResult | null>(null);
       }
 
       const result: StockAlertResult = {
@@ -52,14 +43,11 @@ export class GetStockAlertQueryHandler implements IQueryHandler<
         isResolved: alert.isResolved(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<StockAlertResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetStockAlertQueryHandler as GetStockAlertHandler };

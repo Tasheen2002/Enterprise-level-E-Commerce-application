@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { LocationManagementService } from "../../services/location-management.service";
 import { Location } from "../../../domain/entities/location.entity";
 
@@ -13,33 +13,24 @@ export interface LocationResult {
   address?: any;
 }
 
-export class GetLocationQueryHandler implements IQueryHandler<
+export class GetLocationHandler implements IQueryHandler<
   GetLocationQuery,
-  CommandResult<LocationResult | null>
+  QueryResult<LocationResult | null>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
   async handle(
     query: GetLocationQuery,
-  ): Promise<CommandResult<LocationResult | null>> {
+  ): Promise<QueryResult<LocationResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.locationId || query.locationId.trim().length === 0) {
-        errors.push("locationId: Location ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<LocationResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("locationId: Location ID is required");
       }
 
       const location = await this.locationService.getLocation(query.locationId);
 
       if (!location) {
-        return CommandResult.success<LocationResult | null>(null);
+        return QueryResult.success<LocationResult | null>(null);
       }
 
       const result: LocationResult = {
@@ -49,14 +40,11 @@ export class GetLocationQueryHandler implements IQueryHandler<
         address: location.getAddress(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<LocationResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetLocationQueryHandler as GetLocationHandler };

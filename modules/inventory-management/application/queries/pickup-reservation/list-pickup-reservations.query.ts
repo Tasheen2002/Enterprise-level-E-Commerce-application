@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PickupReservationService } from "../../services/pickup-reservation.service";
 import { PickupReservationResult } from "./get-pickup-reservation.query";
 
@@ -8,15 +8,15 @@ export interface ListPickupReservationsQuery extends IQuery {
   activeOnly?: boolean;
 }
 
-export class ListPickupReservationsQueryHandler implements IQueryHandler<
+export class ListPickupReservationsHandler implements IQueryHandler<
   ListPickupReservationsQuery,
-  CommandResult<PickupReservationResult[]>
+  QueryResult<PickupReservationResult[]>
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
   async handle(
     query: ListPickupReservationsQuery,
-  ): Promise<CommandResult<PickupReservationResult[]>> {
+  ): Promise<QueryResult<PickupReservationResult[]>> {
     try {
       let reservations;
 
@@ -70,14 +70,11 @@ export class ListPickupReservationsQueryHandler implements IQueryHandler<
         }),
       );
 
-      return CommandResult.success(results);
+      return QueryResult.success(results);
     } catch (error) {
-      return CommandResult.failure<PickupReservationResult[]>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListPickupReservationsQueryHandler as ListPickupReservationsHandler };

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 import { TransactionResult } from "./get-transaction.query";
 
@@ -14,15 +14,15 @@ export interface ListTransactionsResult {
   total: number;
 }
 
-export class ListTransactionsQueryHandler implements IQueryHandler<
+export class ListTransactionsHandler implements IQueryHandler<
   ListTransactionsQuery,
-  CommandResult<ListTransactionsResult>
+  QueryResult<ListTransactionsResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: ListTransactionsQuery,
-  ): Promise<CommandResult<ListTransactionsResult>> {
+  ): Promise<QueryResult<ListTransactionsResult>> {
     try {
       const options = { limit: query.limit, offset: query.offset };
 
@@ -50,17 +50,14 @@ export class ListTransactionsQueryHandler implements IQueryHandler<
         }),
       );
 
-      return CommandResult.success({
+      return QueryResult.success({
         transactions,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<ListTransactionsResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListTransactionsQueryHandler as ListTransactionsHandler };

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 
 export interface GetTotalAvailableStockQuery extends IQuery {
@@ -10,27 +10,18 @@ export interface TotalAvailableStockResult {
   totalAvailable: number;
 }
 
-export class GetTotalAvailableStockQueryHandler implements IQueryHandler<
+export class GetTotalAvailableStockHandler implements IQueryHandler<
   GetTotalAvailableStockQuery,
-  CommandResult<TotalAvailableStockResult>
+  QueryResult<TotalAvailableStockResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetTotalAvailableStockQuery,
-  ): Promise<CommandResult<TotalAvailableStockResult>> {
+  ): Promise<QueryResult<TotalAvailableStockResult>> {
     try {
-      const errors: string[] = [];
-
       if (!query.variantId || query.variantId.trim().length === 0) {
-        errors.push("variantId: Variant ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<TotalAvailableStockResult>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("variantId: Variant ID is required");
       }
 
       const totalAvailable = await this.stockService.getTotalAvailableStock(
@@ -42,14 +33,11 @@ export class GetTotalAvailableStockQueryHandler implements IQueryHandler<
         totalAvailable,
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<TotalAvailableStockResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetTotalAvailableStockQueryHandler as GetTotalAvailableStockHandler };

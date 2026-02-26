@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 
 export interface GetTransactionQuery extends IQuery {
@@ -16,33 +16,24 @@ export interface TransactionResult {
   createdAt: Date;
 }
 
-export class GetTransactionQueryHandler implements IQueryHandler<
+export class GetTransactionHandler implements IQueryHandler<
   GetTransactionQuery,
-  CommandResult<TransactionResult | null>
+  QueryResult<TransactionResult | null>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetTransactionQuery,
-  ): Promise<CommandResult<TransactionResult | null>> {
+  ): Promise<QueryResult<TransactionResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.transactionId || query.transactionId.trim().length === 0) {
-        errors.push("transactionId: Transaction ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<TransactionResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("transactionId: Transaction ID is required");
       }
 
       const txn = await this.stockService.getTransaction(query.transactionId);
 
       if (!txn) {
-        return CommandResult.success<TransactionResult | null>(null);
+        return QueryResult.success<TransactionResult | null>(null);
       }
 
       const result: TransactionResult = {
@@ -55,14 +46,11 @@ export class GetTransactionQueryHandler implements IQueryHandler<
         createdAt: txn.getCreatedAt(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<TransactionResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetTransactionQueryHandler as GetTransactionHandler };

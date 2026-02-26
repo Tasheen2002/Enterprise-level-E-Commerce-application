@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PickupReservationService } from "../../services/pickup-reservation.service";
 
 export interface GetPickupReservationQuery extends IQuery {
@@ -18,27 +18,18 @@ export interface PickupReservationResult {
   isFulfilled?: boolean;
 }
 
-export class GetPickupReservationQueryHandler implements IQueryHandler<
+export class GetPickupReservationHandler implements IQueryHandler<
   GetPickupReservationQuery,
-  CommandResult<PickupReservationResult | null>
+  QueryResult<PickupReservationResult | null>
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
   async handle(
     query: GetPickupReservationQuery,
-  ): Promise<CommandResult<PickupReservationResult | null>> {
+  ): Promise<QueryResult<PickupReservationResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.reservationId || query.reservationId.trim().length === 0) {
-        errors.push("reservationId: Reservation ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<PickupReservationResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("reservationId: Reservation ID is required");
       }
 
       const reservation = await this.reservationService.getPickupReservation(
@@ -46,7 +37,7 @@ export class GetPickupReservationQueryHandler implements IQueryHandler<
       );
 
       if (!reservation) {
-        return CommandResult.success<PickupReservationResult | null>(null);
+        return QueryResult.success<PickupReservationResult | null>(null);
       }
 
       const result: PickupReservationResult = {
@@ -62,14 +53,11 @@ export class GetPickupReservationQueryHandler implements IQueryHandler<
         isFulfilled: reservation.isFulfilled(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<PickupReservationResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetPickupReservationQueryHandler as GetPickupReservationHandler };

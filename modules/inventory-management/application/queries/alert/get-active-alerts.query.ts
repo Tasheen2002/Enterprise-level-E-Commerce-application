@@ -1,18 +1,18 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockAlertService } from "../../services/stock-alert.service";
 import { StockAlertResult } from "./get-stock-alert.query";
 
 export interface GetActiveAlertsQuery extends IQuery {}
 
-export class GetActiveAlertsQueryHandler implements IQueryHandler<
+export class GetActiveAlertsHandler implements IQueryHandler<
   GetActiveAlertsQuery,
-  CommandResult<StockAlertResult[]>
+  QueryResult<StockAlertResult[]>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
   async handle(
     query: GetActiveAlertsQuery,
-  ): Promise<CommandResult<StockAlertResult[]>> {
+  ): Promise<QueryResult<StockAlertResult[]>> {
     try {
       const alerts = await this.stockAlertService.getActiveAlerts();
 
@@ -25,14 +25,11 @@ export class GetActiveAlertsQueryHandler implements IQueryHandler<
         isResolved: alert.isResolved(),
       }));
 
-      return CommandResult.success(results);
+      return QueryResult.success(results);
     } catch (error) {
-      return CommandResult.failure<StockAlertResult[]>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetActiveAlertsQueryHandler as GetActiveAlertsHandler };

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 import { SupplierResult } from "./get-supplier.query";
 
@@ -12,15 +12,15 @@ export interface ListSuppliersResult {
   total: number;
 }
 
-export class ListSuppliersQueryHandler implements IQueryHandler<
+export class ListSuppliersHandler implements IQueryHandler<
   ListSuppliersQuery,
-  CommandResult<ListSuppliersResult>
+  QueryResult<ListSuppliersResult>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
   async handle(
     query: ListSuppliersQuery,
-  ): Promise<CommandResult<ListSuppliersResult>> {
+  ): Promise<QueryResult<ListSuppliersResult>> {
     try {
       const result = await this.supplierService.listSuppliers({
         limit: query.limit,
@@ -34,17 +34,14 @@ export class ListSuppliersQueryHandler implements IQueryHandler<
         contacts: supplier.getContacts(),
       }));
 
-      return CommandResult.success({
+      return QueryResult.success({
         suppliers,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<ListSuppliersResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListSuppliersQueryHandler as ListSuppliersHandler };

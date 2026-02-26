@@ -1,18 +1,18 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 import { StockResult } from "./get-stock.query";
 
 export interface GetLowStockItemsQuery extends IQuery {}
 
-export class GetLowStockItemsQueryHandler implements IQueryHandler<
+export class GetLowStockItemsHandler implements IQueryHandler<
   GetLowStockItemsQuery,
-  CommandResult<StockResult[]>
+  QueryResult<StockResult[]>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetLowStockItemsQuery,
-  ): Promise<CommandResult<StockResult[]>> {
+  ): Promise<QueryResult<StockResult[]>> {
     try {
       const stocks = await this.stockService.getLowStockItems();
 
@@ -31,14 +31,11 @@ export class GetLowStockItemsQueryHandler implements IQueryHandler<
         };
       });
 
-      return CommandResult.success(results);
+      return QueryResult.success(results);
     } catch (error) {
-      return CommandResult.failure<StockResult[]>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetLowStockItemsQueryHandler as GetLowStockItemsHandler };

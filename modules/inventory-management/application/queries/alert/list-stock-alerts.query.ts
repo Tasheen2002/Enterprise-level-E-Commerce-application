@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockAlertService } from "../../services/stock-alert.service";
 import { StockAlertResult } from "./get-stock-alert.query";
 
@@ -13,15 +13,15 @@ export interface ListStockAlertsResult {
   total: number;
 }
 
-export class ListStockAlertsQueryHandler implements IQueryHandler<
+export class ListStockAlertsHandler implements IQueryHandler<
   ListStockAlertsQuery,
-  CommandResult<ListStockAlertsResult>
+  QueryResult<ListStockAlertsResult>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
   async handle(
     query: ListStockAlertsQuery,
-  ): Promise<CommandResult<ListStockAlertsResult>> {
+  ): Promise<QueryResult<ListStockAlertsResult>> {
     try {
       const result = await this.stockAlertService.listStockAlerts({
         limit: query.limit,
@@ -38,17 +38,14 @@ export class ListStockAlertsQueryHandler implements IQueryHandler<
         isResolved: alert.isResolved(),
       }));
 
-      return CommandResult.success({
+      return QueryResult.success({
         alerts,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<ListStockAlertsResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListStockAlertsQueryHandler as ListStockAlertsHandler };

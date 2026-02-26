@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 import { StockResult } from "./get-stock.query";
 
@@ -6,27 +6,18 @@ export interface GetStockByVariantQuery extends IQuery {
   variantId: string;
 }
 
-export class GetStockByVariantQueryHandler implements IQueryHandler<
+export class GetStockByVariantHandler implements IQueryHandler<
   GetStockByVariantQuery,
-  CommandResult<StockResult[]>
+  QueryResult<StockResult[]>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetStockByVariantQuery,
-  ): Promise<CommandResult<StockResult[]>> {
+  ): Promise<QueryResult<StockResult[]>> {
     try {
-      const errors: string[] = [];
-
       if (!query.variantId || query.variantId.trim().length === 0) {
-        errors.push("variantId: Variant ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<StockResult[]>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("variantId: Variant ID is required");
       }
 
       const stocks = await this.stockService.getStockByVariant(query.variantId);
@@ -46,14 +37,11 @@ export class GetStockByVariantQueryHandler implements IQueryHandler<
         };
       });
 
-      return CommandResult.success(results);
+      return QueryResult.success(results);
     } catch (error) {
-      return CommandResult.failure<StockResult[]>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetStockByVariantQueryHandler as GetStockByVariantHandler };

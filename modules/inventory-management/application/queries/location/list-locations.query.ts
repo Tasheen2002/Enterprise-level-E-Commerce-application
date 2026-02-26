@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { LocationManagementService } from "../../services/location-management.service";
 import { LocationResult } from "./get-location.query";
 
@@ -13,15 +13,15 @@ export interface ListLocationsResult {
   total: number;
 }
 
-export class ListLocationsQueryHandler implements IQueryHandler<
+export class ListLocationsHandler implements IQueryHandler<
   ListLocationsQuery,
-  CommandResult<ListLocationsResult>
+  QueryResult<ListLocationsResult>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
   async handle(
     query: ListLocationsQuery,
-  ): Promise<CommandResult<ListLocationsResult>> {
+  ): Promise<QueryResult<ListLocationsResult>> {
     try {
       const result = await this.locationService.listLocations({
         limit: query.limit,
@@ -36,17 +36,14 @@ export class ListLocationsQueryHandler implements IQueryHandler<
         address: location.getAddress(),
       }));
 
-      return CommandResult.success({
+      return QueryResult.success({
         locations,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<ListLocationsResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListLocationsQueryHandler as ListLocationsHandler };

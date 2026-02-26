@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 import { TransactionResult } from "./get-transaction.query";
 
@@ -14,27 +14,18 @@ export interface TransactionsByVariantResult {
   total: number;
 }
 
-export class GetTransactionsByVariantQueryHandler implements IQueryHandler<
+export class GetTransactionsByVariantHandler implements IQueryHandler<
   GetTransactionsByVariantQuery,
-  CommandResult<TransactionsByVariantResult>
+  QueryResult<TransactionsByVariantResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetTransactionsByVariantQuery,
-  ): Promise<CommandResult<TransactionsByVariantResult>> {
+  ): Promise<QueryResult<TransactionsByVariantResult>> {
     try {
-      const errors: string[] = [];
-
       if (!query.variantId || query.variantId.trim().length === 0) {
-        errors.push("variantId: Variant ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<TransactionsByVariantResult>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("variantId: Variant ID is required");
       }
 
       const result = await this.stockService.getTransactionHistory(
@@ -59,17 +50,14 @@ export class GetTransactionsByVariantQueryHandler implements IQueryHandler<
         }),
       );
 
-      return CommandResult.success({
+      return QueryResult.success({
         transactions,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<TransactionsByVariantResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetTransactionsByVariantQueryHandler as GetTransactionsByVariantHandler };

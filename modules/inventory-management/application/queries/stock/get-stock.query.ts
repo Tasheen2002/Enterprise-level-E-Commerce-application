@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { StockManagementService } from "../../services/stock-management.service";
 import { Stock } from "../../../domain/entities/stock.entity";
 
@@ -22,31 +22,22 @@ export interface StockResult {
   location?: any;
 }
 
-export class GetStockQueryHandler implements IQueryHandler<
+export class GetStockHandler implements IQueryHandler<
   GetStockQuery,
-  CommandResult<StockResult | null>
+  QueryResult<StockResult | null>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetStockQuery,
-  ): Promise<CommandResult<StockResult | null>> {
+  ): Promise<QueryResult<StockResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.variantId || query.variantId.trim().length === 0) {
-        errors.push("variantId: Variant ID is required");
+        return QueryResult.failure("variantId: Variant ID is required");
       }
 
       if (!query.locationId || query.locationId.trim().length === 0) {
-        errors.push("locationId: Location ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<StockResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("locationId: Location ID is required");
       }
 
       const stock = await this.stockService.getStock(
@@ -55,7 +46,7 @@ export class GetStockQueryHandler implements IQueryHandler<
       );
 
       if (!stock) {
-        return CommandResult.success<StockResult | null>(null);
+        return QueryResult.success<StockResult | null>(null);
       }
 
       const stockLevel = stock.getStockLevel();
@@ -71,14 +62,11 @@ export class GetStockQueryHandler implements IQueryHandler<
         isOutOfStock: stockLevel.isOutOfStock(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<StockResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetStockQueryHandler as GetStockHandler };

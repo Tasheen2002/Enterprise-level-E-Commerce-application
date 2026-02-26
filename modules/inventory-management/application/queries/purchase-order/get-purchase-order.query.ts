@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
 export interface GetPurchaseOrderQuery extends IQuery {
@@ -14,33 +14,24 @@ export interface PurchaseOrderResult {
   updatedAt: Date;
 }
 
-export class GetPurchaseOrderQueryHandler implements IQueryHandler<
+export class GetPurchaseOrderHandler implements IQueryHandler<
   GetPurchaseOrderQuery,
-  CommandResult<PurchaseOrderResult | null>
+  QueryResult<PurchaseOrderResult | null>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
   async handle(
     query: GetPurchaseOrderQuery,
-  ): Promise<CommandResult<PurchaseOrderResult | null>> {
+  ): Promise<QueryResult<PurchaseOrderResult | null>> {
     try {
-      const errors: string[] = [];
-
       if (!query.poId || query.poId.trim().length === 0) {
-        errors.push("poId: Purchase Order ID is required");
-      }
-
-      if (errors.length > 0) {
-        return CommandResult.failure<PurchaseOrderResult | null>(
-          "Validation failed",
-          errors,
-        );
+        return QueryResult.failure("poId: Purchase Order ID is required");
       }
 
       const purchaseOrder = await this.poService.getPurchaseOrder(query.poId);
 
       if (!purchaseOrder) {
-        return CommandResult.success<PurchaseOrderResult | null>(null);
+        return QueryResult.success<PurchaseOrderResult | null>(null);
       }
 
       const result: PurchaseOrderResult = {
@@ -52,14 +43,11 @@ export class GetPurchaseOrderQueryHandler implements IQueryHandler<
         updatedAt: purchaseOrder.getUpdatedAt(),
       };
 
-      return CommandResult.success(result);
+      return QueryResult.success(result);
     } catch (error) {
-      return CommandResult.failure<PurchaseOrderResult | null>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { GetPurchaseOrderQueryHandler as GetPurchaseOrderHandler };

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, CommandResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 import { PurchaseOrderResult } from "./get-purchase-order.query";
 
@@ -16,15 +16,15 @@ export interface ListPurchaseOrdersResult {
   total: number;
 }
 
-export class ListPurchaseOrdersQueryHandler implements IQueryHandler<
+export class ListPurchaseOrdersHandler implements IQueryHandler<
   ListPurchaseOrdersQuery,
-  CommandResult<ListPurchaseOrdersResult>
+  QueryResult<ListPurchaseOrdersResult>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
   async handle(
     query: ListPurchaseOrdersQuery,
-  ): Promise<CommandResult<ListPurchaseOrdersResult>> {
+  ): Promise<QueryResult<ListPurchaseOrdersResult>> {
     try {
       const result = await this.poService.listPurchaseOrders({
         limit: query.limit,
@@ -46,17 +46,14 @@ export class ListPurchaseOrdersQueryHandler implements IQueryHandler<
         }),
       );
 
-      return CommandResult.success({
+      return QueryResult.success({
         purchaseOrders,
         total: result.total,
       });
     } catch (error) {
-      return CommandResult.failure<ListPurchaseOrdersResult>(
+      return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
-        [error instanceof Error ? error.message : "Unknown error"],
       );
     }
   }
 }
-
-export { ListPurchaseOrdersQueryHandler as ListPurchaseOrdersHandler };
