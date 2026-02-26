@@ -1,8 +1,11 @@
 // Shared Command Types (only export class, not interfaces)
-export { CommandResult } from "./register-user.command.js";
+export {
+  CommandResult,
+  ICommand,
+  ICommandHandler,
+} from "@/api/src/shared/application";
 
 // Export type-only interfaces
-export type { ICommand, ICommandHandler } from "./register-user.command.js";
 export type { RegisterUserCommand } from "./register-user.command.js";
 export type { LoginUserCommand } from "./login-user.command.js";
 export type { UpdateProfileCommand } from "./update-profile.command.js";
@@ -20,6 +23,7 @@ export type { VerifyEmailCommand } from "./verify-email.command.js";
 export type { UpdateUserStatusCommand } from "./update-user-status.command.js";
 export type { UpdateUserRoleCommand } from "./update-user-role.command.js";
 export type { DeleteUserCommand } from "./delete-user.command.js";
+export type { ToggleUserEmailVerifiedCommand } from "./toggle-user-email-verified.command.js";
 
 // Export Handler classes (runtime exports)
 export { RegisterUserHandler } from "./register-user.command.js";

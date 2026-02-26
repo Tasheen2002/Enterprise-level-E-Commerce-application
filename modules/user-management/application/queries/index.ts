@@ -1,5 +1,9 @@
-// Base interfaces (type-only exports)
-export type { IQuery, IQueryHandler } from "./get-user-profile.query.js";
+// Base interfaces from shared
+export {
+  QueryResult,
+  IQuery,
+  IQueryHandler,
+} from "@/api/src/shared/application";
 
 // Query interfaces (type-only exports)
 export type { GetUserProfileQuery } from "./get-user-profile.query.js";
