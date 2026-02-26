@@ -1,5 +1,6 @@
 import { AlertId } from "../value-objects/alert-id.vo";
 import { AlertTypeVO } from "../value-objects/alert-type.vo";
+import { InvalidOperationError } from "../errors";
 
 export interface StockAlertProps {
   alertId: AlertId;
@@ -46,7 +47,7 @@ export class StockAlert {
 
   resolve(resolvedAt: Date): StockAlert {
     if (this.isResolved()) {
-      throw new Error("Alert is already resolved");
+      throw new InvalidOperationError("Alert is already resolved");
     }
     return new StockAlert({
       ...this.props,

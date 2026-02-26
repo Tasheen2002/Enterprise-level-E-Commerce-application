@@ -1,4 +1,5 @@
 import { SupplierId } from "../value-objects/supplier-id.vo";
+import { DomainValidationError } from "../errors";
 
 export interface SupplierContact {
   name?: string;
@@ -29,10 +30,10 @@ export class Supplier {
 
   private validate(): void {
     if (!this.props.name || this.props.name.trim().length === 0) {
-      throw new Error("Supplier name is required");
+      throw new DomainValidationError("Supplier name is required");
     }
     if (this.props.leadTimeDays !== undefined && this.props.leadTimeDays < 0) {
-      throw new Error("Lead time days cannot be negative");
+      throw new DomainValidationError("Lead time days cannot be negative");
     }
   }
 
@@ -54,7 +55,7 @@ export class Supplier {
 
   updateName(name: string): Supplier {
     if (!name || name.trim().length === 0) {
-      throw new Error("Supplier name is required");
+      throw new DomainValidationError("Supplier name is required");
     }
     return new Supplier({
       ...this.props,
@@ -64,7 +65,7 @@ export class Supplier {
 
   updateLeadTimeDays(leadTimeDays: number): Supplier {
     if (leadTimeDays < 0) {
-      throw new Error("Lead time days cannot be negative");
+      throw new DomainValidationError("Lead time days cannot be negative");
     }
     return new Supplier({
       ...this.props,

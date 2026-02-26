@@ -1,5 +1,6 @@
 import { TransactionId } from "../value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../value-objects/transaction-reason.vo";
+import { DomainValidationError } from "../errors";
 
 export interface InventoryTransactionProps {
   invTxnId: TransactionId;
@@ -7,7 +8,6 @@ export interface InventoryTransactionProps {
   locationId: string;
   qtyDelta: number;
   reason: TransactionReasonVO;
-
   referenceId?: string;
   createdAt: Date;
 }
@@ -27,7 +27,7 @@ export class InventoryTransaction {
 
   private validate(): void {
     if (this.props.qtyDelta === 0) {
-      throw new Error("Transaction quantity delta cannot be zero");
+      throw new DomainValidationError("Transaction quantity delta cannot be zero");
     }
   }
 
@@ -74,7 +74,6 @@ export class InventoryTransaction {
       locationId: this.props.locationId,
       qtyDelta: this.props.qtyDelta,
       reason: this.props.reason.getValue(),
-
       referenceId: this.props.referenceId,
       createdAt: this.props.createdAt,
     };

@@ -1,4 +1,5 @@
 import { PurchaseOrderId } from "../value-objects/purchase-order-id.vo";
+import { DomainValidationError, InvalidOperationError } from "../errors";
 
 export interface PurchaseOrderItemProps {
   poId: PurchaseOrderId;
@@ -22,13 +23,17 @@ export class PurchaseOrderItem {
 
   private validate(): void {
     if (this.props.orderedQty <= 0) {
-      throw new Error("Ordered quantity must be greater than zero");
+      throw new DomainValidationError(
+        "Ordered quantity must be greater than zero",
+      );
     }
     if (this.props.receivedQty < 0) {
-      throw new Error("Received quantity cannot be negative");
+      throw new DomainValidationError("Received quantity cannot be negative");
     }
     if (this.props.receivedQty > this.props.orderedQty) {
-      throw new Error("Received quantity cannot exceed ordered quantity");
+      throw new DomainValidationError(
+        "Received quantity cannot exceed ordered quantity",
+      );
     }
   }
 
@@ -62,11 +67,13 @@ export class PurchaseOrderItem {
 
   receiveQuantity(quantity: number): PurchaseOrderItem {
     if (quantity <= 0) {
-      throw new Error("Receive quantity must be greater than zero");
+      throw new DomainValidationError(
+        "Receive quantity must be greater than zero",
+      );
     }
     const newReceivedQty = this.props.receivedQty + quantity;
     if (newReceivedQty > this.props.orderedQty) {
-      throw new Error(
+      throw new InvalidOperationError(
         `Cannot receive ${quantity} units. Would exceed ordered quantity of ${this.props.orderedQty}`,
       );
     }
@@ -78,10 +85,12 @@ export class PurchaseOrderItem {
 
   updateOrderedQty(orderedQty: number): PurchaseOrderItem {
     if (orderedQty <= 0) {
-      throw new Error("Ordered quantity must be greater than zero");
+      throw new DomainValidationError(
+        "Ordered quantity must be greater than zero",
+      );
     }
     if (orderedQty < this.props.receivedQty) {
-      throw new Error(
+      throw new InvalidOperationError(
         "Cannot reduce ordered quantity below already received quantity",
       );
     }

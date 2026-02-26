@@ -3,6 +3,7 @@ import {
   LocationType,
   LocationTypeVO,
 } from "../value-objects/location-type.vo";
+import { DomainValidationError } from "../errors";
 
 export interface LocationAddress {
   addressLine1?: string;
@@ -36,7 +37,7 @@ export class Location {
 
   private validate(): void {
     if (!this.props.name || this.props.name.trim().length === 0) {
-      throw new Error("Location name is required");
+      throw new DomainValidationError("Location name is required");
     }
   }
 
@@ -58,7 +59,7 @@ export class Location {
 
   updateName(name: string): Location {
     if (!name || name.trim().length === 0) {
-      throw new Error("Location name is required");
+      throw new DomainValidationError("Location name is required");
     }
     return new Location({
       ...this.props,

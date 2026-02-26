@@ -1,6 +1,7 @@
 import { PurchaseOrderId } from "../value-objects/purchase-order-id.vo";
 import { SupplierId } from "../value-objects/supplier-id.vo";
 import { PurchaseOrderStatusVO } from "../value-objects/purchase-order-status.vo";
+import { InvalidOperationError } from "../errors";
 
 export interface PurchaseOrderProps {
   poId: PurchaseOrderId;
@@ -56,7 +57,7 @@ export class PurchaseOrder {
 
   updateStatus(newStatus: PurchaseOrderStatusVO): PurchaseOrder {
     if (!this.props.status.canTransitionTo(newStatus)) {
-      throw new Error(
+      throw new InvalidOperationError(
         `Cannot transition from ${this.props.status.getValue()} to ${newStatus.getValue()}`,
       );
     }

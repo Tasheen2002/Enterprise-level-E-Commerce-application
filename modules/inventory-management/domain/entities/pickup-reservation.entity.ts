@@ -1,4 +1,5 @@
 import { ReservationId } from "../value-objects/reservation-id.vo";
+import { DomainValidationError, InvalidOperationError } from "../errors";
 
 export interface PickupReservationProps {
   reservationId: ReservationId;
@@ -7,7 +8,6 @@ export interface PickupReservationProps {
   locationId: string;
   qty: number;
   expiresAt: Date;
-  // We'll track cancellation/fulfillment in a separate service
   isCancelled?: boolean;
   isManuallyExpired?: boolean;
   isFulfilled?: boolean;
@@ -38,7 +38,7 @@ export class PickupReservation {
 
   private validate(): void {
     if (this.props.qty <= 0) {
-      throw new Error("Reservation quantity must be greater than zero");
+      throw new DomainValidationError("Reservation quantity must be greater than zero");
     }
   }
 
@@ -77,12 +77,10 @@ export class PickupReservation {
   }
 
   isExpired(currentTime?: Date): boolean {
-    // If manually marked as expired, return true
     if (this.props.isManuallyExpired) {
       return true;
     }
 
-    // Check time-based expiration for non-cancelled, non-fulfilled reservations
     if (!this.props.isCancelled && !this.props.isFulfilled) {
       const now = currentTime || new Date();
       return now > this.props.expiresAt;
@@ -97,10 +95,10 @@ export class PickupReservation {
 
   extendExpiration(newExpiresAt: Date): PickupReservation {
     if (newExpiresAt <= this.props.expiresAt) {
-      throw new Error("New expiration must be later than current expiration");
+      throw new InvalidOperationError("New expiration must be later than current expiration");
     }
     if (!this.isActive()) {
-      throw new Error("Cannot extend expiration of non-active reservation");
+      throw new InvalidOperationError("Cannot extend expiration of non-active reservation");
     }
     return new PickupReservation({
       ...this.props,
@@ -110,7 +108,7 @@ export class PickupReservation {
 
   cancel(): PickupReservation {
     if (!this.isActive()) {
-      throw new Error("Can only cancel active reservations");
+      throw new InvalidOperationError("Can only cancel active reservations");
     }
     return new PickupReservation({
       ...this.props,
@@ -120,7 +118,7 @@ export class PickupReservation {
 
   markAsExpired(): PickupReservation {
     if (!this.isActive()) {
-      throw new Error("Can only mark active reservations as expired");
+      throw new InvalidOperationError("Can only mark active reservations as expired");
     }
     return new PickupReservation({
       ...this.props,
@@ -130,7 +128,7 @@ export class PickupReservation {
 
   fulfill(): PickupReservation {
     if (!this.isActive()) {
-      throw new Error("Can only fulfill active reservations");
+      throw new InvalidOperationError("Can only fulfill active reservations");
     }
     return new PickupReservation({
       ...this.props,
