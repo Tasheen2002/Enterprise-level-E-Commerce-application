@@ -1,13 +1,15 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Password {
   private readonly value: string;
 
   constructor(password: string) {
     if (!password) {
-      throw new Error("Password is required");
+      throw new DomainValidationError("Password is required");
     }
 
     if (!this.isValidPassword(password)) {
-      throw new Error(this.getPasswordRequirements());
+      throw new DomainValidationError(this.getPasswordRequirements());
     }
 
     this.value = password;
