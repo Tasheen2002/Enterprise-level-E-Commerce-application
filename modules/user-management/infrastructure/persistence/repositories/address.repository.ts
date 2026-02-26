@@ -10,30 +10,26 @@ export class AddressRepository implements IAddressRepository {
   async save(address: Address): Promise<void> {
     const data = address.toDatabaseRow();
 
-    try {
-      const result = await this.prisma.userAddress.create({
-        data: {
-          id: data.address_id,
-          userId: data.user_id,
-          type: data.type,
-          isDefault: data.is_default,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          company: data.company,
-          addressLine1: data.address_line_1,
-          addressLine2: data.address_line_2,
-          city: data.city,
-          state: data.state,
-          postalCode: data.postal_code,
-          country: data.country,
-          phone: data.phone,
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
-        },
-      });
-    } catch (error) {
-      throw error;
-    }
+    await this.prisma.userAddress.create({
+      data: {
+        id: data.address_id,
+        userId: data.user_id,
+        type: data.type,
+        isDefault: data.is_default,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        company: data.company,
+        addressLine1: data.address_line_1,
+        addressLine2: data.address_line_2,
+        city: data.city,
+        state: data.state,
+        postalCode: data.postal_code,
+        country: data.country,
+        phone: data.phone,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+      },
+    });
   }
 
   async findById(id: string): Promise<Address | null> {
@@ -92,7 +88,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
@@ -127,7 +123,7 @@ export class AddressRepository implements IAddressRepository {
 
   async findByUserIdAndType(
     userId: UserId,
-    type: AddressType
+    type: AddressType,
   ): Promise<Address[]> {
     const addresses = await this.prisma.userAddress.findMany({
       where: {
@@ -155,7 +151,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
@@ -194,7 +190,7 @@ export class AddressRepository implements IAddressRepository {
   async findByCountry(
     country: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<Address[]> {
     const addresses = await this.prisma.userAddress.findMany({
       where: { country: country.toUpperCase() },
@@ -221,14 +217,14 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
   async findByCity(
     city: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<Address[]> {
     const addresses = await this.prisma.userAddress.findMany({
       where: {
@@ -260,7 +256,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
@@ -305,7 +301,7 @@ export class AddressRepository implements IAddressRepository {
 
   async findConflictingAddress(
     userId: UserId,
-    address: Address
+    address: Address,
   ): Promise<Address | null> {
     const addressData = address.toDatabaseRow();
 
@@ -348,7 +344,7 @@ export class AddressRepository implements IAddressRepository {
 
   async findSimilarAddresses(
     address: Address,
-    threshold: number = 0.8
+    threshold: number = 0.8,
   ): Promise<Address[]> {
     const addressData = address.toDatabaseRow();
 
@@ -390,7 +386,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
@@ -476,7 +472,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 
@@ -517,7 +513,7 @@ export class AddressRepository implements IAddressRepository {
         phone: addressData.phone,
         created_at: addressData.createdAt,
         updated_at: addressData.updatedAt,
-      })
+      }),
     );
   }
 }

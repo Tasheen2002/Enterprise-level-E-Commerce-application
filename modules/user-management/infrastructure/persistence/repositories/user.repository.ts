@@ -3,7 +3,11 @@ import {
   UserStatus as PrismaUserStatus,
   UserRole as PrismaUserRole,
 } from "@prisma/client";
-import { IUserRepository, FindAllWithFiltersOptions, UserListItemDTO } from "../../../domain/repositories/iuser.repository";
+import {
+  IUserRepository,
+  FindAllWithFiltersOptions,
+  UserListItemDTO,
+} from "../../../domain/repositories/iuser.repository";
 import {
   User,
   UserStatus,
@@ -11,11 +15,11 @@ import {
 } from "../../../domain/entities/user.entity";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
 import { Email } from "../../../domain/value-objects/email.vo";
+import { InvalidOperationError } from "../../../domain/errors/user-management.errors";
 
 export class UserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  /** Cast Prisma row to include new fields added after last `prisma generate`. */
   private toUserRow(r: any) {
     return {
       user_id: r.id as string,
@@ -190,8 +194,19 @@ export class UserRepository implements IUserRepository {
     return result.count;
   }
 
-  async findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItemDTO[]; total: number }> {
-    const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = options;
+  async findAllWithFilters(
+    options: FindAllWithFiltersOptions,
+  ): Promise<{ users: UserListItemDTO[]; total: number }> {
+    const {
+      search,
+      role,
+      status,
+      emailVerified,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    } = options;
 
     const where: any = {};
 
@@ -234,20 +249,22 @@ export class UserRepository implements IUserRepository {
     ]);
 
     return {
-      users: rows.map((r: any): UserListItemDTO => ({
-        userId: r.id,
-        email: r.email,
-        phone: r.phone ?? null,
-        firstName: r.firstName ?? null,
-        lastName: r.lastName ?? null,
-        role: this.mapRoleFromPrisma(r.role),
-        status: this.mapStatusFromPrisma(r.status),
-        emailVerified: r.emailVerified,
-        phoneVerified: r.phoneVerified,
-        isGuest: r.isGuest,
-        createdAt: r.createdAt,
-        updatedAt: r.updatedAt,
-      })),
+      users: rows.map(
+        (r: any): UserListItemDTO => ({
+          userId: r.id,
+          email: r.email,
+          phone: r.phone ?? null,
+          firstName: r.firstName ?? null,
+          lastName: r.lastName ?? null,
+          role: this.mapRoleFromPrisma(r.role),
+          status: this.mapStatusFromPrisma(r.status),
+          emailVerified: r.emailVerified,
+          phoneVerified: r.phoneVerified,
+          isGuest: r.isGuest,
+          createdAt: r.createdAt,
+          updatedAt: r.updatedAt,
+        }),
+      ),
       total,
     };
   }
@@ -255,45 +272,69 @@ export class UserRepository implements IUserRepository {
   // Enum mappers
   private mapStatusToPrisma(status: UserStatus): PrismaUserStatus {
     switch (status) {
-      case UserStatus.ACTIVE:   return PrismaUserStatus.active;
-      case UserStatus.INACTIVE: return PrismaUserStatus.inactive;
-      case UserStatus.BLOCKED:  return PrismaUserStatus.blocked;
-      default: throw new Error(`Unknown user status: ${status}`);
+      case UserStatus.ACTIVE:
+        return PrismaUserStatus.active;
+      case UserStatus.INACTIVE:
+        return PrismaUserStatus.inactive;
+      case UserStatus.BLOCKED:
+        return PrismaUserStatus.blocked;
+      default:
+        throw new InvalidOperationError(`Unknown user status: ${status}`);
     }
   }
 
   private mapStatusFromPrisma(status: PrismaUserStatus): UserStatus {
     switch (status) {
-      case PrismaUserStatus.active:   return UserStatus.ACTIVE;
-      case PrismaUserStatus.inactive: return UserStatus.INACTIVE;
-      case PrismaUserStatus.blocked:  return UserStatus.BLOCKED;
-      default: throw new Error(`Unknown Prisma user status: ${status}`);
+      case PrismaUserStatus.active:
+        return UserStatus.ACTIVE;
+      case PrismaUserStatus.inactive:
+        return UserStatus.INACTIVE;
+      case PrismaUserStatus.blocked:
+        return UserStatus.BLOCKED;
+      default:
+        throw new InvalidOperationError(`Unknown Prisma user status: ${status}`);
     }
   }
 
   private mapRoleToPrisma(role: UserRole): PrismaUserRole {
     switch (role) {
-      case UserRole.GUEST:            return PrismaUserRole.GUEST;
-      case UserRole.CUSTOMER:         return PrismaUserRole.CUSTOMER;
-      case UserRole.ADMIN:            return PrismaUserRole.ADMIN;
-      case UserRole.INVENTORY_STAFF:  return PrismaUserRole.INVENTORY_STAFF;
-      case UserRole.CUSTOMER_SERVICE: return PrismaUserRole.CUSTOMER_SERVICE;
-      case UserRole.ANALYST:          return PrismaUserRole.ANALYST;
-      case UserRole.VENDOR:           return PrismaUserRole.VENDOR;
-      default: throw new Error(`Unknown user role: ${role}`);
+      case UserRole.GUEST:
+        return PrismaUserRole.GUEST;
+      case UserRole.CUSTOMER:
+        return PrismaUserRole.CUSTOMER;
+      case UserRole.ADMIN:
+        return PrismaUserRole.ADMIN;
+      case UserRole.INVENTORY_STAFF:
+        return PrismaUserRole.INVENTORY_STAFF;
+      case UserRole.CUSTOMER_SERVICE:
+        return PrismaUserRole.CUSTOMER_SERVICE;
+      case UserRole.ANALYST:
+        return PrismaUserRole.ANALYST;
+      case UserRole.VENDOR:
+        return PrismaUserRole.VENDOR;
+      default:
+        throw new InvalidOperationError(`Unknown user role: ${role}`);
     }
   }
 
   private mapRoleFromPrisma(role: PrismaUserRole): UserRole {
     switch (role) {
-      case PrismaUserRole.GUEST:            return UserRole.GUEST;
-      case PrismaUserRole.CUSTOMER:         return UserRole.CUSTOMER;
-      case PrismaUserRole.ADMIN:            return UserRole.ADMIN;
-      case PrismaUserRole.INVENTORY_STAFF:  return UserRole.INVENTORY_STAFF;
-      case PrismaUserRole.CUSTOMER_SERVICE: return UserRole.CUSTOMER_SERVICE;
-      case PrismaUserRole.ANALYST:          return UserRole.ANALYST;
-      case PrismaUserRole.VENDOR:           return UserRole.VENDOR;
-      default: throw new Error(`Unknown Prisma user role: ${role}`);
+      case PrismaUserRole.GUEST:
+        return UserRole.GUEST;
+      case PrismaUserRole.CUSTOMER:
+        return UserRole.CUSTOMER;
+      case PrismaUserRole.ADMIN:
+        return UserRole.ADMIN;
+      case PrismaUserRole.INVENTORY_STAFF:
+        return UserRole.INVENTORY_STAFF;
+      case PrismaUserRole.CUSTOMER_SERVICE:
+        return UserRole.CUSTOMER_SERVICE;
+      case PrismaUserRole.ANALYST:
+        return UserRole.ANALYST;
+      case PrismaUserRole.VENDOR:
+        return UserRole.VENDOR;
+      default:
+        throw new InvalidOperationError(`Unknown Prisma user role: ${role}`);
     }
   }
 }
