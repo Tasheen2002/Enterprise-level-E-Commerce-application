@@ -42,8 +42,6 @@ export class ProductManagementService {
     // TODO: Handle tags - requires tag association service
     if (data.tags && data.tags.length > 0) {
       // This would require implementing tag association logic
-      // For now, we'll log it as a TODO
-      console.warn("Tag association not yet implemented for product creation");
     }
 
     return product;
@@ -264,16 +262,11 @@ export class ProductManagementService {
       // This would require:
       // 1. Remove existing category associations
       // 2. Add new category associations
-      console.warn(
-        "Category association update not yet fully implemented for product updates",
-      );
     }
 
     // TODO: Handle tags - requires tag association service
     if (data.tags !== undefined) {
       // This would require implementing tag association logic
-      // For now, we'll log it as a TODO
-      console.warn("Tag association not yet implemented for product updates");
     }
 
     // Save the updated product

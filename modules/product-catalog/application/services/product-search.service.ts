@@ -209,7 +209,6 @@ export class ProductSearchService {
 
       return suggestions.slice(0, limit);
     } catch (error) {
-      console.error("Failed to get search suggestions:", error);
       return [];
     }
   }
@@ -284,7 +283,6 @@ export class ProductSearchService {
 
       return filters;
     } catch (error) {
-      console.error("Failed to get available filters:", error);
       return [];
     }
   }
@@ -317,7 +315,6 @@ export class ProductSearchService {
   ): Promise<void> {
     // TODO: Implement search analytics recording
     // This would store search queries, results count, user info, timestamp, etc.
-    console.log(`Search recorded: "${query}" -> ${resultCount} results`);
   }
 
   async getSimilarProducts(
@@ -331,7 +328,6 @@ export class ProductSearchService {
       // Placeholder: just return some products from the same category
       return [];
     } catch (error) {
-      console.error("Failed to get similar products:", error);
       return [];
     }
   }
@@ -348,6 +344,5 @@ export class ProductSearchService {
 
   async clearSearchHistory(userId: string): Promise<void> {
     // TODO: Implement search history clearing
-    console.log(`Search history cleared for user: ${userId}`);
   }
 }
