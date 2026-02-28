@@ -3,6 +3,7 @@ import { container } from "./container";
 import { registerUserManagementRoutes } from "../../../modules/user-management/infrastructure/http/routes/index";
 import { registerProductCatalogRoutes } from "../../../modules/product-catalog/infrastructure/http/routes";
 import { registerInventoryManagementRoutes } from "../../../modules/inventory-management/infrastructure/http/routes";
+import { registerCartModuleRoutes } from "../../../modules/cart/infra/http/routes";
 
 export default fp(
   async (fastify) => {
@@ -32,6 +33,13 @@ export default fp(
       inventoryManagementServices,
     );
     fastify.log.info("✓ Inventory Management module registered");
+
+    // ============================================
+    // Cart Module
+    // ============================================
+    const cartServices = container.getCartServices();
+    await registerCartModuleRoutes(fastify, cartServices);
+    fastify.log.info("✓ Cart module registered");
 
     fastify.log.info("All modules registered successfully");
   },
