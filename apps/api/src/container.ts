@@ -66,6 +66,22 @@ import {
   PickupReservationService,
 } from "../../../modules/inventory-management/application/services";
 
+// Cart — Repositories
+import {
+  CartRepositoryImpl,
+  ReservationRepositoryImpl,
+  CheckoutRepositoryImpl,
+} from "../../../modules/cart/infra/persistence/repositories";
+
+// Cart — Services
+import { CartManagementService } from "../../../modules/cart/application/services/cart-management.service";
+import { ReservationService } from "../../../modules/cart/application/services/reservation.service";
+import { CheckoutService } from "../../../modules/cart/application/services/checkout.service";
+import { CheckoutOrderService } from "../../../modules/cart/application/services/checkout-order.service";
+
+// Admin — Services (required by CartManagementService and CheckoutService)
+import { SettingsService } from "../../../modules/admin/application/services/settings.service";
+
 /**
  * Dependency Injection Container
  * Centralises all module wiring — repositories → services → ready to hand to routes.
@@ -300,6 +316,59 @@ export class Container {
     );
     this.services.set("stockAlertService", stockAlertService);
     this.services.set("pickupReservationService", pickupReservationService);
+
+    // ============================================
+    // Cart Module
+    // ============================================
+
+    // Repositories (ReservationRepositoryImpl optionally takes stockManagementService)
+    const cartRepository = new CartRepositoryImpl(prisma);
+    const reservationRepository = new ReservationRepositoryImpl(
+      prisma,
+      stockManagementService,
+    );
+    const checkoutRepository = new CheckoutRepositoryImpl(prisma);
+
+    // Services
+    const settingsService = new SettingsService();
+
+    const cartManagementService = new CartManagementService(
+      cartRepository,
+      reservationRepository,
+      checkoutRepository,
+      productVariantRepository,
+      productRepository,
+      productMediaRepository,
+      mediaAssetRepository,
+      settingsService,
+    );
+
+    const reservationService = new ReservationService(
+      reservationRepository,
+      cartRepository,
+    );
+
+    const checkoutService = new CheckoutService(
+      checkoutRepository,
+      cartRepository,
+      settingsService,
+    );
+
+    const checkoutOrderService = new CheckoutOrderService(
+      prisma,
+      checkoutRepository,
+      cartRepository,
+      reservationRepository,
+      stockManagementService,
+      productRepository,
+      productVariantRepository,
+    );
+
+    // Store Cart services
+    this.services.set("cartManagementService", cartManagementService);
+    this.services.set("reservationService", reservationService);
+    this.services.set("checkoutService", checkoutService);
+    this.services.set("checkoutOrderService", checkoutOrderService);
   }
 
   get<T>(name: string): T {
@@ -372,6 +441,19 @@ export class Container {
         "variantMediaManagementService",
       ),
       prisma: this.get<PrismaClient>("prisma"),
+    };
+  }
+
+  getCartServices() {
+    return {
+      cartManagementService: this.get<CartManagementService>(
+        "cartManagementService",
+      ),
+      reservationService: this.get<ReservationService>("reservationService"),
+      checkoutService: this.get<CheckoutService>("checkoutService"),
+      checkoutOrderService: this.get<CheckoutOrderService>(
+        "checkoutOrderService",
+      ),
     };
   }
 }
