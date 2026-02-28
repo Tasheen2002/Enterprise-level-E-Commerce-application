@@ -3,10 +3,7 @@ import { CartId } from "../value-objects/cart-id.vo";
 import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 import { Currency } from "../value-objects/currency.vo";
-import {
-  CheckoutStatus,
-  CheckoutStatusEnum,
-} from "../value-objects/checkout-status.vo";
+import { CheckoutStatus } from "../value-objects/checkout-status.vo";
 import {
   DomainValidationError,
   InvalidCheckoutStateError,
