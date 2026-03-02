@@ -1,13 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 
 // User Management — Repositories
-import { UserRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/user.repository";
-import { UserProfileRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/user-profile.repository";
-import { AddressRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/address.repository";
-import { PaymentMethodRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/payment-method.repository";
-import { VerificationTokenRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/verification-token.repository";
-import { VerificationRateLimitRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/verification-rate-limit.repository";
-import { VerificationAuditLogRepository } from "../../../modules/user-management/infrastructure/persistence/repositories/verification-audit-log.repository";
+import { UserRepository } from "../../../modules/user-management/infra/persistence/repositories/user.repository";
+import { UserProfileRepository } from "../../../modules/user-management/infra/persistence/repositories/user-profile.repository";
+import { AddressRepository } from "../../../modules/user-management/infra/persistence/repositories/address.repository";
+import { PaymentMethodRepository } from "../../../modules/user-management/infra/persistence/repositories/payment-method.repository";
+import { VerificationTokenRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-token.repository";
+import { VerificationRateLimitRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-rate-limit.repository";
+import { VerificationAuditLogRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-audit-log.repository";
 
 // User Management — Services
 import { AuthenticationService } from "../../../modules/user-management/application/services/authentication.service";
@@ -27,7 +27,7 @@ import {
   SizeGuideRepository,
   EditorialLookRepository,
   ProductMediaRepository,
-} from "../../../modules/product-catalog/infrastructure/persistence/repositories";
+} from "../../../modules/product-catalog/infra/persistence/repositories";
 
 // Product Catalog — Services
 import {
@@ -54,7 +54,7 @@ import {
   InventoryTransactionRepositoryImpl,
   StockAlertRepositoryImpl,
   PickupReservationRepositoryImpl,
-} from "../../../modules/inventory-management/infrastructure/persistence/repositories";
+} from "../../../modules/inventory-management/infra/persistence/repositories";
 
 // Inventory Management — Services
 import {
@@ -81,6 +81,26 @@ import { CheckoutOrderService } from "../../../modules/cart/application/services
 
 // Admin — Services (required by CartManagementService and CheckoutService)
 import { SettingsService } from "../../../modules/admin/application/services/settings.service";
+
+// Order Management — Repositories
+import {
+  OrderRepositoryImpl,
+  OrderItemRepositoryImpl,
+  OrderAddressRepositoryImpl,
+  OrderShipmentRepositoryImpl,
+  OrderStatusHistoryRepositoryImpl,
+  OrderEventRepositoryImpl,
+  BackorderRepositoryImpl,
+  PreorderRepositoryImpl,
+} from "../../../modules/order-management/infra/persistence/repositories";
+
+// Order Management — Services
+import { OrderManagementService } from "../../../modules/order-management/application/services/order-management.service";
+import { OrderEventService } from "../../../modules/order-management/application/services/order-event.service";
+import { OrderItemManagementService } from "../../../modules/order-management/application/services/order-item-management.service";
+import { ShipmentManagementService } from "../../../modules/order-management/application/services/shipment-management.service";
+import { BackorderManagementService } from "../../../modules/order-management/application/services/backorder-management.service";
+import { PreorderManagementService } from "../../../modules/order-management/application/services/preorder-management.service";
 
 /**
  * Dependency Injection Container
@@ -369,6 +389,49 @@ export class Container {
     this.services.set("reservationService", reservationService);
     this.services.set("checkoutService", checkoutService);
     this.services.set("checkoutOrderService", checkoutOrderService);
+
+    // ============================================
+    // Order Management Module
+    // ============================================
+
+    // Repositories
+    const orderRepository = new OrderRepositoryImpl(prisma);
+    const orderItemRepository = new OrderItemRepositoryImpl(prisma);
+    const orderAddressRepository = new OrderAddressRepositoryImpl(prisma);
+    const orderShipmentRepository = new OrderShipmentRepositoryImpl(prisma);
+    const orderStatusHistoryRepository = new OrderStatusHistoryRepositoryImpl(prisma);
+    const orderEventRepository = new OrderEventRepositoryImpl(prisma);
+    const backorderRepository = new BackorderRepositoryImpl(prisma);
+    const preorderRepository = new PreorderRepositoryImpl(prisma);
+
+    // Services
+    const orderEventService = new OrderEventService(orderEventRepository);
+
+    const orderManagementService = new OrderManagementService(
+      orderRepository,
+      orderAddressRepository,
+      orderItemRepository,
+      orderShipmentRepository,
+      orderStatusHistoryRepository,
+      variantManagementService,
+      productManagementService,
+      productMediaManagementService,
+      stockManagementService,
+      orderEventService,
+    );
+
+    const orderItemManagementService = new OrderItemManagementService(orderItemRepository);
+    const shipmentManagementService = new ShipmentManagementService(orderShipmentRepository);
+    const backorderManagementService = new BackorderManagementService(backorderRepository);
+    const preorderManagementService = new PreorderManagementService(preorderRepository);
+
+    // Store Order Management services
+    this.services.set("orderManagementService", orderManagementService);
+    this.services.set("orderEventService", orderEventService);
+    this.services.set("orderItemManagementService", orderItemManagementService);
+    this.services.set("shipmentManagementService", shipmentManagementService);
+    this.services.set("backorderManagementService", backorderManagementService);
+    this.services.set("preorderManagementService", preorderManagementService);
   }
 
   get<T>(name: string): T {
@@ -454,6 +517,15 @@ export class Container {
       checkoutOrderService: this.get<CheckoutOrderService>(
         "checkoutOrderService",
       ),
+    };
+  }
+
+  getOrderManagementServices() {
+    return {
+      orderService: this.get<OrderManagementService>("orderManagementService"),
+      orderEventService: this.get<OrderEventService>("orderEventService"),
+      preorderService: this.get<PreorderManagementService>("preorderManagementService"),
+      backorderService: this.get<BackorderManagementService>("backorderManagementService"),
     };
   }
 }
