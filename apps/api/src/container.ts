@@ -102,6 +102,32 @@ import { ShipmentManagementService } from "../../../modules/order-management/app
 import { BackorderManagementService } from "../../../modules/order-management/application/services/backorder-management.service";
 import { PreorderManagementService } from "../../../modules/order-management/application/services/preorder-management.service";
 
+// Payment & Loyalty — Repositories
+import {
+  PaymentIntentRepository,
+  PaymentTransactionRepository,
+  PaymentWebhookEventRepository,
+  BnplTransactionRepository,
+  GiftCardRepository,
+  GiftCardTransactionRepository,
+  PromotionRepository,
+  PromotionUsageRepository,
+  LoyaltyAccountRepository,
+  LoyaltyProgramRepository,
+  LoyaltyTransactionRepository,
+} from "../../../modules/payment-loyalty/infra/persistence/repositories";
+
+// Payment & Loyalty — Services
+import {
+  PaymentService,
+  BnplTransactionService,
+  GiftCardService,
+  PromotionService,
+  PaymentWebhookService,
+  LoyaltyService,
+  LoyaltyTransactionService,
+} from "../../../modules/payment-loyalty/application/services";
+
 /**
  * Dependency Injection Container
  * Centralises all module wiring — repositories → services → ready to hand to routes.
@@ -432,6 +458,65 @@ export class Container {
     this.services.set("shipmentManagementService", shipmentManagementService);
     this.services.set("backorderManagementService", backorderManagementService);
     this.services.set("preorderManagementService", preorderManagementService);
+
+    // ============================================
+    // Payment & Loyalty Module
+    // ============================================
+
+    // Repositories
+    const paymentIntentRepository = new PaymentIntentRepository(prisma);
+    const paymentTransactionRepository = new PaymentTransactionRepository(prisma);
+    const paymentWebhookEventRepository = new PaymentWebhookEventRepository(prisma);
+    const bnplTransactionRepository = new BnplTransactionRepository(prisma);
+    const giftCardRepository = new GiftCardRepository(prisma);
+    const giftCardTransactionRepository = new GiftCardTransactionRepository(prisma);
+    const promotionRepository = new PromotionRepository(prisma);
+    const promotionUsageRepository = new PromotionUsageRepository(prisma);
+    const loyaltyAccountRepository = new LoyaltyAccountRepository(prisma);
+    const loyaltyProgramRepository = new LoyaltyProgramRepository(prisma);
+    const loyaltyTransactionRepository = new LoyaltyTransactionRepository(prisma);
+
+    // Services
+    const paymentService = new PaymentService(
+      prisma,
+      paymentIntentRepository,
+      paymentTransactionRepository,
+    );
+    const bnplTransactionService = new BnplTransactionService(
+      prisma,
+      bnplTransactionRepository,
+    );
+    const giftCardService = new GiftCardService(
+      prisma,
+      giftCardRepository,
+      giftCardTransactionRepository,
+    );
+    const promotionService = new PromotionService(
+      prisma,
+      promotionRepository,
+      promotionUsageRepository,
+    );
+    const paymentWebhookService = new PaymentWebhookService(
+      paymentWebhookEventRepository,
+    );
+    const loyaltyService = new LoyaltyService(
+      prisma,
+      loyaltyAccountRepository,
+      loyaltyProgramRepository,
+      loyaltyTransactionRepository,
+    );
+    const loyaltyTransactionService = new LoyaltyTransactionService(
+      loyaltyTransactionRepository,
+    );
+
+    // Store Payment & Loyalty services
+    this.services.set("paymentService", paymentService);
+    this.services.set("bnplTransactionService", bnplTransactionService);
+    this.services.set("giftCardService", giftCardService);
+    this.services.set("promotionService", promotionService);
+    this.services.set("paymentWebhookService", paymentWebhookService);
+    this.services.set("loyaltyService", loyaltyService);
+    this.services.set("loyaltyTransactionService", loyaltyTransactionService);
   }
 
   get<T>(name: string): T {
@@ -526,6 +611,18 @@ export class Container {
       orderEventService: this.get<OrderEventService>("orderEventService"),
       preorderService: this.get<PreorderManagementService>("preorderManagementService"),
       backorderService: this.get<BackorderManagementService>("backorderManagementService"),
+    };
+  }
+
+  getPaymentLoyaltyServices() {
+    return {
+      paymentService: this.get<PaymentService>("paymentService"),
+      bnplService: this.get<BnplTransactionService>("bnplTransactionService"),
+      giftCardService: this.get<GiftCardService>("giftCardService"),
+      promotionService: this.get<PromotionService>("promotionService"),
+      webhookService: this.get<PaymentWebhookService>("paymentWebhookService"),
+      loyaltyService: this.get<LoyaltyService>("loyaltyService"),
+      loyaltyTxnService: this.get<LoyaltyTransactionService>("loyaltyTransactionService"),
     };
   }
 }
