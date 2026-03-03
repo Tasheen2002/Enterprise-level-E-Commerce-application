@@ -7,6 +7,7 @@ import {
 } from "../../../application";
 import { PaymentWebhookService } from "../../../application/services/payment-webhook.service";
 import { WebhookEventData } from "../../../domain/entities/payment-webhook-event.entity";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface ProcessWebhookRequest {
   provider: string;
@@ -49,7 +50,7 @@ export class PaymentWebhookController {
       timestamp: new Date(),
     };
     const result = await this.processHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Webhook event processed");
   }
 
   /**
@@ -67,6 +68,6 @@ export class PaymentWebhookController {
       timestamp: new Date(),
     };
     const result = await this.listHandler.handle(query);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(reply, result, "Webhook events retrieved");
   }
 }

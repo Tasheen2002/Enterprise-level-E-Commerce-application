@@ -1,27 +1,28 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   AddPOItemCommand,
-  AddPOItemCommandHandler,
+  AddPOItemHandler,
   UpdatePOItemCommand,
-  UpdatePOItemCommandHandler,
+  UpdatePOItemHandler,
   RemovePOItemCommand,
-  RemovePOItemCommandHandler,
+  RemovePOItemHandler,
   GetPOItemsQuery,
-  GetPOItemsQueryHandler,
+  GetPOItemsHandler,
 } from "../../../application";
 import { PurchaseOrderManagementService } from "../../../application/services/purchase-order-management.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class PurchaseOrderItemController {
-  private addPOItemHandler: AddPOItemCommandHandler;
-  private updatePOItemHandler: UpdatePOItemCommandHandler;
-  private removePOItemHandler: RemovePOItemCommandHandler;
-  private getPOItemsHandler: GetPOItemsQueryHandler;
+  private addPOItemHandler: AddPOItemHandler;
+  private updatePOItemHandler: UpdatePOItemHandler;
+  private removePOItemHandler: RemovePOItemHandler;
+  private getPOItemsHandler: GetPOItemsHandler;
 
   constructor(private readonly poService: PurchaseOrderManagementService) {
-    this.addPOItemHandler = new AddPOItemCommandHandler(poService);
-    this.updatePOItemHandler = new UpdatePOItemCommandHandler(poService);
-    this.removePOItemHandler = new RemovePOItemCommandHandler(poService);
-    this.getPOItemsHandler = new GetPOItemsQueryHandler(poService);
+    this.addPOItemHandler = new AddPOItemHandler(poService);
+    this.updatePOItemHandler = new UpdatePOItemHandler(poService);
+    this.removePOItemHandler = new RemovePOItemHandler(poService);
+    this.getPOItemsHandler = new GetPOItemsHandler(poService);
   }
 
   async getPOItems(
@@ -33,26 +34,13 @@ export class PurchaseOrderItemController {
 
       const query: GetPOItemsQuery = { poId };
       const result = await this.getPOItemsHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get purchase order items",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Purchase order items retrieved",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get purchase order items");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve purchase order items",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -74,31 +62,23 @@ export class PurchaseOrderItemController {
 
       if (result.success && result.data) {
         const item = result.data;
-
-        return reply.code(201).send({
-          success: true,
-          data: {
+        return ResponseHelper.created(
+          reply,
+          "Item added to purchase order successfully",
+          {
             poId: item.getPoId().getValue(),
             variantId: item.getVariantId(),
             orderedQty: item.getOrderedQty(),
             receivedQty: item.getReceivedQty(),
           },
-          message: "Item added to purchase order successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to add item to purchase order",
-          errors: result.errors,
-        });
+        );
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to add item to purchase order",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to add item to purchase order");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to add item to purchase order",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -122,31 +102,23 @@ export class PurchaseOrderItemController {
 
       if (result.success && result.data) {
         const item = result.data;
-
-        return reply.code(200).send({
-          success: true,
-          data: {
+        return ResponseHelper.ok(
+          reply,
+          "Purchase order item updated successfully",
+          {
             poId: item.getPoId().getValue(),
             variantId: item.getVariantId(),
             orderedQty: item.getOrderedQty(),
             receivedQty: item.getReceivedQty(),
           },
-          message: "Purchase order item updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to update purchase order item",
-          errors: result.errors,
-        });
+        );
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to update purchase order item",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update purchase order item");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to update purchase order item",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -165,26 +137,13 @@ export class PurchaseOrderItemController {
       };
 
       const result = await this.removePOItemHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Item removed from purchase order successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to remove item from purchase order",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Item removed from purchase order successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to remove item from purchase order");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to remove item from purchase order",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

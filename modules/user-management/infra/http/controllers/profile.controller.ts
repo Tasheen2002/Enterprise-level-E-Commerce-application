@@ -6,6 +6,7 @@ import {
   GetUserProfileHandler,
 } from "../../../application";
 import { UserProfileService } from "../../../application/services/user-profile.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 // Request DTOs
 export interface UpdateProfileRequest {
@@ -25,34 +26,6 @@ export interface UpdateProfileRequest {
   nationality?: string;
 }
 
-// Response DTOs
-export interface ProfileResponse {
-  success: boolean;
-  data?: {
-    userId: string;
-    defaultAddressId?: string;
-    defaultPaymentMethodId?: string;
-    preferences: Record<string, any>;
-    locale?: string;
-    currency?: string;
-    stylePreferences: Record<string, any>;
-    preferredSizes: Record<string, any>;
-  };
-  error?: string;
-  errors?: string[];
-}
-
-export interface UpdateProfileResponse {
-  success: boolean;
-  data?: {
-    userId: string;
-    updated: boolean;
-    message: string;
-  };
-  error?: string;
-  errors?: string[];
-}
-
 export class ProfileController {
   private getProfileHandler: GetUserProfileHandler;
   private updateProfileHandler: UpdateProfileHandler;
@@ -68,43 +41,11 @@ export class ProfileController {
   ): Promise<void> {
     try {
       const { userId } = request.params;
-
-      if (!userId) {
-        reply.status(400).send({
-          success: false,
-          error: "User ID is required",
-          errors: ["userId"],
-        });
-        return;
-      }
-
-      // Create query
-      const query: GetUserProfileQuery = {
-        userId,
-        timestamp: new Date(),
-      };
-
-      // Execute query
+      const query: GetUserProfileQuery = { userId, timestamp: new Date() };
       const result = await this.getProfileHandler.handle(query);
-
-      if (result.success) {
-        reply.status(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        const statusCode = result.error?.includes("not found") ? 404 : 400;
-        reply.status(statusCode).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      ResponseHelper.fromQuery(reply, result, "Profile retrieved", "User profile not found");
     } catch (error) {
-      reply.status(500).send({
-        success: false,
-        error: "Internal server error while retrieving profile",
-      });
+      ResponseHelper.error(reply, error);
     }
   }
 
@@ -125,18 +66,15 @@ export class ProfileController {
         currency,
         stylePreferences,
         preferredSizes,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
       } = request.body;
 
-      if (!userId) {
-        reply.status(400).send({
-          success: false,
-          error: "User ID is required",
-          errors: ["userId"],
-        });
-        return;
-      }
-
-      // Create command
       const command: UpdateProfileCommand = {
         userId,
         defaultAddressId,
@@ -146,40 +84,20 @@ export class ProfileController {
         currency,
         stylePreferences,
         preferredSizes,
-        firstName: request.body.firstName,
-        lastName: request.body.lastName,
-        phone: request.body.phone,
-        title: request.body.title,
-        dateOfBirth: request.body.dateOfBirth,
-        residentOf: request.body.residentOf,
-        nationality: request.body.nationality,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
         timestamp: new Date(),
       };
 
-      // Execute command
       const result = await this.updateProfileHandler.handle(command);
-
-      if (result.success) {
-        reply.status(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        reply.status(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-          code: "PROFILE_UPDATE_ERROR",
-          timestamp: new Date().toISOString(),
-        });
-      }
+      ResponseHelper.fromCommand(reply, result, "Profile updated");
     } catch (error) {
-      reply.status(500).send({
-        success: false,
-        error: "Internal server error while updating profile",
-        code: "INTERNAL_SERVER_ERROR",
-        timestamp: new Date().toISOString(),
-      });
+      ResponseHelper.error(reply, error);
     }
   }
 
@@ -188,44 +106,15 @@ export class ProfileController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      // Extract user ID from JWT token (assuming middleware sets it)
       const userId = (request as any).user?.userId;
-
       if (!userId) {
-        reply.status(401).send({
-          success: false,
-          error: "Authentication required",
-        });
-        return;
+        return ResponseHelper.unauthorized(reply);
       }
-
-      // Create query
-      const query: GetUserProfileQuery = {
-        userId,
-        timestamp: new Date(),
-      };
-
-      // Execute query
+      const query: GetUserProfileQuery = { userId, timestamp: new Date() };
       const result = await this.getProfileHandler.handle(query);
-
-      if (result.success) {
-        reply.status(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        const statusCode = result.error?.includes("not found") ? 404 : 400;
-        reply.status(statusCode).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      ResponseHelper.fromQuery(reply, result, "Profile retrieved", "User profile not found");
     } catch (error) {
-      reply.status(500).send({
-        success: false,
-        error: "Internal server error while retrieving current user profile",
-      });
+      ResponseHelper.error(reply, error);
     }
   }
 
@@ -234,15 +123,9 @@ export class ProfileController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      // Extract user ID from JWT token (assuming middleware sets it)
       const userId = (request as any).user?.userId;
-
       if (!userId) {
-        reply.status(401).send({
-          success: false,
-          error: "Authentication required",
-        });
-        return;
+        return ResponseHelper.unauthorized(reply);
       }
 
       const {
@@ -253,9 +136,15 @@ export class ProfileController {
         currency,
         stylePreferences,
         preferredSizes,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
       } = request.body;
 
-      // Create command
       const command: UpdateProfileCommand = {
         userId,
         defaultAddressId,
@@ -265,47 +154,20 @@ export class ProfileController {
         currency,
         stylePreferences,
         preferredSizes,
-        firstName: request.body.firstName,
-        lastName: request.body.lastName,
-        phone: request.body.phone,
-        title: request.body.title,
-        dateOfBirth: request.body.dateOfBirth,
-        residentOf: request.body.residentOf,
-        nationality: request.body.nationality,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
         timestamp: new Date(),
       };
 
-      // Execute command
       const result = await this.updateProfileHandler.handle(command);
-
-      if (result.success && result.data) {
-        // Map response to match API contract (prefs -> preferences)
-        const responseData = {
-          ...result.data,
-          preferences: result.data.prefs, // Map prefs back to preferences for API response
-        };
-        delete (responseData as any).prefs; // Remove the prefs field from response
-
-        reply.status(200).send({
-          success: true,
-          data: responseData,
-        });
-      } else {
-        reply.status(400).send({
-          success: false,
-          error: result.error || "Profile update failed",
-          errors: result.errors,
-          code: "PROFILE_UPDATE_ERROR",
-          timestamp: new Date().toISOString(),
-        });
-      }
+      ResponseHelper.fromCommand(reply, result, "Profile updated");
     } catch (error) {
-      reply.status(500).send({
-        success: false,
-        error: "Internal server error while updating current user profile",
-        code: "INTERNAL_SERVER_ERROR",
-        timestamp: new Date().toISOString(),
-      });
+      ResponseHelper.error(reply, error);
     }
   }
 }

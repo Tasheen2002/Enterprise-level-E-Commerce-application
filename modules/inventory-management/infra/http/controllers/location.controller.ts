@@ -13,6 +13,7 @@ import {
   LocationResult,
 } from "../../../application";
 import { LocationManagementService } from "../../../application/services/location-management.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class LocationController {
   private createLocationHandler: CreateLocationHandler;
@@ -42,29 +43,14 @@ export class LocationController {
       };
 
       const result = await this.getLocationHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else if (result.success && result.data === null) {
-        return reply.code(404).send({
-          success: false,
-          error: "Location not found",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get location",
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Location retrieved",
+        "Location not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get location");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -86,7 +72,6 @@ export class LocationController {
       const result = await this.listLocationsHandler.handle(query);
 
       if (result.success && result.data) {
-        // Map address fields for API response
         const mappedLocations = result.data.locations.map(
           (loc: LocationResult) => ({
             locationId: loc.locationId,
@@ -103,25 +88,17 @@ export class LocationController {
               : null,
           }),
         );
-        return reply.code(200).send({
-          success: true,
-          data: {
-            locations: mappedLocations,
-            total: result.data.total,
-          },
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to list locations",
+        return ResponseHelper.ok(reply, "Locations retrieved", {
+          locations: mappedLocations,
+          total: result.data.total,
         });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to list locations",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to list locations");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -151,37 +128,27 @@ export class LocationController {
       if (result.success && result.data) {
         const location = result.data;
         const locAddress = location.getAddress();
-        return reply.code(201).send({
-          success: true,
-          data: {
-            locationId: location.getLocationId().getValue(),
-            type: location.getType().getValue(),
-            name: location.getName(),
-            address: locAddress
-              ? {
-                  street: locAddress.addressLine1 || undefined,
-                  city: locAddress.city || undefined,
-                  state: locAddress.state || undefined,
-                  postalCode: locAddress.postalCode || undefined,
-                  country: locAddress.country || undefined,
-                }
-              : null,
-          },
-          message: "Location created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Location creation failed",
-          errors: result.errors,
+        return ResponseHelper.created(reply, "Location created successfully", {
+          locationId: location.getLocationId().getValue(),
+          type: location.getType().getValue(),
+          name: location.getName(),
+          address: locAddress
+            ? {
+                street: locAddress.addressLine1 || undefined,
+                city: locAddress.city || undefined,
+                state: locAddress.state || undefined,
+                postalCode: locAddress.postalCode || undefined,
+                country: locAddress.country || undefined,
+              }
+            : null,
         });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Location creation failed",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create location");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -203,30 +170,19 @@ export class LocationController {
 
       if (result.success && result.data) {
         const location = result.data;
-
-        return reply.code(200).send({
-          success: true,
-          data: {
-            locationId: location.getLocationId().getValue(),
-            type: location.getType().getValue(),
-            name: location.getName(),
-            address: location.getAddress(),
-          },
-          message: "Location updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Location update failed",
-          errors: result.errors,
+        return ResponseHelper.ok(reply, "Location updated successfully", {
+          locationId: location.getLocationId().getValue(),
+          type: location.getType().getValue(),
+          name: location.getName(),
+          address: location.getAddress(),
         });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Location update failed",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update location");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -242,25 +198,13 @@ export class LocationController {
       };
 
       const result = await this.deleteLocationHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Location deleted successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Location deletion failed",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Location deleted successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to delete location");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

@@ -10,6 +10,7 @@ import {
   GetGiftCardTransactionsHandler,
 } from "../../../application";
 import { GiftCardService } from "../../../application/services/gift-card.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface CreateGiftCardRequest {
   code: string;
@@ -45,9 +46,7 @@ export class GiftCardController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const body = request.body;
@@ -62,7 +61,7 @@ export class GiftCardController {
       timestamp: new Date(),
     };
     const result = await this.createHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Gift card created", 201);
   }
 
   async redeem(
@@ -74,9 +73,7 @@ export class GiftCardController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const { giftCardId } = request.params;
@@ -89,7 +86,7 @@ export class GiftCardController {
       timestamp: new Date(),
     };
     const result = await this.redeemHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Gift card redeemed");
   }
 
   async getBalance(
@@ -101,7 +98,12 @@ export class GiftCardController {
       timestamp: new Date(),
     };
     const result = await this.balanceHandler.handle(query);
-    return reply.code(result.success ? 200 : 404).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Gift card balance retrieved",
+      "Gift card not found",
+    );
   }
 
   async getTransactions(
@@ -113,6 +115,10 @@ export class GiftCardController {
       timestamp: new Date(),
     };
     const result = await this.txnsHandler.handle(query);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Gift card transactions retrieved",
+    );
   }
 }

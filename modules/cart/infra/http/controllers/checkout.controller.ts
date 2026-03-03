@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { CheckoutService } from "../../../application/services/checkout.service";
 import { CheckoutOrderService } from "../../../application/services/checkout-order.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 // Import middleware for type augmentations (request.guestToken)
 import "../middleware/cart-auth.middleware";
@@ -56,10 +57,7 @@ export class CheckoutController {
       const body = request.body;
 
       if (!userId && !guestToken) {
-        return reply.code(401).send({
-          success: false,
-          error: "Authentication required",
-        });
+        return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
       const checkout = await this.checkoutService.initializeCheckout({
@@ -69,16 +67,10 @@ export class CheckoutController {
         expiresInMinutes: body.expiresInMinutes,
       });
 
-      return reply.code(201).send({
-        success: true,
-        data: checkout,
-      });
+      return ResponseHelper.created(reply, "Checkout initialized", checkout);
     } catch (error) {
       request.log.error(error, "Failed to initialize checkout");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -91,29 +83,16 @@ export class CheckoutController {
       const guestToken = request.guestToken;
       const { checkoutId } = request.params;
 
-      const checkout = await this.checkoutService.getCheckout(
-        checkoutId,
-        userId,
-        guestToken,
-      );
+      const checkout = await this.checkoutService.getCheckout(checkoutId, userId, guestToken);
 
       if (!checkout) {
-        return reply.code(404).send({
-          success: false,
-          error: "Checkout not found",
-        });
+        return ResponseHelper.notFound(reply, "Checkout not found");
       }
 
-      return reply.code(200).send({
-        success: true,
-        data: checkout,
-      });
+      return ResponseHelper.ok(reply, "Checkout retrieved", checkout);
     } catch (error) {
       request.log.error(error, "Failed to get checkout");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -130,10 +109,7 @@ export class CheckoutController {
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
-        return reply.code(401).send({
-          success: false,
-          error: "Authentication required",
-        });
+        return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
       const checkout = await this.checkoutService.completeCheckout({
@@ -142,16 +118,10 @@ export class CheckoutController {
         guestToken,
       });
 
-      return reply.code(200).send({
-        success: true,
-        data: checkout,
-      });
+      return ResponseHelper.ok(reply, "Checkout completed", checkout);
     } catch (error) {
       request.log.error(error, "Failed to complete checkout");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -165,28 +135,15 @@ export class CheckoutController {
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
-        return reply.code(401).send({
-          success: false,
-          error: "Authentication required",
-        });
+        return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const checkout = await this.checkoutService.cancelCheckout(
-        checkoutId,
-        userId,
-        guestToken,
-      );
+      const checkout = await this.checkoutService.cancelCheckout(checkoutId, userId, guestToken);
 
-      return reply.code(200).send({
-        success: true,
-        data: checkout,
-      });
+      return ResponseHelper.ok(reply, "Checkout cancelled", checkout);
     } catch (error) {
       request.log.error(error, "Failed to cancel checkout");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -199,10 +156,7 @@ export class CheckoutController {
   ) {
     try {
       if (!this.checkoutOrderService) {
-        return reply.code(500).send({
-          success: false,
-          error: "Checkout order service not initialized",
-        });
+        return ResponseHelper.error(reply, new Error("Checkout order service not initialized"));
       }
 
       const userId = request.user?.userId;
@@ -211,10 +165,7 @@ export class CheckoutController {
       const body = request.body;
 
       if (!userId && !guestToken) {
-        return reply.code(401).send({
-          success: false,
-          error: "Authentication required",
-        });
+        return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
       const result = await this.checkoutOrderService.completeCheckoutWithOrder({
@@ -226,17 +177,10 @@ export class CheckoutController {
         billingAddress: body.billingAddress,
       });
 
-      return reply.code(200).send({
-        success: true,
-        data: result,
-        message: "Order created successfully from checkout",
-      });
+      return ResponseHelper.ok(reply, "Order created successfully from checkout", result);
     } catch (error) {
       request.log.error(error, "Failed to complete checkout and create order");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -246,10 +190,7 @@ export class CheckoutController {
   ) {
     try {
       if (!this.checkoutOrderService) {
-        return reply.code(500).send({
-          success: false,
-          error: "Checkout order service not initialized",
-        });
+        return ResponseHelper.error(reply, new Error("Checkout order service not initialized"));
       }
 
       const userId = request.user?.userId;
@@ -257,35 +198,19 @@ export class CheckoutController {
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
-        return reply.code(401).send({
-          success: false,
-          error: "Authentication required",
-        });
+        return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const order = await this.checkoutOrderService.getOrderByCheckoutId(
-        checkoutId,
-        userId,
-        guestToken,
-      );
+      const order = await this.checkoutOrderService.getOrderByCheckoutId(checkoutId, userId, guestToken);
 
       if (!order) {
-        return reply.code(404).send({
-          success: false,
-          error: "Order not found for this checkout",
-        });
+        return ResponseHelper.notFound(reply, "Order not found for this checkout");
       }
 
-      return reply.code(200).send({
-        success: true,
-        data: order,
-      });
+      return ResponseHelper.ok(reply, "Order retrieved", order);
     } catch (error) {
       request.log.error(error, "Failed to get order by checkout ID");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

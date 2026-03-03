@@ -4,6 +4,7 @@ import {
   GetLoyaltyAccountHandler,
 } from "../../../application";
 import { LoyaltyService } from "../../../application/services/loyalty.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class LoyaltyAccountController {
   private getHandler: GetLoyaltyAccountHandler;
@@ -12,10 +13,6 @@ export class LoyaltyAccountController {
     this.getHandler = new GetLoyaltyAccountHandler(loyaltyService);
   }
 
-  /**
-   * GET /loyalty/accounts/:userId/:programId
-   * Get loyalty account for a user in a specific program
-   */
   async get(
     request: FastifyRequest<{ Params: { userId: string; programId: string } }>,
     reply: FastifyReply,
@@ -27,6 +24,11 @@ export class LoyaltyAccountController {
       timestamp: new Date(),
     };
     const result = await this.getHandler.handle(query);
-    return reply.code(result.success ? 200 : 404).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Loyalty account retrieved",
+      "Loyalty account not found",
+    );
   }
 }

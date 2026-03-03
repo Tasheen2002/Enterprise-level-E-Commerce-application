@@ -1,7 +1,7 @@
 import { Checkout } from "../entities/checkout.entity";
 import { CheckoutId } from "../value-objects/checkout-id.vo";
 import { CartId } from "../value-objects/cart-id.vo";
-import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 
 export interface CheckoutRepository {
@@ -11,7 +11,7 @@ export interface CheckoutRepository {
   update(checkout: Checkout): Promise<void>;
   delete(checkoutId: CheckoutId): Promise<void>;
 
-  findByUserId(userId: UserId): Promise<Checkout[]>;
+  findByCartOwnerId(userId: CartOwnerId): Promise<Checkout[]>;
   findByGuestToken(guestToken: GuestToken): Promise<Checkout[]>;
   findPendingCheckouts(): Promise<Checkout[]>;
   findExpiredCheckouts(): Promise<Checkout[]>;

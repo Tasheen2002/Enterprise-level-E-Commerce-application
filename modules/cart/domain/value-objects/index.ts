@@ -1,4 +1,5 @@
 export { CartId } from "./cart-id.vo";
+export { CartOwnerId } from "./cart-owner-id.vo";
 export { VariantId } from "./variant-id.vo";
 export { Quantity } from "./quantity.vo";
 export { GuestToken } from "./guest-token.vo";

@@ -5,6 +5,7 @@ import {
   CreateSizeGuideData,
 } from "../../../domain/entities/size-guide.entity";
 import { SizeGuideQueryOptions } from "../../../domain/repositories/size-guide.repository";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 interface CreateSizeGuideRequest {
   title: string;
@@ -117,8 +118,6 @@ export class SizeGuideController {
           );
       }
 
-      console.log("Size guides retrieved:", guides);
-
       // Serialize entities to plain objects
       const serializedGuides = Array.isArray(guides)
         ? guides
@@ -126,38 +125,18 @@ export class SizeGuideController {
             .filter(Boolean)
         : guides;
 
-      console.log("Serialized guides:", serializedGuides);
-
-      return reply.code(200).send({
-        success: true,
-        data: {
-          sizeGuides: serializedGuides,
-          pagination: {
-            page: pageOptions.page,
-            limit: pageOptions.limit,
-            total: serializedGuides.length,
-            total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
-          },
+      return ResponseHelper.ok(reply, "Size guides retrieved successfully", {
+        sizeGuides: serializedGuides,
+        pagination: {
+          page: pageOptions.page,
+          limit: pageOptions.limit,
+          total: serializedGuides.length,
+          total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
         },
       });
     } catch (error) {
-      console.error("=== Size guides list error ===");
-      console.error("Error:", error);
-      console.error(
-        "Error message:",
-        error instanceof Error ? error.message : "Unknown",
-      );
-      console.error(
-        "Error stack:",
-        error instanceof Error ? error.stack : "No stack",
-      );
-
       request.log.error(error, "Failed to get size guides");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve size guides",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -168,36 +147,17 @@ export class SizeGuideController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide ID is required and must be a valid string",
-        });
-      }
-
       const guide = await this.sizeGuideManagementService.getSizeGuideById(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: guide,
-      });
+      return ResponseHelper.ok(reply, "Size guide retrieved successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to get size guide");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Size guide not found",
-        });
+        return ResponseHelper.notFound(reply, "Size guide not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -208,74 +168,24 @@ export class SizeGuideController {
     try {
       const guideData = request.body;
 
-      // Basic validation
-      if (
-        !guideData.title ||
-        typeof guideData.title !== "string" ||
-        guideData.title.trim().length === 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Title is required and must be a non-empty string",
-        });
-      }
-
-      if (
-        !guideData.region ||
-        !Object.values(Region).includes(guideData.region)
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region is required and must be one of: UK, US, EU",
-        });
-      }
-
-      // Validate title length
-      if (guideData.title.length > 200) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Title cannot be longer than 200 characters",
-        });
-      }
-
-      // Validate HTML content length if provided
-      if (guideData.bodyHtml && guideData.bodyHtml.length > 50000) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "HTML content cannot exceed 50,000 characters",
-        });
-      }
-
       const guide = await this.sizeGuideManagementService.createSizeGuide(
         guideData as CreateSizeGuideData,
       );
 
-      return reply.code(201).send({
-        success: true,
-        data: guide,
-        message: "Size guide created successfully",
-      });
+      return ResponseHelper.created(reply, "Size guide created successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to create size guide");
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
+          message: "Size guide already exists for this region and category combination",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -290,115 +200,32 @@ export class SizeGuideController {
       const { id } = request.params;
       const updateData = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide ID is required and must be a valid string",
-        });
-      }
-
-      // Validate title if provided
-      if (updateData.title !== undefined) {
-        if (
-          typeof updateData.title !== "string" ||
-          updateData.title.trim().length === 0
-        ) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "Title must be a non-empty string",
-          });
-        }
-
-        if (updateData.title.length > 200) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "Title cannot be longer than 200 characters",
-          });
-        }
-      }
-
-      // Validate region if provided
-      if (
-        updateData.region &&
-        !Object.values(Region).includes(updateData.region)
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
-
-      // Validate HTML content if provided
-      if (
-        updateData.bodyHtml !== undefined &&
-        updateData.bodyHtml &&
-        updateData.bodyHtml.length > 50000
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "HTML content cannot exceed 50,000 characters",
-        });
-      }
-
-      console.log("Updating size guide with ID:", id);
-      console.log("Update data:", updateData);
-
       const guide = await this.sizeGuideManagementService.updateSizeGuide(
         id,
         updateData,
       );
 
-      console.log("Updated guide:", guide);
-
       // Serialize entity to plain object
       const serializedGuide = guide.toData ? guide.toData() : guide;
 
-      return reply.code(200).send({
-        success: true,
-        data: serializedGuide,
-        message: "Size guide updated successfully",
-      });
+      return ResponseHelper.ok(reply, "Size guide updated successfully", serializedGuide);
     } catch (error) {
-      console.error("=== Size guide update error ===");
-      console.error("Error:", error);
-      console.error(
-        "Error message:",
-        error instanceof Error ? error.message : "Unknown",
-      );
-      console.error(
-        "Error stack:",
-        error instanceof Error ? error.stack : "No stack",
-      );
-
       request.log.error(error, "Failed to update size guide");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Size guide not found",
-        });
+        return ResponseHelper.notFound(reply, "Size guide not found");
       }
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
+          message: "Size guide already exists for this region and category combination",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to update size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -409,36 +236,17 @@ export class SizeGuideController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide ID is required and must be a valid string",
-        });
-      }
-
       await this.sizeGuideManagementService.deleteSizeGuide(id);
 
-      return reply.code(200).send({
-        success: true,
-        message: "Size guide deleted successfully",
-      });
+      return ResponseHelper.ok(reply, "Size guide deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete size guide");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Size guide not found",
-        });
+        return ResponseHelper.notFound(reply, "Size guide not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to delete size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -459,14 +267,6 @@ export class SizeGuideController {
         sortBy = "title",
         sortOrder = "desc",
       } = request.query;
-
-      if (!Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
 
       const serviceOptions: SizeGuideQueryOptions = {
         limit: Math.min(100, Math.max(1, limit)),
@@ -503,16 +303,13 @@ export class SizeGuideController {
             .filter(Boolean)
         : [];
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          sizeGuides: serializedGuides,
-          pagination: {
-            page: pageOptions.page,
-            limit: pageOptions.limit,
-            total: serializedGuides.length,
-            total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
-          },
+      return ResponseHelper.ok(reply, "Regional size guides retrieved successfully", {
+        sizeGuides: serializedGuides,
+        pagination: {
+          page: pageOptions.page,
+          limit: pageOptions.limit,
+          total: serializedGuides.length,
+          total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
         },
         meta: {
           region,
@@ -522,11 +319,7 @@ export class SizeGuideController {
       });
     } catch (error) {
       request.log.error(error, "Failed to get regional size guides");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve regional size guides",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -541,42 +334,26 @@ export class SizeGuideController {
       const { region } = request.params;
       const guideData = request.body;
 
-      if (!Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
-
       const guide =
         await this.sizeGuideManagementService.createRegionalSizeGuide(
           region as Region,
           guideData,
         );
 
-      return reply.code(201).send({
-        success: true,
-        data: guide,
-        message: "Regional size guide created successfully",
-      });
+      return ResponseHelper.created(reply, "Regional size guide created successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to create regional size guide");
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
+          message: "Size guide already exists for this region and category combination",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create regional size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -587,21 +364,12 @@ export class SizeGuideController {
     try {
       const { region } = request.params;
 
-      if (!Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
-
       const guides = await this.sizeGuideManagementService.getGeneralSizeGuides(
         region as Region,
       );
 
-      return reply.code(200).send({
-        success: true,
-        data: guides,
+      return ResponseHelper.ok(reply, "General size guides retrieved successfully", {
+        guides,
         meta: {
           region,
           count: guides.length,
@@ -609,11 +377,7 @@ export class SizeGuideController {
       });
     } catch (error) {
       request.log.error(error, "Failed to get general size guides");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve general size guides",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -628,14 +392,6 @@ export class SizeGuideController {
       const { category, region } = request.params;
       const guideData = request.body;
 
-      if (!Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
-
       const guide =
         await this.sizeGuideManagementService.createCategorySizeGuide(
           decodeURIComponent(category),
@@ -643,28 +399,20 @@ export class SizeGuideController {
           guideData,
         );
 
-      return reply.code(201).send({
-        success: true,
-        data: guide,
-        message: "Category size guide created successfully",
-      });
+      return ResponseHelper.created(reply, "Category size guide created successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to create category size guide");
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
+          message: "Size guide already exists for this region and category combination",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create category size guide",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -679,57 +427,21 @@ export class SizeGuideController {
       const { id } = request.params;
       const { htmlContent } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide ID is required and must be a valid string",
-        });
-      }
-
-      if (!htmlContent || typeof htmlContent !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "HTML content is required and must be a string",
-        });
-      }
-
-      if (htmlContent.length > 50000) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "HTML content cannot exceed 50,000 characters",
-        });
-      }
-
       const guide =
         await this.sizeGuideManagementService.updateSizeGuideContent(
           id,
           htmlContent,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: guide,
-        message: "Size guide content updated successfully",
-      });
+      return ResponseHelper.ok(reply, "Size guide content updated successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to update size guide content");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Size guide not found",
-        });
+        return ResponseHelper.notFound(reply, "Size guide not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to update size guide content",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -740,56 +452,28 @@ export class SizeGuideController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide ID is required and must be a valid string",
-        });
-      }
-
       const guide =
         await this.sizeGuideManagementService.clearSizeGuideContent(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: guide,
-        message: "Size guide content cleared successfully",
-      });
+      return ResponseHelper.ok(reply, "Size guide content cleared successfully", guide);
     } catch (error) {
       request.log.error(error, "Failed to clear size guide content");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Size guide not found",
-        });
+        return ResponseHelper.notFound(reply, "Size guide not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to clear size guide content",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getSizeGuideStats(request: FastifyRequest, reply: FastifyReply) {
     try {
       const stats = await this.sizeGuideManagementService.getSizeGuideStats();
-
-      return reply.code(200).send({
-        success: true,
-        data: stats,
-      });
+      return ResponseHelper.ok(reply, "Size guide statistics retrieved successfully", stats);
     } catch (error) {
       request.log.error(error, "Failed to get size guide statistics");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve size guide statistics",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -798,17 +482,10 @@ export class SizeGuideController {
       const regions =
         await this.sizeGuideManagementService.getAvailableRegions();
 
-      return reply.code(200).send({
-        success: true,
-        data: regions,
-      });
+      return ResponseHelper.ok(reply, "Available regions retrieved successfully", regions);
     } catch (error) {
       request.log.error(error, "Failed to get available regions");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve available regions",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -819,33 +496,20 @@ export class SizeGuideController {
     try {
       const { region } = request.query;
 
-      if (region && !Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region must be one of: UK, US, EU",
-        });
-      }
-
       const categories =
         await this.sizeGuideManagementService.getAvailableCategories(
           region as Region,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: categories,
+      return ResponseHelper.ok(reply, "Available categories retrieved successfully", {
+        categories,
         meta: {
           region: region || "all",
         },
       });
     } catch (error) {
       request.log.error(error, "Failed to get available categories");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve available categories",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -856,39 +520,10 @@ export class SizeGuideController {
     try {
       const { guides } = request.body;
 
-      if (!guides || !Array.isArray(guides) || guides.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guides array is required and must not be empty",
-        });
-      }
-
-      if (guides.length > 50) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cannot create more than 50 size guides at once",
-        });
-      }
-
-      // Validate each guide
-      for (const guideData of guides) {
-        if (!guideData.title || !guideData.region) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "All size guides must have title and region",
-          });
-        }
-      }
-
-      console.log("Creating bulk size guides:", guides);
       const result =
         await this.sizeGuideManagementService.createMultipleSizeGuides(
           guides as CreateSizeGuideData[],
         );
-      console.log("Created guides result:", result);
 
       // Serialize entities to plain objects
       const serializedGuides = Array.isArray(result.created)
@@ -897,34 +532,17 @@ export class SizeGuideController {
             .filter(Boolean)
         : [];
 
-      console.log("Serialized guides:", serializedGuides);
-
-      return reply.code(201).send({
-        success: true,
-        data: {
+      return ResponseHelper.created(
+        reply,
+        `${serializedGuides.length} size guides created successfully${result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}`,
+        {
           created: serializedGuides,
           skipped: result.skipped,
         },
-        message: `${serializedGuides.length} size guides created successfully${result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}`,
-      });
+      );
     } catch (error) {
-      console.error("=== Bulk create size guides error ===");
-      console.error("Error:", error);
-      console.error(
-        "Error message:",
-        error instanceof Error ? error.message : "Unknown",
-      );
-      console.error(
-        "Error stack:",
-        error instanceof Error ? error.stack : "No stack",
-      );
-
       request.log.error(error, "Failed to create bulk size guides");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create size guides",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -935,37 +553,17 @@ export class SizeGuideController {
     try {
       const { ids } = request.body;
 
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size guide IDs array is required and must not be empty",
-        });
-      }
-
-      if (ids.length > 50) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cannot delete more than 50 size guides at once",
-        });
-      }
-
       const result =
         await this.sizeGuideManagementService.deleteMultipleSizeGuides(ids);
 
-      return reply.code(200).send({
-        success: true,
-        data: result,
-        message: `${result.deleted.length} size guides deleted successfully`,
-      });
+      return ResponseHelper.ok(
+        reply,
+        `${result.deleted.length} size guides deleted successfully`,
+        result,
+      );
     } catch (error) {
       request.log.error(error, "Failed to delete bulk size guides");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to delete size guides",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -978,36 +576,21 @@ export class SizeGuideController {
     try {
       const { region, category } = request.query;
 
-      if (!region || !Object.values(Region).includes(region as Region)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Region is required and must be one of: UK, US, EU",
-        });
-      }
-
       const isUnique =
         await this.sizeGuideManagementService.validateSizeGuideUniqueness(
           region as Region,
           category || null,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          region,
-          category: category || null,
-          isUnique,
-          available: isUnique,
-        },
+      return ResponseHelper.ok(reply, "Size guide uniqueness validated", {
+        region,
+        category: category || null,
+        isUnique,
+        available: isUnique,
       });
     } catch (error) {
       request.log.error(error, "Failed to validate size guide uniqueness");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to validate size guide uniqueness",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

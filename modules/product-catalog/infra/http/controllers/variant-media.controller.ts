@@ -3,6 +3,7 @@ import {
   VariantMediaManagementService,
   VariantMediaServiceQueryOptions,
 } from "../../../application/services/variant-media-management.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 interface AddMediaToVariantRequest {
   assetId: string;
@@ -42,37 +43,18 @@ export class VariantMediaController {
     try {
       const { variantId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
       const variantMedia =
         await this.variantMediaManagementService.getVariantMedia(variantId);
 
-      return reply.code(200).send({
-        success: true,
-        data: variantMedia,
-      });
+      return ResponseHelper.ok(reply, "Variant media retrieved successfully", variantMedia);
     } catch (error) {
       request.log.error(error, "Failed to get variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product variant not found",
-        });
+        return ResponseHelper.notFound(reply, "Product variant not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -87,58 +69,32 @@ export class VariantMediaController {
       const { variantId } = request.params;
       const { assetId } = request.body;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
       await this.variantMediaManagementService.addMediaToVariant(
         variantId,
         assetId,
       );
 
-      return reply.code(201).send({
-        success: true,
-        message: "Media added to variant successfully",
-      });
+      return ResponseHelper.created(reply, "Media added to variant successfully");
     } catch (error) {
       request.log.error(error, "Failed to add media to variant");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
       if (
         error instanceof Error &&
         error.message.includes("already associated")
       ) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
           message: error.message,
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to add media to variant",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -149,47 +105,20 @@ export class VariantMediaController {
     try {
       const { variantId, assetId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
       await this.variantMediaManagementService.removeMediaFromVariant(
         variantId,
         assetId,
       );
 
-      return reply.code(200).send({
-        success: true,
-        message: "Media removed from variant successfully",
-      });
+      return ResponseHelper.ok(reply, "Media removed from variant successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove media from variant");
 
       if (error instanceof Error && error.message.includes("not associated")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to remove media from variant",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -200,36 +129,17 @@ export class VariantMediaController {
     try {
       const { variantId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
       await this.variantMediaManagementService.removeAllVariantMedia(variantId);
 
-      return reply.code(200).send({
-        success: true,
-        message: "All media removed from variant successfully",
-      });
+      return ResponseHelper.ok(reply, "All media removed from variant successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove all variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product variant not found",
-        });
+        return ResponseHelper.notFound(reply, "Product variant not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to remove all variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -244,58 +154,20 @@ export class VariantMediaController {
       const { variantId } = request.params;
       const { assetIds } = request.body;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (!assetIds || !Array.isArray(assetIds)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset IDs must be an array",
-        });
-      }
-
-      // Validate each asset ID
-      for (const assetId of assetIds) {
-        if (!assetId || typeof assetId !== "string") {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "All asset IDs must be valid strings",
-          });
-        }
-      }
-
       await this.variantMediaManagementService.setVariantMedia(
         variantId,
         assetIds,
       );
 
-      return reply.code(200).send({
-        success: true,
-        message: "Variant media set successfully",
-      });
+      return ResponseHelper.ok(reply, "Variant media set successfully");
     } catch (error) {
       request.log.error(error, "Failed to set variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to set variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -306,62 +178,20 @@ export class VariantMediaController {
     try {
       const { variantIds, assetId } = request.body;
 
-      if (
-        !variantIds ||
-        !Array.isArray(variantIds) ||
-        variantIds.length === 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant IDs are required and must be a non-empty array",
-        });
-      }
-
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
-      // Validate each variant ID
-      for (const variantId of variantIds) {
-        if (!variantId || typeof variantId !== "string") {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "All variant IDs must be valid strings",
-          });
-        }
-      }
-
       await this.variantMediaManagementService.addMediaToMultipleVariants(
         variantIds,
         assetId,
       );
 
-      return reply.code(201).send({
-        success: true,
-        message: `Media added to ${variantIds.length} variants successfully`,
-      });
+      return ResponseHelper.created(reply, `Media added to ${variantIds.length} variants successfully`);
     } catch (error) {
       request.log.error(error, "Failed to add media to multiple variants");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to add media to multiple variants",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -372,58 +202,20 @@ export class VariantMediaController {
     try {
       const { variantId, assetIds } = request.body;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (!assetIds || !Array.isArray(assetIds) || assetIds.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset IDs are required and must be a non-empty array",
-        });
-      }
-
-      // Validate each asset ID
-      for (const assetId of assetIds) {
-        if (!assetId || typeof assetId !== "string") {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "All asset IDs must be valid strings",
-          });
-        }
-      }
-
       await this.variantMediaManagementService.addMultipleMediaToVariant(
         variantId,
         assetIds,
       );
 
-      return reply.code(201).send({
-        success: true,
-        message: `${assetIds.length} media assets added to variant successfully`,
-      });
+      return ResponseHelper.created(reply, `${assetIds.length} media assets added to variant successfully`);
     } catch (error) {
       request.log.error(error, "Failed to add multiple media to variant");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to add multiple media to variant",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -436,55 +228,20 @@ export class VariantMediaController {
     try {
       const { sourceVariantId, targetVariantId } = request.params;
 
-      if (!sourceVariantId || typeof sourceVariantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Source variant ID is required and must be a valid string",
-        });
-      }
-
-      if (!targetVariantId || typeof targetVariantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Target variant ID is required and must be a valid string",
-        });
-      }
-
-      if (sourceVariantId === targetVariantId) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Source and target variant IDs must be different",
-        });
-      }
-
       await this.variantMediaManagementService.duplicateVariantMedia(
         sourceVariantId,
         targetVariantId,
       );
 
-      return reply.code(200).send({
-        success: true,
-        message: "Variant media duplicated successfully",
-      });
+      return ResponseHelper.ok(reply, "Variant media duplicated successfully");
     } catch (error) {
       request.log.error(error, "Failed to duplicate variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to duplicate variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -499,40 +256,21 @@ export class VariantMediaController {
       const { productId } = request.params;
       const options = request.query;
 
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
       const productVariantMedia =
         await this.variantMediaManagementService.getProductVariantMedia(
           productId,
           options,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: productVariantMedia,
-      });
+      return ResponseHelper.ok(reply, "Product variant media retrieved successfully", productVariantMedia);
     } catch (error) {
       request.log.error(error, "Failed to get product variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product not found",
-        });
+        return ResponseHelper.notFound(reply, "Product not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve product variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -543,64 +281,21 @@ export class VariantMediaController {
     try {
       const { sourceProductId, targetProductId, variantMapping } = request.body;
 
-      if (!sourceProductId || typeof sourceProductId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Source product ID is required and must be a valid string",
-        });
-      }
-
-      if (!targetProductId || typeof targetProductId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Target product ID is required and must be a valid string",
-        });
-      }
-
-      if (!variantMapping || typeof variantMapping !== "object") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant mapping is required and must be an object",
-        });
-      }
-
-      if (sourceProductId === targetProductId) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Source and target product IDs must be different",
-        });
-      }
-
       await this.variantMediaManagementService.copyProductVariantMedia(
         sourceProductId,
         targetProductId,
         variantMapping,
       );
 
-      return reply.code(200).send({
-        success: true,
-        message: "Product variant media copied successfully",
-      });
+      return ResponseHelper.ok(reply, "Product variant media copied successfully");
     } catch (error) {
       request.log.error(error, "Failed to copy product variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to copy product variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -611,37 +306,18 @@ export class VariantMediaController {
     try {
       const { assetId } = request.params;
 
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
       const variantIds =
         await this.variantMediaManagementService.getVariantsUsingAsset(assetId);
 
-      return reply.code(200).send({
-        success: true,
-        data: variantIds,
-      });
+      return ResponseHelper.ok(reply, "Variants using asset retrieved successfully", variantIds);
     } catch (error) {
       request.log.error(error, "Failed to get variants using asset");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Media asset not found",
-        });
+        return ResponseHelper.notFound(reply, "Media asset not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get variants using asset",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -652,37 +328,18 @@ export class VariantMediaController {
     try {
       const { assetId } = request.params;
 
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
       const usageCount =
         await this.variantMediaManagementService.getAssetUsageCount(assetId);
 
-      return reply.code(200).send({
-        success: true,
-        data: { assetId, usageCount },
-      });
+      return ResponseHelper.ok(reply, "Asset usage count retrieved successfully", { assetId, usageCount });
     } catch (error) {
       request.log.error(error, "Failed to get asset usage count");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Media asset not found",
-        });
+        return ResponseHelper.notFound(reply, "Media asset not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get asset usage count",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -693,48 +350,21 @@ export class VariantMediaController {
     try {
       const { productId, color } = request.params;
 
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
-      if (!color || typeof color !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Color is required and must be a valid string",
-        });
-      }
-
       const colorVariantMedia =
         await this.variantMediaManagementService.getColorVariantMedia(
           productId,
           decodeURIComponent(color),
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: colorVariantMedia,
-      });
+      return ResponseHelper.ok(reply, "Color variant media retrieved successfully", colorVariantMedia);
     } catch (error) {
       request.log.error(error, "Failed to get color variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product not found",
-        });
+        return ResponseHelper.notFound(reply, "Product not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get color variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -745,48 +375,21 @@ export class VariantMediaController {
     try {
       const { productId, size } = request.params;
 
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
-      if (!size || typeof size !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Size is required and must be a valid string",
-        });
-      }
-
       const sizeVariantMedia =
         await this.variantMediaManagementService.getSizeVariantMedia(
           productId,
           decodeURIComponent(size),
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: sizeVariantMedia,
-      });
+      return ResponseHelper.ok(reply, "Size variant media retrieved successfully", sizeVariantMedia);
     } catch (error) {
       request.log.error(error, "Failed to get size variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product not found",
-        });
+        return ResponseHelper.notFound(reply, "Product not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get size variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -797,20 +400,11 @@ export class VariantMediaController {
     try {
       const { productId } = request.query;
 
-      if (productId && typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID must be a valid string if provided",
-        });
-      }
-
       const unusedAssetIds =
         await this.variantMediaManagementService.getUnusedAssets(productId);
 
-      return reply.code(200).send({
-        success: true,
-        data: unusedAssetIds,
+      return ResponseHelper.ok(reply, "Unused assets retrieved successfully", {
+        assets: unusedAssetIds,
         meta: {
           productId: productId || "all",
         },
@@ -819,18 +413,10 @@ export class VariantMediaController {
       request.log.error(error, "Failed to get unused assets");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product not found",
-        });
+        return ResponseHelper.notFound(reply, "Product not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get unused assets",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -841,39 +427,20 @@ export class VariantMediaController {
     try {
       const { variantId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
       const validation =
         await this.variantMediaManagementService.validateVariantMedia(
           variantId,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: validation,
-      });
+      return ResponseHelper.ok(reply, "Variant media validated successfully", validation);
     } catch (error) {
       request.log.error(error, "Failed to validate variant media");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product variant not found",
-        });
+        return ResponseHelper.notFound(reply, "Product variant not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to validate variant media",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -884,39 +451,20 @@ export class VariantMediaController {
     try {
       const { variantId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
       const statistics =
         await this.variantMediaManagementService.getVariantMediaStatistics(
           variantId,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: statistics,
-      });
+      return ResponseHelper.ok(reply, "Variant media statistics retrieved successfully", statistics);
     } catch (error) {
       request.log.error(error, "Failed to get variant media statistics");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product variant not found",
-        });
+        return ResponseHelper.notFound(reply, "Product variant not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get variant media statistics",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

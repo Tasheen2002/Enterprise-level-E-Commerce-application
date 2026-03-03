@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { StripeProvider } from "../../payment-providers/stripe.provider";
 import { getStripeConfig } from "../../config/stripe.config";
 import { PaymentService } from "../../../application/services/payment.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class StripeWebhookController {
   private stripeProvider: StripeProvider;
@@ -24,10 +25,10 @@ export class StripeWebhookController {
       const user = (req as any).user;
 
       if (!orderId || !amount) {
-        return reply.status(400).send({
-          success: false,
-          error: "orderId and amount are required",
-        });
+        return ResponseHelper.badRequest(
+          reply,
+          "orderId and amount are required",
+        );
       }
 
       // Create payment intent in our system
@@ -51,10 +52,10 @@ export class StripeWebhookController {
       });
 
       if (!stripeResult.success) {
-        return reply.status(400).send({
-          success: false,
-          error: stripeResult.error || "Failed to create Stripe payment intent",
-        });
+        return ResponseHelper.badRequest(
+          reply,
+          stripeResult.error || "Failed to create Stripe payment intent",
+        );
       }
 
       // Persist the Stripe intent ID as clientSecret reference
@@ -64,20 +65,14 @@ export class StripeWebhookController {
         });
       }
 
-      return reply.status(201).send({
-        success: true,
-        data: {
-          intentId: paymentIntent.intentId,
-          clientSecret: stripeResult.clientSecret,
-          stripeIntentId: stripeResult.stripeIntentId,
-        },
+      return ResponseHelper.created(reply, "Stripe payment intent created", {
+        intentId: paymentIntent.intentId,
+        clientSecret: stripeResult.clientSecret,
+        stripeIntentId: stripeResult.stripeIntentId,
       });
     } catch (error: any) {
       req.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        error: error.message || "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -93,10 +88,10 @@ export class StripeWebhookController {
       const rawBody = (req as any).rawBody as Buffer;
 
       if (!signature) {
-        return reply.status(400).send({
-          success: false,
-          error: "Missing Stripe-Signature header",
-        });
+        return ResponseHelper.badRequest(
+          reply,
+          "Missing Stripe-Signature header",
+        );
       }
 
       // Verify webhook signature when webhook secret is configured
@@ -109,11 +104,13 @@ export class StripeWebhookController {
             this.webhookSecret,
           );
         } catch (err: any) {
-          req.log.warn(`Stripe webhook signature validation failed: ${err.message}`);
-          return reply.status(401).send({
-            success: false,
-            error: "Invalid webhook signature",
-          });
+          req.log.warn(
+            `Stripe webhook signature validation failed: ${err.message}`,
+          );
+          return ResponseHelper.unauthorized(
+            reply,
+            "Invalid webhook signature",
+          );
         }
       } else {
         // Without webhook secret (development), parse body directly
@@ -193,13 +190,10 @@ export class StripeWebhookController {
           req.log.info(`Unhandled Stripe webhook event: ${event.type}`);
       }
 
-      return reply.status(200).send({ received: true });
+      return ResponseHelper.ok(reply, "Webhook received", { received: true });
     } catch (error: any) {
       req.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        error: error.message || "Webhook processing failed",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

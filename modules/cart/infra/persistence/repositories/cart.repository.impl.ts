@@ -9,7 +9,7 @@ import {
   CartItemEntityData,
 } from "../../../domain/entities/cart-item.entity";
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
-import { UserId } from "../../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
 
@@ -110,7 +110,7 @@ export class CartRepositoryImpl implements CartRepository {
   }
 
   // User cart operations
-  async findByUserId(userId: UserId): Promise<ShoppingCart | null> {
+  async findByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null> {
     const cartData = await this.prisma.shoppingCart.findFirst({
       where: { userId: userId.getValue() },
       include: { items: true },
@@ -124,7 +124,7 @@ export class CartRepositoryImpl implements CartRepository {
     return this.mapPrismaToEntity(cartData);
   }
 
-  async findActiveCartByUserId(userId: UserId): Promise<ShoppingCart | null> {
+  async findActiveCartByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null> {
     const cartData = await this.prisma.shoppingCart.findFirst({
       where: {
         userId: userId.getValue(),
@@ -140,7 +140,7 @@ export class CartRepositoryImpl implements CartRepository {
     return this.mapPrismaToEntity(cartData);
   }
 
-  async existsByUserId(userId: UserId): Promise<boolean> {
+  async existsByCartOwnerId(userId: CartOwnerId): Promise<boolean> {
     const count = await this.prisma.shoppingCart.count({
       where: { userId: userId.getValue() },
     });
@@ -189,7 +189,7 @@ export class CartRepositoryImpl implements CartRepository {
 
   // Cart management operations
   async createUserCart(
-    userId: UserId,
+    userId: CartOwnerId,
     currency: Currency,
   ): Promise<ShoppingCart> {
     const cart = ShoppingCart.createForUser({
@@ -214,7 +214,7 @@ export class CartRepositoryImpl implements CartRepository {
 
   async transferGuestCartToUser(
     guestToken: GuestToken,
-    userId: UserId,
+    userId: CartOwnerId,
   ): Promise<ShoppingCart> {
     const guestCart = await this.findByGuestToken(guestToken);
     if (!guestCart) {
@@ -236,10 +236,10 @@ export class CartRepositoryImpl implements CartRepository {
 
   async mergeGuestCartIntoUserCart(
     guestToken: GuestToken,
-    userId: UserId,
+    userId: CartOwnerId,
   ): Promise<ShoppingCart> {
     const guestCart = await this.findByGuestToken(guestToken);
-    const userCart = await this.findByUserId(userId);
+    const userCart = await this.findByCartOwnerId(userId);
 
     if (!guestCart) {
       throw new Error("Guest cart not found");
@@ -720,7 +720,7 @@ export class CartRepositoryImpl implements CartRepository {
   // Validation operations
   async validateCartOwnership(
     cartId: CartId,
-    userId?: UserId,
+    userId?: CartOwnerId,
     guestToken?: GuestToken,
   ): Promise<boolean> {
     const cart = await this.prisma.shoppingCart.findUnique({
@@ -738,7 +738,7 @@ export class CartRepositoryImpl implements CartRepository {
 
   async isCartAccessible(
     cartId: CartId,
-    userId?: UserId,
+    userId?: CartOwnerId,
     guestToken?: GuestToken,
   ): Promise<boolean> {
     return this.validateCartOwnership(cartId, userId, guestToken);

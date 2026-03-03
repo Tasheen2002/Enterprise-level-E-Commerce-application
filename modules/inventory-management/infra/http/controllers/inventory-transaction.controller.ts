@@ -6,6 +6,7 @@ import {
   ListTransactionsHandler,
 } from "../../../application";
 import { StockManagementService } from "../../../application/services/stock-management.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class InventoryTransactionController {
   private getTransactionsByVariantHandler: GetTransactionsByVariantHandler;
@@ -33,17 +34,9 @@ export class InventoryTransactionController {
       };
 
       const result = await this.getTransactionsByVariantHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else {
-        return reply.code(400).send({ success: false, error: result.error });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to get transactions by variant");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -58,17 +51,9 @@ export class InventoryTransactionController {
       };
 
       const result = await this.listTransactionsHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else {
-        return reply.code(400).send({ success: false, error: result.error });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list transactions");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

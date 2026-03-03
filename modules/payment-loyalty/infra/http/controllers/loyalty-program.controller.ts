@@ -6,6 +6,7 @@ import {
   GetLoyaltyProgramsHandler,
 } from "../../../application";
 import { LoyaltyService } from "../../../application/services/loyalty.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface CreateLoyaltyProgramRequest {
   name: string;
@@ -40,7 +41,12 @@ export class LoyaltyProgramController {
       timestamp: new Date(),
     };
     const result = await this.createHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "Loyalty program created",
+      201,
+    );
   }
 
   /**
@@ -49,6 +55,10 @@ export class LoyaltyProgramController {
    */
   async list(request: FastifyRequest, reply: FastifyReply) {
     const result = await this.listHandler.handle({ timestamp: new Date() });
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Loyalty programs retrieved",
+    );
   }
 }

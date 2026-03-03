@@ -119,15 +119,10 @@ export class CheckoutOrderService {
         );
       }
 
-      // 4. Validate ownership (only enforce if payment not authorized)
-      // If payment is already authorized, allow order creation regardless of token mismatch
-      // This handles cases where guest token changed (cleared localStorage, different browser, etc.)
-      if (dto.userId && checkout.getUserId()?.toString() !== dto.userId) {
+      if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
         throw new Error("Checkout does not belong to user");
       }
 
-      // For guest checkouts, we're more lenient: if payment is authorized, we trust it
-      // The payment authorization itself validates the user's intent to purchase
       if (
         dto.guestToken &&
         checkout.getGuestToken()?.toString() !== dto.guestToken &&
@@ -178,7 +173,7 @@ export class CheckoutOrderService {
       const order = await tx.order.create({
         data: {
           orderNo,
-          userId: checkout.getUserId()?.toString(),
+          userId: checkout.getCartOwnerId()?.toString(),
           guestToken: checkout.getGuestToken()?.toString(),
           checkoutId: checkout.getCheckoutId().toString(),
           paymentIntentId: dto.paymentIntentId,

@@ -4,6 +4,7 @@ import {
   GetPaymentTransactionsHandler,
 } from "../../../application";
 import { PaymentService } from "../../../application/services/payment.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class PaymentTransactionController {
   private listHandler: GetPaymentTransactionsHandler;
@@ -18,9 +19,7 @@ export class PaymentTransactionController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const result = await this.listHandler.handle({
@@ -28,6 +27,10 @@ export class PaymentTransactionController {
       userId,
       timestamp: new Date(),
     });
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Payment transactions retrieved",
+    );
   }
 }

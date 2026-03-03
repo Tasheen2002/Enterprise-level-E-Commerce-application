@@ -53,7 +53,7 @@ export class CheckoutService {
     }
 
     // Validate cart belongs to user or guest
-    if (dto.userId && cart.getUserId()?.toString() !== dto.userId) {
+    if (dto.userId && cart.getCartOwnerId()?.toString() !== dto.userId) {
       throw new Error("Cart does not belong to user");
     }
 
@@ -113,7 +113,7 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (userId && checkout.getUserId()?.toString() !== userId) {
+    if (userId && checkout.getCartOwnerId()?.toString() !== userId) {
       throw new Error("Checkout does not belong to user");
     }
 
@@ -133,7 +133,7 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (dto.userId && checkout.getUserId()?.toString() !== dto.userId) {
+    if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
       throw new Error("Checkout does not belong to user");
     }
 
@@ -174,7 +174,7 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (userId && checkout.getUserId()?.toString() !== userId) {
+    if (userId && checkout.getCartOwnerId()?.toString() !== userId) {
       throw new Error("Checkout does not belong to user");
     }
 
@@ -196,7 +196,7 @@ export class CheckoutService {
     return {
       checkoutId: checkout.getCheckoutId().toString(),
       cartId: checkout.getCartId().toString(),
-      userId: checkout.getUserId()?.toString(),
+      userId: checkout.getCartOwnerId()?.toString(),
       guestToken: checkout.getGuestToken()?.toString(),
       status: checkout.getStatus().toString(),
       totalAmount: checkout.getTotalAmount(),

@@ -6,7 +6,7 @@ import {
 } from "../../../domain/entities/checkout.entity";
 import { CheckoutId } from "../../../domain/value-objects/checkout-id.vo";
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
-import { UserId } from "../../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 
 export class CheckoutRepositoryImpl implements CheckoutRepository {
@@ -114,7 +114,7 @@ export class CheckoutRepositoryImpl implements CheckoutRepository {
     });
   }
 
-  async findByUserId(userId: UserId): Promise<Checkout[]> {
+  async findByCartOwnerId(userId: CartOwnerId): Promise<Checkout[]> {
     const checkouts = await this.prisma.checkout.findMany({
       where: { userId: userId.toString() },
       orderBy: { createdAt: "desc" },

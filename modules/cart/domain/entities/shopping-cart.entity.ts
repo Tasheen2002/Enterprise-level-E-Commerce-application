@@ -1,5 +1,5 @@
 import { CartId } from "../value-objects/cart-id.vo";
-import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 import { Currency } from "../value-objects/currency.vo";
 import {
@@ -36,7 +36,7 @@ export interface ShoppingCartEntityData {
 export class ShoppingCart {
   private constructor(
     private readonly cartId: CartId,
-    private readonly userId: UserId | null,
+    private readonly userId: CartOwnerId | null,
     private readonly guestToken: GuestToken | null,
     private currency: Currency,
     private items: CartItem[],
@@ -58,7 +58,7 @@ export class ShoppingCart {
     data: CreateShoppingCartData & { userId: string },
   ): ShoppingCart {
     const cartId = CartId.create();
-    const userId = UserId.fromString(data.userId);
+    const userId = CartOwnerId.fromString(data.userId);
     const currency = Currency.fromString(data.currency);
     const now = new Date();
 
@@ -96,7 +96,7 @@ export class ShoppingCart {
 
   static reconstitute(data: ShoppingCartEntityData): ShoppingCart {
     const cartId = CartId.fromString(data.cartId);
-    const userId = data.userId ? UserId.fromString(data.userId) : null;
+    const userId = data.userId ? CartOwnerId.fromString(data.userId) : null;
     const guestToken = data.guestToken
       ? GuestToken.fromString(data.guestToken)
       : null;
@@ -120,7 +120,7 @@ export class ShoppingCart {
     return this.cartId;
   }
 
-  getUserId(): UserId | null {
+  getCartOwnerId(): CartOwnerId | null {
     return this.userId;
   }
 
@@ -306,10 +306,10 @@ export class ShoppingCart {
       throw new InvalidOperationError("Cannot transfer user cart to another user");
     }
 
-    const newUserId = UserId.fromString(userId);
+    const newCartOwnerId = CartOwnerId.fromString(userId);
     const transferredCart = new ShoppingCart(
       this.cartId,
-      newUserId,
+      newCartOwnerId,
       null,
       this.currency,
       this.items,

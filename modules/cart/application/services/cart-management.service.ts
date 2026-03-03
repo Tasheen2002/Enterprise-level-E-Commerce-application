@@ -10,7 +10,7 @@ import {
   CreateCartItemData,
 } from "../../domain/entities/cart-item.entity";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
-import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../domain/value-objects/guest-token.vo";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { PromoData } from "../../domain/value-objects/applied-promos.vo";
@@ -168,8 +168,8 @@ export class CartManagementService {
     dto: CreateCartDto & { userId: string },
   ): Promise<CartDto> {
     // Check if user already has an active cart
-    const existingCart = await this.cartRepository.findActiveCartByUserId(
-      UserId.fromString(dto.userId),
+    const existingCart = await this.cartRepository.findActiveCartByCartOwnerId(
+      CartOwnerId.fromString(dto.userId),
     );
 
     if (existingCart) {
@@ -269,8 +269,8 @@ export class CartManagementService {
   }
 
   async getActiveCartByUser(userId: string): Promise<CartDto | null> {
-    const cart = await this.cartRepository.findActiveCartByUserId(
-      UserId.fromString(userId),
+    const cart = await this.cartRepository.findActiveCartByCartOwnerId(
+      CartOwnerId.fromString(userId),
     );
 
     if (cart) {
@@ -351,8 +351,8 @@ export class CartManagementService {
         }
       }
     } else if (dto.userId) {
-      cart = await this.cartRepository.findActiveCartByUserId(
-        UserId.fromString(dto.userId),
+      cart = await this.cartRepository.findActiveCartByCartOwnerId(
+        CartOwnerId.fromString(dto.userId),
       );
       if (!cart) {
         // Create new user cart
@@ -531,8 +531,8 @@ export class CartManagementService {
 
     if (dto.mergeWithExisting) {
       // Check if user has existing cart
-      const userCart = await this.cartRepository.findActiveCartByUserId(
-        UserId.fromString(dto.userId),
+      const userCart = await this.cartRepository.findActiveCartByCartOwnerId(
+        CartOwnerId.fromString(dto.userId),
       );
 
       if (userCart) {
@@ -623,11 +623,11 @@ export class CartManagementService {
     userId?: string,
     guestToken?: string,
   ): void {
-    const cartUserId = cart.getUserId()?.getValue();
+    const cartCartOwnerId = cart.getCartOwnerId()?.getValue();
     const cartGuestToken = cart.getGuestToken()?.getValue();
 
-    if (cartUserId) {
-      if (!userId || cartUserId !== userId) {
+    if (cartCartOwnerId) {
+      if (!userId || cartCartOwnerId !== userId) {
         throw new Error("Unauthorized: Cart does not belong to user");
       }
     } else if (cartGuestToken) {
@@ -669,7 +669,7 @@ export class CartManagementService {
 
     return {
       cartId: cart.getCartId().getValue(),
-      userId: cart.getUserId()?.getValue(),
+      userId: cart.getCartOwnerId()?.getValue(),
       guestToken: cart.getGuestToken()?.getValue(),
       currency: cart.getCurrency().getValue(),
       items,

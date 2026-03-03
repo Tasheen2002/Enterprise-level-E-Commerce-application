@@ -1,6 +1,6 @@
 import { CheckoutId } from "../value-objects/checkout-id.vo";
 import { CartId } from "../value-objects/cart-id.vo";
-import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 import { Currency } from "../value-objects/currency.vo";
 import { CheckoutStatus } from "../value-objects/checkout-status.vo";
@@ -38,7 +38,7 @@ export class Checkout {
   private constructor(
     private readonly checkoutId: CheckoutId,
     private readonly cartId: CartId,
-    private readonly userId: UserId | null,
+    private readonly userId: CartOwnerId | null,
     private readonly guestToken: GuestToken | null,
     private status: CheckoutStatus,
     private readonly totalAmount: number,
@@ -62,7 +62,7 @@ export class Checkout {
   static create(data: CreateCheckoutData): Checkout {
     const checkoutId = CheckoutId.create();
     const cartId = CartId.fromString(data.cartId);
-    const userId = data.userId ? UserId.fromString(data.userId) : null;
+    const userId = data.userId ? CartOwnerId.fromString(data.userId) : null;
     const guestToken = data.guestToken
       ? GuestToken.fromString(data.guestToken)
       : null;
@@ -90,7 +90,7 @@ export class Checkout {
   static fromData(data: CheckoutEntityData): Checkout {
     const checkoutId = CheckoutId.fromString(data.checkoutId);
     const cartId = CartId.fromString(data.cartId);
-    const userId = data.userId ? UserId.fromString(data.userId) : null;
+    const userId = data.userId ? CartOwnerId.fromString(data.userId) : null;
     const guestToken = data.guestToken
       ? GuestToken.fromString(data.guestToken)
       : null;
@@ -163,7 +163,7 @@ export class Checkout {
     return this.cartId;
   }
 
-  getUserId(): UserId | null {
+  getCartOwnerId(): CartOwnerId | null {
     return this.userId;
   }
 
@@ -219,12 +219,12 @@ export class Checkout {
       throw new InvalidOperationError("Checkout already belongs to a user");
     }
 
-    const newUserId = UserId.fromString(userId);
+    const newCartOwnerId = CartOwnerId.fromString(userId);
 
     return new Checkout(
       this.checkoutId,
       this.cartId,
-      newUserId,
+      newCartOwnerId,
       null,
       this.status,
       this.totalAmount,

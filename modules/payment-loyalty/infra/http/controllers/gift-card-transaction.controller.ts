@@ -4,6 +4,7 @@ import {
   GetGiftCardTransactionsHandler,
 } from "../../../application";
 import { GiftCardService } from "../../../application/services/gift-card.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class GiftCardTransactionController {
   private listHandler: GetGiftCardTransactionsHandler;
@@ -20,6 +21,10 @@ export class GiftCardTransactionController {
       giftCardId: request.params.giftCardId,
       timestamp: new Date(),
     });
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Gift card transactions retrieved",
+    );
   }
 }
