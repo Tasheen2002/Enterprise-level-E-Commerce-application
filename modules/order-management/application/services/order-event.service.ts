@@ -3,7 +3,27 @@ import {
   OrderEventQueryOptions,
 } from "../../domain/repositories/order-event.repository";
 import { OrderEvent } from "../../domain/entities/order-event.entity";
-import { OrderEventTypes } from "../../domain/enums/order-event-types.enum";
+
+export enum OrderEventTypes {
+  ORDER_CREATED = "order.created",
+  ORDER_UPDATED = "order.updated",
+  ORDER_CANCELLED = "order.cancelled",
+  ORDER_REFUNDED = "order.refunded",
+  ORDER_STATUS_CHANGED = "order.status_changed",
+  ORDER_PAID = "order.paid",
+  ORDER_FULFILLED = "order.fulfilled",
+  ORDER_ITEM_ADDED = "order.item_added",
+  ORDER_ITEM_REMOVED = "order.item_removed",
+  ORDER_ITEM_UPDATED = "order.item_updated",
+  ORDER_SHIPMENT_CREATED = "order.shipment_created",
+  ORDER_SHIPMENT_SHIPPED = "order.shipment_shipped",
+  ORDER_SHIPMENT_DELIVERED = "order.shipment_delivered",
+  PAYMENT_RECEIVED = "payment.received",
+  PAYMENT_FAILED = "payment.failed",
+  PAYMENT_REFUNDED = "payment.refunded",
+  ORDER_SYSTEM_NOTE = "order.system_note",
+  ORDER_ADMIN_ACTION = "order.admin_action",
+}
 
 export interface LogEventData {
   orderId: string;

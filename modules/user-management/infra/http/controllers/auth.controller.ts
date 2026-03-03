@@ -21,7 +21,7 @@ import {
 } from "../../../application";
 import { AuthenticationService } from "../../../application/services/authentication.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { UserRole } from "../../../domain/enums/user-role.enum";
+import { UserRole } from "../../../domain/entities/user.entity";
 import { TokenBlacklistService } from "../security/token-blacklist";
 import crypto from "crypto";
 

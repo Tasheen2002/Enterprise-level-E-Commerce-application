@@ -14,7 +14,7 @@ import {
   InvalidPasswordError,
   EmailAlreadyVerifiedError,
 } from "../../domain/errors/user-management.errors";
-import { UserStatus } from "../../domain/enums/user-status.enum";
+import { UserStatus } from "../../domain/entities/user.entity";
 
 export interface LoginCredentials {
   email: string;

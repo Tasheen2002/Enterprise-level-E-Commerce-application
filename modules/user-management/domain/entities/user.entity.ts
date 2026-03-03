@@ -6,12 +6,23 @@ import {
   EmailAlreadyVerifiedError,
   InvalidOperationError,
 } from "../errors/user-management.errors";
-import { UserRole } from "../enums/user-role.enum";
-import { UserStatus } from "../enums/user-status.enum";
 import { AggregateRoot } from "@/api/src/shared/domain/aggregate-root";
 
-export { UserRole } from "../enums/user-role.enum";
-export { UserStatus } from "../enums/user-status.enum";
+export enum UserRole {
+  GUEST = "GUEST",
+  CUSTOMER = "CUSTOMER",
+  ADMIN = "ADMIN",
+  INVENTORY_STAFF = "INVENTORY_STAFF",
+  CUSTOMER_SERVICE = "CUSTOMER_SERVICE",
+  ANALYST = "ANALYST",
+  VENDOR = "VENDOR",
+}
+
+export enum UserStatus {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  BLOCKED = "blocked",
+}
 
 export class User extends AggregateRoot {
   private constructor(
