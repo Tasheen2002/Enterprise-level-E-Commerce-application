@@ -14,6 +14,7 @@ import {
   GetPaymentTransactionsHandler,
 } from "../../../application";
 import { PaymentService } from "../../../application/services/payment.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface CreatePaymentIntentRequest {
   orderId: string;
@@ -60,9 +61,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const cmd: CreatePaymentIntentCommand = {
@@ -71,7 +70,12 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.createHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "Payment intent created",
+      201,
+    );
   }
 
   async process(
@@ -80,9 +84,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const cmd: ProcessPaymentCommand = {
@@ -91,7 +93,7 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.processHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Payment processed");
   }
 
   async refund(
@@ -100,9 +102,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const cmd: RefundPaymentCommand = {
@@ -111,7 +111,7 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.refundHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Payment refunded");
   }
 
   async void(
@@ -120,9 +120,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const cmd: VoidPaymentCommand = {
@@ -131,7 +129,7 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.voidHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Payment voided");
   }
 
   async get(
@@ -142,9 +140,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const query: GetPaymentIntentQuery = {
@@ -154,7 +150,12 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.getHandler.handle(query);
-    return reply.code(result.success ? 200 : 404).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Payment intent retrieved",
+      "Payment intent not found",
+    );
   }
 
   async listTransactions(
@@ -163,9 +164,7 @@ export class PaymentIntentController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const q: GetPaymentTransactionsQuery = {
@@ -174,6 +173,10 @@ export class PaymentIntentController {
       timestamp: new Date(),
     };
     const result = await this.txnsHandler.handle(q);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Payment transactions retrieved",
+    );
   }
 }

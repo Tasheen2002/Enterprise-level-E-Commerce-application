@@ -10,6 +10,7 @@ import {
   ListPickupReservationsHandler,
 } from "../../../application";
 import { PickupReservationService } from "../../../application/services/pickup-reservation.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class PickupReservationController {
   private createReservationHandler: CreatePickupReservationHandler;
@@ -40,23 +41,14 @@ export class PickupReservationController {
       const { reservationId } = request.params;
       const query: GetPickupReservationQuery = { reservationId };
       const result = await this.getReservationHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else if (result.success && result.data === null) {
-        return reply
-          .code(404)
-          .send({ success: false, error: "Reservation not found" });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Reservation retrieved",
+        "Reservation not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get reservation");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -78,19 +70,9 @@ export class PickupReservationController {
         activeOnly,
       };
       const result = await this.listReservationsHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Reservations retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list reservations");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -109,9 +91,10 @@ export class PickupReservationController {
 
       if (result.success && result.data) {
         const reservation = result.data;
-        return reply.code(201).send({
-          success: true,
-          data: {
+        return ResponseHelper.created(
+          reply,
+          "Reservation created successfully",
+          {
             reservationId: reservation.getReservationId().getValue(),
             orderId: reservation.getOrderId(),
             variantId: reservation.getVariantId(),
@@ -119,18 +102,14 @@ export class PickupReservationController {
             qty: reservation.getQty(),
             expiresAt: reservation.getExpiresAt(),
           },
-          message: "Reservation created successfully",
-        });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
+        );
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to create reservation",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create reservation");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -143,22 +122,13 @@ export class PickupReservationController {
       const command: CancelPickupReservationCommand = { reservationId };
 
       const result = await this.cancelReservationHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Reservation cancelled successfully",
-        });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Reservation cancelled successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to cancel reservation");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

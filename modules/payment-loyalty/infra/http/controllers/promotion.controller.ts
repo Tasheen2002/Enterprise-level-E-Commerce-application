@@ -8,6 +8,7 @@ import {
   GetActivePromotionsHandler,
 } from "../../../application";
 import { PromotionService } from "../../../application/services/promotion.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface CreatePromotionRequest {
   code?: string;
@@ -50,7 +51,7 @@ export class PromotionController {
       timestamp: new Date(),
     };
     const result = await this.createHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Promotion created", 201);
   }
 
   async apply(
@@ -62,13 +63,17 @@ export class PromotionController {
       timestamp: new Date(),
     };
     const result = await this.applyHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "Promotion applied");
   }
 
   async listActive(_req: FastifyRequest, reply: FastifyReply) {
     const result = await this.listActiveHandler.handle({
       timestamp: new Date(),
     });
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Active promotions retrieved",
+    );
   }
 }

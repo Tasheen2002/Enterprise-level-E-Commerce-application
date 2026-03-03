@@ -1,7 +1,7 @@
 import { ShoppingCart } from "../entities/shopping-cart.entity";
 import { CartId } from "../value-objects/cart-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
-import { UserId } from "../../../user-management/domain/value-objects/user-id.vo";
+import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { Currency } from "../value-objects/currency.vo";
 
 export interface CartRepository {
@@ -9,26 +9,26 @@ export interface CartRepository {
   findById(cartId: CartId): Promise<ShoppingCart | null>;
   update(cart: ShoppingCart): Promise<void>;
   delete(cartId: CartId): Promise<void>;
-  findByUserId(userId: UserId): Promise<ShoppingCart | null>;
-  findActiveCartByUserId(userId: UserId): Promise<ShoppingCart | null>;
-  existsByUserId(userId: UserId): Promise<boolean>;
+  findByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
+  findActiveCartByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
+  existsByCartOwnerId(userId: CartOwnerId): Promise<boolean>;
   findByGuestToken(guestToken: GuestToken): Promise<ShoppingCart | null>;
   findActiveCartByGuestToken(
     guestToken: GuestToken,
   ): Promise<ShoppingCart | null>;
   existsByGuestToken(guestToken: GuestToken): Promise<boolean>;
-  createUserCart(userId: UserId, currency: Currency): Promise<ShoppingCart>;
+  createUserCart(userId: CartOwnerId, currency: Currency): Promise<ShoppingCart>;
   createGuestCart(
     guestToken: GuestToken,
     currency: Currency,
   ): Promise<ShoppingCart>;
   transferGuestCartToUser(
     guestToken: GuestToken,
-    userId: UserId,
+    userId: CartOwnerId,
   ): Promise<ShoppingCart>;
   mergeGuestCartIntoUserCart(
     guestToken: GuestToken,
-    userId: UserId,
+    userId: CartOwnerId,
   ): Promise<ShoppingCart>;
   findEmptyCarts(olderThanDays?: number): Promise<ShoppingCart[]>;
   findExpiredReservationCarts(): Promise<ShoppingCart[]>;
@@ -111,12 +111,12 @@ export interface CartRepository {
   }): Promise<ShoppingCart[]>;
   validateCartOwnership(
     cartId: CartId,
-    userId?: UserId,
+    userId?: CartOwnerId,
     guestToken?: GuestToken,
   ): Promise<boolean>;
   isCartAccessible(
     cartId: CartId,
-    userId?: UserId,
+    userId?: CartOwnerId,
     guestToken?: GuestToken,
   ): Promise<boolean>;
   getCartSummary(cartId: CartId): Promise<{

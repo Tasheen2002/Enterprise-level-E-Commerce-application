@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { EditorialLookManagementService } from "../../../application/services/editorial-look-management.service";
 import { CreateEditorialLookData } from "../../../domain/entities/editorial-look.entity";
 import { EditorialLookQueryOptions } from "../../../domain/repositories/editorial-look.repository";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 interface CreateEditorialLookRequest {
   title: string;
@@ -133,9 +134,8 @@ export class EditorialLookController {
           );
       }
 
-      return reply.code(200).send({
-        success: true,
-        data: Array.isArray(looks)
+      return ResponseHelper.ok(reply, "Editorial looks retrieved successfully", {
+        looks: Array.isArray(looks)
           ? looks.map((look) => ({
               id: look.getId().getValue(),
               title: look.getTitle(),
@@ -154,11 +154,7 @@ export class EditorialLookController {
       });
     } catch (error) {
       request.log.error(error, "Failed to get editorial looks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve editorial looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -169,44 +165,25 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const look =
         await this.editorialLookManagementService.getEditorialLookById(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
+      return ResponseHelper.ok(reply, "Editorial look retrieved successfully", {
+        id: look.getId().getValue(),
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId: look.getHeroAssetId()?.getValue() || null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to get editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -217,59 +194,9 @@ export class EditorialLookController {
     try {
       const lookData = request.body;
 
-      // Basic validation
-      if (
-        !lookData.title ||
-        typeof lookData.title !== "string" ||
-        lookData.title.trim().length === 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Title is required and must be a non-empty string",
-        });
-      }
-
-      // Validate title length
-      if (lookData.title.length > 200) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Title cannot be longer than 200 characters",
-        });
-      }
-
-      // Validate HTML content length if provided
-      if (lookData.storyHtml && lookData.storyHtml.length > 100000) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Story content cannot exceed 100,000 characters",
-        });
-      }
-
-      // Validate publishedAt if provided
       let publishedAt: Date | undefined;
       if (lookData.publishedAt) {
         publishedAt = new Date(lookData.publishedAt);
-        if (isNaN(publishedAt.getTime())) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "publishedAt must be a valid ISO date string",
-          });
-        }
-
-        // Allow any publishedAt date (past, present, future)
-      }
-
-      // Validate productIds if provided
-      if (lookData.productIds && !Array.isArray(lookData.productIds)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product IDs must be an array",
-        });
       }
 
       const createData: CreateEditorialLookData = {
@@ -285,42 +212,31 @@ export class EditorialLookController {
           createData,
         );
 
-      return reply.code(201).send({
-        success: true,
-        data: {
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look created successfully",
+      return ResponseHelper.created(reply, "Editorial look created successfully", {
+        id: look.getId().getValue(),
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId: look.getHeroAssetId()?.getValue() || null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to create editorial look");
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
           message: "Editorial look with this title already exists",
         });
       }
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: error.message,
-        });
+        return ResponseHelper.badRequest(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -335,65 +251,12 @@ export class EditorialLookController {
       const { id } = request.params;
       const updateData = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      // Validate title if provided
-      if (updateData.title !== undefined) {
-        if (
-          typeof updateData.title !== "string" ||
-          updateData.title.trim().length === 0
-        ) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "Title must be a non-empty string",
-          });
-        }
-
-        if (updateData.title.length > 200) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "Title cannot be longer than 200 characters",
-          });
-        }
-      }
-
-      // Validate HTML content if provided
-      if (
-        updateData.storyHtml !== undefined &&
-        updateData.storyHtml &&
-        updateData.storyHtml.length > 100000
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Story content cannot exceed 100,000 characters",
-        });
-      }
-
-      // Validate publishedAt if provided
       let publishedAt: Date | null | undefined;
       if (updateData.publishedAt !== undefined) {
         if (updateData.publishedAt === null) {
           publishedAt = null;
         } else {
           publishedAt = new Date(updateData.publishedAt);
-          if (isNaN(publishedAt.getTime())) {
-            return reply.code(400).send({
-              success: false,
-              error: "Bad Request",
-              message: "publishedAt must be a valid ISO date string or null",
-            });
-          }
-
-          // Allow any publishedAt date (past, present, future)
         }
       }
 
@@ -410,45 +273,34 @@ export class EditorialLookController {
           updates,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look updated successfully",
+      return ResponseHelper.ok(reply, "Editorial look updated successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to update editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
           message: "Editorial look with this title already exists",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to update editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -459,36 +311,17 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       await this.editorialLookManagementService.deleteEditorialLook(id);
 
-      return reply.code(200).send({
-        success: true,
-        message: "Editorial look deleted successfully",
-      });
+      return ResponseHelper.ok(reply, "Editorial look deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to delete editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -499,58 +332,34 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const look = await this.editorialLookManagementService.publishLook(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look published successfully",
+      return ResponseHelper.ok(reply, "Editorial look published successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to publish editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
       if (
         error instanceof Error &&
         error.message.includes("cannot be published")
       ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: error.message,
-        });
+        return ResponseHelper.badRequest(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to publish editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -561,47 +370,27 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const look = await this.editorialLookManagementService.unpublishLook(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look unpublished successfully",
+      return ResponseHelper.ok(reply, "Editorial look unpublished successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to unpublish editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to unpublish editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -616,31 +405,7 @@ export class EditorialLookController {
       const { id } = request.params;
       const { publishDate } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!publishDate || typeof publishDate !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message:
-            "Publish date is required and must be a valid ISO date string",
-        });
-      }
-
       const publishDateTime = new Date(publishDate);
-      if (isNaN(publishDateTime.getTime())) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Publish date must be a valid ISO date string",
-        });
-      }
 
       // Allow any publication date (past, present, future)
 
@@ -650,48 +415,32 @@ export class EditorialLookController {
           publishDateTime,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look scheduled for publication successfully",
+      return ResponseHelper.ok(reply, "Editorial look scheduled for publication successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to schedule editorial look publication");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
       if (
         error instanceof Error &&
         error.message.includes("cannot be scheduled")
       ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: error.message,
-        });
+        return ResponseHelper.badRequest(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to schedule editorial look publication",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -700,24 +449,17 @@ export class EditorialLookController {
       const looks =
         await this.editorialLookManagementService.getReadyToPublishLooks();
 
-      return reply.code(200).send({
-        success: true,
-        data: looks.map((look) => ({
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        })),
-      });
+      return ResponseHelper.ok(reply, "Ready to publish looks retrieved successfully", looks.map((look) => ({
+        id: look.getId().getValue(),
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId: look.getHeroAssetId()?.getValue() || null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
+      })));
     } catch (error) {
       request.log.error(error, "Failed to get ready to publish looks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve ready to publish looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -729,31 +471,23 @@ export class EditorialLookController {
       const result =
         await this.editorialLookManagementService.processScheduledPublications();
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          published: result.published.map((look) => ({
-            id: { value: look.getId().getValue() },
-            title: look.getTitle(),
-            storyHtml: look.getStoryHtml(),
-            heroAssetId:
-              look.getHeroAssetId() != null
-                ? { value: look.getHeroAssetId()!.getValue() }
-                : null,
-            publishedAt: look.getPublishedAt(),
-            productIds: look.getProductIds().map((id) => id.getValue()),
-          })),
-          errors: result.errors,
-        },
-        message: `${result.published.length} editorial looks published successfully`,
+      return ResponseHelper.ok(reply, `${result.published.length} editorial looks published successfully`, {
+        published: result.published.map((look) => ({
+          id: { value: look.getId().getValue() },
+          title: look.getTitle(),
+          storyHtml: look.getStoryHtml(),
+          heroAssetId:
+            look.getHeroAssetId() != null
+              ? { value: look.getHeroAssetId()!.getValue() }
+              : null,
+          publishedAt: look.getPublishedAt(),
+          productIds: look.getProductIds().map((id) => id.getValue()),
+        })),
+        errors: result.errors,
       });
     } catch (error) {
       request.log.error(error, "Failed to process scheduled publications");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to process scheduled publications",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -768,69 +502,37 @@ export class EditorialLookController {
       const { id } = request.params;
       const { assetId } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
       const look = await this.editorialLookManagementService.setHeroImage(
         id,
         assetId,
       );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Hero image set successfully",
+      return ResponseHelper.ok(reply, "Hero image set successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to set hero image");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
       if (
         error instanceof Error &&
         error.message.includes("must be an image")
       ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: error.message,
-        });
+        return ResponseHelper.badRequest(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to set hero image",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -841,48 +543,28 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const look =
         await this.editorialLookManagementService.removeHeroImage(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Hero image removed successfully",
+      return ResponseHelper.ok(reply, "Hero image removed successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to remove hero image");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to remove hero image",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -893,43 +575,20 @@ export class EditorialLookController {
     try {
       const { assetId } = request.params;
 
-      if (!assetId || typeof assetId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Asset ID is required and must be a valid string",
-        });
-      }
-
-      console.log(
-        `[DEBUG] Controller: searching for looks with heroAssetId: ${assetId}`,
-      );
-
       const looks =
         await this.editorialLookManagementService.getLooksByHeroAsset(assetId);
 
-      console.log(
-        `[DEBUG] Controller: found ${looks.length} looks with heroAssetId: ${assetId}`,
-      );
-
-      return reply.code(200).send({
-        success: true,
-        data: looks.map((look) => ({
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        })),
-      });
+      return ResponseHelper.ok(reply, "Looks by hero asset retrieved successfully", looks.map((look) => ({
+        id: look.getId().getValue(),
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId: look.getHeroAssetId()?.getValue() || null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
+      })));
     } catch (error) {
       request.log.error(error, "Failed to get looks by hero asset");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve looks by hero asset",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -940,55 +599,29 @@ export class EditorialLookController {
     try {
       const { id, productId } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
       await this.editorialLookManagementService.addProductToLook(id, productId);
 
-      return reply.code(200).send({
-        success: true,
-        message: "Product added to editorial look successfully",
-      });
+      return ResponseHelper.ok(reply, "Product added to editorial look successfully");
     } catch (error) {
       request.log.error(error, "Failed to add product to look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
       if (
         error instanceof Error &&
         error.message.includes("already associated")
       ) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
           message: error.message,
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to add product to editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -999,47 +632,20 @@ export class EditorialLookController {
     try {
       const { id, productId } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
       await this.editorialLookManagementService.removeProductFromLook(
         id,
         productId,
       );
 
-      return reply.code(200).send({
-        success: true,
-        message: "Product removed from editorial look successfully",
-      });
+      return ResponseHelper.ok(reply, "Product removed from editorial look successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove product from look");
 
       if (error instanceof Error && error.message.includes("not associated")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to remove product from editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1054,58 +660,30 @@ export class EditorialLookController {
       const { id } = request.params;
       const { productIds } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!productIds || !Array.isArray(productIds)) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product IDs must be an array",
-        });
-      }
-
       const look = await this.editorialLookManagementService.setLookProducts(
         id,
         productIds,
       );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look products updated successfully",
+      return ResponseHelper.ok(reply, "Editorial look products updated successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to set look products");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
+        return ResponseHelper.notFound(reply, error.message);
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to set editorial look products",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1116,37 +694,18 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const productIds =
         await this.editorialLookManagementService.getLookProducts(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: productIds,
-      });
+      return ResponseHelper.ok(reply, "Editorial look products retrieved successfully", productIds);
     } catch (error) {
       request.log.error(error, "Failed to get look products");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get editorial look products",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1157,37 +716,18 @@ export class EditorialLookController {
     try {
       const { productId } = request.params;
 
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
       const lookIds =
         await this.editorialLookManagementService.getProductLooks(productId);
 
-      return reply.code(200).send({
-        success: true,
-        data: lookIds,
-      });
+      return ResponseHelper.ok(reply, "Product looks retrieved successfully", lookIds);
     } catch (error) {
       request.log.error(error, "Failed to get product looks");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Product not found",
-        });
+        return ResponseHelper.notFound(reply, "Product not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get product looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1208,14 +748,6 @@ export class EditorialLookController {
         includeUnpublished = false,
       } = request.query;
 
-      if (!productId || typeof productId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Product ID is required and must be a valid string",
-        });
-      }
-
       const serviceOptions: EditorialLookQueryOptions = {
         limit: Math.min(100, Math.max(1, limit)),
         offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
@@ -1229,9 +761,8 @@ export class EditorialLookController {
         serviceOptions,
       );
 
-      return reply.code(200).send({
-        success: true,
-        data: looks.map((look) => ({
+      return ResponseHelper.ok(reply, "Looks by product retrieved successfully", {
+        looks: looks.map((look) => ({
           id: look.getId().getValue(),
           title: look.getTitle(),
           storyHtml: look.getStoryHtml(),
@@ -1248,11 +779,7 @@ export class EditorialLookController {
       });
     } catch (error) {
       request.log.error(error, "Failed to get looks by product");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to get looks by product",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1267,66 +794,30 @@ export class EditorialLookController {
       const { id } = request.params;
       const { storyHtml } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (!storyHtml || typeof storyHtml !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Story HTML content is required and must be a string",
-        });
-      }
-
-      if (storyHtml.length > 100000) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Story content cannot exceed 100,000 characters",
-        });
-      }
-
       const look = await this.editorialLookManagementService.updateStoryContent(
         id,
         storyHtml,
       );
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Story content updated successfully",
+      return ResponseHelper.ok(reply, "Story content updated successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to update story content");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to update story content",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1337,48 +828,28 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const look =
         await this.editorialLookManagementService.clearStoryContent(id);
 
-      return reply.code(200).send({
-        success: true,
-        data: {
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Story content cleared successfully",
+      return ResponseHelper.ok(reply, "Story content cleared successfully", {
+        id: { value: look.getId().getValue() },
+        title: look.getTitle(),
+        storyHtml: look.getStoryHtml(),
+        heroAssetId:
+          look.getHeroAssetId() != null
+            ? { value: look.getHeroAssetId()!.getValue() }
+            : null,
+        publishedAt: look.getPublishedAt(),
+        productIds: look.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to clear story content");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to clear story content",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1387,17 +858,10 @@ export class EditorialLookController {
       const stats =
         await this.editorialLookManagementService.getEditorialLookStats();
 
-      return reply.code(200).send({
-        success: true,
-        data: stats,
-      });
+      return ResponseHelper.ok(reply, "Editorial look statistics retrieved successfully", stats);
     } catch (error) {
       request.log.error(error, "Failed to get editorial look statistics");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve editorial look statistics",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1413,17 +877,10 @@ export class EditorialLookController {
           Math.min(50, Math.max(1, limit)),
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: popularProducts,
-      });
+      return ResponseHelper.ok(reply, "Popular products retrieved successfully", popularProducts);
     } catch (error) {
       request.log.error(error, "Failed to get popular products");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve popular products",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1433,33 +890,6 @@ export class EditorialLookController {
   ) {
     try {
       const { looks } = request.body;
-
-      if (!looks || !Array.isArray(looks) || looks.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial looks array is required and must not be empty",
-        });
-      }
-
-      if (looks.length > 20) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cannot create more than 20 editorial looks at once",
-        });
-      }
-
-      // Validate each look
-      for (const lookData of looks) {
-        if (!lookData.title || typeof lookData.title !== "string") {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: "All editorial looks must have a title",
-          });
-        }
-      }
 
       const createData: CreateEditorialLookData[] = looks.map((look) => ({
         title: look.title,
@@ -1474,9 +904,10 @@ export class EditorialLookController {
           createData,
         );
 
-      return reply.code(201).send({
-        success: true,
-        data: createdLooks.map((look) => ({
+      return ResponseHelper.created(
+        reply,
+        `${createdLooks.length} editorial looks created successfully`,
+        createdLooks.map((look) => ({
           id: look.getId().getValue(),
           title: look.getTitle(),
           storyHtml: look.getStoryHtml(),
@@ -1484,15 +915,10 @@ export class EditorialLookController {
           publishedAt: look.getPublishedAt(),
           productIds: look.getProductIds().map((id) => id.getValue()),
         })),
-        message: `${createdLooks.length} editorial looks created successfully`,
-      });
+      );
     } catch (error) {
       request.log.error(error, "Failed to create bulk editorial looks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create editorial looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1503,39 +929,19 @@ export class EditorialLookController {
     try {
       const { ids } = request.body;
 
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look IDs array is required and must not be empty",
-        });
-      }
-
-      if (ids.length > 50) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cannot delete more than 50 editorial looks at once",
-        });
-      }
-
       const result =
         await this.editorialLookManagementService.deleteMultipleEditorialLooks(
           ids,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: result,
-        message: `${result.deleted.length} editorial looks deleted successfully`,
-      });
+      return ResponseHelper.ok(
+        reply,
+        `${result.deleted.length} editorial looks deleted successfully`,
+        result,
+      );
     } catch (error) {
       request.log.error(error, "Failed to delete bulk editorial looks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to delete editorial looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1546,37 +952,17 @@ export class EditorialLookController {
     try {
       const { ids } = request.body;
 
-      if (!ids || !Array.isArray(ids) || ids.length === 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look IDs array is required and must not be empty",
-        });
-      }
-
-      if (ids.length > 20) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cannot publish more than 20 editorial looks at once",
-        });
-      }
-
       const result =
         await this.editorialLookManagementService.publishMultipleLooks(ids);
 
-      return reply.code(200).send({
-        success: true,
-        data: result,
-        message: `${result.published.length} editorial looks published successfully`,
-      });
+      return ResponseHelper.ok(
+        reply,
+        `${result.published.length} editorial looks published successfully`,
+        result,
+      );
     } catch (error) {
       request.log.error(error, "Failed to publish bulk editorial looks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to publish editorial looks",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1587,23 +973,12 @@ export class EditorialLookController {
     try {
       const { id } = request.params;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
       const validation =
         await this.editorialLookManagementService.validateLookForPublication(
           id,
         );
 
-      return reply.code(200).send({
-        success: true,
-        data: validation,
-      });
+      return ResponseHelper.ok(reply, "Editorial look validated for publication", validation);
     } catch (error) {
       request.log.error(
         error,
@@ -1611,18 +986,10 @@ export class EditorialLookController {
       );
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to validate editorial look for publication",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -1637,76 +1004,37 @@ export class EditorialLookController {
       const { id } = request.params;
       const { newTitle } = request.body;
 
-      if (!id || typeof id !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Editorial look ID is required and must be a valid string",
-        });
-      }
-
-      if (
-        !newTitle ||
-        typeof newTitle !== "string" ||
-        newTitle.trim().length === 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "New title is required and must be a non-empty string",
-        });
-      }
-
-      if (newTitle.length > 200) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "New title cannot be longer than 200 characters",
-        });
-      }
-
       const duplicatedLook =
         await this.editorialLookManagementService.duplicateEditorialLook(
           id,
           newTitle,
         );
 
-      return reply.code(201).send({
-        success: true,
-        data: {
-          id: duplicatedLook.getId().getValue(),
-          title: duplicatedLook.getTitle(),
-          storyHtml: duplicatedLook.getStoryHtml(),
-          heroAssetId: duplicatedLook.getHeroAssetId()?.getValue() || null,
-          publishedAt: duplicatedLook.getPublishedAt(),
-          productIds: duplicatedLook.getProductIds().map((id) => id.getValue()),
-        },
-        message: "Editorial look duplicated successfully",
+      return ResponseHelper.created(reply, "Editorial look duplicated successfully", {
+        id: duplicatedLook.getId().getValue(),
+        title: duplicatedLook.getTitle(),
+        storyHtml: duplicatedLook.getStoryHtml(),
+        heroAssetId: duplicatedLook.getHeroAssetId()?.getValue() || null,
+        publishedAt: duplicatedLook.getPublishedAt(),
+        productIds: duplicatedLook.getProductIds().map((id) => id.getValue()),
       });
     } catch (error) {
       request.log.error(error, "Failed to duplicate editorial look");
 
       if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Editorial look not found",
-        });
+        return ResponseHelper.notFound(reply, "Editorial look not found");
       }
 
       if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.code(409).send({
+        return reply.status(409).send({
           success: false,
+          statusCode: 409,
           error: "Conflict",
           message: "Editorial look with this title already exists",
         });
       }
 
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to duplicate editorial look",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

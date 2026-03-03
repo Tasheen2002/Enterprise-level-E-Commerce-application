@@ -9,6 +9,7 @@ import {
 } from "../../../application";
 import { LoyaltyService } from "../../../application/services/loyalty.service";
 import { LoyaltyTransactionService } from "../../../application/services/loyalty-transaction.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface AwardPointsRequest {
   userId: string;
@@ -48,7 +49,12 @@ export class LoyaltyTransactionController {
       timestamp: new Date(),
     };
     const result = await this.awardHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "Loyalty points awarded",
+      201,
+    );
   }
 
   async redeem(
@@ -60,7 +66,12 @@ export class LoyaltyTransactionController {
       timestamp: new Date(),
     };
     const result = await this.redeemHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "Loyalty points redeemed",
+      201,
+    );
   }
 
   /**
@@ -76,6 +87,10 @@ export class LoyaltyTransactionController {
       timestamp: new Date(),
     };
     const result = await this.listHandler.handle(query);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "Loyalty transactions retrieved",
+    );
   }
 }

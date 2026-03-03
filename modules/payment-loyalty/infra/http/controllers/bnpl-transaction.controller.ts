@@ -8,6 +8,7 @@ import {
   GetBnplTransactionsHandler,
 } from "../../../application";
 import { BnplTransactionService } from "../../../application/services/bnpl-transaction.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface CreateBnplTransactionRequest {
   intentId: string;
@@ -37,9 +38,7 @@ export class BnplTransactionController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const cmd: CreateBnplTransactionCommand = {
@@ -48,7 +47,12 @@ export class BnplTransactionController {
       timestamp: new Date(),
     };
     const result = await this.createHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "BNPL transaction created",
+      201,
+    );
   }
 
   async process(
@@ -57,9 +61,7 @@ export class BnplTransactionController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const { bnplId, action } = request.params;
@@ -70,7 +72,7 @@ export class BnplTransactionController {
       timestamp: new Date(),
     };
     const result = await this.processHandler.handle(cmd);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromCommand(reply, result, "BNPL payment processed");
   }
 
   async list(
@@ -81,9 +83,7 @@ export class BnplTransactionController {
   ) {
     const userId = (request as any).user?.userId;
     if (!userId) {
-      return reply
-        .code(401)
-        .send({ success: false, error: "Authentication required" });
+      return ResponseHelper.unauthorized(reply, "Authentication required");
     }
 
     const query: GetBnplTransactionsQuery = {
@@ -92,6 +92,10 @@ export class BnplTransactionController {
       timestamp: new Date(),
     };
     const result = await this.listHandler.handle(query);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(
+      reply,
+      result,
+      "BNPL transactions retrieved",
+    );
   }
 }

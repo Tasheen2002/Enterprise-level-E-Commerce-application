@@ -1,33 +1,32 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreateStockAlertCommand,
-  CreateStockAlertCommandHandler,
+  CreateStockAlertHandler,
   ResolveStockAlertCommand,
-  ResolveStockAlertCommandHandler,
+  ResolveStockAlertHandler,
   GetStockAlertQuery,
-  GetStockAlertQueryHandler,
+  GetStockAlertHandler,
   GetActiveAlertsQuery,
-  GetActiveAlertsQueryHandler,
+  GetActiveAlertsHandler,
   ListStockAlertsQuery,
-  ListStockAlertsQueryHandler,
+  ListStockAlertsHandler,
 } from "../../../application";
 import { StockAlertService } from "../../../application/services/stock-alert.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class StockAlertController {
-  private createAlertHandler: CreateStockAlertCommandHandler;
-  private resolveAlertHandler: ResolveStockAlertCommandHandler;
-  private getAlertHandler: GetStockAlertQueryHandler;
-  private getActiveAlertsHandler: GetActiveAlertsQueryHandler;
-  private listAlertsHandler: ListStockAlertsQueryHandler;
+  private createAlertHandler: CreateStockAlertHandler;
+  private resolveAlertHandler: ResolveStockAlertHandler;
+  private getAlertHandler: GetStockAlertHandler;
+  private getActiveAlertsHandler: GetActiveAlertsHandler;
+  private listAlertsHandler: ListStockAlertsHandler;
 
   constructor(private readonly alertService: StockAlertService) {
-    this.createAlertHandler = new CreateStockAlertCommandHandler(alertService);
-    this.resolveAlertHandler = new ResolveStockAlertCommandHandler(
-      alertService,
-    );
-    this.getAlertHandler = new GetStockAlertQueryHandler(alertService);
-    this.getActiveAlertsHandler = new GetActiveAlertsQueryHandler(alertService);
-    this.listAlertsHandler = new ListStockAlertsQueryHandler(alertService);
+    this.createAlertHandler = new CreateStockAlertHandler(alertService);
+    this.resolveAlertHandler = new ResolveStockAlertHandler(alertService);
+    this.getAlertHandler = new GetStockAlertHandler(alertService);
+    this.getActiveAlertsHandler = new GetActiveAlertsHandler(alertService);
+    this.listAlertsHandler = new ListStockAlertsHandler(alertService);
   }
 
   async getAlert(
@@ -38,23 +37,14 @@ export class StockAlertController {
       const { alertId } = request.params;
       const query: GetStockAlertQuery = { alertId };
       const result = await this.getAlertHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else if (result.success && result.data === null) {
-        return reply
-          .code(404)
-          .send({ success: false, error: "Alert not found" });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Alert retrieved",
+        "Alert not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get alert");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -62,19 +52,9 @@ export class StockAlertController {
     try {
       const query: GetActiveAlertsQuery = {};
       const result = await this.getActiveAlertsHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Active alerts retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to get active alerts");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -97,19 +77,9 @@ export class StockAlertController {
         includeResolved,
       };
       const result = await this.listAlertsHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({ success: true, data: result.data });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Alerts retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list alerts");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -125,25 +95,18 @@ export class StockAlertController {
 
       if (result.success && result.data) {
         const alert = result.data;
-        return reply.code(201).send({
-          success: true,
-          data: {
-            alertId: alert.getAlertId().getValue(),
-            variantId: alert.getVariantId(),
-            type: alert.getType().getValue(),
-          },
-          message: "Alert created successfully",
+        return ResponseHelper.created(reply, "Alert created successfully", {
+          alertId: alert.getAlertId().getValue(),
+          variantId: alert.getVariantId(),
+          type: alert.getType().getValue(),
         });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to create alert",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create alert");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -156,21 +119,13 @@ export class StockAlertController {
       const command: ResolveStockAlertCommand = { alertId };
 
       const result = await this.resolveAlertHandler.handle(command);
-
-      if (result.success && result.data) {
-        return reply
-          .code(200)
-          .send({ success: true, message: "Alert resolved successfully" });
-      } else {
-        return reply
-          .code(400)
-          .send({ success: false, error: result.error, errors: result.errors });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Alert resolved successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to resolve alert");
-      return reply
-        .code(500)
-        .send({ success: false, error: "Internal server error" });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

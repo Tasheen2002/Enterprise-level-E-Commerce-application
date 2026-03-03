@@ -6,6 +6,7 @@ import {
   GetPromotionUsageHandler,
 } from "../../../application";
 import { PromotionService } from "../../../application/services/promotion.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export interface RecordPromotionUsageRequest {
   orderId: string;
@@ -39,7 +40,12 @@ export class PromotionUsageController {
       timestamp: new Date(),
     };
     const result = await this.recordHandler.handle(cmd);
-    return reply.code(result.success ? 201 : 400).send(result);
+    return ResponseHelper.fromCommand(
+      reply,
+      result,
+      "Promotion usage recorded",
+      201,
+    );
   }
 
   async list(
@@ -51,6 +57,6 @@ export class PromotionUsageController {
       timestamp: new Date(),
     };
     const result = await this.listHandler.handle(q);
-    return reply.code(result.success ? 200 : 400).send(result);
+    return ResponseHelper.fromQuery(reply, result, "Promotion usage retrieved");
   }
 }

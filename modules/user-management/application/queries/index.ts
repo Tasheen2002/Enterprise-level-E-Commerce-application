@@ -1,22 +1,17 @@
-// Base interfaces from shared
-export {
-  QueryResult,
-  IQuery,
-  IQueryHandler,
-} from "@/api/src/shared/application";
+export type { GetUserProfileQuery, UserProfileResult } from "./get-user-profile.query";
+export { GetUserProfileHandler } from "./get-user-profile.handler";
 
-// Query interfaces (type-only exports)
-export type { GetUserProfileQuery } from "./get-user-profile.query.js";
-export type { ListAddressesQuery } from "./list-addresses.query.js";
-export type { ListPaymentMethodsQuery } from "./list-payment-methods.query.js";
-export type { GetUserByEmailQuery } from "./get-user-by-email.query.js";
-export type { GetUserDetailsQuery } from "./get-user-details.query.js";
-export type { ListUsersQuery } from "./list-user.query.js";
+export type { ListAddressesQuery, ListAddressesResult, AddressListItem } from "./list-addresses.query";
+export { ListAddressesHandler } from "./list-addresses.handler";
 
-// Query Handler classes (runtime exports)
-export { GetUserProfileHandler } from "./get-user-profile.query.js";
-export { ListAddressesHandler } from "./list-addresses.query.js";
-export { ListPaymentMethodsHandler } from "./list-payment-methods.query.js";
-export { GetUserByEmailHandler } from "./get-user-by-email.query.js";
-export { GetUserDetailsHandler } from "./get-user-details.query.js";
-export { ListUsersHandler } from "./list-user.query.js";
+export type { ListPaymentMethodsQuery, PaymentMethodsListResult, PaymentMethodResult } from "./list-payment-methods.query";
+export { ListPaymentMethodsHandler } from "./list-payment-methods.handler";
+
+export type { GetUserByEmailQuery, GetUserByEmailResult } from "./get-user-by-email.query";
+export { GetUserByEmailHandler } from "./get-user-by-email.handler";
+
+export type { GetUserDetailsQuery, GetUserDetailsResult } from "./get-user-details.query";
+export { GetUserDetailsHandler } from "./get-user-details.handler";
+
+export type { ListUsersQuery, ListUsersResult } from "./list-user.query";
+export { ListUsersHandler } from "./list-user.handler";

@@ -6,6 +6,7 @@ import {
   GetReservationsQuery,
   GetReservationsHandler,
 } from "../../../application";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 // Request interfaces
 interface CreateReservationRequest {
@@ -51,16 +52,10 @@ export class ReservationController {
   private getReservationsHandler: GetReservationsHandler;
 
   constructor(private readonly reservationService: ReservationService) {
-    // Initialize CQRS handlers
-    this.createReservationHandler = new CreateReservationHandler(
-      reservationService,
-    );
-    this.getReservationsHandler = new GetReservationsHandler(
-      reservationService,
-    );
+    this.createReservationHandler = new CreateReservationHandler(reservationService);
+    this.getReservationsHandler = new GetReservationsHandler(reservationService);
   }
 
-  // Create reservation
   async createReservation(
     request: FastifyRequest<{ Body: CreateReservationRequest }>,
     reply: FastifyReply,
@@ -68,42 +63,6 @@ export class ReservationController {
     try {
       const reservationData = request.body;
 
-      // Validate required fields
-      if (
-        !reservationData.cartId ||
-        typeof reservationData.cartId !== "string"
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cart ID is required and must be a valid string",
-        });
-      }
-
-      if (
-        !reservationData.variantId ||
-        typeof reservationData.variantId !== "string"
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (
-        !reservationData.quantity ||
-        typeof reservationData.quantity !== "number" ||
-        reservationData.quantity <= 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Quantity must be a positive number",
-        });
-      }
-
-      // Create command
       const command: CreateReservationCommand = {
         cartId: reservationData.cartId,
         variantId: reservationData.variantId,
@@ -111,42 +70,14 @@ export class ReservationController {
         durationMinutes: reservationData.durationMinutes,
       };
 
-      // Execute command using handler
       const result = await this.createReservationHandler.handle(command);
-
-      if (result.success && result.data) {
-        return reply.code(201).send({
-          success: true,
-          data: result.data,
-          message: "Reservation created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to create reservation",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(reply, result, "Reservation created successfully", 201);
     } catch (error) {
       request.log.error(error, "Failed to create reservation");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
-      }
-
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get reservation by ID
   async getReservation(
     request: FastifyRequest<{ Params: { reservationId: string } }>,
     reply: FastifyReply,
@@ -154,40 +85,19 @@ export class ReservationController {
     try {
       const { reservationId } = request.params;
 
-      if (!reservationId || typeof reservationId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Reservation ID is required and must be a valid string",
-        });
-      }
-
-      const reservation =
-        await this.reservationService.getReservation(reservationId);
+      const reservation = await this.reservationService.getReservation(reservationId);
 
       if (!reservation) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Reservation not found",
-        });
+        return ResponseHelper.notFound(reply, "Reservation not found");
       }
 
-      return reply.code(200).send({
-        success: true,
-        data: reservation,
-      });
+      return ResponseHelper.ok(reply, "Reservation retrieved", reservation);
     } catch (error) {
       request.log.error(error, "Failed to get reservation");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get cart reservations
   async getCartReservations(
     request: FastifyRequest<{
       Params: { cartId: string };
@@ -199,78 +109,31 @@ export class ReservationController {
       const { cartId } = request.params;
       const { activeOnly } = request.query;
 
-      if (!cartId || typeof cartId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cart ID is required and must be a valid string",
-        });
-      }
-
-      // Create query
-      const query: GetReservationsQuery = {
-        cartId,
-        activeOnly,
-      };
-
-      // Execute query using handler (gets active reservations)
+      const query: GetReservationsQuery = { cartId, activeOnly };
       const result = await this.getReservationsHandler.handle(query);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to retrieve reservations",
-        });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Reservations retrieved");
     } catch (error) {
       request.log.error(error, "Failed to get cart reservations");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve cart reservations",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get variant reservations
   async getVariantReservations(
     request: FastifyRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { variantId } = request.params;
+      const reservations = await this.reservationService.getVariantReservations(variantId);
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      const reservations =
-        await this.reservationService.getVariantReservations(variantId);
-
-      return reply.code(200).send({
-        success: true,
-        data: reservations,
-      });
+      return ResponseHelper.ok(reply, "Variant reservations retrieved", reservations);
     } catch (error) {
       request.log.error(error, "Failed to get variant reservations");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve variant reservations",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Extend reservation
   async extendReservation(
     request: FastifyRequest<{
       Params: { reservationId: string };
@@ -282,66 +145,18 @@ export class ReservationController {
       const { reservationId } = request.params;
       const { additionalMinutes } = request.body;
 
-      if (!reservationId || typeof reservationId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Reservation ID is required and must be a valid string",
-        });
-      }
-
-      if (
-        !additionalMinutes ||
-        typeof additionalMinutes !== "number" ||
-        additionalMinutes <= 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Additional minutes must be a positive number",
-        });
-      }
-
       const reservation = await this.reservationService.extendReservation({
         reservationId,
         additionalMinutes,
       });
 
-      return reply.code(200).send({
-        success: true,
-        data: reservation,
-        message: "Reservation extended successfully",
-      });
+      return ResponseHelper.ok(reply, "Reservation extended successfully", reservation);
     } catch (error) {
       request.log.error(error, "Failed to extend reservation");
-
-      if (error instanceof Error) {
-        if (error.message.includes("not found")) {
-          return reply.code(404).send({
-            success: false,
-            error: "Not Found",
-            message: error.message,
-          });
-        }
-
-        if (error.message.includes("cannot be extended")) {
-          return reply.code(400).send({
-            success: false,
-            error: "Bad Request",
-            message: error.message,
-          });
-        }
-      }
-
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to extend reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Renew reservation
   async renewReservation(
     request: FastifyRequest<{
       Params: { reservationId: string };
@@ -353,44 +168,18 @@ export class ReservationController {
       const { reservationId } = request.params;
       const { durationMinutes } = request.body;
 
-      if (!reservationId || typeof reservationId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Reservation ID is required and must be a valid string",
-        });
-      }
-
       const reservation = await this.reservationService.renewReservation({
         reservationId,
         durationMinutes,
       });
 
-      return reply.code(200).send({
-        success: true,
-        data: reservation,
-        message: "Reservation renewed successfully",
-      });
+      return ResponseHelper.ok(reply, "Reservation renewed successfully", reservation);
     } catch (error) {
       request.log.error(error, "Failed to renew reservation");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: error.message,
-        });
-      }
-
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to renew reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Release reservation
   async releaseReservation(
     request: FastifyRequest<{ Params: { reservationId: string } }>,
     reply: FastifyReply,
@@ -398,40 +187,19 @@ export class ReservationController {
     try {
       const { reservationId } = request.params;
 
-      if (!reservationId || typeof reservationId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Reservation ID is required and must be a valid string",
-        });
-      }
-
-      const success =
-        await this.reservationService.releaseReservation(reservationId);
+      const success = await this.reservationService.releaseReservation(reservationId);
 
       if (!success) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Reservation not found",
-        });
+        return ResponseHelper.notFound(reply, "Reservation not found");
       }
 
-      return reply.code(200).send({
-        success: true,
-        message: "Reservation released successfully",
-      });
+      return ResponseHelper.ok(reply, "Reservation released successfully");
     } catch (error) {
       request.log.error(error, "Failed to release reservation");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to release reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Adjust reservation quantity
   async adjustReservation(
     request: FastifyRequest<{
       Params: { cartId: string; variantId: string };
@@ -443,30 +211,6 @@ export class ReservationController {
       const { cartId, variantId } = request.params;
       const { newQuantity } = request.body;
 
-      if (!cartId || typeof cartId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cart ID is required and must be a valid string",
-        });
-      }
-
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      if (typeof newQuantity !== "number" || newQuantity < 0) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "New quantity must be a non-negative number",
-        });
-      }
-
       const reservation = await this.reservationService.adjustReservation({
         cartId,
         variantId,
@@ -474,29 +218,16 @@ export class ReservationController {
       });
 
       if (!reservation) {
-        return reply.code(404).send({
-          success: false,
-          error: "Not Found",
-          message: "Reservation not found",
-        });
+        return ResponseHelper.notFound(reply, "Reservation not found");
       }
 
-      return reply.code(200).send({
-        success: true,
-        data: reservation,
-        message: "Reservation adjusted successfully",
-      });
+      return ResponseHelper.ok(reply, "Reservation adjusted successfully", reservation);
     } catch (error) {
       request.log.error(error, "Failed to adjust reservation");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to adjust reservation",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Check availability
   async checkAvailability(
     request: FastifyRequest<{ Querystring: CheckAvailabilityRequest }>,
     reply: FastifyReply,
@@ -504,112 +235,45 @@ export class ReservationController {
     try {
       const { variantId, requestedQuantity } = request.query;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
+      const availability = await this.reservationService.checkAvailability(variantId, requestedQuantity);
 
-      if (
-        !requestedQuantity ||
-        typeof requestedQuantity !== "number" ||
-        requestedQuantity <= 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Requested quantity must be a positive number",
-        });
-      }
-
-      const availability = await this.reservationService.checkAvailability(
-        variantId,
-        requestedQuantity,
-      );
-
-      return reply.code(200).send({
-        success: true,
-        data: availability,
-      });
+      return ResponseHelper.ok(reply, "Availability checked", availability);
     } catch (error) {
       request.log.error(error, "Failed to check availability");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to check availability",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get total reserved quantity
   async getTotalReservedQuantity(
     request: FastifyRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { variantId } = request.params;
+      const totalReserved = await this.reservationService.getTotalReservedQuantity(variantId);
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      const totalReserved =
-        await this.reservationService.getTotalReservedQuantity(variantId);
-
-      return reply.code(200).send({
-        success: true,
-        data: { variantId, totalReserved },
-      });
+      return ResponseHelper.ok(reply, "Total reserved quantity retrieved", { variantId, totalReserved });
     } catch (error) {
       request.log.error(error, "Failed to get total reserved quantity");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve total reserved quantity",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get active reserved quantity
   async getActiveReservedQuantity(
     request: FastifyRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { variantId } = request.params;
+      const activeReserved = await this.reservationService.getActiveReservedQuantity(variantId);
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
-
-      const activeReserved =
-        await this.reservationService.getActiveReservedQuantity(variantId);
-
-      return reply.code(200).send({
-        success: true,
-        data: { variantId, activeReserved },
-      });
+      return ResponseHelper.ok(reply, "Active reserved quantity retrieved", { variantId, activeReserved });
     } catch (error) {
       request.log.error(error, "Failed to get active reserved quantity");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve active reserved quantity",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Create bulk reservations
   async createBulkReservations(
     request: FastifyRequest<{ Body: BulkReservationRequest }>,
     reply: FastifyReply,
@@ -617,118 +281,51 @@ export class ReservationController {
     try {
       const bulkData = request.body;
 
-      if (!bulkData.cartId || typeof bulkData.cartId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Cart ID is required and must be a valid string",
-        });
-      }
-
-      if (
-        !bulkData.items ||
-        !Array.isArray(bulkData.items) ||
-        bulkData.items.length === 0
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Items array is required and must not be empty",
-        });
-      }
-
       const result = await this.reservationService.createBulkReservations({
         cartId: bulkData.cartId,
         items: bulkData.items,
         durationMinutes: bulkData.durationMinutes,
       });
 
-      return reply.code(result.totalFailed === 0 ? 201 : 207).send({
-        success: result.totalFailed === 0,
-        data: result,
-        message:
-          result.totalFailed === 0
-            ? "All reservations created successfully"
-            : `${result.totalCreated} reservation(s) created, ${result.totalFailed} failed`,
-      });
+      const allSucceeded = result.totalFailed === 0;
+      const statusCode = allSucceeded ? 201 : 207;
+      const message = allSucceeded
+        ? "All reservations created successfully"
+        : `${result.totalCreated} reservation(s) created, ${result.totalFailed} failed`;
+
+      return ResponseHelper.success(reply, statusCode, message, result);
     } catch (error) {
       request.log.error(error, "Failed to create bulk reservations");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to create bulk reservations",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get reservation statistics (admin endpoint)
   async getReservationStatistics(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const statistics =
-        await this.reservationService.getReservationStatistics();
-
-      return reply.code(200).send({
-        success: true,
-        data: statistics,
-      });
+      const statistics = await this.reservationService.getReservationStatistics();
+      return ResponseHelper.ok(reply, "Reservation statistics retrieved", statistics);
     } catch (error) {
       request.log.error(error, "Failed to get reservation statistics");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve reservation statistics",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Get reservations by status
   async getReservationsByStatus(
-    request: FastifyRequest<{
-      Querystring: ReservationQueryParams;
-    }>,
+    request: FastifyRequest<{ Querystring: ReservationQueryParams }>,
     reply: FastifyReply,
   ) {
     try {
       const { status } = request.query;
 
-      if (!status) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Status parameter is required",
-        });
-      }
+      const reservations = await this.reservationService.getReservationsByStatus(status!);
 
-      if (
-        !["active", "expiring_soon", "expired", "recently_expired"].includes(
-          status,
-        )
-      ) {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Invalid status value",
-        });
-      }
-
-      const reservations =
-        await this.reservationService.getReservationsByStatus(status);
-
-      return reply.code(200).send({
-        success: true,
-        data: reservations,
-      });
+      return ResponseHelper.ok(reply, "Reservations retrieved", reservations);
     } catch (error) {
       request.log.error(error, "Failed to get reservations by status");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to retrieve reservations by status",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Resolve reservation conflicts (admin endpoint)
   async resolveReservationConflicts(
     request: FastifyRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
@@ -736,50 +333,23 @@ export class ReservationController {
     try {
       const { variantId } = request.params;
 
-      if (!variantId || typeof variantId !== "string") {
-        return reply.code(400).send({
-          success: false,
-          error: "Bad Request",
-          message: "Variant ID is required and must be a valid string",
-        });
-      }
+      const result = await this.reservationService.resolveReservationConflicts(variantId);
 
-      const result =
-        await this.reservationService.resolveReservationConflicts(variantId);
-
-      return reply.code(200).send({
-        success: true,
-        data: result,
-        message: `Resolved ${result.resolved} conflict(s)`,
-      });
+      return ResponseHelper.ok(reply, `Resolved ${result.resolved} conflict(s)`, result);
     } catch (error) {
       request.log.error(error, "Failed to resolve reservation conflicts");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to resolve reservation conflicts",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  // Optimize reservations (admin endpoint)
   async optimizeReservations(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const optimizedCount =
-        await this.reservationService.optimizeReservations();
+      const optimizedCount = await this.reservationService.optimizeReservations();
 
-      return reply.code(200).send({
-        success: true,
-        data: { optimizedCount },
-        message: `Successfully optimized ${optimizedCount} reservation(s)`,
-      });
+      return ResponseHelper.ok(reply, `Successfully optimized ${optimizedCount} reservation(s)`, { optimizedCount });
     } catch (error) {
       request.log.error(error, "Failed to optimize reservations");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-        message: "Failed to optimize reservations",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

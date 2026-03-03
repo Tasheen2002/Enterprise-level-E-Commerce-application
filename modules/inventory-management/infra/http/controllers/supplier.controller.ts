@@ -12,6 +12,7 @@ import {
   ListSuppliersHandler,
 } from "../../../application";
 import { SupplierManagementService } from "../../../application/services/supplier-management.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class SupplierController {
   private createSupplierHandler: CreateSupplierHandler;
@@ -41,29 +42,14 @@ export class SupplierController {
       };
 
       const result = await this.getSupplierHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else if (result.success && result.data === null) {
-        return reply.code(404).send({
-          success: false,
-          error: "Supplier not found",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get supplier",
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Supplier retrieved",
+        "Supplier not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get supplier");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -82,24 +68,9 @@ export class SupplierController {
       };
 
       const result = await this.listSuppliersHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to list suppliers",
-        });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Suppliers retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list suppliers");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -117,30 +88,19 @@ export class SupplierController {
 
       if (result.success && result.data) {
         const supplier = result.data;
-
-        return reply.code(201).send({
-          success: true,
-          data: {
-            supplierId: supplier.getSupplierId().getValue(),
-            name: supplier.getName(),
-            leadTimeDays: supplier.getLeadTimeDays(),
-            contacts: supplier.getContacts(),
-          },
-          message: "Supplier created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Supplier creation failed",
-          errors: result.errors,
+        return ResponseHelper.created(reply, "Supplier created successfully", {
+          supplierId: supplier.getSupplierId().getValue(),
+          name: supplier.getName(),
+          leadTimeDays: supplier.getLeadTimeDays(),
+          contacts: supplier.getContacts(),
         });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Supplier creation failed",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create supplier");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -163,30 +123,19 @@ export class SupplierController {
 
       if (result.success && result.data) {
         const supplier = result.data;
-
-        return reply.code(200).send({
-          success: true,
-          data: {
-            supplierId: supplier.getSupplierId().getValue(),
-            name: supplier.getName(),
-            leadTimeDays: supplier.getLeadTimeDays(),
-            contacts: supplier.getContacts(),
-          },
-          message: "Supplier updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Supplier update failed",
-          errors: result.errors,
+        return ResponseHelper.ok(reply, "Supplier updated successfully", {
+          supplierId: supplier.getSupplierId().getValue(),
+          name: supplier.getName(),
+          leadTimeDays: supplier.getLeadTimeDays(),
+          contacts: supplier.getContacts(),
         });
       }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Supplier update failed",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update supplier");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -202,25 +151,13 @@ export class SupplierController {
       };
 
       const result = await this.deleteSupplierHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Supplier deleted successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Supplier deletion failed",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Supplier deleted successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to delete supplier");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }
