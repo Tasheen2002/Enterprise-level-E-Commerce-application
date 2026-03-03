@@ -1,70 +1,69 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   AddStockCommand,
-  AddStockCommandHandler,
+  AddStockHandler,
   AdjustStockCommand,
-  AdjustStockCommandHandler,
+  AdjustStockHandler,
   TransferStockCommand,
-  TransferStockCommandHandler,
+  TransferStockHandler,
   ReserveStockCommand,
-  ReserveStockCommandHandler,
+  ReserveStockHandler,
   FulfillReservationCommand,
-  FulfillReservationCommandHandler,
+  FulfillReservationHandler,
   SetStockThresholdsCommand,
-  SetStockThresholdsCommandHandler,
+  SetStockThresholdsHandler,
   GetStockQuery,
-  GetStockQueryHandler,
+  GetStockHandler,
   GetStockByVariantQuery,
-  GetStockByVariantQueryHandler,
+  GetStockByVariantHandler,
   GetStockStatsQuery,
-  GetStockStatsQueryHandler,
+  GetStockStatsHandler,
   GetTotalAvailableStockQuery,
-  GetTotalAvailableStockQueryHandler,
+  GetTotalAvailableStockHandler,
   ListStocksQuery,
-  ListStocksQueryHandler,
+  ListStocksHandler,
 } from "../../../application";
 import { StockManagementService } from "../../../application/services/stock-management.service";
 import { PickupReservationService } from "../../../application/services/pickup-reservation.service";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class StockController {
-  private addStockHandler: AddStockCommandHandler;
-  private adjustStockHandler: AdjustStockCommandHandler;
-  private transferStockHandler: TransferStockCommandHandler;
-  private reserveStockHandler: ReserveStockCommandHandler;
-  private fulfillReservationHandler: FulfillReservationCommandHandler;
-  private setStockThresholdsHandler: SetStockThresholdsCommandHandler;
-  private getStockHandler: GetStockQueryHandler;
-  private getStockByVariantHandler: GetStockByVariantQueryHandler;
-  private getStockStatsHandler: GetStockStatsQueryHandler;
-  private getTotalAvailableStockHandler: GetTotalAvailableStockQueryHandler;
-  private listStocksHandler: ListStocksQueryHandler;
+  private addStockHandler: AddStockHandler;
+  private adjustStockHandler: AdjustStockHandler;
+  private transferStockHandler: TransferStockHandler;
+  private reserveStockHandler: ReserveStockHandler;
+  private fulfillReservationHandler: FulfillReservationHandler;
+  private setStockThresholdsHandler: SetStockThresholdsHandler;
+  private getStockHandler: GetStockHandler;
+  private getStockByVariantHandler: GetStockByVariantHandler;
+  private getStockStatsHandler: GetStockStatsHandler;
+  private getTotalAvailableStockHandler: GetTotalAvailableStockHandler;
+  private listStocksHandler: ListStocksHandler;
 
   constructor(
     private readonly stockService: StockManagementService,
     private readonly reservationService?: PickupReservationService,
   ) {
     // Initialize command handlers
-    this.addStockHandler = new AddStockCommandHandler(stockService);
-    this.adjustStockHandler = new AdjustStockCommandHandler(stockService);
-    this.transferStockHandler = new TransferStockCommandHandler(stockService);
-    this.reserveStockHandler = new ReserveStockCommandHandler(stockService);
-    this.fulfillReservationHandler = new FulfillReservationCommandHandler(
+    this.addStockHandler = new AddStockHandler(stockService);
+    this.adjustStockHandler = new AdjustStockHandler(stockService);
+    this.transferStockHandler = new TransferStockHandler(stockService);
+    this.reserveStockHandler = new ReserveStockHandler(stockService);
+    this.fulfillReservationHandler = new FulfillReservationHandler(
       stockService,
     );
-    this.setStockThresholdsHandler = new SetStockThresholdsCommandHandler(
+    this.setStockThresholdsHandler = new SetStockThresholdsHandler(
       stockService,
     );
 
     // Initialize query handlers
-    this.getStockHandler = new GetStockQueryHandler(stockService);
-    this.getStockByVariantHandler = new GetStockByVariantQueryHandler(
+    this.getStockHandler = new GetStockHandler(stockService);
+    this.getStockByVariantHandler = new GetStockByVariantHandler(stockService);
+    this.getStockStatsHandler = new GetStockStatsHandler(stockService);
+    this.getTotalAvailableStockHandler = new GetTotalAvailableStockHandler(
       stockService,
     );
-    this.getStockStatsHandler = new GetStockStatsQueryHandler(stockService);
-    this.getTotalAvailableStockHandler = new GetTotalAvailableStockQueryHandler(
-      stockService,
-    );
-    this.listStocksHandler = new ListStocksQueryHandler(stockService);
+    this.listStocksHandler = new ListStocksHandler(stockService);
   }
 
   async getStats(request: FastifyRequest, reply: FastifyReply) {
@@ -72,17 +71,9 @@ export class StockController {
       const query: GetStockStatsQuery = {};
 
       const result = await this.getStockStatsHandler.handle(query);
-
-      return reply.code(200).send({
-        success: true,
-        data: result,
-      });
+      return ResponseHelper.fromQuery(reply, result, "Stock stats retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to get stock stats");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -101,30 +92,14 @@ export class StockController {
       };
 
       const result = await this.getStockHandler.handle(query);
-
-      if (result.success && result.data) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else if (result.success && result.data === null) {
-        return reply.code(404).send({
-          success: false,
-          error: "Stock not found",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Stock retrieved",
+        "Stock not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -140,25 +115,13 @@ export class StockController {
       };
 
       const result = await this.getStockByVariantHandler.handle(query);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Stock by variant retrieved",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get stock by variant");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -174,25 +137,13 @@ export class StockController {
       };
 
       const result = await this.getTotalAvailableStockHandler.handle(query);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to get total available stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Total available stock retrieved",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get total available stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -234,25 +185,9 @@ export class StockController {
       };
 
       const result = await this.listStocksHandler.handle(query);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to list stocks",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Stocks retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list stocks");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -271,25 +206,14 @@ export class StockController {
       const command: AddStockCommand = request.body;
 
       const result = await this.addStockHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(201).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to add stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Stock added successfully",
+        201,
+      );
     } catch (error) {
-      request.log.error(error, "Failed to add stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -308,25 +232,13 @@ export class StockController {
       const command: AdjustStockCommand = request.body;
 
       const result = await this.adjustStockHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to adjust stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Stock adjusted successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to adjust stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -345,25 +257,13 @@ export class StockController {
       const command: TransferStockCommand = request.body;
 
       const result = await this.transferStockHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to transfer stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Stock transferred successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to transfer stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -381,25 +281,13 @@ export class StockController {
       const command: ReserveStockCommand = request.body;
 
       const result = await this.reserveStockHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to reserve stock",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Stock reserved successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to reserve stock");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -417,25 +305,13 @@ export class StockController {
       const command: FulfillReservationCommand = request.body;
 
       const result = await this.fulfillReservationHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to fulfill reservation",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Reservation fulfilled successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to fulfill reservation");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -461,25 +337,13 @@ export class StockController {
       };
 
       const result = await this.setStockThresholdsHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error || "Failed to set stock thresholds",
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Stock thresholds updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to set stock thresholds");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }
