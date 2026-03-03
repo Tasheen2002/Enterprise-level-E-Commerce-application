@@ -1,15 +1,17 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Locale {
   private readonly value: string;
 
   constructor(locale: string) {
     if (!locale) {
-      throw new Error("Locale is required");
+      throw new DomainValidationError("Locale is required");
     }
 
     const normalizedLocale = locale.trim();
 
     if (!this.isValidLocale(normalizedLocale)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid locale format: ${locale}. Use format like "en-US", "fr-FR", "de-DE"`
       );
     }

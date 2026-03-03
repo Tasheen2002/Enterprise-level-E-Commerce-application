@@ -1,4 +1,5 @@
 import { UserId } from "../value-objects/user-id.vo";
+import { DomainValidationError, InvalidOperationError } from "../errors/user-management.errors";
 
 export class SocialLogin {
   private constructor(
@@ -92,11 +93,11 @@ export class SocialLogin {
   // Validation methods
   validate(): void {
     if (!SocialProvider.getAllValues().includes(this.provider)) {
-      throw new Error(`Invalid social provider: ${this.provider}`);
+      throw new InvalidOperationError(`Invalid social provider: ${this.provider}`);
     }
 
     if (!this.providerUserId || this.providerUserId.trim() === "") {
-      throw new Error("Provider user ID cannot be empty");
+      throw new DomainValidationError("Provider user ID cannot be empty");
     }
   }
 
@@ -147,7 +148,7 @@ export enum SocialProvider {
 export namespace SocialProvider {
   export function fromString(provider: string): SocialProvider {
     if (!provider || typeof provider !== "string") {
-      throw new Error("Social provider must be a non-empty string");
+      throw new DomainValidationError("Social provider must be a non-empty string");
     }
 
     switch (provider.toLowerCase()) {
@@ -166,7 +167,7 @@ export namespace SocialProvider {
       case "microsoft":
         return SocialProvider.MICROSOFT;
       default:
-        throw new Error(`Invalid social provider: ${provider}`);
+        throw new DomainValidationError(`Invalid social provider: ${provider}`);
     }
   }
 

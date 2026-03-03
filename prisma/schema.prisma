@@ -14,6 +14,12 @@ model User {
   email             String             @unique
   passwordHash      String?            @map("password_hash")
   phone             String?
+  firstName         String?            @map("first_name")
+  lastName          String?            @map("last_name")
+  title             String?
+  dateOfBirth       DateTime?          @map("date_of_birth") @db.Date
+  residentOf        String?            @map("resident_of")
+  nationality       String?
   role              UserRole           @default(CUSTOMER)
   status            UserStatus         @default(active)
   emailVerified     Boolean            @default(false) @map("email_verified")
@@ -21,9 +27,6 @@ model User {
   isGuest           Boolean            @default(false) @map("is_guest")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  twoFactorSecret      String?            @map("two_factor_secret")
-  twoFactorEnabled     Boolean            @default(false) @map("two_factor_enabled")
-  twoFactorBackupCodes String[]           @default([]) @map("two_factor_backup_codes")
   shoppingCarts        ShoppingCart[]
   checkouts         Checkout[]
   chat_sessions     ChatSession[]

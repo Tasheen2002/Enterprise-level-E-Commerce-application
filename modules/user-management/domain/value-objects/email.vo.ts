@@ -1,19 +1,21 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Email {
   private readonly value: string;
 
   constructor(email: string) {
     if (!email) {
-      throw new Error("Email is required");
+      throw new DomainValidationError("Email is required");
     }
 
     const trimmedEmail = email.trim().toLowerCase();
 
     if (!this.isValidEmail(trimmedEmail)) {
-      throw new Error("Invalid email format");
+      throw new DomainValidationError("Invalid email format");
     }
 
     if (trimmedEmail.length > 254) {
-      throw new Error("Email is too long (maximum 254 characters)");
+      throw new DomainValidationError("Email is too long (maximum 254 characters)");
     }
     this.value = trimmedEmail;
   }

@@ -1,0 +1,20 @@
+import { randomUUID } from "crypto";
+import { UuidId } from "@/api/src/shared/domain/value-objects/uuid-id.base";
+
+export class GiftCardTransactionId extends UuidId {
+  private constructor(value: string) {
+    super(value, "Gift Card Transaction ID");
+  }
+
+  static create(): GiftCardTransactionId {
+    return new GiftCardTransactionId(randomUUID());
+  }
+
+  static fromString(value: string): GiftCardTransactionId {
+    return new GiftCardTransactionId(value);
+  }
+
+  equals(other: GiftCardTransactionId | null | undefined): boolean {
+    return super.equals(other);
+  }
+}

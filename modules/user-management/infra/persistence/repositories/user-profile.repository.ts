@@ -38,14 +38,7 @@ export class UserProfileRepository implements IUserProfileRepository {
   async update(userProfile: UserProfile): Promise<void> {
     const data = userProfile.toDatabaseRow();
 
-    console.log("[DEBUG REPO] Updating profile with data:", {
-      userId: data.user_id,
-      prefs: data.prefs,
-      stylePreferences: data.style_preferences,
-      preferredSizes: data.preferred_sizes,
-    });
-
-    const result = await this.prisma.userProfile.update({
+    await this.prisma.userProfile.update({
       where: { userId: data.user_id },
       data: {
         defaultAddressId: data.default_address_id,
@@ -57,8 +50,6 @@ export class UserProfileRepository implements IUserProfileRepository {
         preferredSizes: data.preferred_sizes,
       },
     });
-
-    console.log("[DEBUG REPO] Profile updated successfully:", result);
   }
 
   async delete(userId: UserId): Promise<void> {

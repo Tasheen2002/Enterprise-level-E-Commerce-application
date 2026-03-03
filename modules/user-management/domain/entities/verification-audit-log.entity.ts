@@ -1,3 +1,7 @@
+import { VerificationType } from "./verification-token.entity";
+
+export { VerificationType };
+
 export class VerificationAuditLog {
   private constructor(
     private readonly logId: string,
@@ -91,12 +95,6 @@ export class VerificationAuditLog {
       created_at: this.createdAt,
     };
   }
-}
-
-export enum VerificationType {
-  EMAIL_VERIFICATION = "email_verification",
-  PHONE_VERIFICATION = "phone_verification",
-  PASSWORD_RESET = "password_reset",
 }
 
 export enum VerificationAction {

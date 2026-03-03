@@ -1,16 +1,18 @@
+import { DomainValidationError } from "../errors/user-management.errors";
+
 export class Currency {
   private readonly value: string;
 
   constructor(currency: string) {
     if (!currency) {
-      throw new Error("Currency is required");
+      throw new DomainValidationError("Currency is required");
     }
 
     const normalizedCurrency = currency.trim().toUpperCase();
 
     if (!this.isValidCurrency(normalizedCurrency)) {
-      throw new Error(
-        `Invalid currency code: ${currency}. Must be a valid ISO 4217 code`
+      throw new DomainValidationError(
+        `Invalid currency code: ${currency}. Must be a valid ISO 4217 code`,
       );
     }
 
@@ -20,9 +22,9 @@ export class Currency {
   private isValidCurrency(currency: string): boolean {
     // ISO 4217 currency codes for e-commerce platform
     const validCurrencies = [
-      "USD", // US Dollar
-      "EUR", // Euro
-      "GBP", // British Pound
+      "USD",
+      "EUR",
+      "GBP",
       "JPY", // Japanese Yen
       "AUD", // Australian Dollar
       "CAD", // Canadian Dollar

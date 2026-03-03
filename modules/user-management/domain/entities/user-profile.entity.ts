@@ -1,6 +1,7 @@
 import { UserId } from "../value-objects/user-id.vo";
 import { Currency } from "../value-objects/currency.vo";
 import { Locale } from "../value-objects/locale.vo";
+import { InvalidOperationError } from "../errors/user-management.errors";
 
 export class UserProfile {
   private constructor(
@@ -45,14 +46,7 @@ export class UserProfile {
     );
   }
 
-  // Add this method to map database row to UserProfile
   static fromDatabaseRow(row: UserProfileRow): UserProfile {
-    console.log("[DEBUG ENTITY] fromDatabaseRow input:", {
-      prefs: row.prefs,
-      style_preferences: row.style_preferences,
-      preferred_sizes: row.preferred_sizes,
-    });
-
     return new UserProfile(
       UserId.fromString(row.user_id),
       row.default_address_id,
@@ -94,7 +88,7 @@ export class UserProfile {
   // Address management
   setDefaultAddress(addressId: string): void {
     if (!addressId) {
-      throw new Error("Address ID is required");
+      throw new InvalidOperationError("Address ID is required");
     }
 
     this.defaultAddressId = addressId;
@@ -111,7 +105,7 @@ export class UserProfile {
   // Payment method management
   setDefaultPaymentMethod(paymentMethodId: string): void {
     if (!paymentMethodId) {
-      throw new Error("Payment method ID is required");
+      throw new InvalidOperationError("Payment method ID is required");
     }
 
     this.defaultPaymentMethodId = paymentMethodId;
@@ -139,7 +133,7 @@ export class UserProfile {
   // Preferences management
   updatePreference(key: string, value: any): void {
     if (!key) {
-      throw new Error("Preference key is required");
+      throw new InvalidOperationError("Preference key is required");
     }
 
     this.preferences = {
@@ -154,7 +148,7 @@ export class UserProfile {
 
   removePreference(key: string): void {
     if (!key) {
-      throw new Error("Preference key is required");
+      throw new InvalidOperationError("Preference key is required");
     }
 
     const { [key]: removed, ...remainingPreferences } = this.preferences;
@@ -168,7 +162,7 @@ export class UserProfile {
   // Style preferences management
   updateStylePreference(category: string, preferences: any): void {
     if (!category) {
-      throw new Error("Style category is required");
+      throw new InvalidOperationError("Style category is required");
     }
 
     this.stylePreferences = {
@@ -213,7 +207,7 @@ export class UserProfile {
   // Size preferences management
   updatePreferredSize(category: string, size: string): void {
     if (!category || !size) {
-      throw new Error("Category and size are required");
+      throw new InvalidOperationError("Category and size are required");
     }
 
     this.preferredSizes = {
@@ -314,9 +308,8 @@ export class UserProfile {
     };
   }
 
-  // Add this method for database-compatible persistence
   toDatabaseRow(): UserProfileRow {
-    const row = {
+    return {
       user_id: this.userId.getValue(),
       default_address_id: this.defaultAddressId,
       default_payment_method_id: this.defaultPaymentMethodId,
@@ -326,14 +319,6 @@ export class UserProfile {
       style_preferences: this.stylePreferences,
       preferred_sizes: this.preferredSizes,
     };
-
-    console.log("[DEBUG ENTITY] toDatabaseRow output:", {
-      prefs: row.prefs,
-      style_preferences: row.style_preferences,
-      preferred_sizes: row.preferred_sizes,
-    });
-
-    return row;
   }
 
   equals(other: UserProfile): boolean {

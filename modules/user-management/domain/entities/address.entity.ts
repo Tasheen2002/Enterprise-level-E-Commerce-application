@@ -13,7 +13,7 @@ export class Address {
     private type: AddressType,
     private isDefault: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date
+    private updatedAt: Date,
   ) {}
 
   // Factory methods
@@ -30,7 +30,7 @@ export class Address {
       data.type,
       data.isDefault || false,
       now,
-      now
+      now,
     );
   }
 
@@ -42,7 +42,7 @@ export class Address {
       data.type,
       data.isDefault,
       data.createdAt,
-      data.updatedAt
+      data.updatedAt,
     );
   }
 
@@ -67,7 +67,7 @@ export class Address {
       AddressType.fromString(row.type),
       row.is_default,
       row.created_at,
-      row.updated_at
+      row.updated_at,
     );
   }
 
@@ -251,7 +251,6 @@ export class Address {
       user_id: this.userId.getValue(),
       type: this.type.toString(),
       is_default: this.isDefault,
-      // Map nested VO to flat database columns
       first_name: addressData.firstName || null,
       last_name: addressData.lastName || null,
       company: addressData.company || null,
@@ -267,7 +266,6 @@ export class Address {
     };
   }
 
-  // ✅ KEEP: Original toData() for domain use
   toData(): AddressEntityData {
     return {
       id: this.id,
@@ -318,7 +316,6 @@ export interface AddressLabel {
   type: "SHIPPING" | "BILLING";
 }
 
-// Database row interface matching PostgreSQL schema
 export interface UserAddressRow {
   address_id: string;
   user_id: string;

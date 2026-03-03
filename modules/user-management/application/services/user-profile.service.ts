@@ -3,6 +3,7 @@ import { IUserProfileRepository } from "../../domain/repositories/iuser-profile.
 import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
 import { IPaymentMethodRepository } from "../../domain/repositories/ipayment-method.repository";
 import { UserProfile } from "../../domain/entities/user-profile.entity";
+import { User } from "../../domain/entities/user.entity";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 
 export interface UserProfileDto {
@@ -14,6 +15,14 @@ export interface UserProfileDto {
   currency?: string | null;
   stylePreferences: Record<string, any>;
   preferredSizes: Record<string, any>;
+  // User entity fields
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  title?: string | null;
+  dateOfBirth?: string | null;
+  residentOf?: string | null;
+  nationality?: string | null;
 }
 
 export interface UpdateUserProfileDto {
@@ -24,6 +33,14 @@ export interface UpdateUserProfileDto {
   currency?: string;
   stylePreferences?: Record<string, any>;
   preferredSizes?: Record<string, any>;
+  // User entity fields
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  title?: string;
+  dateOfBirth?: string;
+  residentOf?: string;
+  nationality?: string;
 }
 
 export interface UserProfileWithDetails {
@@ -50,7 +67,7 @@ export class UserProfileService {
     private readonly userRepository: IUserRepository,
     private readonly userProfileRepository: IUserProfileRepository,
     private readonly addressRepository: IAddressRepository,
-    private readonly paymentMethodRepository: IPaymentMethodRepository
+    private readonly paymentMethodRepository: IPaymentMethodRepository,
   ) {}
 
   async getUserProfile(userId: string): Promise<UserProfileDto | null> {
@@ -66,14 +83,14 @@ export class UserProfileService {
 
     if (!profile) {
       // Create a default profile if none exists
-      return this.createDefaultProfile(userId);
+      return this.createDefaultProfile(userId, user);
     }
 
-    return this.mapToDto(profile);
+    return this.mapToDto(profile, user);
   }
 
   async getUserProfileWithDetails(
-    userId: string
+    userId: string,
   ): Promise<UserProfileWithDetails> {
     const userIdVo = UserId.fromString(userId);
 
@@ -89,7 +106,7 @@ export class UserProfileService {
     // Get default address details
     if (profileDto.defaultAddressId) {
       const address = await this.addressRepository.findById(
-        profileDto.defaultAddressId
+        profileDto.defaultAddressId,
       );
       if (address) {
         const addressData = address.getAddressValue().toData();
@@ -107,7 +124,7 @@ export class UserProfileService {
     // Get default payment method details
     if (profileDto.defaultPaymentMethodId) {
       const paymentMethod = await this.paymentMethodRepository.findById(
-        profileDto.defaultPaymentMethodId
+        profileDto.defaultPaymentMethodId,
       );
       if (paymentMethod) {
         result.defaultPaymentMethod = {
@@ -125,18 +142,9 @@ export class UserProfileService {
 
   async updateUserProfile(
     userId: string,
-    dto: UpdateUserProfileDto
+    dto: UpdateUserProfileDto,
   ): Promise<UserProfileDto> {
     const userIdVo = UserId.fromString(userId);
-
-    console.log("[DEBUG] UpdateUserProfile called with:", {
-      userId,
-      dto: {
-        prefs: dto.prefs,
-        stylePreferences: dto.stylePreferences,
-        preferredSizes: dto.preferredSizes,
-      },
-    });
 
     // Verify user exists
     const user = await this.userRepository.findById(userIdVo);
@@ -144,8 +152,32 @@ export class UserProfileService {
       throw new Error("User not found");
     }
 
+    // Update user entity fields if provided
+    const hasUserFields =
+      dto.firstName !== undefined ||
+      dto.lastName !== undefined ||
+      dto.phone !== undefined ||
+      dto.title !== undefined ||
+      dto.dateOfBirth !== undefined ||
+      dto.residentOf !== undefined ||
+      dto.nationality !== undefined;
+
+    if (hasUserFields) {
+      if (dto.firstName !== undefined) user.updateFirstName(dto.firstName);
+      if (dto.lastName !== undefined) user.updateLastName(dto.lastName);
+      if (dto.phone !== undefined) user.updatePhone(dto.phone);
+      if (dto.title !== undefined) user.updateTitle(dto.title);
+      if (dto.dateOfBirth !== undefined)
+        user.updateDateOfBirth(
+          dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+        );
+      if (dto.residentOf !== undefined) user.updateResidentOf(dto.residentOf);
+      if (dto.nationality !== undefined)
+        user.updateNationality(dto.nationality);
+      await this.userRepository.update(user);
+    }
+
     let profile = await this.userProfileRepository.findByUserId(userIdVo);
-    console.log("[DEBUG] Existing profile found:", profile ? "YES" : "NO");
 
     if (!profile) {
       // Create profile if it doesn't exist
@@ -167,7 +199,7 @@ export class UserProfileService {
         if (dto.defaultAddressId) {
           await this.validateAddressBelongsToUser(
             dto.defaultAddressId,
-            userIdVo
+            userIdVo,
           );
           profile.setDefaultAddress(dto.defaultAddressId);
         } else {
@@ -179,7 +211,7 @@ export class UserProfileService {
         if (dto.defaultPaymentMethodId) {
           await this.validatePaymentMethodBelongsToUser(
             dto.defaultPaymentMethodId,
-            userIdVo
+            userIdVo,
           );
           profile.setDefaultPaymentMethod(dto.defaultPaymentMethodId);
         } else {
@@ -189,7 +221,6 @@ export class UserProfileService {
 
       if (dto.prefs !== undefined) {
         // Replace entire preferences object
-        console.log("[DEBUG] Updating preferences:", dto.prefs);
         profile!.setPreferences(dto.prefs);
       }
 
@@ -207,20 +238,18 @@ export class UserProfileService {
 
       if (dto.stylePreferences !== undefined) {
         // Replace entire style preferences object
-        console.log("[DEBUG] Updating stylePreferences:", dto.stylePreferences);
         profile!.setStylePreferences(dto.stylePreferences);
       }
 
       if (dto.preferredSizes !== undefined) {
         // Replace entire preferred sizes object
-        console.log("[DEBUG] Updating preferredSizes:", dto.preferredSizes);
         profile!.setPreferredSizes(dto.preferredSizes);
       }
 
       await this.userProfileRepository.update(profile!);
     }
 
-    return this.mapToDto(profile!);
+    return this.mapToDto(profile!, user);
   }
 
   async setDefaultAddress(userId: string, addressId: string): Promise<void> {
@@ -248,7 +277,7 @@ export class UserProfileService {
 
   async setDefaultPaymentMethod(
     userId: string,
-    paymentMethodId: string
+    paymentMethodId: string,
   ): Promise<void> {
     const userIdVo = UserId.fromString(userId);
 
@@ -274,21 +303,21 @@ export class UserProfileService {
 
   async updatePreferences(
     userId: string,
-    prefs: Record<string, any>
+    prefs: Record<string, any>,
   ): Promise<UserProfileDto> {
     return this.updateUserProfile(userId, { prefs });
   }
 
   async updateStylePreferences(
     userId: string,
-    stylePreferences: Record<string, any>
+    stylePreferences: Record<string, any>,
   ): Promise<UserProfileDto> {
     return this.updateUserProfile(userId, { stylePreferences });
   }
 
   async updatePreferredSizes(
     userId: string,
-    preferredSizes: Record<string, any>
+    preferredSizes: Record<string, any>,
   ): Promise<UserProfileDto> {
     return this.updateUserProfile(userId, { preferredSizes });
   }
@@ -296,7 +325,7 @@ export class UserProfileService {
   async updateLocaleAndCurrency(
     userId: string,
     locale?: string,
-    currency?: string
+    currency?: string,
   ): Promise<UserProfileDto> {
     return this.updateUserProfile(userId, { locale, currency });
   }
@@ -342,7 +371,7 @@ export class UserProfileService {
   async setUserPreference(
     userId: string,
     key: string,
-    value: any
+    value: any,
   ): Promise<void> {
     const profile = await this.getUserProfile(userId);
 
@@ -370,7 +399,7 @@ export class UserProfileService {
 
   async bulkUpdatePreferences(
     userId: string,
-    preferences: Record<string, any>
+    preferences: Record<string, any>,
   ): Promise<UserProfileDto> {
     const profile = await this.getUserProfile(userId);
 
@@ -383,9 +412,7 @@ export class UserProfileService {
     return this.updateUserProfile(userId, { prefs: updatedPrefs });
   }
 
-  private async createDefaultProfile(userId: string): Promise<UserProfileDto> {
-    const userIdVo = UserId.fromString(userId);
-
+  private async createDefaultProfile(userId: string, user: User): Promise<UserProfileDto> {
     const profile = UserProfile.create({
       userId: userId,
       preferences: {},
@@ -395,12 +422,12 @@ export class UserProfileService {
 
     await this.userProfileRepository.save(profile);
 
-    return this.mapToDto(profile);
+    return this.mapToDto(profile, user);
   }
 
   private async validateAddressBelongsToUser(
     addressId: string,
-    userId: UserId
+    userId: UserId,
   ): Promise<void> {
     const address = await this.addressRepository.findById(addressId);
 
@@ -415,11 +442,10 @@ export class UserProfileService {
 
   private async validatePaymentMethodBelongsToUser(
     paymentMethodId: string,
-    userId: UserId
+    userId: UserId,
   ): Promise<void> {
-    const paymentMethod = await this.paymentMethodRepository.findById(
-      paymentMethodId
-    );
+    const paymentMethod =
+      await this.paymentMethodRepository.findById(paymentMethodId);
 
     if (!paymentMethod) {
       throw new Error("Payment method not found");
@@ -430,8 +456,8 @@ export class UserProfileService {
     }
   }
 
-  private mapToDto(profile: UserProfile): UserProfileDto {
-    const dto = {
+  private mapToDto(profile: UserProfile, user: User): UserProfileDto {
+    return {
       userId: profile.getUserId().getValue(),
       defaultAddressId: profile.getDefaultAddressId(),
       defaultPaymentMethodId: profile.getDefaultPaymentMethodId(),
@@ -440,14 +466,13 @@ export class UserProfileService {
       currency: profile.getCurrency()?.getValue() ?? null,
       stylePreferences: profile.getStylePreferences(),
       preferredSizes: profile.getPreferredSizes(),
+      firstName: user.getFirstName(),
+      lastName: user.getLastName(),
+      phone: user.getPhone()?.getValue() ?? null,
+      title: user.getTitle(),
+      dateOfBirth: user.getDateOfBirth()?.toISOString() ?? null,
+      residentOf: user.getResidentOf(),
+      nationality: user.getNationality(),
     };
-
-    console.log("[DEBUG SERVICE] mapToDto output:", {
-      prefs: dto.prefs,
-      stylePreferences: dto.stylePreferences,
-      preferredSizes: dto.preferredSizes,
-    });
-
-    return dto;
   }
 }

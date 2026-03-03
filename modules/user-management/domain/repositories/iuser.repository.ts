@@ -1,6 +1,33 @@
-import { User } from "../entities/user.entity";
+import { User, UserRole, UserStatus } from "../entities/user.entity";
 import { UserId } from "../value-objects/user-id.vo";
 import { Email } from "../value-objects/email.vo";
+
+export interface FindAllWithFiltersOptions {
+  search?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  emailVerified?: boolean;
+  page: number;
+  limit: number;
+  sortBy: "createdAt" | "email";
+  sortOrder: "asc" | "desc";
+}
+
+/** Plain DTO returned by the read-side query — no domain entity hydration. */
+export interface UserListItemDTO {
+  userId: string;
+  email: string;
+  phone: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  status: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  isGuest: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface IUserRepository {
   // Core CRUD operations
@@ -15,6 +42,9 @@ export interface IUserRepository {
   findActiveUsers(limit?: number, offset?: number): Promise<User[]>;
   findGuestUsers(limit?: number, offset?: number): Promise<User[]>;
   findUnverifiedUsers(limit?: number, offset?: number): Promise<User[]>;
+
+  /** Read-side: returns plain DTOs directly — no entity hydration. */
+  findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItemDTO[]; total: number }>;
 
   // Business operations
   existsByEmail(email: Email): Promise<boolean>;

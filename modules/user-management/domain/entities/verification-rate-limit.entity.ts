@@ -1,3 +1,7 @@
+import { VerificationType } from "./verification-token.entity";
+
+export { VerificationType };
+
 export class VerificationRateLimit {
   private constructor(
     private readonly rateLimitId: string,
@@ -92,12 +96,6 @@ export class VerificationRateLimit {
       reset_at: this.resetAt,
     };
   }
-}
-
-export enum VerificationType {
-  EMAIL_VERIFICATION = "email_verification",
-  PHONE_VERIFICATION = "phone_verification",
-  PASSWORD_RESET = "password_reset",
 }
 
 export interface CreateVerificationRateLimitData {

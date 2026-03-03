@@ -1,3 +1,5 @@
+import { InvalidOperationError } from "../errors/user-management.errors";
+
 export class VerificationToken {
   private constructor(
     private readonly tokenId: string,
@@ -106,11 +108,11 @@ export class VerificationToken {
 
   markAsUsed(): void {
     if (this.isUsed()) {
-      throw new Error("Token has already been used");
+      throw new InvalidOperationError("Token has already been used");
     }
 
     if (this.isExpired()) {
-      throw new Error("Cannot use expired token");
+      throw new InvalidOperationError("Cannot use expired token");
     }
 
     this.usedAt = new Date();

@@ -1,1 +1,2 @@
-// modules/user-management/infra/http/index.ts
+export { registerUserManagementRoutes } from "./routes/index";
+export * from "./controllers/index";

@@ -1,4 +1,8 @@
 import { UserId } from "../value-objects/user-id.vo";
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../errors/user-management.errors";
 
 export class PaymentMethod {
   private constructor(
@@ -13,7 +17,7 @@ export class PaymentMethod {
     private providerRef: string | null,
     private isDefault: boolean,
     private readonly createdAt: Date,
-    private updatedAt: Date
+    private updatedAt: Date,
   ) {}
 
   // Factory methods
@@ -34,7 +38,7 @@ export class PaymentMethod {
       data.providerRef || null,
       data.isDefault || false,
       now,
-      now
+      now,
     );
 
     paymentMethod.validate();
@@ -54,7 +58,7 @@ export class PaymentMethod {
       data.providerRef,
       data.isDefault,
       data.createdAt,
-      data.updatedAt
+      data.updatedAt,
     );
 
     paymentMethod.validate();
@@ -75,7 +79,7 @@ export class PaymentMethod {
       row.provider_ref,
       row.is_default,
       row.created_at,
-      row.updated_at
+      row.updated_at,
     );
 
     paymentMethod.validate();
@@ -127,11 +131,11 @@ export class PaymentMethod {
     }
 
     if (month < 1 || month > 12) {
-      throw new Error("Invalid expiry month");
+      throw new DomainValidationError("Invalid expiry month");
     }
 
     if (year < new Date().getFullYear()) {
-      throw new Error("Expiry year cannot be in the past");
+      throw new DomainValidationError("Expiry year cannot be in the past");
     }
 
     this.expMonth = month;
@@ -217,7 +221,7 @@ export class PaymentMethod {
     const futureDate = new Date(
       now.getFullYear(),
       now.getMonth() + monthsAhead,
-      now.getDate()
+      now.getDate(),
     );
     const futureYear = futureDate.getFullYear();
     const futureMonth = futureDate.getMonth() + 1;
@@ -255,31 +259,37 @@ export class PaymentMethod {
   validate(): void {
     // Validate type matches database constraints
     if (!PaymentMethodType.getAllValues().includes(this.type)) {
-      throw new Error(`Invalid payment method type: ${this.type}`);
+      throw new InvalidOperationError(
+        `Invalid payment method type: ${this.type}`,
+      );
     }
 
     // Validate last4 format if present
     if (this.last4 && !/^\d{4}$/.test(this.last4)) {
-      throw new Error("last4 must be exactly 4 digits");
+      throw new DomainValidationError("last4 must be exactly 4 digits");
     }
 
     // Validate expiry month if present
     if (this.expMonth && (this.expMonth < 1 || this.expMonth > 12)) {
-      throw new Error("Expiry month must be between 1 and 12");
+      throw new DomainValidationError("Expiry month must be between 1 and 12");
     }
 
     // Validate expiry year if present
     if (this.expYear && this.expYear < 1900) {
-      throw new Error("Expiry year must be a valid year");
+      throw new DomainValidationError("Expiry year must be a valid year");
     }
 
     // Validate card-specific fields
     if (this.type === PaymentMethodType.CARD) {
       if (!this.last4) {
-        throw new Error("Card payment methods must have last4 digits");
+        throw new DomainValidationError(
+          "Card payment methods must have last4 digits",
+        );
       }
       if (!this.expMonth || !this.expYear) {
-        throw new Error("Card payment methods must have expiry date");
+        throw new DomainValidationError(
+          "Card payment methods must have expiry date",
+        );
       }
     }
   }
@@ -366,14 +376,16 @@ export enum PaymentMethodType {
   CARD = "card",
   WALLET = "wallet",
   BANK = "bank",
-  COD = "cod", // Cash on Delivery
+  COD = "cod",
   GIFT_CARD = "gift_card",
 }
 
 export namespace PaymentMethodType {
   export function fromString(type: string): PaymentMethodType {
     if (!type || typeof type !== "string") {
-      throw new Error("Payment method type must be a non-empty string");
+      throw new DomainValidationError(
+        "Payment method type must be a non-empty string",
+      );
     }
 
     switch (type.toLowerCase()) {
@@ -388,7 +400,7 @@ export namespace PaymentMethodType {
       case "gift_card":
         return PaymentMethodType.GIFT_CARD;
       default:
-        throw new Error(`Invalid payment method type: ${type}`);
+        throw new DomainValidationError(`Invalid payment method type: ${type}`);
     }
   }
 

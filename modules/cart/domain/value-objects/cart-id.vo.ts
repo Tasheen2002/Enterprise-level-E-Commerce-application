@@ -1,0 +1,20 @@
+import { randomUUID } from "crypto";
+import { UuidId } from "@/api/src/shared/domain/value-objects/uuid-id.base";
+
+export class CartId extends UuidId {
+  private constructor(value: string) {
+    super(value, "Cart ID");
+  }
+
+  static create(): CartId {
+    return new CartId(randomUUID());
+  }
+
+  static fromString(value: string): CartId {
+    return new CartId(value);
+  }
+
+  equals(other: CartId | null | undefined): boolean {
+    return super.equals(other);
+  }
+}
