@@ -1,122 +1,60 @@
-// Order Commands
+// Command interfaces
+export type { CreateOrderCommand } from "./create-order.command";
+export type { UpdateOrderStatusCommand } from "./update-order-status.command";
+export type { UpdateOrderTotalsCommand } from "./update-order-totals.command";
+export type { CancelOrderCommand } from "./cancel-order.command";
+export type { MarkOrderAsPaidCommand } from "./mark-order-paid.command";
+export type { MarkOrderAsFulfilledCommand } from "./mark-order-fulfilled.command";
+export type { DeleteOrderCommand } from "./delete-order.command";
+export type { AddOrderItemCommand } from "./add-order-item.command";
+export type { UpdateOrderItemCommand } from "./update-order-item.command";
+export type { RemoveOrderItemCommand } from "./remove-order-item.command";
+export type { SetOrderAddressesCommand } from "./set-order-addresses.command";
+export type { UpdateBillingAddressCommand } from "./update-billing-address.command";
+export type { UpdateShippingAddressCommand } from "./update-shipping-address.command";
+export type { CreateShipmentCommand } from "./create-shipment.command";
+export type { UpdateShipmentTrackingCommand } from "./update-shipment-tracking.command";
+export type { MarkShipmentShippedCommand } from "./mark-shipment-shipped.command";
+export type { MarkShipmentDeliveredCommand } from "./mark-shipment-delivered.command";
+export type { CreateBackorderCommand } from "./create-backorder.command";
+export type { UpdateBackorderEtaCommand } from "./update-backorder-eta.command";
+export type { MarkBackorderNotifiedCommand } from "./mark-backorder-notified.command";
+export type { DeleteBackorderCommand } from "./delete-backorder.command";
+export type { CreatePreorderCommand } from "./create-preorder.command";
+export type { UpdatePreorderReleaseDateCommand } from "./update-preorder-release-date.command";
+export type { MarkPreorderNotifiedCommand } from "./mark-preorder-notified.command";
+export type { DeletePreorderCommand } from "./delete-preorder.command";
+export type { LogOrderEventCommand } from "./log-order-event.command";
+export type { LogOrderStatusChangeCommand } from "./log-order-status-change.command";
+
+// Command handlers
 export {
-  CreateOrderCommand,
   CreateOrderCommandHandler,
   CreateOrderCommandHandler as CreateOrderHandler,
-} from "./create-order.command";
-export {
-  UpdateOrderStatusCommand,
-  UpdateOrderStatusCommandHandler,
-} from "./update-order-status.command";
-export {
-  UpdateOrderTotalsCommand,
-  UpdateOrderTotalsCommandHandler,
-} from "./update-order-totals.command";
-export {
-  CancelOrderCommand,
-  CancelOrderCommandHandler,
-} from "./cancel-order.command";
-export {
-  MarkOrderAsPaidCommand,
-  MarkOrderAsPaidCommandHandler,
-} from "./mark-order-paid.command";
-export {
-  MarkOrderAsFulfilledCommand,
-  MarkOrderAsFulfilledCommandHandler,
-} from "./mark-order-fulfilled.command";
-export {
-  DeleteOrderCommand,
-  DeleteOrderCommandHandler,
-} from "./delete-order.command";
-
-// Order Item Commands
-export {
-  AddOrderItemCommand,
-  AddOrderItemCommandHandler,
-} from "./add-order-item.command";
-export {
-  UpdateOrderItemCommand,
-  UpdateOrderItemCommandHandler,
-} from "./update-order-item.command";
-export {
-  RemoveOrderItemCommand,
-  RemoveOrderItemCommandHandler,
-} from "./remove-order-item.command";
-
-// Order Address Commands
-export {
-  SetOrderAddressesCommand,
-  SetOrderAddressesCommandHandler,
-} from "./set-order-addresses.command";
-export {
-  UpdateBillingAddressCommand,
-  UpdateBillingAddressCommandHandler,
-} from "./update-billing-address.command";
-export {
-  UpdateShippingAddressCommand,
-  UpdateShippingAddressCommandHandler,
-} from "./update-shipping-address.command";
-
-// Order Shipment Commands
-export {
-  CreateShipmentCommand,
-  CreateShipmentCommandHandler,
-} from "./create-shipment.command";
-export {
-  UpdateShipmentTrackingCommand,
-  UpdateShipmentTrackingCommandHandler,
-} from "./update-shipment-tracking.command";
-export {
-  MarkShipmentShippedCommand,
-  MarkShipmentShippedCommandHandler,
-} from "./mark-shipment-shipped.command";
-export {
-  MarkShipmentDeliveredCommand,
-  MarkShipmentDeliveredCommandHandler,
-} from "./mark-shipment-delivered.command";
-
-// Backorder Commands
-export {
-  CreateBackorderCommand,
-  CreateBackorderCommandHandler,
-} from "./create-backorder.command";
-export {
-  UpdateBackorderEtaCommand,
-  UpdateBackorderEtaCommandHandler,
-} from "./update-backorder-eta.command";
-export {
-  MarkBackorderNotifiedCommand,
-  MarkBackorderNotifiedCommandHandler,
-} from "./mark-backorder-notified.command";
-export {
-  DeleteBackorderCommand,
-  DeleteBackorderCommandHandler,
-} from "./delete-backorder.command";
-
-// Preorder Commands
-export {
-  CreatePreorderCommand,
-  CreatePreorderCommandHandler,
-} from "./create-preorder.command";
-export {
-  UpdatePreorderReleaseDateCommand,
-  UpdatePreorderReleaseDateCommandHandler,
-} from "./update-preorder-release-date.command";
-export {
-  MarkPreorderNotifiedCommand,
-  MarkPreorderNotifiedCommandHandler,
-} from "./mark-preorder-notified.command";
-export {
-  DeletePreorderCommand,
-  DeletePreorderCommandHandler,
-} from "./delete-preorder.command";
-
-// Order Event Commands
-export {
-  LogOrderEventCommand,
-  LogOrderEventCommandHandler,
-} from "./log-order-event.command";
-export {
-  LogOrderStatusChangeCommand,
-  LogOrderStatusChangeCommandHandler,
-} from "./log-order-status-change.command";
+} from "./create-order.handler";
+export { UpdateOrderStatusCommandHandler } from "./update-order-status.handler";
+export { UpdateOrderTotalsCommandHandler } from "./update-order-totals.handler";
+export { CancelOrderCommandHandler } from "./cancel-order.handler";
+export { MarkOrderAsPaidCommandHandler } from "./mark-order-paid.handler";
+export { MarkOrderAsFulfilledCommandHandler } from "./mark-order-fulfilled.handler";
+export { DeleteOrderCommandHandler } from "./delete-order.handler";
+export { AddOrderItemCommandHandler } from "./add-order-item.handler";
+export { UpdateOrderItemCommandHandler } from "./update-order-item.handler";
+export { RemoveOrderItemCommandHandler } from "./remove-order-item.handler";
+export { SetOrderAddressesCommandHandler } from "./set-order-addresses.handler";
+export { UpdateBillingAddressCommandHandler } from "./update-billing-address.handler";
+export { UpdateShippingAddressCommandHandler } from "./update-shipping-address.handler";
+export { CreateShipmentCommandHandler } from "./create-shipment.handler";
+export { UpdateShipmentTrackingCommandHandler } from "./update-shipment-tracking.handler";
+export { MarkShipmentShippedCommandHandler } from "./mark-shipment-shipped.handler";
+export { MarkShipmentDeliveredCommandHandler } from "./mark-shipment-delivered.handler";
+export { CreateBackorderCommandHandler } from "./create-backorder.handler";
+export { UpdateBackorderEtaCommandHandler } from "./update-backorder-eta.handler";
+export { MarkBackorderNotifiedCommandHandler } from "./mark-backorder-notified.handler";
+export { DeleteBackorderCommandHandler } from "./delete-backorder.handler";
+export { CreatePreorderCommandHandler } from "./create-preorder.handler";
+export { UpdatePreorderReleaseDateCommandHandler } from "./update-preorder-release-date.handler";
+export { MarkPreorderNotifiedCommandHandler } from "./mark-preorder-notified.handler";
+export { DeletePreorderCommandHandler } from "./delete-preorder.handler";
+export { LogOrderEventCommandHandler } from "./log-order-event.handler";
+export { LogOrderStatusChangeCommandHandler } from "./log-order-status-change.handler";
