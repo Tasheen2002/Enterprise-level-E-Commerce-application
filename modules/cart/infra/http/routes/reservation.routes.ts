@@ -1,9 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { ReservationController } from "../controllers/reservation.controller";
 import {
-  requireAdmin,
-  authenticateUser,
-} from "@/api/src/shared/middleware";
+  ReservationController,
+  CreateReservationRequest,
+  ExtendReservationRequest,
+  CheckAvailabilityRequest,
+} from "../controllers/reservation.controller";
+import { requireAdmin, authenticateUser } from "@/api/src/shared/middleware";
 
 const authErrorResponses = {
   401: {
@@ -39,7 +41,7 @@ export async function registerReservationRoutes(
   reservationController: ReservationController,
 ): Promise<void> {
   // Create reservation
-  fastify.post(
+  fastify.post<{ Body: CreateReservationRequest }>(
     "/reservations",
     {
       preHandler: authenticateUser,
@@ -96,11 +98,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.createReservation.bind(reservationController) as any,
+    reservationController.createReservation.bind(reservationController),
   );
 
   // Get reservation by ID
-  fastify.get(
+  fastify.get<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: authenticateUser,
@@ -154,11 +156,14 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getReservation.bind(reservationController) as any,
+    reservationController.getReservation.bind(reservationController),
   );
 
   // Get cart reservations
-  fastify.get(
+  fastify.get<{
+    Params: { cartId: string };
+    Querystring: { activeOnly?: boolean };
+  }>(
     "/carts/:cartId/reservations",
     {
       preHandler: authenticateUser,
@@ -220,13 +225,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getCartReservations.bind(
-      reservationController,
-    ) as any,
+    reservationController.getCartReservations.bind(reservationController),
   );
 
   // Get variant reservations
-  fastify.get(
+  fastify.get<{ Params: { variantId: string } }>(
     "/variants/:variantId/reservations",
     {
       schema: {
@@ -279,13 +282,14 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getVariantReservations.bind(
-      reservationController,
-    ) as any,
+    reservationController.getVariantReservations.bind(reservationController),
   );
 
   // Extend reservation
-  fastify.post(
+  fastify.post<{
+    Params: { reservationId: string };
+    Body: ExtendReservationRequest;
+  }>(
     "/reservations/:reservationId/extend",
     {
       preHandler: authenticateUser,
@@ -325,13 +329,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.extendReservation.bind(
-      reservationController,
-    ) as any,
+    reservationController.extendReservation.bind(reservationController),
   );
 
   // Release reservation
-  fastify.delete(
+  fastify.delete<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: authenticateUser,
@@ -363,13 +365,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.releaseReservation.bind(
-      reservationController,
-    ) as any,
+    reservationController.releaseReservation.bind(reservationController),
   );
 
   // Check availability
-  fastify.get(
+  fastify.get<{ Querystring: CheckAvailabilityRequest }>(
     "/availability",
     {
       schema: {
@@ -405,9 +405,7 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.checkAvailability.bind(
-      reservationController,
-    ) as any,
+    reservationController.checkAvailability.bind(reservationController),
   );
 
   // Get reservation statistics (admin)
@@ -433,8 +431,6 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getReservationStatistics.bind(
-      reservationController,
-    ) as any,
+    reservationController.getReservationStatistics.bind(reservationController),
   );
 }
