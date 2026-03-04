@@ -10,7 +10,7 @@ import {
   OrderManagementService,
 } from "../../../application";
 
-interface CreateShipmentRequest {
+export interface CreateShipmentRequest {
   Params: { orderId: string };
   Body: {
     carrier?: string;
@@ -21,7 +21,7 @@ interface CreateShipmentRequest {
   };
 }
 
-interface MarkShippedRequest {
+export interface MarkShippedRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     carrier: string;
@@ -30,7 +30,7 @@ interface MarkShippedRequest {
   };
 }
 
-interface UpdateTrackingRequest {
+export interface UpdateTrackingRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     trackingNumber: string;
@@ -39,18 +39,18 @@ interface UpdateTrackingRequest {
   };
 }
 
-interface MarkDeliveredRequest {
+export interface MarkDeliveredRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     deliveredAt?: string;
   };
 }
 
-interface GetShipmentsRequest {
+export interface GetShipmentsRequest {
   Params: { orderId: string };
 }
 
-interface GetShipmentRequest {
+export interface GetShipmentRequest {
   Params: { orderId: string; shipmentId: string };
 }
 

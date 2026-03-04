@@ -12,7 +12,7 @@ import {
   OrderManagementService,
 } from "../../../application";
 
-interface AddressData {
+export interface AddressData {
   firstName: string;
   lastName: string;
   addressLine1: string;
@@ -25,7 +25,7 @@ interface AddressData {
   email?: string;
 }
 
-interface SetAddressesRequest {
+export interface SetAddressesRequest {
   Params: { orderId: string };
   Body: {
     billingAddress: AddressData;
@@ -33,17 +33,17 @@ interface SetAddressesRequest {
   };
 }
 
-interface UpdateBillingAddressRequest {
+export interface UpdateBillingAddressRequest {
   Params: { orderId: string };
   Body: AddressData;
 }
 
-interface UpdateShippingAddressRequest {
+export interface UpdateShippingAddressRequest {
   Params: { orderId: string };
   Body: AddressData;
 }
 
-interface GetAddressesRequest {
+export interface GetAddressesRequest {
   Params: { orderId: string };
 }
 

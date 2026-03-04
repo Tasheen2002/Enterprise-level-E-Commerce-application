@@ -14,7 +14,7 @@ import {
   OrderManagementService,
 } from "../../../application";
 
-interface AddItemRequest {
+export interface AddItemRequest {
   Params: { orderId: string };
   Body: {
     variantId: string;
@@ -24,7 +24,7 @@ interface AddItemRequest {
   };
 }
 
-interface UpdateItemRequest {
+export interface UpdateItemRequest {
   Params: { orderId: string; itemId: string };
   Body: {
     quantity?: number;
@@ -33,15 +33,15 @@ interface UpdateItemRequest {
   };
 }
 
-interface RemoveItemRequest {
+export interface RemoveItemRequest {
   Params: { orderId: string; itemId: string };
 }
 
-interface GetItemsRequest {
+export interface GetItemsRequest {
   Params: { orderId: string };
 }
 
-interface GetItemRequest {
+export interface GetItemRequest {
   Params: { itemId: string };
 }
 

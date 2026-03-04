@@ -37,6 +37,10 @@ export interface VoidPaymentRequest {
   intentId: string;
   pspReference?: string;
 }
+export interface GetPaymentIntentQuerystring {
+  intentId?: string;
+  orderId?: string;
+}
 
 export class PaymentIntentController {
   private createHandler: CreatePaymentIntentHandler;
@@ -133,9 +137,7 @@ export class PaymentIntentController {
   }
 
   async get(
-    request: FastifyRequest<{
-      Querystring: { intentId?: string; orderId?: string };
-    }>,
+    request: FastifyRequest<{ Querystring: GetPaymentIntentQuerystring }>,
     reply: FastifyReply,
   ) {
     const userId = (request as any).user?.userId;

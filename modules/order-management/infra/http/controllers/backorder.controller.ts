@@ -16,33 +16,33 @@ import {
   BackorderManagementService,
 } from "../../../application";
 
-interface CreateBackorderRequest {
+export interface CreateBackorderRequest {
   Body: {
     orderItemId: string;
     promisedEta?: string;
   };
 }
 
-interface UpdateBackorderEtaRequest {
+export interface UpdateBackorderEtaRequest {
   Params: { orderItemId: string };
   Body: {
     promisedEta: string;
   };
 }
 
-interface MarkBackorderNotifiedRequest {
+export interface MarkBackorderNotifiedRequest {
   Params: { orderItemId: string };
 }
 
-interface DeleteBackorderRequest {
+export interface DeleteBackorderRequest {
   Params: { orderItemId: string };
 }
 
-interface GetBackorderRequest {
+export interface GetBackorderRequest {
   Params: { orderItemId: string };
 }
 
-interface ListBackordersRequest {
+export interface ListBackordersRequest {
   Querystring: {
     limit?: number;
     offset?: number;

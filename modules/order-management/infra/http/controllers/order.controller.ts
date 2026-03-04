@@ -9,7 +9,7 @@ import {
   OrderManagementService,
 } from "../../../application";
 
-interface CreateOrderRequest {
+export interface CreateOrderBody {
   guestToken?: string;
   items: Array<{
     variantId: string;
@@ -19,6 +19,34 @@ interface CreateOrderRequest {
   }>;
   source?: string;
   currency?: string;
+}
+
+export interface TrackOrderQuerystring {
+  orderNumber: string;
+  contact: string;
+  trackingNumber?: string;
+}
+
+export interface ListOrdersQuerystring {
+  page?: number;
+  limit?: number;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export interface UpdateOrderStatusBody {
+  status: string;
+}
+
+export interface UpdateOrderTotalsBody {
+  totals: {
+    tax: number;
+    shipping: number;
+    discount: number;
+  };
 }
 
 export class OrderController {
@@ -149,9 +177,12 @@ export class OrderController {
     }
   }
 
-  async createOrder(request: FastifyRequest, reply: FastifyReply) {
+  async createOrder(
+    request: FastifyRequest<{ Body: CreateOrderBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const orderData = request.body as CreateOrderRequest;
+      const orderData = request.body;
 
       // Extract userId from authentication context (JWT token)
       // @ts-ignore - request.user is added by authentication middleware
@@ -221,7 +252,10 @@ export class OrderController {
     }
   }
 
-  async listOrders(request: any, reply: FastifyReply) {
+  async listOrders(
+    request: FastifyRequest<{ Querystring: ListOrdersQuerystring }>,
+    reply: FastifyReply,
+  ) {
     try {
       const {
         page: pageQuery = 1,
@@ -359,7 +393,7 @@ export class OrderController {
   async updateOrderStatus(
     request: FastifyRequest<{
       Params: { orderId: string };
-      Body: { status: string };
+      Body: UpdateOrderStatusBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -420,13 +454,7 @@ export class OrderController {
   async updateOrderTotals(
     request: FastifyRequest<{
       Params: { orderId: string };
-      Body: {
-        totals: {
-          tax: number;
-          shipping: number;
-          discount: number;
-        };
-      };
+      Body: UpdateOrderTotalsBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -596,13 +624,7 @@ export class OrderController {
 
   // Public order tracking (no authentication required)
   async trackOrder(
-    request: FastifyRequest<{
-      Querystring: {
-        orderNumber: string;
-        contact: string; // email or phone
-        trackingNumber?: string;
-      };
-    }>,
+    request: FastifyRequest<{ Querystring: TrackOrderQuerystring }>,
     reply: FastifyReply,
   ) {
     try {

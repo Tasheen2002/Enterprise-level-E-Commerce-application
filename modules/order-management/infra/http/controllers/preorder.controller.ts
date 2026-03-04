@@ -16,33 +16,33 @@ import {
   PreorderManagementService,
 } from "../../../application";
 
-interface CreatePreorderRequest {
+export interface CreatePreorderRequest {
   Body: {
     orderItemId: string;
     releaseDate?: string;
   };
 }
 
-interface UpdatePreorderReleaseDateRequest {
+export interface UpdatePreorderReleaseDateRequest {
   Params: { orderItemId: string };
   Body: {
     releaseDate: string;
   };
 }
 
-interface MarkPreorderNotifiedRequest {
+export interface MarkPreorderNotifiedRequest {
   Params: { orderItemId: string };
 }
 
-interface DeletePreorderRequest {
+export interface DeletePreorderRequest {
   Params: { orderItemId: string };
 }
 
-interface GetPreorderRequest {
+export interface GetPreorderRequest {
   Params: { orderItemId: string };
 }
 
-interface ListPreordersRequest {
+export interface ListPreordersRequest {
   Querystring: {
     limit?: number;
     offset?: number;

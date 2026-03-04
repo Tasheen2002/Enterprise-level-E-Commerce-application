@@ -6,7 +6,7 @@ import {
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface LogStatusChangeRequest {
+export interface LogStatusChangeRequest {
   Params: { orderId: string };
   Body: {
     fromStatus?: string;
@@ -15,7 +15,7 @@ interface LogStatusChangeRequest {
   };
 }
 
-interface GetStatusHistoryRequest {
+export interface GetStatusHistoryRequest {
   Params: { orderId: string };
   Querystring: {
     limit?: number;

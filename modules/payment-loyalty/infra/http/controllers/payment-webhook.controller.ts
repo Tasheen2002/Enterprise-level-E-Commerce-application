@@ -19,6 +19,7 @@ export interface WebhookFilterParams {
   provider?: string;
   eventType?: string;
   limit?: number;
+  offset?: number;
 }
 
 export class PaymentWebhookController {

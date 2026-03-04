@@ -7,7 +7,7 @@ import {
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface LogEventRequest {
+export interface LogEventRequest {
   Params: { orderId: string };
   Body: {
     eventType: string;
@@ -15,7 +15,7 @@ interface LogEventRequest {
   };
 }
 
-interface GetEventsRequest {
+export interface GetEventsRequest {
   Params: { orderId: string };
   Querystring: {
     eventType?: string;
@@ -26,7 +26,7 @@ interface GetEventsRequest {
   };
 }
 
-interface GetEventRequest {
+export interface GetEventRequest {
   Params: {
     orderId: string;
     eventId: string;
