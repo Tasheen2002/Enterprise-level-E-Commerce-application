@@ -7,6 +7,7 @@ import {
   BulkCreateSizeGuidesRequest,
   BulkDeleteSizeGuidesRequest,
   RegionalSizeGuideRequest,
+  ValidateSizeGuideQueryParams,
 } from "../controllers/size-guide.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
@@ -30,8 +31,16 @@ export async function registerSizeGuideRoutes(
             region: { type: "string", enum: ["UK", "US", "EU"] },
             category: { type: "string" },
             hasContent: { type: "boolean" },
-            sortBy: { type: "string", enum: ["title", "region", "category"], default: "title" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+            sortBy: {
+              type: "string",
+              enum: ["title", "region", "category"],
+              default: "title",
+            },
+            sortOrder: {
+              type: "string",
+              enum: ["asc", "desc"],
+              default: "asc",
+            },
           },
         },
       },
@@ -94,7 +103,10 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/region/:region — Get size guides by region (public)
-  fastify.get<{ Params: { region: string }; Querystring: Omit<SizeGuideQueryParams, "region"> }>(
+  fastify.get<{
+    Params: { region: string };
+    Querystring: Omit<SizeGuideQueryParams, "region">;
+  }>(
     "/size-guides/region/:region",
     {
       schema: {
@@ -208,8 +220,15 @@ export async function registerSizeGuideRoutes(
           required: ["title", "region"],
           properties: {
             title: { type: "string", description: "Size guide title" },
-            bodyHtml: { type: "string", description: "Size guide content in HTML" },
-            region: { type: "string", enum: ["UK", "US", "EU"], description: "Region" },
+            bodyHtml: {
+              type: "string",
+              description: "Size guide content in HTML",
+            },
+            region: {
+              type: "string",
+              enum: ["UK", "US", "EU"],
+              description: "Region",
+            },
             category: { type: "string", description: "Product category" },
           },
         },
@@ -360,11 +379,12 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/validate — Validate size guide uniqueness (public)
-  fastify.get<{ Querystring: { region: string; category?: string } }>(
+  fastify.get<{ Querystring: ValidateSizeGuideQueryParams }>(
     "/size-guides/validate",
     {
       schema: {
-        description: "Validate size guide uniqueness for a region/category combination",
+        description:
+          "Validate size guide uniqueness for a region/category combination",
         tags: ["Size Guides"],
         summary: "Validate Size Guide Uniqueness",
         querystring: {

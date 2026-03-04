@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { PurchaseOrderItemController } from "../controllers/purchase-order-item.controller";
+import {
+  PurchaseOrderItemController,
+  AddPOItemBody,
+  UpdatePOItemBody,
+} from "../controllers/purchase-order-item.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +56,7 @@ export async function registerPurchaseOrderItemRoutes(
   controller: PurchaseOrderItemController,
 ): Promise<void> {
   // Get PO items
-  fastify.get(
+  fastify.get<{ Params: { poId: string } }>(
     "/purchase-orders/:poId/items",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -74,11 +78,11 @@ export async function registerPurchaseOrderItemRoutes(
         },
       },
     },
-    controller.getPOItems.bind(controller) as any,
+    controller.getPOItems.bind(controller),
   );
 
   // Add item to PO
-  fastify.post(
+  fastify.post<{ Params: { poId: string }; Body: AddPOItemBody }>(
     "/purchase-orders/:poId/items",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -108,11 +112,14 @@ export async function registerPurchaseOrderItemRoutes(
         },
       },
     },
-    controller.addItem.bind(controller) as any,
+    controller.addItem.bind(controller),
   );
 
   // Update PO item
-  fastify.put(
+  fastify.put<{
+    Params: { poId: string; variantId: string };
+    Body: UpdatePOItemBody;
+  }>(
     "/purchase-orders/:poId/items/:variantId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -142,11 +149,11 @@ export async function registerPurchaseOrderItemRoutes(
         },
       },
     },
-    controller.updateItem.bind(controller) as any,
+    controller.updateItem.bind(controller),
   );
 
   // Remove PO item
-  fastify.delete(
+  fastify.delete<{ Params: { poId: string; variantId: string } }>(
     "/purchase-orders/:poId/items/:variantId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -169,6 +176,6 @@ export async function registerPurchaseOrderItemRoutes(
         },
       },
     },
-    controller.removeItem.bind(controller) as any,
+    controller.removeItem.bind(controller),
   );
 }

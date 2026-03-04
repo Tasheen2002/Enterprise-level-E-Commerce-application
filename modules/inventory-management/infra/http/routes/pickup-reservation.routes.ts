@@ -1,6 +1,10 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
-import { PickupReservationController } from "../controllers/pickup-reservation.controller";
+import {
+  PickupReservationController,
+  ListReservationsQuerystring,
+  CreateReservationBody,
+} from "../controllers/pickup-reservation.controller";
 
 const errorResponses = {
   400: {
@@ -51,7 +55,7 @@ export async function registerPickupReservationRoutes(
   controller: PickupReservationController,
 ): Promise<void> {
   // List reservations
-  fastify.get(
+  fastify.get<{ Querystring: ListReservationsQuerystring }>(
     "/reservations",
     {
       preHandler: [authenticate],
@@ -74,11 +78,11 @@ export async function registerPickupReservationRoutes(
         },
       },
     },
-    controller.listReservations.bind(controller) as any,
+    controller.listReservations.bind(controller),
   );
 
   // Get reservation
-  fastify.get(
+  fastify.get<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: [authenticate],
@@ -100,11 +104,11 @@ export async function registerPickupReservationRoutes(
         },
       },
     },
-    controller.getReservation.bind(controller) as any,
+    controller.getReservation.bind(controller),
   );
 
   // Create reservation
-  fastify.post(
+  fastify.post<{ Body: CreateReservationBody }>(
     "/reservations",
     {
       preHandler: [authenticate],
@@ -130,11 +134,11 @@ export async function registerPickupReservationRoutes(
         },
       },
     },
-    controller.createReservation.bind(controller) as any,
+    controller.createReservation.bind(controller),
   );
 
   // Cancel reservation
-  fastify.delete(
+  fastify.delete<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: [authenticate],
@@ -156,6 +160,6 @@ export async function registerPickupReservationRoutes(
         },
       },
     },
-    controller.cancelReservation.bind(controller) as any,
+    controller.cancelReservation.bind(controller),
   );
 }

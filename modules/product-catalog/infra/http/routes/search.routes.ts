@@ -1,5 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { SearchController, SearchQueryParams, SearchSuggestionsQueryParams } from "../controllers/search.controller";
+import {
+  SearchController,
+  SearchQueryParams,
+  SearchSuggestionsQueryParams,
+  SearchFiltersQueryParams,
+} from "../controllers/search.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerSearchRoutes(
@@ -144,7 +149,7 @@ export async function registerSearchRoutes(
   );
 
   // GET /search/filters — Get available search filters (public)
-  fastify.get<{ Querystring: { q?: string; category?: string } }>(
+  fastify.get<{ Querystring: SearchFiltersQueryParams }>(
     "/search/filters",
     {
       schema: {

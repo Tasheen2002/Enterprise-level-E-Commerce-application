@@ -1,6 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { AddressesController } from "../controllers/addresses.controller";
-import { ListAddressesQueryParams } from "../controllers/addresses.controller";
+import {
+  AddressesController,
+  AddAddressRequest,
+  UpdateAddressRequest,
+  ListAddressesQueryParams,
+} from "../controllers/addresses.controller";
 import { authenticate } from "@/api/src/shared/middleware";
 
 const addressObject = {
@@ -77,7 +81,7 @@ export async function registerAddressRoutes(
   );
 
   // POST /users/me/addresses
-  fastify.post<{ Body: { type: "billing" | "shipping"; firstName?: string; lastName?: string; phone?: string; addressLine1: string; addressLine2?: string; city: string; state?: string; postalCode?: string; country: string; isDefault?: boolean } }>(
+  fastify.post<{ Body: AddAddressRequest }>(
     "/users/me/addresses",
     {
       preHandler: [authenticate],
@@ -119,7 +123,7 @@ export async function registerAddressRoutes(
   // PATCH /users/me/addresses/:addressId
   fastify.patch<{
     Params: { addressId: string };
-    Body: { type?: "billing" | "shipping"; firstName?: string; lastName?: string; phone?: string; addressLine1?: string; addressLine2?: string; city?: string; state?: string; postalCode?: string; country?: string; isDefault?: boolean };
+    Body: UpdateAddressRequest;
   }>(
     "/users/me/addresses/:addressId",
     {

@@ -20,6 +20,32 @@ import { IAddressRepository } from "../../../domain/repositories/iaddress.reposi
 import { UserRole, UserStatus } from "../../../domain/entities/user.entity";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface ListUsersQuerystring {
+  search?: string;
+  role?: string;
+  status?: string;
+  emailVerified?: string;
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
+export interface UpdateUserStatusBody {
+  status: string;
+  notes?: string;
+}
+
+export interface UpdateUserRoleBody {
+  role: UserRole;
+  reason?: string;
+}
+
+export interface ToggleEmailVerifiedBody {
+  isVerified: boolean;
+  reason?: string;
+}
+
 export class UsersController {
   private getProfileHandler: GetUserProfileHandler;
   private getUserDetailsHandler: GetUserDetailsHandler;
@@ -35,12 +61,17 @@ export class UsersController {
     addressRepository: IAddressRepository,
   ) {
     this.getProfileHandler = new GetUserProfileHandler(userProfileService);
-    this.getUserDetailsHandler = new GetUserDetailsHandler(userRepository, addressRepository);
+    this.getUserDetailsHandler = new GetUserDetailsHandler(
+      userRepository,
+      addressRepository,
+    );
     this.listUsersHandler = new ListUsersHandler(userRepository);
     this.updateUserStatusHandler = new UpdateUserStatusHandler(userRepository);
     this.updateUserRoleHandler = new UpdateUserRoleHandler(userRepository);
     this.deleteUserHandler = new DeleteUserHandler(userRepository);
-    this.toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(userRepository);
+    this.toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(
+      userRepository,
+    );
   }
 
   async getUser(
@@ -51,7 +82,12 @@ export class UsersController {
       const { userId } = request.params;
       const query: GetUserDetailsQuery = { userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "User retrieved", "User not found");
+      ResponseHelper.fromQuery(
+        reply,
+        result,
+        "User retrieved",
+        "User not found",
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -69,29 +105,32 @@ export class UsersController {
 
       const query: GetUserDetailsQuery = { userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "User retrieved", "User not found");
+      ResponseHelper.fromQuery(
+        reply,
+        result,
+        "User retrieved",
+        "User not found",
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
   }
 
   async listUsers(
-    request: FastifyRequest<{
-      Querystring: {
-        search?: string;
-        role?: string;
-        status?: string;
-        emailVerified?: string;
-        page?: string;
-        limit?: string;
-        sortBy?: string;
-        sortOrder?: string;
-      };
-    }>,
+    request: FastifyRequest<{ Querystring: ListUsersQuerystring }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = request.query;
+      const {
+        search,
+        role,
+        status,
+        emailVerified,
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+      } = request.query;
 
       const parsedPage = page ? parseInt(page, 10) : 1;
       const parsedLimit = limit ? parseInt(limit, 10) : 20;
@@ -99,7 +138,10 @@ export class UsersController {
       let parsedRole: UserRole | undefined;
       if (role) {
         if (!Object.values(UserRole).includes(role as UserRole)) {
-          return ResponseHelper.badRequest(reply, `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`);
+          return ResponseHelper.badRequest(
+            reply,
+            `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`,
+          );
         }
         parsedRole = role as UserRole;
       }
@@ -107,7 +149,10 @@ export class UsersController {
       let parsedStatus: UserStatus | undefined;
       if (status) {
         if (!Object.values(UserStatus).includes(status as UserStatus)) {
-          return ResponseHelper.badRequest(reply, `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`);
+          return ResponseHelper.badRequest(
+            reply,
+            `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`,
+          );
         }
         parsedStatus = status as UserStatus;
       }
@@ -121,11 +166,17 @@ export class UsersController {
       const validSortOrder = ["asc", "desc"];
 
       if (sortBy && !validSortBy.includes(sortBy)) {
-        return ResponseHelper.badRequest(reply, `Invalid sortBy. Must be one of: ${validSortBy.join(", ")}`);
+        return ResponseHelper.badRequest(
+          reply,
+          `Invalid sortBy. Must be one of: ${validSortBy.join(", ")}`,
+        );
       }
 
       if (sortOrder && !validSortOrder.includes(sortOrder)) {
-        return ResponseHelper.badRequest(reply, `Invalid sortOrder. Must be one of: ${validSortOrder.join(", ")}`);
+        return ResponseHelper.badRequest(
+          reply,
+          `Invalid sortOrder. Must be one of: ${validSortOrder.join(", ")}`,
+        );
       }
 
       const query: ListUsersQuery = {
@@ -150,7 +201,7 @@ export class UsersController {
   async updateStatus(
     request: FastifyRequest<{
       Params: { userId: string };
-      Body: { status: string; notes?: string };
+      Body: UpdateUserStatusBody;
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -159,7 +210,10 @@ export class UsersController {
       const { status, notes } = request.body;
 
       if (!Object.values(UserStatus).includes(status as UserStatus)) {
-        return ResponseHelper.badRequest(reply, `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`);
+        return ResponseHelper.badRequest(
+          reply,
+          `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`,
+        );
       }
 
       const command: UpdateUserStatusCommand = {
@@ -179,7 +233,7 @@ export class UsersController {
   async updateRole(
     request: FastifyRequest<{
       Params: { userId: string };
-      Body: { role: UserRole; reason?: string };
+      Body: UpdateUserRoleBody;
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -188,7 +242,10 @@ export class UsersController {
       const { role, reason } = request.body;
 
       if (!Object.values(UserRole).includes(role as UserRole)) {
-        return ResponseHelper.badRequest(reply, `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`);
+        return ResponseHelper.badRequest(
+          reply,
+          `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`,
+        );
       }
 
       const command: UpdateUserRoleCommand = {
@@ -208,7 +265,7 @@ export class UsersController {
   async toggleEmailVerification(
     request: FastifyRequest<{
       Params: { userId: string };
-      Body: { isVerified: boolean; reason?: string };
+      Body: ToggleEmailVerifiedBody;
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -222,7 +279,11 @@ export class UsersController {
         reason,
       });
 
-      ResponseHelper.fromCommand(reply, result, "Email verification status updated");
+      ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Email verification status updated",
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }

@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { UsersController } from "../controllers/users.controller";
+import {
+  UsersController,
+  ListUsersQuerystring,
+  UpdateUserStatusBody,
+  UpdateUserRoleBody,
+  ToggleEmailVerifiedBody,
+} from "../controllers/users.controller";
 import { authenticate, RolePermissions } from "@/api/src/shared/middleware";
-import { UserRole } from "../../../domain/entities/user.entity";
 
 const userIdParam = {
   type: "object",
@@ -69,18 +74,7 @@ export async function registerUserRoutes(
   );
 
   // GET /admin/users — Admin only
-  fastify.get<{
-    Querystring: {
-      search?: string;
-      role?: string;
-      status?: string;
-      emailVerified?: string;
-      page?: string;
-      limit?: string;
-      sortBy?: string;
-      sortOrder?: string;
-    };
-  }>(
+  fastify.get<{ Querystring: ListUsersQuerystring }>(
     "/admin/users",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -159,7 +153,7 @@ export async function registerUserRoutes(
   // PATCH /users/:userId/status — Admin only
   fastify.patch<{
     Params: { userId: string };
-    Body: { status: string; notes?: string };
+    Body: UpdateUserStatusBody;
   }>(
     "/users/:userId/status",
     {
@@ -202,7 +196,7 @@ export async function registerUserRoutes(
   // PATCH /users/:userId/role — Admin only
   fastify.patch<{
     Params: { userId: string };
-    Body: { role: UserRole; reason?: string };
+    Body: UpdateUserRoleBody;
   }>(
     "/users/:userId/role",
     {
@@ -255,7 +249,7 @@ export async function registerUserRoutes(
   // PATCH /users/:userId/email-verified — Admin only
   fastify.patch<{
     Params: { userId: string };
-    Body: { isVerified: boolean; reason?: string };
+    Body: ToggleEmailVerifiedBody;
   }>(
     "/users/:userId/email-verified",
     {

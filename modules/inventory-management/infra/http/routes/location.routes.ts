@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { LocationController } from "../controllers/location.controller";
+import {
+  LocationController,
+  CreateLocationBody,
+  UpdateLocationBody,
+  ListLocationsQuerystring,
+} from "../controllers/location.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +57,7 @@ export async function registerLocationRoutes(
   controller: LocationController,
 ): Promise<void> {
   // List locations
-  fastify.get(
+  fastify.get<{ Querystring: ListLocationsQuerystring }>(
     "/locations",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -117,11 +122,11 @@ export async function registerLocationRoutes(
         },
       },
     },
-    controller.listLocations.bind(controller) as any,
+    controller.listLocations.bind(controller),
   );
 
   // Get location
-  fastify.get(
+  fastify.get<{ Params: { locationId: string } }>(
     "/locations/:locationId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -143,11 +148,11 @@ export async function registerLocationRoutes(
         },
       },
     },
-    controller.getLocation.bind(controller) as any,
+    controller.getLocation.bind(controller),
   );
 
   // Create location
-  fastify.post(
+  fastify.post<{ Body: CreateLocationBody }>(
     "/locations",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -180,11 +185,11 @@ export async function registerLocationRoutes(
         },
       },
     },
-    controller.createLocation.bind(controller) as any,
+    controller.createLocation.bind(controller),
   );
 
   // Update location
-  fastify.put(
+  fastify.put<{ Params: { locationId: string }; Body: UpdateLocationBody }>(
     "/locations/:locationId",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -213,11 +218,11 @@ export async function registerLocationRoutes(
         },
       },
     },
-    controller.updateLocation.bind(controller) as any,
+    controller.updateLocation.bind(controller),
   );
 
   // Delete location
-  fastify.delete(
+  fastify.delete<{ Params: { locationId: string } }>(
     "/locations/:locationId",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -239,6 +244,6 @@ export async function registerLocationRoutes(
         },
       },
     },
-    controller.deleteLocation.bind(controller) as any,
+    controller.deleteLocation.bind(controller),
   );
 }
