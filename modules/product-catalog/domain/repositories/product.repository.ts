@@ -2,6 +2,56 @@ import { Product } from "../entities/product.entity";
 import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
 
+// Enrichment read-model DTOs returned by enrichment queries
+export interface EnrichedVariantData {
+  id: string;
+  sku: string;
+  size: string | null;
+  color: string | null;
+  inventory: number;
+}
+
+export interface EnrichedImageData {
+  url: string;
+  alt: string | null;
+  width: number | null;
+  height: number | null;
+}
+
+export interface EnrichedMediaData {
+  id: string;
+  productId: string;
+  assetId: string;
+  position: number | null;
+  asset: {
+    id: string;
+    storageKey: string;
+    altText: string | null;
+    width: number | null;
+    height: number | null;
+    bytes: string | null;
+    mime: string;
+  };
+}
+
+export interface EnrichedCategoryData {
+  id: string;
+  name: string;
+  slug: string;
+  position: number | null;
+}
+
+export interface ProductEnrichment {
+  variants: EnrichedVariantData[];
+  images: EnrichedImageData[];
+  categories: EnrichedCategoryData[];
+}
+
+export interface ProductMediaEnrichment {
+  images: EnrichedImageData[];
+  media: EnrichedMediaData[];
+}
+
 export interface IProductRepository {
   save(product: Product): Promise<void>;
   saveWithCategories(product: Product, categoryIds: string[]): Promise<void>;
@@ -24,6 +74,10 @@ export interface IProductRepository {
   existsBySlug(slug: Slug): Promise<boolean>;
   count(options?: ProductCountOptions): Promise<number>;
   addToCategory(productId: string, categoryId: string): Promise<void>;
+  replaceCategories(productId: string, categoryIds: string[]): Promise<void>;
+  findWithEnrichment(ids: string[]): Promise<Map<string, ProductEnrichment>>;
+  findOneWithEnrichment(id: string): Promise<ProductEnrichment>;
+  findMediaEnrichment(id: string): Promise<ProductMediaEnrichment>;
 }
 
 export interface ProductQueryOptions {
