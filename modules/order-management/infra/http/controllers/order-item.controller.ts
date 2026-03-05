@@ -12,6 +12,7 @@ import {
   GetOrderItemHandler,
   GetOrderItemQuery,
   OrderManagementService,
+  OrderItemManagementService,
 } from "../../../application";
 
 export interface AddItemRequest {
@@ -52,7 +53,10 @@ export class OrderItemController {
   private getOrderItemsHandler: GetOrderItemsHandler;
   private getOrderItemHandler: GetOrderItemHandler;
 
-  constructor(private readonly orderService: OrderManagementService) {
+  constructor(
+    private readonly orderService: OrderManagementService,
+    private readonly orderItemService: OrderItemManagementService,
+  ) {
     this.addOrderItemHandler = new AddOrderItemCommandHandler(orderService);
     this.updateOrderItemHandler = new UpdateOrderItemCommandHandler(
       orderService,
@@ -60,8 +64,8 @@ export class OrderItemController {
     this.removeOrderItemHandler = new RemoveOrderItemCommandHandler(
       orderService,
     );
-    this.getOrderItemsHandler = new GetOrderItemsHandler(orderService);
-    this.getOrderItemHandler = new GetOrderItemHandler(orderService);
+    this.getOrderItemsHandler = new GetOrderItemsHandler(orderItemService);
+    this.getOrderItemHandler = new GetOrderItemHandler(orderItemService);
   }
 
   async addItem(

@@ -8,6 +8,7 @@ import {
   GetOrderShipmentsHandler,
   GetShipmentHandler,
   OrderManagementService,
+  ShipmentManagementService,
 } from "../../../application";
 
 export interface CreateShipmentRequest {
@@ -62,7 +63,10 @@ export class OrderShipmentController {
   private getOrderShipmentsHandler: GetOrderShipmentsHandler;
   private getShipmentHandler: GetShipmentHandler;
 
-  constructor(orderService: OrderManagementService) {
+  constructor(
+    orderService: OrderManagementService,
+    shipmentService: ShipmentManagementService,
+  ) {
     this.createShipmentHandler = new CreateShipmentCommandHandler(orderService);
     this.updateTrackingHandler = new UpdateShipmentTrackingCommandHandler(
       orderService,
@@ -73,8 +77,10 @@ export class OrderShipmentController {
     this.markDeliveredHandler = new MarkShipmentDeliveredCommandHandler(
       orderService,
     );
-    this.getOrderShipmentsHandler = new GetOrderShipmentsHandler(orderService);
-    this.getShipmentHandler = new GetShipmentHandler(orderService);
+    this.getOrderShipmentsHandler = new GetOrderShipmentsHandler(
+      shipmentService,
+    );
+    this.getShipmentHandler = new GetShipmentHandler(shipmentService);
   }
 
   async createShipment(

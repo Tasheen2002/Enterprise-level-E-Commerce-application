@@ -3,10 +3,27 @@ import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateOrderCommand,
   CreateOrderHandler,
+  UpdateOrderStatusCommand,
+  UpdateOrderStatusCommandHandler,
+  UpdateOrderTotalsCommand,
+  UpdateOrderTotalsCommandHandler,
+  MarkOrderAsPaidCommand,
+  MarkOrderAsPaidCommandHandler,
+  MarkOrderAsFulfilledCommand,
+  MarkOrderAsFulfilledCommandHandler,
+  CancelOrderCommand,
+  CancelOrderCommandHandler,
+  DeleteOrderCommand,
+  DeleteOrderCommandHandler,
   GetOrderQuery,
   GetOrderHandler,
   ListOrdersQueryHandler,
+  GetOrderAddressesQuery,
+  GetOrderAddressesHandler,
+  GetOrderShipmentsQuery,
+  GetOrderShipmentsHandler,
   OrderManagementService,
+  ShipmentManagementService,
 } from "../../../application";
 
 export interface CreateOrderBody {
@@ -53,12 +70,48 @@ export class OrderController {
   private createOrderHandler: CreateOrderHandler;
   private getOrderHandler: GetOrderHandler;
   private listOrdersHandler: ListOrdersQueryHandler;
+  private updateOrderStatusHandler: UpdateOrderStatusCommandHandler;
+  private updateOrderTotalsHandler: UpdateOrderTotalsCommandHandler;
+  private markOrderAsPaidHandler: MarkOrderAsPaidCommandHandler;
+  private markOrderAsFulfilledHandler: MarkOrderAsFulfilledCommandHandler;
+  private cancelOrderHandler: CancelOrderCommandHandler;
+  private deleteOrderHandler: DeleteOrderCommandHandler;
+  private getOrderAddressesHandler: GetOrderAddressesHandler;
+  private getOrderShipmentsHandler: GetOrderShipmentsHandler;
+  private shipmentService: ShipmentManagementService;
 
-  constructor(private readonly orderManagementService: OrderManagementService) {
-    // Initialize CQRS handlers
+  constructor(
+    orderManagementService: OrderManagementService,
+    shipmentService: ShipmentManagementService,
+  ) {
+    this.shipmentService = shipmentService;
     this.createOrderHandler = new CreateOrderHandler(orderManagementService);
     this.getOrderHandler = new GetOrderHandler(orderManagementService);
     this.listOrdersHandler = new ListOrdersQueryHandler(orderManagementService);
+    this.updateOrderStatusHandler = new UpdateOrderStatusCommandHandler(
+      orderManagementService,
+    );
+    this.updateOrderTotalsHandler = new UpdateOrderTotalsCommandHandler(
+      orderManagementService,
+    );
+    this.markOrderAsPaidHandler = new MarkOrderAsPaidCommandHandler(
+      orderManagementService,
+    );
+    this.markOrderAsFulfilledHandler = new MarkOrderAsFulfilledCommandHandler(
+      orderManagementService,
+    );
+    this.cancelOrderHandler = new CancelOrderCommandHandler(
+      orderManagementService,
+    );
+    this.deleteOrderHandler = new DeleteOrderCommandHandler(
+      orderManagementService,
+    );
+    this.getOrderAddressesHandler = new GetOrderAddressesHandler(
+      orderManagementService,
+    );
+    this.getOrderShipmentsHandler = new GetOrderShipmentsHandler(
+      shipmentService,
+    );
   }
 
   async getOrder(
@@ -328,52 +381,55 @@ export class OrderController {
 
       const result = queryResult.data;
 
-      // Fetch addresses and map orders
-      const orders = await Promise.all(
-        result.items.map(async (order) => {
-          // Fetch address for customer details
-          const orderAddress =
-            await this.orderManagementService.getOrderAddress(
-              order.getOrderId().toString(),
-            );
-          const billing = orderAddress?.getBillingAddress()?.toJSON();
-
-          let customerName = "Guest Customer";
-          let customerEmail = billing?.email || "";
-
-          if (billing) {
-            customerName = `${billing.firstName} ${billing.lastName}`;
-          } else if (order.getUserId()) {
-            customerName = "Authenticated User";
-          }
-
-          return {
-            orderId: order.getOrderId()?.toString() || "",
-            orderNumber: order.getOrderNumber()?.toString() || "",
-            userId: order.getUserId() || null,
-            guestToken: order.getGuestToken() || null,
-            customerName,
-            customerEmail,
-            billingAddress: billing,
-            shippingAddress: orderAddress?.getShippingAddress()?.toJSON(),
-
-            items: order.getItems().map((item) => ({
-              orderItemId: item.getOrderItemId(),
-              variantId: item.getVariantId(),
-              quantity: item.getQuantity(),
-              productSnapshot: item.getProductSnapshot().toJSON(),
-              isGift: item.isGiftItem(),
-              giftMessage: item.getGiftMessage(),
-            })),
-            totals: order.getTotals()?.toJSON() || {},
-            status: order.getStatus()?.toString() || "",
-            source: order.getSource()?.toString() || "",
-            currency: order.getCurrency()?.toString() || "",
-            createdAt: order.getCreatedAt() || null,
-            updatedAt: order.getUpdatedAt() || null,
-          };
-        }),
+      // Fetch addresses for all orders in parallel via handlers
+      const addressResults = await Promise.all(
+        result.items.map((order) =>
+          this.getOrderAddressesHandler.handle({
+            orderId: order.getOrderId().toString(),
+          }),
+        ),
       );
+
+      const orders = result.items.map((order, index) => {
+        const addressResult = addressResults[index];
+        const orderAddress = addressResult.success ? addressResult.data : null;
+        const billing = orderAddress?.billingAddress;
+
+        let customerName = "Guest Customer";
+        let customerEmail = billing?.email || "";
+
+        if (billing) {
+          customerName = `${billing.firstName} ${billing.lastName}`;
+        } else if (order.getUserId()) {
+          customerName = "Authenticated User";
+        }
+
+        return {
+          orderId: order.getOrderId()?.toString() || "",
+          orderNumber: order.getOrderNumber()?.toString() || "",
+          userId: order.getUserId() || null,
+          guestToken: order.getGuestToken() || null,
+          customerName,
+          customerEmail,
+          billingAddress: billing,
+          shippingAddress: orderAddress?.shippingAddress,
+
+          items: order.getItems().map((item) => ({
+            orderItemId: item.getOrderItemId(),
+            variantId: item.getVariantId(),
+            quantity: item.getQuantity(),
+            productSnapshot: item.getProductSnapshot().toJSON(),
+            isGift: item.isGiftItem(),
+            giftMessage: item.getGiftMessage(),
+          })),
+          totals: order.getTotals()?.toJSON() || {},
+          status: order.getStatus()?.toString() || "",
+          source: order.getSource()?.toString() || "",
+          currency: order.getCurrency()?.toString() || "",
+          createdAt: order.getCreatedAt() || null,
+          updatedAt: order.getUpdatedAt() || null,
+        };
+      });
 
       return ResponseHelper.ok(reply, "Orders retrieved", {
         orders,
@@ -401,7 +457,6 @@ export class OrderController {
       const { orderId } = request.params;
       const { status } = request.body;
 
-      // Validate inputs
       if (!orderId) {
         return ResponseHelper.badRequest(reply, "Order ID is required");
       }
@@ -410,43 +465,25 @@ export class OrderController {
         return ResponseHelper.badRequest(reply, "Status is required");
       }
 
-      const order = await this.orderManagementService.updateOrderStatus(
-        orderId,
-        status,
-      );
+      const command: UpdateOrderStatusCommand = { orderId, status };
+      const result = await this.updateOrderStatusHandler.handle(command);
 
-      if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found");
+      if (result.success && result.data) {
+        const order = result.data;
+        return ResponseHelper.ok(reply, "Order status updated successfully", {
+          orderId: order.getOrderId().toString(),
+          status: order.getStatus().toString(),
+          updatedAt: order.getUpdatedAt(),
+        });
       }
 
-      return ResponseHelper.ok(reply, "Order status updated successfully", {
-        orderId: order.getOrderId().toString(),
-        status: order.getStatus().toString(),
-        updatedAt: order.getUpdatedAt(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order status updated successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to update order status");
-
-      // Handle business rule violations (return 400 instead of 500)
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-
-        // Business rule violations should return 400 Bad Request
-        if (
-          errorMessage.includes("Cannot mark") ||
-          errorMessage.includes("without address") ||
-          errorMessage.includes("Invalid status") ||
-          errorMessage.includes("Cannot directly set") ||
-          errorMessage.includes("Cannot transition") ||
-          errorMessage.includes("without shipments")
-        ) {
-          return ResponseHelper.badRequest(reply, errorMessage);
-        }
-
-        // Return all other errors with message for debugging
-        return ResponseHelper.error(reply, error);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -462,37 +499,25 @@ export class OrderController {
       const { orderId } = request.params;
       const { totals } = request.body;
 
-      const order = await this.orderManagementService.updateOrderTotals(
-        orderId,
-        totals,
-      );
+      const command: UpdateOrderTotalsCommand = { orderId, totals };
+      const result = await this.updateOrderTotalsHandler.handle(command);
 
-      if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found");
+      if (result.success && result.data) {
+        const order = result.data;
+        return ResponseHelper.ok(reply, "Order totals updated successfully", {
+          orderId: order.getOrderId().toString(),
+          totals: order.getTotals().toJSON(),
+          updatedAt: order.getUpdatedAt(),
+        });
       }
 
-      return ResponseHelper.ok(reply, "Order totals updated successfully", {
-        orderId: order.getOrderId().toString(),
-        totals: order.getTotals().toJSON(),
-        updatedAt: order.getUpdatedAt(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order totals updated successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to update order totals");
-
-      // Handle validation errors (negative values, invalid totals, etc.)
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-
-        if (
-          errorMessage.includes("cannot be negative") ||
-          errorMessage.includes("must be") ||
-          errorMessage.includes("Invalid") ||
-          errorMessage.includes("required")
-        ) {
-          return ResponseHelper.badRequest(reply, errorMessage);
-        }
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -504,25 +529,25 @@ export class OrderController {
     try {
       const { orderId } = request.params;
 
-      const order = await this.orderManagementService.markOrderAsPaid(orderId);
+      const command: MarkOrderAsPaidCommand = { orderId };
+      const result = await this.markOrderAsPaidHandler.handle(command);
 
-      if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found");
+      if (result.success && result.data) {
+        const order = result.data;
+        return ResponseHelper.ok(reply, "Order marked as paid successfully", {
+          orderId: order.getOrderId().toString(),
+          status: order.getStatus().toString(),
+          updatedAt: order.getUpdatedAt(),
+        });
       }
 
-      return ResponseHelper.ok(reply, "Order marked as paid successfully", {
-        orderId: order.getOrderId().toString(),
-        status: order.getStatus().toString(),
-        updatedAt: order.getUpdatedAt(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order marked as paid successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to mark order as paid");
-
-      // Handle business rule violations
-      if (error instanceof Error && error.message.includes("Cannot mark")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -534,30 +559,29 @@ export class OrderController {
     try {
       const { orderId } = request.params;
 
-      const order =
-        await this.orderManagementService.markOrderAsFulfilled(orderId);
+      const command: MarkOrderAsFulfilledCommand = { orderId };
+      const result = await this.markOrderAsFulfilledHandler.handle(command);
 
-      if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found");
+      if (result.success && result.data) {
+        const order = result.data;
+        return ResponseHelper.ok(
+          reply,
+          "Order marked as fulfilled successfully",
+          {
+            orderId: order.getOrderId().toString(),
+            status: order.getStatus().toString(),
+            updatedAt: order.getUpdatedAt(),
+          },
+        );
       }
 
-      return ResponseHelper.ok(
+      return ResponseHelper.fromCommand(
         reply,
+        result,
         "Order marked as fulfilled successfully",
-        {
-          orderId: order.getOrderId().toString(),
-          status: order.getStatus().toString(),
-          updatedAt: order.getUpdatedAt(),
-        },
       );
     } catch (error) {
       request.log.error(error, "Failed to mark order as fulfilled");
-
-      // Handle business rule violations
-      if (error instanceof Error && error.message.includes("Cannot mark")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -569,25 +593,25 @@ export class OrderController {
     try {
       const { orderId } = request.params;
 
-      const order = await this.orderManagementService.cancelOrder(orderId);
+      const command: CancelOrderCommand = { orderId };
+      const result = await this.cancelOrderHandler.handle(command);
 
-      if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found");
+      if (result.success && result.data) {
+        const order = result.data;
+        return ResponseHelper.ok(reply, "Order cancelled successfully", {
+          orderId: order.getOrderId().toString(),
+          status: order.getStatus().toString(),
+          updatedAt: order.getUpdatedAt(),
+        });
       }
 
-      return ResponseHelper.ok(reply, "Order cancelled successfully", {
-        orderId: order.getOrderId().toString(),
-        status: order.getStatus().toString(),
-        updatedAt: order.getUpdatedAt(),
-      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order cancelled successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to cancel order");
-
-      // Handle business rule violations
-      if (error instanceof Error && error.message.includes("Cannot")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -599,25 +623,15 @@ export class OrderController {
     try {
       const { orderId } = request.params;
 
-      const deleted = await this.orderManagementService.deleteOrder(orderId);
-
-      if (!deleted) {
-        return ResponseHelper.notFound(reply, "Order not found");
-      }
-
-      return ResponseHelper.ok(reply, "Order deleted successfully");
+      const command: DeleteOrderCommand = { orderId };
+      const result = await this.deleteOrderHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order deleted successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to delete order");
-
-      // Handle business rule violations (e.g., constraint violations)
-      if (
-        error instanceof Error &&
-        (error.message.includes("Cannot delete") ||
-          error.message.includes("constraint"))
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -663,14 +677,17 @@ export class OrderController {
         const order = result.data;
 
         // Get the order addresses to verify contact info
-        const orderAddress = await this.orderManagementService.getOrderAddress(
-          order.orderId as string,
-        );
+        const addressQuery: GetOrderAddressesQuery = {
+          orderId: order.orderId as string,
+        };
+        const addressResult =
+          await this.getOrderAddressesHandler.handle(addressQuery);
+        const orderAddress = addressResult.success ? addressResult.data : null;
 
         // Verify contact matches billing or shipping address
         const contactLower = contact.toLowerCase().trim();
-        const billingAddress = orderAddress?.getBillingAddress()?.toJSON();
-        const shippingAddress = orderAddress?.getShippingAddress()?.toJSON();
+        const billingAddress = orderAddress?.billingAddress;
+        const shippingAddress = orderAddress?.shippingAddress;
 
         const billingEmail = billingAddress?.email?.toLowerCase().trim();
         const billingPhone = billingAddress?.phone?.trim();
@@ -691,9 +708,12 @@ export class OrderController {
         }
 
         // Get shipment information
-        const shipments = await this.orderManagementService.getOrderShipments(
-          order.orderId as string,
-        );
+        const shipmentsQuery: GetOrderShipmentsQuery = {
+          orderId: order.orderId as string,
+        };
+        const shipmentsResult =
+          await this.getOrderShipmentsHandler.handle(shipmentsQuery);
+        const shipments = shipmentsResult.success ? shipmentsResult.data : [];
 
         return ResponseHelper.ok(reply, "Order tracking retrieved", {
           orderId: order.orderId,
@@ -711,13 +731,29 @@ export class OrderController {
 
       // Track by tracking number only
       if (trackingNumber) {
-        // TODO: Implement tracking number lookup
-        // This would search shipments table for the tracking number
-        return ResponseHelper.success(
-          reply,
-          501,
-          "Tracking by tracking number is not yet implemented",
-        );
+        const shipment =
+          await this.shipmentService.getShipmentByTrackingNumber(
+            trackingNumber,
+          );
+
+        if (!shipment) {
+          return ResponseHelper.notFound(
+            reply,
+            "No shipment found for the given tracking number",
+          );
+        }
+
+        return ResponseHelper.ok(reply, "Shipment tracking retrieved", {
+          shipmentId: shipment.getShipmentId(),
+          orderId: shipment.getOrderId(),
+          carrier: shipment.getCarrier(),
+          service: shipment.getService(),
+          trackingNumber: shipment.getTrackingNumber(),
+          shipped: shipment.isShipped(),
+          delivered: shipment.isDelivered(),
+          shippedAt: shipment.getShippedAt(),
+          deliveredAt: shipment.getDeliveredAt(),
+        });
       }
 
       return ResponseHelper.badRequest(reply, "Invalid tracking request");
