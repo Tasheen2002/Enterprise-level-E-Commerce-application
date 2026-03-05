@@ -1,7 +1,10 @@
 import {
   IProductRepository,
   ProductQueryOptions,
+  ProductEnrichment,
+  ProductMediaEnrichment,
 } from "../../domain/repositories/product.repository";
+import { IProductTagRepository } from "../../domain/repositories/product-tag.repository";
 import {
   Product,
   CreateProductData,
@@ -15,7 +18,10 @@ import {
 } from "../../domain/errors";
 
 export class ProductManagementService {
-  constructor(private readonly productRepository: IProductRepository) {}
+  constructor(
+    private readonly productRepository: IProductRepository,
+    private readonly productTagRepository?: IProductTagRepository,
+  ) {}
 
   async createProduct(data: CreateProductData): Promise<Product> {
     // Validate categories - product must have at least one category
@@ -39,9 +45,12 @@ export class ProductManagementService {
     // Save the product with categories in a transaction
     await this.productRepository.saveWithCategories(product, data.categoryIds);
 
-    // TODO: Handle tags - requires tag association service
-    if (data.tags && data.tags.length > 0) {
-      // This would require implementing tag association logic
+    // Handle tag associations
+    if (data.tags && data.tags.length > 0 && this.productTagRepository) {
+      await this.productTagRepository.associateProductTags(
+        product.getId().getValue(),
+        data.tags,
+      );
     }
 
     return product;
@@ -258,15 +267,13 @@ export class ProductManagementService {
         );
       }
 
-      // TODO: Implement category association update logic
-      // This would require:
-      // 1. Remove existing category associations
-      // 2. Add new category associations
+      // Replace category associations
+      await this.productRepository.replaceCategories(id, data.categoryIds);
     }
 
-    // TODO: Handle tags - requires tag association service
-    if (data.tags !== undefined) {
-      // This would require implementing tag association logic
+    // Handle tag association updates
+    if (data.tags !== undefined && this.productTagRepository) {
+      await this.productTagRepository.associateProductTags(id, data.tags);
     }
 
     // Save the updated product
@@ -297,5 +304,23 @@ export class ProductManagementService {
       }
       throw error;
     }
+  }
+
+  async getProductEnrichment(
+    productIds: string[],
+  ): Promise<Map<string, ProductEnrichment>> {
+    return this.productRepository.findWithEnrichment(productIds);
+  }
+
+  async getSingleProductEnrichment(
+    productId: string,
+  ): Promise<ProductEnrichment> {
+    return this.productRepository.findOneWithEnrichment(productId);
+  }
+
+  async getProductMediaEnrichment(
+    productId: string,
+  ): Promise<ProductMediaEnrichment> {
+    return this.productRepository.findMediaEnrichment(productId);
   }
 }

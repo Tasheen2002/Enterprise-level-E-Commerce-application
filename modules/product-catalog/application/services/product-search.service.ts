@@ -167,19 +167,17 @@ export class ProductSearchService {
     const suggestions: SearchSuggestion[] = [];
 
     try {
-      // Product suggestions (based on product titles)
+      // Product suggestions from actual search results
       if (type === "products" || type === "all") {
-        // TODO: Implement actual product name matching
-        // This is a placeholder implementation
-        const productSuggestions: SearchSuggestion[] = [
-          {
-            type: "product",
-            value: query,
-            label: `Search for "${query}"`,
-            count: 0,
-          },
-        ];
-        suggestions.push(...productSuggestions.slice(0, Math.floor(limit / 3)));
+        const products = await this.productRepository.search(query.trim(), {
+          limit: Math.floor(limit / 3),
+        });
+        const productSuggestions: SearchSuggestion[] = products.map((p) => ({
+          type: "product" as const,
+          value: p.getId().getValue(),
+          label: p.getTitle(),
+        }));
+        suggestions.push(...productSuggestions);
       }
 
       // Category suggestions
@@ -193,18 +191,32 @@ export class ProductSearchService {
             type: "category" as const,
             value: cat.getSlug().getValue(),
             label: cat.getName(),
-            count: 0, // TODO: Count products in category
           }));
         suggestions.push(
           ...categorySuggestions.slice(0, Math.floor(limit / 3)),
         );
       }
 
-      // Brand suggestions (placeholder)
+      // Brand suggestions extracted from product data
       if (type === "brands" || type === "all") {
-        // TODO: Implement brand suggestions from product data
-        const brandSuggestions: SearchSuggestion[] = [];
-        suggestions.push(...brandSuggestions.slice(0, Math.floor(limit / 3)));
+        const products = await this.productRepository.search(query.trim(), {
+          limit: 50,
+        });
+        const brands = new Set<string>();
+        products.forEach((p) => {
+          const brand = p.getBrand();
+          if (brand && brand.toLowerCase().includes(query.toLowerCase())) {
+            brands.add(brand);
+          }
+        });
+        const brandSuggestions: SearchSuggestion[] = Array.from(brands)
+          .slice(0, Math.floor(limit / 3))
+          .map((brand) => ({
+            type: "brand" as const,
+            value: brand.toLowerCase(),
+            label: brand,
+          }));
+        suggestions.push(...brandSuggestions);
       }
 
       return suggestions.slice(0, limit);
@@ -214,17 +226,8 @@ export class ProductSearchService {
   }
 
   async getPopularSearches(): Promise<Array<{ term: string; count: number }>> {
-    // TODO: Implement analytics tracking for popular searches
-    // This would typically come from search analytics/logs
-
-    // Placeholder implementation
-    return [
-      { term: "jeans", count: 1234 },
-      { term: "t-shirt", count: 987 },
-      { term: "sneakers", count: 756 },
-      { term: "dress", count: 654 },
-      { term: "jacket", count: 543 },
-    ];
+    // No search analytics table exists yet — return empty until analytics is implemented
+    return [];
   }
 
   async getAvailableFilters(
@@ -244,30 +247,40 @@ export class ProductSearchService {
           options: categories.map((cat) => ({
             value: cat.getId().getValue(),
             label: cat.getName(),
-            count: 0, // TODO: Count products in each category
+            count: 0,
           })),
         });
       }
 
-      // Brand filter (placeholder)
-      // TODO: Get actual brands from product data
-      filters.push({
-        name: "brand",
-        type: "select",
-        options: [
-          { value: "nike", label: "Nike", count: 45 },
-          { value: "adidas", label: "Adidas", count: 38 },
-          { value: "zara", label: "Zara", count: 62 },
-        ],
+      // Brand filter from actual product data
+      const allProducts = await this.productRepository.findAll({ limit: 200 });
+      const brandCounts = new Map<string, number>();
+      allProducts.forEach((p) => {
+        const brand = p.getBrand();
+        if (brand) {
+          brandCounts.set(brand, (brandCounts.get(brand) || 0) + 1);
+        }
       });
+      if (brandCounts.size > 0) {
+        filters.push({
+          name: "brand",
+          type: "select",
+          options: Array.from(brandCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .map(([brand, count]) => ({
+              value: brand.toLowerCase(),
+              label: brand,
+              count,
+            })),
+        });
+      }
 
-      // Price range filter
-      // TODO: Get actual price ranges from product data
+      // Price range filter — default range; real variant prices need variant repo access
       filters.push({
         name: "price",
         type: "range",
         min: 0,
-        max: 1000,
+        max: 10000,
       });
 
       // Status filter
@@ -288,23 +301,14 @@ export class ProductSearchService {
   }
 
   async getSearchStatistics(): Promise<SearchStatistics> {
-    // TODO: Implement actual search analytics
-    // This would typically come from search logs and analytics
-
-    // Placeholder implementation
+    // No search analytics table exists yet — return zeros until analytics is implemented
     return {
-      totalSearches: 12543,
-      uniqueQueries: 3421,
-      averageResultsPerSearch: 8.7,
-      topSearchTerms: [
-        { term: "jeans", count: 1234 },
-        { term: "t-shirt", count: 987 },
-        { term: "sneakers", count: 756 },
-        { term: "dress", count: 654 },
-        { term: "jacket", count: 543 },
-      ],
-      zeroResultSearches: 234,
-      searchConversionRate: 12.5,
+      totalSearches: 0,
+      uniqueQueries: 0,
+      averageResultsPerSearch: 0,
+      topSearchTerms: [],
+      zeroResultSearches: 0,
+      searchConversionRate: 0,
     };
   }
 
