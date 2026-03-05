@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import * as crypto from "crypto";
 import { IPaymentIntentRepository } from "../../domain/repositories/payment-intent.repository";
 import { IPaymentTransactionRepository } from "../../domain/repositories/payment-transaction.repository";
+import { IExternalOrderQueryPort } from "../../domain/external-services";
 import { PaymentIntent } from "../../domain/entities/payment-intent.entity";
 import { PaymentTransaction } from "../../domain/entities/payment-transaction.entity";
 import { Money } from "../../domain/value-objects/money.vo";
@@ -67,7 +67,7 @@ export interface PaymentTransactionDto {
 
 export class PaymentService {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly orderQueryPort: IExternalOrderQueryPort,
     private readonly paymentIntentRepo: IPaymentIntentRepository,
     private readonly paymentTxnRepo: IPaymentTransactionRepository,
   ) {}
@@ -76,10 +76,7 @@ export class PaymentService {
     orderId: string,
     userId?: string,
   ): Promise<void> {
-    const order = await (this.prisma as any).order.findUnique({
-      where: { id: orderId },
-      select: { userId: true },
-    });
+    const order = await this.orderQueryPort.findOrderOwner(orderId);
 
     if (!order) {
       // Order might not exist yet during checkout - this is OK
@@ -348,11 +345,11 @@ export class PaymentService {
     return this.toPaymentIntentDto(intent);
   }
 
-
   async getPaymentIntentByClientSecret(
     clientSecret: string,
   ): Promise<PaymentIntentDto | null> {
-    const intent = await this.paymentIntentRepo.findByClientSecret(clientSecret);
+    const intent =
+      await this.paymentIntentRepo.findByClientSecret(clientSecret);
     return intent ? this.toPaymentIntentDto(intent) : null;
   }
   async getPaymentIntentByOrderId(

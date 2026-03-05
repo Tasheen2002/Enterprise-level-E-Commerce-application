@@ -23,9 +23,16 @@ export interface PaymentWebhookEventDto {
   createdAt: Date;
 }
 
+export interface WebhookSecrets {
+  stripe?: string;
+  paypal?: string;
+  razorpay?: string;
+}
+
 export class PaymentWebhookService {
   constructor(
     private readonly webhookEventRepo: IPaymentWebhookEventRepository,
+    private readonly webhookSecrets: WebhookSecrets,
   ) {}
 
   private verifySignature(
@@ -34,9 +41,9 @@ export class PaymentWebhookService {
     signature?: string,
   ) {
     const secretMap: Record<string, string | undefined> = {
-      stripe: process.env.STRIPE_WEBHOOK_SECRET,
-      paypal: process.env.PAYPAL_WEBHOOK_SECRET,
-      razorpay: process.env.RAZORPAY_WEBHOOK_SECRET,
+      stripe: this.webhookSecrets.stripe,
+      paypal: this.webhookSecrets.paypal,
+      razorpay: this.webhookSecrets.razorpay,
     };
 
     const secret = secretMap[provider];

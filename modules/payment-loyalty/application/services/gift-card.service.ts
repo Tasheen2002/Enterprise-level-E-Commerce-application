@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { IGiftCardRepository } from "../../domain/repositories/gift-card.repository";
 import { IGiftCardTransactionRepository } from "../../domain/repositories/gift-card-transaction.repository";
+import { IExternalOrderQueryPort } from "../../domain/external-services";
 import { GiftCard } from "../../domain/entities/gift-card.entity";
 import { GiftCardTransaction } from "../../domain/entities/gift-card-transaction.entity";
 import { Money } from "../../domain/value-objects/money.vo";
@@ -51,7 +51,7 @@ export interface GiftCardTransactionDto {
 
 export class GiftCardService {
   constructor(
-    private readonly prisma: PrismaClient,
+    private readonly orderQueryPort: IExternalOrderQueryPort,
     private readonly giftCardRepo: IGiftCardRepository,
     private readonly giftCardTxnRepo: IGiftCardTransactionRepository,
   ) {}
@@ -77,20 +77,15 @@ export class GiftCardService {
       type: GiftCardTransactionType.issue(),
     });
 
-    await this.prisma.$transaction([
-      this.giftCardRepo.save(giftCard) as any,
-      this.giftCardTxnRepo.save(transaction) as any,
-    ]);
+    await this.giftCardRepo.save(giftCard);
+    await this.giftCardTxnRepo.save(transaction);
 
     return this.toGiftCardDto(giftCard);
   }
 
   async redeemGiftCard(dto: RedeemGiftCardDto): Promise<GiftCardDto> {
     if (dto.userId) {
-      const order = await (this.prisma as any).order.findUnique({
-        where: { id: dto.orderId },
-        select: { userId: true },
-      });
+      const order = await this.orderQueryPort.findOrderOwner(dto.orderId);
       if (!order) {
         throw new Error("Order not found for gift card redemption");
       }
@@ -134,10 +129,8 @@ export class GiftCardService {
       type: GiftCardTransactionType.redeem(),
     });
 
-    await this.prisma.$transaction([
-      this.giftCardRepo.update(giftCard) as any,
-      this.giftCardTxnRepo.save(transaction) as any,
-    ]);
+    await this.giftCardRepo.update(giftCard);
+    await this.giftCardTxnRepo.save(transaction);
 
     return this.toGiftCardDto(giftCard);
   }
@@ -168,10 +161,8 @@ export class GiftCardService {
       type: GiftCardTransactionType.refund(),
     });
 
-    await this.prisma.$transaction([
-      this.giftCardRepo.update(giftCard) as any,
-      this.giftCardTxnRepo.save(transaction) as any,
-    ]);
+    await this.giftCardRepo.update(giftCard);
+    await this.giftCardTxnRepo.save(transaction);
 
     return this.toGiftCardDto(giftCard);
   }

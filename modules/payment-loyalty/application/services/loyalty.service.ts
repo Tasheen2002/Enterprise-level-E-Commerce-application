@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { ILoyaltyAccountRepository } from "../../domain/repositories/loyalty-account.repository";
 import { ILoyaltyProgramRepository } from "../../domain/repositories/loyalty-program.repository";
 import { ILoyaltyTransactionRepository } from "../../domain/repositories/loyalty-transaction.repository";
@@ -62,7 +61,6 @@ export interface LoyaltyTransactionDto {
 
 export class LoyaltyService {
   constructor(
-    private readonly prisma: PrismaClient,
     private readonly loyaltyAccountRepo: ILoyaltyAccountRepository,
     private readonly loyaltyProgramRepo: ILoyaltyProgramRepository,
     private readonly loyaltyTxnRepo: ILoyaltyTransactionRepository,
@@ -147,10 +145,8 @@ export class LoyaltyService {
       orderId: dto.orderId || null,
     });
 
-    await this.prisma.$transaction([
-      this.loyaltyAccountRepo.update(account) as any,
-      this.loyaltyTxnRepo.save(transaction) as any,
-    ]);
+    await this.loyaltyAccountRepo.update(account);
+    await this.loyaltyTxnRepo.save(transaction);
 
     return this.toLoyaltyAccountDto(account);
   }
@@ -195,10 +191,8 @@ export class LoyaltyService {
       orderId: dto.orderId,
     });
 
-    await this.prisma.$transaction([
-      this.loyaltyAccountRepo.update(account) as any,
-      this.loyaltyTxnRepo.save(transaction) as any,
-    ]);
+    await this.loyaltyAccountRepo.update(account);
+    await this.loyaltyTxnRepo.save(transaction);
 
     return this.toLoyaltyAccountDto(account);
   }

@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { IPromotionRepository } from "../../domain/repositories/promotion.repository";
 import { IPromotionUsageRepository } from "../../domain/repositories/promotion-usage.repository";
 import {
@@ -60,7 +59,6 @@ export interface ApplyPromotionResult {
 
 export class PromotionService {
   constructor(
-    private readonly prisma: PrismaClient,
     private readonly promotionRepo: IPromotionRepository,
     private readonly promotionUsageRepo: IPromotionUsageRepository,
   ) {}
