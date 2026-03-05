@@ -1,6 +1,5 @@
 // Query interfaces
 export type { GetOrderQuery, OrderResult } from "./get-order.query";
-export type { GetOrderByNumberQuery } from "./get-order-by-number.query";
 export type {
   ListOrdersQuery,
   PaginatedOrdersResult,
@@ -41,7 +40,6 @@ export type {
 
 // Query handlers
 export { GetOrderHandler } from "./get-order.handler";
-export { GetOrderByNumberQueryHandler } from "./get-order-by-number.handler";
 export { ListOrdersQueryHandler } from "./list-orders.handler";
 export { GetOrderAddressesHandler } from "./get-order-addresses.handler";
 export { GetOrderShipmentsHandler } from "./get-order-shipments.handler";
