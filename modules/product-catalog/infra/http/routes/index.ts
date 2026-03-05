@@ -19,7 +19,6 @@ import { SearchController } from "../controllers/search.controller";
 import { SizeGuideController } from "../controllers/size-guide.controller";
 import { EditorialLookController } from "../controllers/editorial-look.controller";
 import { VariantMediaController } from "../controllers/variant-media.controller";
-import { PrismaClient } from "@prisma/client";
 import {
   ProductManagementService,
   CategoryManagementService,
@@ -44,7 +43,6 @@ export interface ProductCatalogRouteServices {
   editorialLookService: EditorialLookManagementService;
   productMediaService: ProductMediaManagementService;
   variantMediaService: VariantMediaManagementService;
-  prisma: PrismaClient;
 }
 
 export async function registerProductCatalogRoutes(
@@ -52,16 +50,29 @@ export async function registerProductCatalogRoutes(
   services: ProductCatalogRouteServices,
 ): Promise<void> {
   // Initialize controllers
-  const productController = new ProductController(services.productService, services.productSearchService, services.prisma);
+  const productController = new ProductController(
+    services.productService,
+    services.productSearchService,
+  );
   const categoryController = new CategoryController(services.categoryService);
   const variantController = new VariantController(services.variantService);
   const mediaController = new MediaController(services.mediaService);
-  const productMediaController = new ProductMediaController(services.productMediaService);
-  const productTagController = new ProductTagController(services.productTagService);
+  const productMediaController = new ProductMediaController(
+    services.productMediaService,
+  );
+  const productTagController = new ProductTagController(
+    services.productTagService,
+  );
   const searchController = new SearchController(services.productSearchService);
-  const sizeGuideController = new SizeGuideController(services.sizeGuideService);
-  const editorialLookController = new EditorialLookController(services.editorialLookService);
-  const variantMediaController = new VariantMediaController(services.variantMediaService);
+  const sizeGuideController = new SizeGuideController(
+    services.sizeGuideService,
+  );
+  const editorialLookController = new EditorialLookController(
+    services.editorialLookService,
+  );
+  const variantMediaController = new VariantMediaController(
+    services.variantMediaService,
+  );
 
   await fastify.register(
     async (instance) => {
@@ -90,4 +101,3 @@ export async function registerProductCatalogRoutes(
     { prefix: "/api/v1" },
   );
 }
-
