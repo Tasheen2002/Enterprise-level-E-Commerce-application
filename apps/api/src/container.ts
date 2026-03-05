@@ -27,6 +27,7 @@ import {
   SizeGuideRepository,
   EditorialLookRepository,
   ProductMediaRepository,
+  VariantMediaRepository,
 } from "../../../modules/product-catalog/infra/persistence/repositories";
 
 // Product Catalog — Services
@@ -78,6 +79,7 @@ import { CartManagementService } from "../../../modules/cart/application/service
 import { ReservationService } from "../../../modules/cart/application/services/reservation.service";
 import { CheckoutService } from "../../../modules/cart/application/services/checkout.service";
 import { CheckoutOrderService } from "../../../modules/cart/application/services/checkout-order.service";
+import type { IProductSnapshotFactory } from "../../../modules/cart/domain/external-services";
 
 // Admin — Services (required by CartManagementService and CheckoutService)
 import { SettingsService } from "../../../modules/admin/application/services/settings.service";
@@ -93,6 +95,9 @@ import {
   BackorderRepositoryImpl,
   PreorderRepositoryImpl,
 } from "../../../modules/order-management/infra/persistence/repositories";
+
+// Order Management — Value Objects (used by cart adapter)
+import { ProductSnapshot } from "../../../modules/order-management/domain/value-objects/product-snapshot.vo";
 
 // Order Management — Services
 import { OrderManagementService } from "../../../modules/order-management/application/services/order-management.service";
@@ -127,6 +132,7 @@ import {
   LoyaltyService,
   LoyaltyTransactionService,
 } from "../../../modules/payment-loyalty/application/services";
+import type { IExternalOrderQueryPort } from "../../../modules/payment-loyalty/domain/external-services";
 
 /**
  * Dependency Injection Container
@@ -212,6 +218,8 @@ export class Container {
     this.services.set("addressService", addressService);
     this.services.set("paymentMethodService", paymentMethodService);
     this.services.set("verificationService", verificationService);
+    this.services.set("userRepository", userRepository);
+    this.services.set("addressRepository", addressRepository);
     this.services.set("prisma", prisma);
 
     // ============================================
@@ -233,6 +241,7 @@ export class Container {
 
     const productManagementService = new ProductManagementService(
       productRepository,
+      productTagRepository,
     );
 
     const categoryManagementService = new CategoryManagementService(
@@ -274,11 +283,10 @@ export class Container {
       productRepository,
     );
 
-    // NOTE: VariantMediaManagementService requires a VariantMediaRepository
-    // implementation (infra/persistence/repositories/variant-media.repository.impl.ts)
-    // which is not yet created. Placeholder — wire once the impl exists.
+    const variantMediaRepository = new VariantMediaRepository(prisma);
+
     const variantMediaManagementService = new VariantMediaManagementService(
-      productMediaRepository as any, // TODO: replace with VariantMediaRepositoryImpl once created
+      variantMediaRepository,
       mediaAssetRepository,
       productVariantRepository,
       productRepository,
@@ -408,6 +416,10 @@ export class Container {
       stockManagementService,
       productRepository,
       productVariantRepository,
+      {
+        create: (data) => ProductSnapshot.create(data),
+      } satisfies IProductSnapshotFactory,
+      { defaultStockLocation: process.env.DEFAULT_STOCK_LOCATION },
     );
 
     // Store Cart services
@@ -425,7 +437,9 @@ export class Container {
     const orderItemRepository = new OrderItemRepositoryImpl(prisma);
     const orderAddressRepository = new OrderAddressRepositoryImpl(prisma);
     const orderShipmentRepository = new OrderShipmentRepositoryImpl(prisma);
-    const orderStatusHistoryRepository = new OrderStatusHistoryRepositoryImpl(prisma);
+    const orderStatusHistoryRepository = new OrderStatusHistoryRepositoryImpl(
+      prisma,
+    );
     const orderEventRepository = new OrderEventRepositoryImpl(prisma);
     const backorderRepository = new BackorderRepositoryImpl(prisma);
     const preorderRepository = new PreorderRepositoryImpl(prisma);
@@ -446,10 +460,18 @@ export class Container {
       orderEventService,
     );
 
-    const orderItemManagementService = new OrderItemManagementService(orderItemRepository);
-    const shipmentManagementService = new ShipmentManagementService(orderShipmentRepository);
-    const backorderManagementService = new BackorderManagementService(backorderRepository);
-    const preorderManagementService = new PreorderManagementService(preorderRepository);
+    const orderItemManagementService = new OrderItemManagementService(
+      orderItemRepository,
+    );
+    const shipmentManagementService = new ShipmentManagementService(
+      orderShipmentRepository,
+    );
+    const backorderManagementService = new BackorderManagementService(
+      backorderRepository,
+    );
+    const preorderManagementService = new PreorderManagementService(
+      preorderRepository,
+    );
 
     // Store Order Management services
     this.services.set("orderManagementService", orderManagementService);
@@ -465,42 +487,65 @@ export class Container {
 
     // Repositories
     const paymentIntentRepository = new PaymentIntentRepository(prisma);
-    const paymentTransactionRepository = new PaymentTransactionRepository(prisma);
-    const paymentWebhookEventRepository = new PaymentWebhookEventRepository(prisma);
+    const paymentTransactionRepository = new PaymentTransactionRepository(
+      prisma,
+    );
+    const paymentWebhookEventRepository = new PaymentWebhookEventRepository(
+      prisma,
+    );
     const bnplTransactionRepository = new BnplTransactionRepository(prisma);
     const giftCardRepository = new GiftCardRepository(prisma);
-    const giftCardTransactionRepository = new GiftCardTransactionRepository(prisma);
+    const giftCardTransactionRepository = new GiftCardTransactionRepository(
+      prisma,
+    );
     const promotionRepository = new PromotionRepository(prisma);
     const promotionUsageRepository = new PromotionUsageRepository(prisma);
     const loyaltyAccountRepository = new LoyaltyAccountRepository(prisma);
     const loyaltyProgramRepository = new LoyaltyProgramRepository(prisma);
-    const loyaltyTransactionRepository = new LoyaltyTransactionRepository(prisma);
+    const loyaltyTransactionRepository = new LoyaltyTransactionRepository(
+      prisma,
+    );
+
+    // Port adapter: cross-module Order ownership lookup
+    const orderQueryPort: IExternalOrderQueryPort = {
+      async findOrderOwner(orderId: string) {
+        const order = await (prisma as any).order.findUnique({
+          where: { id: orderId },
+          select: { userId: true },
+        });
+        return order ? { userId: order.userId } : null;
+      },
+    };
 
     // Services
     const paymentService = new PaymentService(
-      prisma,
+      orderQueryPort,
       paymentIntentRepository,
       paymentTransactionRepository,
     );
     const bnplTransactionService = new BnplTransactionService(
-      prisma,
+      paymentIntentRepository,
+      orderQueryPort,
       bnplTransactionRepository,
     );
     const giftCardService = new GiftCardService(
-      prisma,
+      orderQueryPort,
       giftCardRepository,
       giftCardTransactionRepository,
     );
     const promotionService = new PromotionService(
-      prisma,
       promotionRepository,
       promotionUsageRepository,
     );
     const paymentWebhookService = new PaymentWebhookService(
       paymentWebhookEventRepository,
+      {
+        stripe: process.env.STRIPE_WEBHOOK_SECRET,
+        paypal: process.env.PAYPAL_WEBHOOK_SECRET,
+        razorpay: process.env.RAZORPAY_WEBHOOK_SECRET,
+      },
     );
     const loyaltyService = new LoyaltyService(
-      prisma,
       loyaltyAccountRepository,
       loyaltyProgramRepository,
       loyaltyTransactionRepository,
@@ -535,7 +580,8 @@ export class Container {
       paymentMethodService: this.get<PaymentMethodService>(
         "paymentMethodService",
       ),
-      prisma: this.get<PrismaClient>("prisma"),
+      userRepository: this.get<UserRepository>("userRepository"),
+      addressRepository: this.get<AddressRepository>("addressRepository"),
     };
   }
 
@@ -588,7 +634,6 @@ export class Container {
       variantMediaService: this.get<VariantMediaManagementService>(
         "variantMediaManagementService",
       ),
-      prisma: this.get<PrismaClient>("prisma"),
     };
   }
 
@@ -608,9 +653,19 @@ export class Container {
   getOrderManagementServices() {
     return {
       orderService: this.get<OrderManagementService>("orderManagementService"),
+      orderItemService: this.get<OrderItemManagementService>(
+        "orderItemManagementService",
+      ),
+      shipmentService: this.get<ShipmentManagementService>(
+        "shipmentManagementService",
+      ),
       orderEventService: this.get<OrderEventService>("orderEventService"),
-      preorderService: this.get<PreorderManagementService>("preorderManagementService"),
-      backorderService: this.get<BackorderManagementService>("backorderManagementService"),
+      preorderService: this.get<PreorderManagementService>(
+        "preorderManagementService",
+      ),
+      backorderService: this.get<BackorderManagementService>(
+        "backorderManagementService",
+      ),
     };
   }
 
@@ -622,7 +677,9 @@ export class Container {
       promotionService: this.get<PromotionService>("promotionService"),
       webhookService: this.get<PaymentWebhookService>("paymentWebhookService"),
       loyaltyService: this.get<LoyaltyService>("loyaltyService"),
-      loyaltyTxnService: this.get<LoyaltyTransactionService>("loyaltyTransactionService"),
+      loyaltyTxnService: this.get<LoyaltyTransactionService>(
+        "loyaltyTransactionService",
+      ),
     };
   }
 }
