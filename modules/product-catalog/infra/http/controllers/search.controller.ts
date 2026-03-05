@@ -1,4 +1,16 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import {
+  SearchProductsQuery,
+  SearchProductsHandler,
+  GetSearchSuggestionsQuery,
+  GetSearchSuggestionsHandler,
+  GetPopularSearchesQuery,
+  GetPopularSearchesHandler,
+  GetSearchFiltersQuery,
+  GetSearchFiltersHandler,
+  GetSearchStatsQuery,
+  GetSearchStatsHandler,
+} from "../../../application";
 import { ProductSearchService } from "../../../application/services/product-search.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
@@ -28,7 +40,29 @@ export interface SearchFiltersQueryParams {
 }
 
 export class SearchController {
-  constructor(private readonly productSearchService: ProductSearchService) {}
+  private searchProductsHandler: SearchProductsHandler;
+  private getSearchSuggestionsHandler: GetSearchSuggestionsHandler;
+  private getPopularSearchesHandler: GetPopularSearchesHandler;
+  private getSearchFiltersHandler: GetSearchFiltersHandler;
+  private getSearchStatsHandler: GetSearchStatsHandler;
+
+  constructor(productSearchService: ProductSearchService) {
+    this.searchProductsHandler = new SearchProductsHandler(
+      productSearchService,
+    );
+    this.getSearchSuggestionsHandler = new GetSearchSuggestionsHandler(
+      productSearchService,
+    );
+    this.getPopularSearchesHandler = new GetPopularSearchesHandler(
+      productSearchService,
+    );
+    this.getSearchFiltersHandler = new GetSearchFiltersHandler(
+      productSearchService,
+    );
+    this.getSearchStatsHandler = new GetSearchStatsHandler(
+      productSearchService,
+    );
+  }
 
   async searchProducts(
     request: FastifyRequest<{ Querystring: SearchQueryParams }>,
@@ -37,58 +71,38 @@ export class SearchController {
     try {
       const {
         q,
-        page = 1,
-        limit = 20,
+        page,
+        limit,
         category,
         brand,
         minPrice,
         maxPrice,
         status,
         tags,
-        sortBy = "relevance",
-        sortOrder = "desc",
+        sortBy,
+        sortOrder,
       } = request.query;
 
-      const searchQuery = q.trim();
-
-      const options = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        category,
+      const query: SearchProductsQuery = {
+        searchTerm: q,
+        page,
+        limit,
+        categoryId: category,
         brand,
         minPrice,
         maxPrice,
+        tags,
         status,
-        tags: Array.isArray(tags) ? tags : tags ? [tags] : undefined,
         sortBy,
         sortOrder,
       };
 
-      const searchResults = await this.productSearchService.searchProducts(
-        searchQuery,
-        options,
+      const result = await this.searchProductsHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Search completed successfully",
       );
-
-      const products = searchResults.items.map((product) => ({
-        productId: product.getId().toString(),
-        title: product.getTitle(),
-        slug: product.getSlug().toString(),
-        brand: product.getBrand() ?? undefined,
-        shortDesc: product.getShortDesc() ?? undefined,
-        status: product.getStatus(),
-        publishAt: product.getPublishAt() ?? undefined,
-        createdAt: product.getCreatedAt(),
-        updatedAt: product.getUpdatedAt(),
-      }));
-
-      return ResponseHelper.ok(reply, "Search completed successfully", {
-        products,
-        total: searchResults.totalCount,
-        page: options.page,
-        limit: options.limit,
-        query: searchQuery,
-        suggestions: searchResults.suggestions,
-      });
     } catch (error) {
       request.log.error(error, "Failed to search products");
       return ResponseHelper.error(reply, error);
@@ -100,24 +114,19 @@ export class SearchController {
     reply: FastifyReply,
   ) {
     try {
-      const { q, limit = 10, type = "all" } = request.query;
-
-      const searchQuery = q.trim();
-
-      const options = {
-        limit: Math.min(50, Math.max(1, limit)),
+      const { q, limit, type } = request.query;
+      const query: GetSearchSuggestionsQuery = {
+        searchTerm: q,
+        limit,
         type,
       };
 
-      const suggestions = await this.productSearchService.getSearchSuggestions(
-        searchQuery,
-        options,
+      const result = await this.getSearchSuggestionsHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Suggestions retrieved successfully",
       );
-
-      return ResponseHelper.ok(reply, "Suggestions retrieved successfully", {
-        suggestions,
-        meta: { query: searchQuery, type: options.type, limit: options.limit },
-      });
     } catch (error) {
       request.log.error(error, "Failed to get search suggestions");
       return ResponseHelper.error(reply, error);
@@ -126,12 +135,12 @@ export class SearchController {
 
   async getPopularSearches(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const popularSearches =
-        await this.productSearchService.getPopularSearches();
-      return ResponseHelper.ok(
+      const query: GetPopularSearchesQuery = {};
+      const result = await this.getPopularSearchesHandler.handle(query);
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         "Popular searches retrieved successfully",
-        popularSearches,
       );
     } catch (error) {
       request.log.error(error, "Failed to get popular searches");
@@ -145,14 +154,16 @@ export class SearchController {
   ) {
     try {
       const { q, category } = request.query;
-      const filters = await this.productSearchService.getAvailableFilters({
+      const query: GetSearchFiltersQuery = {
         query: q,
         category,
-      });
-      return ResponseHelper.ok(
+      };
+
+      const result = await this.getSearchFiltersHandler.handle(query);
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         "Search filters retrieved successfully",
-        filters,
       );
     } catch (error) {
       request.log.error(error, "Failed to get search filters");
@@ -162,11 +173,12 @@ export class SearchController {
 
   async getSearchStats(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const stats = await this.productSearchService.getSearchStatistics();
-      return ResponseHelper.ok(
+      const query: GetSearchStatsQuery = {};
+      const result = await this.getSearchStatsHandler.handle(query);
+      return ResponseHelper.fromQuery(
         reply,
+        result,
         "Search statistics retrieved successfully",
-        stats,
       );
     } catch (error) {
       request.log.error(error, "Failed to get search statistics");
