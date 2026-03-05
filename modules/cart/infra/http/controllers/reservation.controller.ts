@@ -5,6 +5,8 @@ import {
   CreateReservationHandler,
   GetReservationsQuery,
   GetReservationsHandler,
+  GetReservationByVariantQuery,
+  GetReservationByVariantHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
@@ -50,12 +52,16 @@ export interface ReservationQueryParams {
 export class ReservationController {
   private createReservationHandler: CreateReservationHandler;
   private getReservationsHandler: GetReservationsHandler;
+  private getReservationByVariantHandler: GetReservationByVariantHandler;
 
   constructor(private readonly reservationService: ReservationService) {
     this.createReservationHandler = new CreateReservationHandler(
       reservationService,
     );
     this.getReservationsHandler = new GetReservationsHandler(
+      reservationService,
+    );
+    this.getReservationByVariantHandler = new GetReservationByVariantHandler(
       reservationService,
     );
   }
@@ -145,6 +151,29 @@ export class ReservationController {
       );
     } catch (error) {
       request.log.error(error, "Failed to get variant reservations");
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getReservationByVariant(
+    request: FastifyRequest<{
+      Params: { cartId: string; variantId: string };
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId, variantId } = request.params;
+      const query: GetReservationByVariantQuery = { cartId, variantId };
+      const result = await this.getReservationByVariantHandler.handle(query);
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Reservation retrieved",
+        "Reservation not found",
+      );
+    } catch (error) {
+      request.log.error(error, "Failed to get reservation by variant");
       return ResponseHelper.error(reply, error);
     }
   }

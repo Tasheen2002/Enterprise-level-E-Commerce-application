@@ -23,6 +23,8 @@ import {
   GetActiveCartByUserHandler,
   GetActiveCartByGuestTokenQuery,
   GetActiveCartByGuestTokenHandler,
+  GetCartSummaryQuery,
+  GetCartSummaryHandler,
 } from "../../../application";
 import { PromoData } from "../../../domain/value-objects/applied-promos.vo";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
@@ -109,6 +111,7 @@ export class CartController {
   private getCartHandler: GetCartHandler;
   private getActiveCartByUserHandler: GetActiveCartByUserHandler;
   private getActiveCartByGuestTokenHandler: GetActiveCartByGuestTokenHandler;
+  private getCartSummaryHandler: GetCartSummaryHandler;
 
   constructor(private readonly cartManagementService: CartManagementService) {
     this.addToCartHandler = new AddToCartHandler(cartManagementService);
@@ -132,6 +135,9 @@ export class CartController {
     );
     this.getActiveCartByGuestTokenHandler =
       new GetActiveCartByGuestTokenHandler(cartManagementService);
+    this.getCartSummaryHandler = new GetCartSummaryHandler(
+      cartManagementService,
+    );
   }
 
   async getCart(
@@ -446,6 +452,33 @@ export class CartController {
     }
   }
 
+  async getCartSummary(
+    request: FastifyRequest<{
+      Params: { cartId: string };
+      Querystring: CartQueryParams;
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId } = request.params;
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+
+      const query: GetCartSummaryQuery = { cartId, userId, guestToken };
+      const result = await this.getCartSummaryHandler.handle(query);
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Cart summary retrieved",
+        "Cart not found",
+      );
+    } catch (error) {
+      request.log.error(error, "Failed to get cart summary");
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async getCartStatistics(request: FastifyRequest, reply: FastifyReply) {
     try {
       const statistics = await this.cartManagementService.getCartStatistics();
@@ -499,11 +532,13 @@ export class CartController {
         );
       }
 
-      const result = await this.cartManagementService.clearCart(
-        activeCart.cartId,
-        userId,
+      const command: ClearCartCommand = { cartId: activeCart.cartId, userId };
+      const result = await this.clearCartHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart cleared successfully",
       );
-      return ResponseHelper.ok(reply, "Cart cleared successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to clear user cart");
       return ResponseHelper.error(reply, error);
@@ -533,12 +568,16 @@ export class CartController {
         );
       }
 
-      const result = await this.cartManagementService.clearCart(
-        activeCart.cartId,
-        undefined,
+      const command: ClearCartCommand = {
+        cartId: activeCart.cartId,
         guestToken,
+      };
+      const result = await this.clearCartHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart cleared successfully",
       );
-      return ResponseHelper.ok(reply, "Cart cleared successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to clear guest cart");
       return ResponseHelper.error(reply, error);
