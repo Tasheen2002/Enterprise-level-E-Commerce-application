@@ -4,6 +4,8 @@
   "description": "\"# Enterprise-level-E-Commerce-application\"",
   "main": "index.js",
   "scripts": {
+    "dev": "npx tsx apps/api/src/index.ts",
+    "build": "npx tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
