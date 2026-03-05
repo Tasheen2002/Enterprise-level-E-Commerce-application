@@ -1,6 +1,6 @@
-import { CartRepository } from "../../domain/repositories/cart.repository";
-import { ReservationRepository } from "../../domain/repositories/reservation.repository";
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
+import { IReservationRepository } from "../../domain/repositories/reservation.repository";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
 import {
   ShoppingCart,
   CreateShoppingCartData,
@@ -14,14 +14,13 @@ import { CartOwnerId } from "../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../domain/value-objects/guest-token.vo";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { PromoData } from "../../domain/value-objects/applied-promos.vo";
-import { IProductVariantRepository } from "../../../product-catalog/domain/repositories/product-variant.repository";
-import { VariantId as ProductVariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
-import { IProductRepository } from "../../../product-catalog/domain/repositories/product.repository";
-import { IProductMediaRepository } from "../../../product-catalog/domain/repositories/product-media.repository";
-import { IMediaAssetRepository } from "../../../product-catalog/domain/repositories/media-asset.repository";
-import { ProductId } from "../../../product-catalog/domain/value-objects/product-id.vo";
-import { MediaAssetId } from "../../../product-catalog/domain/entities/media-asset.entity";
-import { SettingsService } from "../../../admin/application/services/settings.service";
+import {
+  IExternalProductVariantRepository,
+  IExternalProductRepository,
+  IExternalProductMediaRepository,
+  IExternalMediaAssetRepository,
+  IExternalSettingsService,
+} from "../../domain/external-services";
 import {
   RESERVATION_DEFAULT_DURATION_MINUTES,
   DEFAULT_CURRENCY,
@@ -153,14 +152,14 @@ export interface CartDto {
 
 export class CartManagementService {
   constructor(
-    private readonly cartRepository: CartRepository,
-    private readonly reservationRepository: ReservationRepository,
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly productVariantRepository: IProductVariantRepository,
-    private readonly productRepository: IProductRepository,
-    private readonly productMediaRepository: IProductMediaRepository,
-    private readonly mediaAssetRepository: IMediaAssetRepository,
-    private readonly settingsService: SettingsService,
+    private readonly cartRepository: ICartRepository,
+    private readonly reservationRepository: IReservationRepository,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly productVariantRepository: IExternalProductVariantRepository,
+    private readonly productRepository: IExternalProductRepository,
+    private readonly productMediaRepository: IExternalProductMediaRepository,
+    private readonly mediaAssetRepository: IExternalMediaAssetRepository,
+    private readonly settingsService: IExternalSettingsService,
   ) {}
 
   // Cart creation
@@ -191,7 +190,10 @@ export class CartManagementService {
       currency: dto.currency,
       reservationExpiresAt: new Date(
         Date.now() +
-          (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+          (dto.reservationDurationMinutes ||
+            RESERVATION_DEFAULT_DURATION_MINUTES) *
+            60 *
+            1000,
       ), // Always create with reservation expiry
     };
 
@@ -221,7 +223,10 @@ export class CartManagementService {
         // Safe to reuse - update reservation expiry and return existing cart
         const newExpiryTime = new Date(
           Date.now() +
-            (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+            (dto.reservationDurationMinutes ||
+              RESERVATION_DEFAULT_DURATION_MINUTES) *
+              60 *
+              1000,
         );
         existingCart.updateReservationExpiry(newExpiryTime);
         await this.cartRepository.update(existingCart);
@@ -236,7 +241,10 @@ export class CartManagementService {
       currency: dto.currency,
       reservationExpiresAt: new Date(
         Date.now() +
-          (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+          (dto.reservationDurationMinutes ||
+            RESERVATION_DEFAULT_DURATION_MINUTES) *
+            60 *
+            1000,
       ), // Always create with reservation expiry
     };
 
@@ -297,9 +305,9 @@ export class CartManagementService {
     let cart: ShoppingCart | null = null;
 
     // Fetch product variant
-    const productVariant = await this.productVariantRepository.findById(
-      ProductVariantId.fromString(dto.variantId),
-    );
+    const productVariant = await this.productVariantRepository.findById({
+      getValue: () => dto.variantId,
+    });
 
     if (!productVariant) {
       throw new Error("Product variant not found");
@@ -307,7 +315,7 @@ export class CartManagementService {
 
     // Get the unit price from the product (price is now at product level)
     const product = await this.productRepository.findById(
-      ProductId.fromString(productVariant.getProductId().getValue()),
+      productVariant.getProductId(),
     );
 
     if (!product) {
@@ -728,9 +736,9 @@ export class CartManagementService {
     const variantId = item.getVariantId().getValue();
 
     // Fetch variant details
-    const variant = await this.productVariantRepository.findById(
-      ProductVariantId.fromString(variantId),
-    );
+    const variant = await this.productVariantRepository.findById({
+      getValue: () => variantId,
+    });
 
     let productDetails = undefined;
     let variantDetails = undefined;
@@ -757,11 +765,9 @@ export class CartManagementService {
 
         const images = await Promise.all(
           productMediaList.map(async (media) => {
-            // Convert value-objects MediaAssetId to entity MediaAssetId
-            const assetId = MediaAssetId.fromString(
-              media.getAssetId().getValue(),
+            const asset = await this.mediaAssetRepository.findById(
+              media.getAssetId(),
             );
-            const asset = await this.mediaAssetRepository.findById(assetId);
             return {
               url: asset?.getStorageKey() || "",
               alt: asset?.getAltText() || undefined,
@@ -893,7 +899,7 @@ export class CartManagementService {
     userId?: string,
     guestToken?: string,
   ): Promise<
-    ReturnType<CartRepository["getCartWithCheckoutInfo"]> extends Promise<
+    ReturnType<ICartRepository["getCartWithCheckoutInfo"]> extends Promise<
       infer T
     >
       ? T

@@ -1,13 +1,14 @@
-import { PrismaClient, CheckoutStatusEnum } from "@prisma/client";
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
-import { CartRepository } from "../../domain/repositories/cart.repository";
-import { ReservationRepository } from "../../domain/repositories/reservation.repository";
-import { StockManagementService } from "../../../inventory-management/application/services/stock-management.service";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
+import { IReservationRepository } from "../../domain/repositories/reservation.repository";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
-import { IProductRepository } from "../../../product-catalog/domain/repositories/product.repository";
-import { IProductVariantRepository } from "../../../product-catalog/domain/repositories/product-variant.repository";
-import { ProductSnapshot } from "../../../order-management/domain/value-objects/product-snapshot.vo";
-import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
+import {
+  IExternalProductRepository,
+  IExternalProductVariantRepository,
+  IExternalStockService,
+  IProductSnapshotFactory,
+  ITransactionRunner,
+} from "../../domain/external-services";
 
 export interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
@@ -52,20 +53,22 @@ export interface OrderResult {
 
 export class CheckoutOrderService {
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly reservationRepository: ReservationRepository,
-    private readonly stockManagementService: StockManagementService,
-    private readonly productRepository: IProductRepository,
-    private readonly productVariantRepository: IProductVariantRepository,
+    private readonly transactionRunner: ITransactionRunner,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly reservationRepository: IReservationRepository,
+    private readonly stockService: IExternalStockService,
+    private readonly productRepository: IExternalProductRepository,
+    private readonly productVariantRepository: IExternalProductVariantRepository,
+    private readonly snapshotFactory: IProductSnapshotFactory,
+    private readonly config: { defaultStockLocation?: string },
   ) {}
 
   async completeCheckoutWithOrder(
     dto: CompleteCheckoutWithOrderDto,
   ): Promise<OrderResult> {
-    // Use Prisma transaction to ensure atomicity
-    return await this.prisma.$transaction(async (tx) => {
+    // Use transaction to ensure atomicity
+    return await this.transactionRunner.$transaction(async (tx) => {
       // 1. Get and validate checkout
       const checkoutId = CheckoutId.fromString(dto.checkoutId);
       const checkout = await this.checkoutRepository.findById(checkoutId);
@@ -187,8 +190,9 @@ export class CheckoutOrderService {
       const orderItems = [];
       for (const item of cartSnapshot.items || []) {
         // Fetch variant and product to build a valid snapshot
-        const variantId = VariantId.fromString(item.variantId);
-        const variant = await this.productVariantRepository.findById(variantId);
+        const variant = await this.productVariantRepository.findById({
+          getValue: () => item.variantId,
+        });
 
         if (!variant) {
           throw new Error(`Variant not found: ${item.variantId}`);
@@ -202,8 +206,8 @@ export class CheckoutOrderService {
           throw new Error(`Product not found for variant: ${item.variantId}`);
         }
 
-        // Create valid ProductSnapshot
-        const productSnapshot = ProductSnapshot.create({
+        // Create valid ProductSnapshot via factory
+        const productSnapshot = this.snapshotFactory.create({
           productId: product.getId().getValue(),
           variantId: variant.getId().getValue(),
           sku: variant.getSku().getValue(),
@@ -212,8 +216,8 @@ export class CheckoutOrderService {
             [variant.getSize(), variant.getColor()]
               .filter(Boolean)
               .join(" / ") || undefined,
-          price: product.getPrice().getValue(), // DB price (price is at product level)
-          imageUrl: undefined, // You might want to fetch images too
+          price: product.getPrice().getValue(),
+          imageUrl: undefined,
           weight: variant.getWeightG() || undefined,
           attributes: {
             size: variant.getSize(),
@@ -243,7 +247,7 @@ export class CheckoutOrderService {
 
       // Remove stock from inventory (no reservation was made during cart creation)
       for (const item of cartSnapshot.items || []) {
-        await this.stockManagementService.adjustStock(
+        await this.stockService.adjustStock(
           item.variantId,
           warehouseId,
           -item.quantity, // Negative to remove stock
@@ -283,7 +287,7 @@ export class CheckoutOrderService {
       await tx.checkout.update({
         where: { id: dto.checkoutId },
         data: {
-          status: CheckoutStatusEnum.completed,
+          status: "completed",
           completedAt: new Date(),
           updatedAt: new Date(),
         },
@@ -394,42 +398,44 @@ export class CheckoutOrderService {
     guestToken?: string,
   ): Promise<OrderResult | null> {
     // Find the order associated with this checkout
-    const order = await this.prisma.order.findFirst({
-      where: {
-        checkoutId: checkoutId,
-        ...(userId ? { userId } : { guestToken }),
-      },
-      include: {
-        items: true,
-      },
+    return await this.transactionRunner.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: {
+          checkoutId: checkoutId,
+          ...(userId ? { userId } : { guestToken }),
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      if (!order) {
+        return null;
+      }
+
+      // Extract totals from JSONB field
+      const totals = order.totals as any;
+      const totalAmount = totals?.total || 0;
+
+      // Transform to OrderResult format
+      return {
+        orderId: order.id,
+        orderNo: order.orderNo,
+        checkoutId: order.checkoutId!,
+        paymentIntentId: order.paymentIntentId || "",
+        totalAmount: Number(totalAmount) || 0,
+        currency: order.currency,
+        status: order.status,
+        createdAt: order.createdAt,
+        items: order.items.map((item: any) => ({
+          id: item.id,
+          productId: item.productSnapshot?.productId || item.productId,
+          variantId: item.variantId,
+          quantity: item.qty,
+          price: Number(item.productSnapshot?.price || item.price) || 0,
+        })),
+      };
     });
-
-    if (!order) {
-      return null;
-    }
-
-    // Extract totals from JSONB field
-    const totals = order.totals as any;
-    const totalAmount = totals?.total || 0;
-
-    // Transform to OrderResult format
-    return {
-      orderId: order.id,
-      orderNo: order.orderNo,
-      checkoutId: order.checkoutId!,
-      paymentIntentId: order.paymentIntentId || "",
-      totalAmount: Number(totalAmount) || 0,
-      currency: order.currency,
-      status: order.status,
-      createdAt: order.createdAt,
-      items: order.items.map((item: any) => ({
-        id: item.id,
-        productId: item.productSnapshot?.productId || item.productId,
-        variantId: item.variantId,
-        quantity: item.qty,
-        price: Number(item.productSnapshot?.price || item.price) || 0,
-      })),
-    };
   }
 
   private async selectWarehouseForOrder(
@@ -438,8 +444,8 @@ export class CheckoutOrderService {
     tx: any,
   ): Promise<string> {
     // Strategy 1: Use configured default warehouse
-    if (process.env.DEFAULT_STOCK_LOCATION) {
-      return process.env.DEFAULT_STOCK_LOCATION;
+    if (this.config.defaultStockLocation) {
+      return this.config.defaultStockLocation;
     }
 
     // Strategy 2: Query first warehouse from database

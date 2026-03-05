@@ -1,12 +1,12 @@
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
-import { CartRepository } from "../../domain/repositories/cart.repository";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
 import {
   Checkout,
   CreateCheckoutData,
 } from "../../domain/entities/checkout.entity";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
-import { SettingsService } from "../../../admin/application/services/settings.service";
+import { IExternalSettingsService } from "../../domain/external-services";
 import { CHECKOUT_DEFAULT_EXPIRY_MINUTES } from "../../domain/constants";
 
 export interface InitializeCheckoutDto {
@@ -38,9 +38,9 @@ export interface CheckoutDto {
 
 export class CheckoutService {
   constructor(
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly settingsService: SettingsService,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly settingsService: IExternalSettingsService,
   ) {}
 
   async initializeCheckout(dto: InitializeCheckoutDto): Promise<CheckoutDto> {

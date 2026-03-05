@@ -1,5 +1,5 @@
-import { ReservationRepository } from "../../domain/repositories/reservation.repository";
-import { CartRepository } from "../../domain/repositories/cart.repository";
+import { IReservationRepository } from "../../domain/repositories/reservation.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
 import {
   Reservation,
   CreateReservationData,
@@ -99,8 +99,8 @@ export interface BulkReservationResultDto {
 
 export class ReservationService {
   constructor(
-    private readonly reservationRepository: ReservationRepository,
-    private readonly cartRepository: CartRepository,
+    private readonly reservationRepository: IReservationRepository,
+    private readonly cartRepository: ICartRepository,
   ) {}
 
   // Core reservation operations
