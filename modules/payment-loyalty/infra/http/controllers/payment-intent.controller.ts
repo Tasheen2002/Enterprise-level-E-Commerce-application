@@ -10,8 +10,6 @@ import {
   VoidPaymentHandler,
   GetPaymentIntentQuery,
   GetPaymentIntentHandler,
-  GetPaymentTransactionsQuery,
-  GetPaymentTransactionsHandler,
 } from "../../../application";
 import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
@@ -48,7 +46,6 @@ export class PaymentIntentController {
   private refundHandler: RefundPaymentHandler;
   private voidHandler: VoidPaymentHandler;
   private getHandler: GetPaymentIntentHandler;
-  private txnsHandler: GetPaymentTransactionsHandler;
 
   constructor(private readonly paymentService: PaymentService) {
     this.createHandler = new CreatePaymentIntentHandler(paymentService);
@@ -56,7 +53,6 @@ export class PaymentIntentController {
     this.refundHandler = new RefundPaymentHandler(paymentService);
     this.voidHandler = new VoidPaymentHandler(paymentService);
     this.getHandler = new GetPaymentIntentHandler(paymentService);
-    this.txnsHandler = new GetPaymentTransactionsHandler(paymentService);
   }
 
   async create(
@@ -157,28 +153,6 @@ export class PaymentIntentController {
       result,
       "Payment intent retrieved",
       "Payment intent not found",
-    );
-  }
-
-  async listTransactions(
-    request: FastifyRequest<{ Params: { intentId: string } }>,
-    reply: FastifyReply,
-  ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
-    }
-
-    const q: GetPaymentTransactionsQuery = {
-      intentId: request.params.intentId,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.txnsHandler.handle(q);
-    return ResponseHelper.fromQuery(
-      reply,
-      result,
-      "Payment transactions retrieved",
     );
   }
 }
