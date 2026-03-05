@@ -1,21 +1,19 @@
 import { IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { GetOrderItemQuery, OrderItemResult } from "./get-order-item.query";
-import { OrderManagementService } from "../services/order-management.service";
+import { OrderItemManagementService } from "../services/order-item-management.service";
 
 export class GetOrderItemHandler implements IQueryHandler<
   GetOrderItemQuery,
   QueryResult<OrderItemResult>
 > {
-  constructor(
-    private readonly orderManagementService: OrderManagementService,
-  ) {}
+  constructor(private readonly orderItemService: OrderItemManagementService) {}
 
   async handle(
     query: GetOrderItemQuery,
   ): Promise<QueryResult<OrderItemResult>> {
     try {
       // Get order item
-      const item = await this.orderManagementService.getOrderItem(query.itemId);
+      const item = await this.orderItemService.getOrderItemById(query.itemId);
 
       if (!item) {
         return QueryResult.failure<OrderItemResult>("Order item not found");

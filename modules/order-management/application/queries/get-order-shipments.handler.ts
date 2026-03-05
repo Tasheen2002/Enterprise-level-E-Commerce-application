@@ -3,22 +3,20 @@ import {
   GetOrderShipmentsQuery,
   ShipmentResult,
 } from "./get-order-shipments.query";
-import { OrderManagementService } from "../services/order-management.service";
+import { ShipmentManagementService } from "../services/shipment-management.service";
 
 export class GetOrderShipmentsHandler implements IQueryHandler<
   GetOrderShipmentsQuery,
   QueryResult<ShipmentResult[]>
 > {
-  constructor(
-    private readonly orderManagementService: OrderManagementService,
-  ) {}
+  constructor(private readonly shipmentService: ShipmentManagementService) {}
 
   async handle(
     query: GetOrderShipmentsQuery,
   ): Promise<QueryResult<ShipmentResult[]>> {
     try {
       // Get shipments
-      const shipments = await this.orderManagementService.getOrderShipments(
+      const shipments = await this.shipmentService.getShipmentsByOrderId(
         query.orderId,
       );
 
