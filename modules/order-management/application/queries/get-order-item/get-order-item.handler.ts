@@ -1,6 +1,7 @@
 import { IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { GetOrderItemQuery, OrderItemResult } from "./get-order-item.query";
 import { OrderItemManagementService } from "../../services/order-item-management.service";
+import { OrderItemNotFoundError } from "../../../domain/errors/order-management.errors";
 
 export class GetOrderItemHandler implements IQueryHandler<
   GetOrderItemQuery,
@@ -12,12 +13,7 @@ export class GetOrderItemHandler implements IQueryHandler<
     query: GetOrderItemQuery,
   ): Promise<QueryResult<OrderItemResult>> {
     try {
-      // Get order item
       const item = await this.orderItemService.getOrderItemById(query.itemId);
-
-      if (!item) {
-        return QueryResult.failure<OrderItemResult>("Order item not found");
-      }
 
       const result: OrderItemResult = {
         orderItemId: item.getOrderItemId(),
@@ -32,6 +28,10 @@ export class GetOrderItemHandler implements IQueryHandler<
 
       return QueryResult.success<OrderItemResult>(result);
     } catch (error) {
+      if (error instanceof OrderItemNotFoundError) {
+        return QueryResult.failure<OrderItemResult>(error.message);
+      }
+
       if (error instanceof Error) {
         return QueryResult.failure<OrderItemResult>(
           `Failed to retrieve order item: ${error.message}`,

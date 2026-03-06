@@ -3,6 +3,7 @@ import {
   PreorderQueryOptions,
 } from "../../domain/repositories/preorder.repository";
 import { Preorder } from "../../domain/entities/preorder.entity";
+import { PreorderNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface CreatePreorderData {
   orderItemId: string;
@@ -38,14 +39,19 @@ export class PreorderManagementService {
     return preorder;
   }
 
-  async getPreorderByOrderItemId(
-    orderItemId: string,
-  ): Promise<Preorder | null> {
+  async getPreorderByOrderItemId(orderItemId: string): Promise<Preorder> {
     if (!orderItemId || orderItemId.trim().length === 0) {
       throw new Error("Order item ID is required");
     }
 
-    return await this.preorderRepository.findByOrderItemId(orderItemId);
+    const preorder =
+      await this.preorderRepository.findByOrderItemId(orderItemId);
+
+    if (!preorder) {
+      throw new PreorderNotFoundError(orderItemId);
+    }
+
+    return preorder;
   }
 
   async getAllPreorders(options?: PreorderQueryOptions): Promise<Preorder[]> {
@@ -97,7 +103,7 @@ export class PreorderManagementService {
   async updateReleaseDate(
     orderItemId: string,
     releaseDate: Date,
-  ): Promise<Preorder | null> {
+  ): Promise<Preorder> {
     if (!orderItemId || orderItemId.trim().length === 0) {
       throw new Error("Order item ID is required");
     }
@@ -107,9 +113,6 @@ export class PreorderManagementService {
     }
 
     const preorder = await this.getPreorderByOrderItemId(orderItemId);
-    if (!preorder) {
-      return null;
-    }
 
     preorder.updateReleaseDate(releaseDate);
 
@@ -118,15 +121,12 @@ export class PreorderManagementService {
     return preorder;
   }
 
-  async markAsNotified(orderItemId: string): Promise<Preorder | null> {
+  async markAsNotified(orderItemId: string): Promise<Preorder> {
     if (!orderItemId || orderItemId.trim().length === 0) {
       throw new Error("Order item ID is required");
     }
 
     const preorder = await this.getPreorderByOrderItemId(orderItemId);
-    if (!preorder) {
-      return null;
-    }
 
     preorder.markAsNotified();
 
@@ -170,18 +170,14 @@ export class PreorderManagementService {
     return notifiedPreorders;
   }
 
-  async deletePreorder(orderItemId: string): Promise<boolean> {
+  async deletePreorder(orderItemId: string): Promise<void> {
     if (!orderItemId || orderItemId.trim().length === 0) {
       throw new Error("Order item ID is required");
     }
 
-    const preorder = await this.getPreorderByOrderItemId(orderItemId);
-    if (!preorder) {
-      return false;
-    }
+    await this.getPreorderByOrderItemId(orderItemId);
 
     await this.preorderRepository.delete(orderItemId);
-    return true;
   }
 
   async getPreorderCount(): Promise<number> {

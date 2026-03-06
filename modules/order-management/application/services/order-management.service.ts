@@ -27,6 +27,13 @@ import {
   IExternalStockService,
 } from "../../domain/external-services";
 import { OrderEventService } from "./order-event.service";
+import {
+  OrderNotFoundError,
+  OrderAddressNotFoundError,
+  OrderItemNotFoundError,
+  OrderShipmentNotFoundError,
+  OrderStatusHistoryNotFoundError,
+} from "../../domain/errors/order-management.errors";
 
 export interface CreateOrderData {
   userId?: string;
@@ -220,14 +227,20 @@ export class OrderManagementService {
     return order;
   }
 
-  async getOrderById(id: string): Promise<Order | null> {
+  async getOrderById(id: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     try {
       const orderId = OrderId.fromString(id);
-      return await this.orderRepository.findById(orderId);
+      const order = await this.orderRepository.findById(orderId);
+
+      if (!order) {
+        throw new OrderNotFoundError(id);
+      }
+
+      return order;
     } catch (error) {
       if (error instanceof Error && error.message.includes("valid UUID")) {
         throw new Error("Invalid order ID format");
@@ -236,14 +249,20 @@ export class OrderManagementService {
     }
   }
 
-  async getOrderByOrderNumber(orderNumber: string): Promise<Order | null> {
+  async getOrderByOrderNumber(orderNumber: string): Promise<Order> {
     if (!orderNumber || orderNumber.trim().length === 0) {
       throw new Error("Order number is required");
     }
 
     try {
       const orderNum = OrderNumber.create(orderNumber.trim());
-      return await this.orderRepository.findByOrderNumber(orderNum);
+      const order = await this.orderRepository.findByOrderNumber(orderNum);
+
+      if (!order) {
+        throw new OrderNotFoundError(orderNumber);
+      }
+
+      return order;
     } catch (error) {
       throw error;
     }
@@ -346,18 +365,12 @@ export class OrderManagementService {
     };
   }
 
-  async updateOrderStatus(
-    id: string,
-    newStatus: string,
-  ): Promise<Order | null> {
+  async updateOrderStatus(id: string, newStatus: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -405,15 +418,12 @@ export class OrderManagementService {
       shipping: number;
       discount: number;
     },
-  ): Promise<Order | null> {
+  ): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     order.updateTotals(
       totalsData.tax,
@@ -426,15 +436,12 @@ export class OrderManagementService {
     return order;
   }
 
-  async markOrderAsPaid(id: string, changedBy?: string): Promise<Order | null> {
+  async markOrderAsPaid(id: string, changedBy?: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -469,18 +476,12 @@ export class OrderManagementService {
     return order;
   }
 
-  async markOrderAsFulfilled(
-    id: string,
-    changedBy?: string,
-  ): Promise<Order | null> {
+  async markOrderAsFulfilled(id: string, changedBy?: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -529,15 +530,12 @@ export class OrderManagementService {
     return order;
   }
 
-  async cancelOrder(id: string): Promise<Order | null> {
+  async cancelOrder(id: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     // If order was paid, we need to release reserved stock
     // Only paid orders would have had stock reserved
@@ -572,15 +570,12 @@ export class OrderManagementService {
     return order;
   }
 
-  async refundOrder(id: string): Promise<Order | null> {
+  async refundOrder(id: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     order.refund();
 
@@ -589,20 +584,16 @@ export class OrderManagementService {
     return order;
   }
 
-  async deleteOrder(id: string): Promise<boolean> {
+  async deleteOrder(id: string): Promise<void> {
     if (!id || id.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
-    const order = await this.getOrderById(id);
-    if (!order) {
-      return false;
-    }
+    await this.getOrderById(id);
 
     try {
       const orderId = OrderId.fromString(id);
       await this.orderRepository.delete(orderId);
-      return true;
     } catch (error) {
       if (error instanceof Error && error.message.includes("constraint")) {
         throw new Error(
@@ -724,12 +715,18 @@ export class OrderManagementService {
     return savedAddress;
   }
 
-  async getOrderAddress(orderId: string): Promise<OrderAddress | null> {
+  async getOrderAddress(orderId: string): Promise<OrderAddress> {
     if (!orderId || orderId.trim().length === 0) {
       throw new Error("Order ID is required");
     }
 
-    return await this.orderAddressRepository.findByOrderId(orderId);
+    const address = await this.orderAddressRepository.findByOrderId(orderId);
+
+    if (!address) {
+      throw new OrderAddressNotFoundError(orderId);
+    }
+
+    return address;
   }
 
   async updateBillingAddress(
@@ -828,9 +825,6 @@ export class OrderManagementService {
     }
 
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Determine location for stock check
     const defaultLocationId = this.getDefaultWarehouseId();
@@ -908,9 +902,6 @@ export class OrderManagementService {
 
     // Fetch the order
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get the item from the order
     const items = order.getItems();
@@ -956,9 +947,6 @@ export class OrderManagementService {
 
     // Fetch the order
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Remove item from order (this validates business rules)
     order.removeItem(data.itemId);
@@ -977,12 +965,18 @@ export class OrderManagementService {
     return await this.orderItemRepository.findByOrderId(orderId);
   }
 
-  async getOrderItem(itemId: string): Promise<OrderItem | null> {
+  async getOrderItem(itemId: string): Promise<OrderItem> {
     if (!itemId || itemId.trim().length === 0) {
       throw new Error("Item ID is required");
     }
 
-    return await this.orderItemRepository.findById(itemId);
+    const item = await this.orderItemRepository.findById(itemId);
+
+    if (!item) {
+      throw new OrderItemNotFoundError(itemId);
+    }
+
+    return item;
   }
 
   // ============================================================================
@@ -1175,7 +1169,7 @@ export class OrderManagementService {
   async getShipment(
     orderId: string,
     shipmentId: string,
-  ): Promise<OrderShipment | null> {
+  ): Promise<OrderShipment> {
     if (!orderId || orderId.trim().length === 0) {
       throw new Error("Order ID is required");
     }
@@ -1187,12 +1181,12 @@ export class OrderManagementService {
     const shipment = await this.orderShipmentRepository.findById(shipmentId);
 
     if (!shipment) {
-      return null;
+      throw new OrderShipmentNotFoundError(shipmentId);
     }
 
     // Verify shipment belongs to order
     if (shipment.getOrderId() !== orderId) {
-      return null;
+      throw new OrderShipmentNotFoundError(shipmentId);
     }
 
     return shipment;
@@ -1218,9 +1212,6 @@ export class OrderManagementService {
 
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get current status
     const currentStatus = order.getStatus().getValue();
@@ -1279,10 +1270,14 @@ export class OrderManagementService {
     );
   }
 
-  async getStatusHistoryById(
-    historyId: number,
-  ): Promise<OrderStatusHistory | null> {
-    return await this.orderStatusHistoryRepository.findById(historyId);
+  async getStatusHistoryById(historyId: number): Promise<OrderStatusHistory> {
+    const history = await this.orderStatusHistoryRepository.findById(historyId);
+
+    if (!history) {
+      throw new OrderStatusHistoryNotFoundError(historyId.toString());
+    }
+
+    return history;
   }
 
   /**

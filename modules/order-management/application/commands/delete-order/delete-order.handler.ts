@@ -1,26 +1,25 @@
 import { ICommandHandler, CommandResult } from "@/api/src/shared/application";
 import { DeleteOrderCommand } from "./delete-order.command";
 import { OrderManagementService } from "../../services/order-management.service";
+import { OrderNotFoundError } from "../../../domain/errors/order-management.errors";
 
 export class DeleteOrderCommandHandler implements ICommandHandler<
   DeleteOrderCommand,
-  CommandResult<boolean>
+  CommandResult<void>
 > {
   constructor(private readonly orderService: OrderManagementService) {}
 
-  async handle(command: DeleteOrderCommand): Promise<CommandResult<boolean>> {
+  async handle(command: DeleteOrderCommand): Promise<CommandResult<void>> {
     try {
-      const deleted = await this.orderService.deleteOrder(command.orderId);
+      await this.orderService.deleteOrder(command.orderId);
 
-      if (!deleted) {
-        return CommandResult.failure<boolean>(
-          "Order not found or could not be deleted",
-        );
+      return CommandResult.success(undefined);
+    } catch (error) {
+      if (error instanceof OrderNotFoundError) {
+        return CommandResult.failure<void>(error.message);
       }
 
-      return CommandResult.success(true);
-    } catch (error) {
-      return CommandResult.failure<boolean>(
+      return CommandResult.failure<void>(
         error instanceof Error
           ? error.message
           : "An unexpected error occurred while deleting order",

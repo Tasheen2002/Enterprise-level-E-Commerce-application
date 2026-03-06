@@ -3,6 +3,7 @@ import {
   OrderEventQueryOptions,
 } from "../../domain/repositories/order-event.repository";
 import { OrderEvent } from "../../domain/entities/order-event.entity";
+import { OrderEventNotFoundError } from "../../domain/errors/order-management.errors";
 
 export enum OrderEventTypes {
   ORDER_CREATED = "order.created",
@@ -230,12 +231,18 @@ export class OrderEventService {
     });
   }
 
-  async getEventById(eventId: number): Promise<OrderEvent | null> {
+  async getEventById(eventId: number): Promise<OrderEvent> {
     if (eventId === undefined || eventId === null || eventId < 0) {
       throw new Error("Valid event ID is required");
     }
 
-    return await this.orderEventRepository.findById(eventId);
+    const event = await this.orderEventRepository.findById(eventId);
+
+    if (!event) {
+      throw new OrderEventNotFoundError(eventId.toString());
+    }
+
+    return event;
   }
 
   async getEventsByOrderId(
@@ -312,18 +319,14 @@ export class OrderEventService {
     );
   }
 
-  async deleteEvent(eventId: number): Promise<boolean> {
+  async deleteEvent(eventId: number): Promise<void> {
     if (eventId === undefined || eventId === null || eventId < 0) {
       throw new Error("Valid event ID is required");
     }
 
-    const event = await this.getEventById(eventId);
-    if (!event) {
-      return false;
-    }
+    await this.getEventById(eventId);
 
     await this.orderEventRepository.delete(eventId);
-    return true;
   }
 
   async deleteAllEventsByOrderId(orderId: string): Promise<void> {

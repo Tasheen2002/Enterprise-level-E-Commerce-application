@@ -3,6 +3,7 @@ import {
   ShipmentQueryOptions,
 } from "../../domain/repositories/order-shipment.repository";
 import { OrderShipment } from "../../domain/entities/order-shipment.entity";
+import { OrderShipmentNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface CreateShipmentData {
   orderId: string;
@@ -42,12 +43,18 @@ export class ShipmentManagementService {
     return shipment;
   }
 
-  async getShipmentById(id: string): Promise<OrderShipment | null> {
+  async getShipmentById(id: string): Promise<OrderShipment> {
     if (!id || id.trim().length === 0) {
       throw new Error("Shipment ID is required");
     }
 
-    return await this.shipmentRepository.findById(id);
+    const shipment = await this.shipmentRepository.findById(id);
+
+    if (!shipment) {
+      throw new OrderShipmentNotFoundError(id);
+    }
+
+    return shipment;
   }
 
   async getShipmentsByOrderId(
@@ -63,12 +70,19 @@ export class ShipmentManagementService {
 
   async getShipmentByTrackingNumber(
     trackingNumber: string,
-  ): Promise<OrderShipment | null> {
+  ): Promise<OrderShipment> {
     if (!trackingNumber || trackingNumber.trim().length === 0) {
       throw new Error("Tracking number is required");
     }
 
-    return await this.shipmentRepository.findByTrackingNumber(trackingNumber);
+    const shipment =
+      await this.shipmentRepository.findByTrackingNumber(trackingNumber);
+
+    if (!shipment) {
+      throw new OrderShipmentNotFoundError(trackingNumber);
+    }
+
+    return shipment;
   }
 
   async getShipmentsByCarrier(
@@ -105,7 +119,7 @@ export class ShipmentManagementService {
     carrier: string,
     service: string,
     trackingNumber: string,
-  ): Promise<OrderShipment | null> {
+  ): Promise<OrderShipment> {
     if (!id || id.trim().length === 0) {
       throw new Error("Shipment ID is required");
     }
@@ -123,9 +137,6 @@ export class ShipmentManagementService {
     }
 
     const shipment = await this.getShipmentById(id);
-    if (!shipment) {
-      return null;
-    }
 
     shipment.markAsShipped(carrier, service, trackingNumber);
 
@@ -134,15 +145,12 @@ export class ShipmentManagementService {
     return shipment;
   }
 
-  async markShipmentAsDelivered(id: string): Promise<OrderShipment | null> {
+  async markShipmentAsDelivered(id: string): Promise<OrderShipment> {
     if (!id || id.trim().length === 0) {
       throw new Error("Shipment ID is required");
     }
 
     const shipment = await this.getShipmentById(id);
-    if (!shipment) {
-      return null;
-    }
 
     shipment.markAsDelivered();
 
@@ -154,7 +162,7 @@ export class ShipmentManagementService {
   async updateTrackingNumber(
     id: string,
     trackingNumber: string,
-  ): Promise<OrderShipment | null> {
+  ): Promise<OrderShipment> {
     if (!id || id.trim().length === 0) {
       throw new Error("Shipment ID is required");
     }
@@ -164,9 +172,6 @@ export class ShipmentManagementService {
     }
 
     const shipment = await this.getShipmentById(id);
-    if (!shipment) {
-      return null;
-    }
 
     shipment.updateTrackingNumber(trackingNumber);
 
@@ -175,18 +180,14 @@ export class ShipmentManagementService {
     return shipment;
   }
 
-  async deleteShipment(id: string): Promise<boolean> {
+  async deleteShipment(id: string): Promise<void> {
     if (!id || id.trim().length === 0) {
       throw new Error("Shipment ID is required");
     }
 
-    const shipment = await this.getShipmentById(id);
-    if (!shipment) {
-      return false;
-    }
+    await this.getShipmentById(id);
 
     await this.shipmentRepository.delete(id);
-    return true;
   }
 
   async deleteShipmentsByOrderId(orderId: string): Promise<void> {

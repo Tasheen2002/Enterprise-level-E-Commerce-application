@@ -1,30 +1,25 @@
 import { ICommandHandler, CommandResult } from "@/api/src/shared/application";
 import { DeletePreorderCommand } from "./delete-preorder.command";
 import { PreorderManagementService } from "../../services/preorder-management.service";
+import { PreorderNotFoundError } from "../../../domain/errors/order-management.errors";
 
 export class DeletePreorderCommandHandler implements ICommandHandler<
   DeletePreorderCommand,
-  CommandResult<boolean>
+  CommandResult<void>
 > {
   constructor(private readonly preorderService: PreorderManagementService) {}
 
-  async handle(
-    command: DeletePreorderCommand,
-  ): Promise<CommandResult<boolean>> {
+  async handle(command: DeletePreorderCommand): Promise<CommandResult<void>> {
     try {
-      const deleted = await this.preorderService.deletePreorder(
-        command.orderItemId,
-      );
+      await this.preorderService.deletePreorder(command.orderItemId);
 
-      if (!deleted) {
-        return CommandResult.failure<boolean>(
-          "Preorder not found or could not be deleted",
-        );
+      return CommandResult.success(undefined);
+    } catch (error) {
+      if (error instanceof PreorderNotFoundError) {
+        return CommandResult.failure<void>(error.message);
       }
 
-      return CommandResult.success(true);
-    } catch (error) {
-      return CommandResult.failure<boolean>(
+      return CommandResult.failure<void>(
         error instanceof Error
           ? error.message
           : "An unexpected error occurred while deleting preorder",
