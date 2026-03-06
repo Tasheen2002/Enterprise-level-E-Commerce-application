@@ -10,7 +10,7 @@ import { authenticate } from "@/api/src/shared/middleware";
 const addressObject = {
   type: "object",
   properties: {
-    id: { type: "string", format: "uuid" },
+    addressId: { type: "string", format: "uuid" },
     userId: { type: "string", format: "uuid" },
     type: { type: "string", enum: ["shipping", "billing"] },
     firstName: { type: "string" },
@@ -71,7 +71,14 @@ export async function registerAddressRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "array", items: addressObject },
+              data: {
+                type: "object",
+                properties: {
+                  userId: { type: "string" },
+                  addresses: { type: "array", items: addressObject },
+                  totalCount: { type: "number" },
+                },
+              },
             },
           },
         },
