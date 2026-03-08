@@ -1,6 +1,10 @@
 import { IProductRepository } from "../../domain/repositories/product.repository";
 import { ICategoryRepository } from "../../domain/repositories/category.repository";
 import { Product } from "../../domain/entities/product.entity";
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../../domain/errors/product-catalog.errors";
 
 export interface ProductSearchOptions {
   page?: number;
@@ -60,7 +64,7 @@ export class ProductSearchService {
     options: ProductSearchOptions = {},
   ): Promise<{ items: Product[]; totalCount: number; suggestions?: string[] }> {
     if (!query || query.trim().length === 0) {
-      throw new Error("Search query cannot be empty");
+      throw new DomainValidationError("Search query cannot be empty");
     }
 
     const {
@@ -119,7 +123,7 @@ export class ProductSearchService {
         suggestions: this.generateSearchSuggestions(query, products),
       };
     } catch (error) {
-      throw new Error(
+      throw new InvalidOperationError(
         `Product search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }

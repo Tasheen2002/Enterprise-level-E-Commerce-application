@@ -10,6 +10,14 @@ import {
   ICheckoutCompletionPort,
   CheckoutOrderResult,
 } from "../../domain/external-services";
+import {
+  CartNotFoundError,
+  CheckoutNotFoundError,
+  CartOwnershipError,
+  InvalidCheckoutStateError,
+  InvalidCartStateError,
+  DomainValidationError,
+} from "../../domain/errors/cart.errors";
 
 export interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
@@ -64,25 +72,25 @@ export class CheckoutOrderService {
     const checkout = await this.checkoutRepository.findById(checkoutId);
 
     if (!checkout) {
-      throw new Error("Checkout not found");
+      throw new CheckoutNotFoundError(dto.checkoutId);
     }
 
     if (checkout.isExpired()) {
-      throw new Error("Checkout has expired");
+      throw new InvalidCheckoutStateError("Checkout has expired");
     }
 
     if (!checkout.isPending()) {
-      throw new Error("Checkout is not in pending state");
+      throw new InvalidCheckoutStateError("Checkout is not in pending state");
     }
 
     const cart = await this.cartRepository.findById(checkout.getCartId());
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(checkout.getCartId().getValue());
     }
 
     if (cart.isEmpty()) {
-      throw new Error("Cannot create order from empty cart");
+      throw new InvalidCartStateError("Cannot create order from empty cart");
     }
 
     // ---- Phase 2: Validate payment via port ----
@@ -93,18 +101,18 @@ export class CheckoutOrderService {
     );
 
     if (!paymentIntent) {
-      throw new Error("Payment intent not found");
+      throw new DomainValidationError("Payment intent not found");
     }
 
     const validStatuses = ["authorized", "captured", "requires_action"];
     if (!validStatuses.includes(paymentIntent.status)) {
-      throw new Error(
+      throw new InvalidCheckoutStateError(
         `Payment intent is not authorized. Current status: ${paymentIntent.status}`,
       );
     }
 
     if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
-      throw new Error("Checkout does not belong to user");
+      throw new CartOwnershipError("Checkout does not belong to user");
     }
 
     if (
@@ -112,7 +120,7 @@ export class CheckoutOrderService {
       checkout.getGuestToken()?.toString() !== dto.guestToken &&
       !validStatuses.includes(paymentIntent.status)
     ) {
-      throw new Error("Checkout does not belong to guest");
+      throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
     // ---- Phase 3: Idempotency check via port ----
@@ -157,7 +165,7 @@ export class CheckoutOrderService {
       });
 
       if (!variant) {
-        throw new Error(`Variant not found: ${item.variantId}`);
+        throw new DomainValidationError(`Variant not found: ${item.variantId}`);
       }
 
       const product = await this.productRepository.findById(
@@ -165,7 +173,9 @@ export class CheckoutOrderService {
       );
 
       if (!product) {
-        throw new Error(`Product not found for variant: ${item.variantId}`);
+        throw new DomainValidationError(
+          `Product not found for variant: ${item.variantId}`,
+        );
       }
 
       const productSnapshot = this.snapshotFactory.create({
@@ -268,7 +278,7 @@ export class CheckoutOrderService {
 
     const warehouseId = await this.stockService.findWarehouseId();
     if (!warehouseId) {
-      throw new Error(
+      throw new DomainValidationError(
         "No warehouse location found. Please configure DEFAULT_STOCK_LOCATION in .env or create a warehouse location in the database.",
       );
     }

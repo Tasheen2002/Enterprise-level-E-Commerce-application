@@ -13,6 +13,10 @@ import {
   VerificationAuditLog,
   VerificationAction,
 } from "../../domain/entities/verification-audit-log.entity";
+import {
+  UserNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/user-management.errors";
 
 export interface EmailService {
   sendVerificationEmail(email: string, token: string): Promise<void>;
@@ -41,22 +45,22 @@ export class VerificationService {
     private readonly tokenRepository: IVerificationTokenRepository,
     private readonly rateLimitRepository: IVerificationRateLimitRepository,
     private readonly auditRepository: IVerificationAuditLogRepository,
-    private readonly emailService?: EmailService
+    private readonly emailService?: EmailService,
   ) {}
 
   async sendEmailVerification(
     userId: string,
-    context?: VerificationContext
+    context?: VerificationContext,
   ): Promise<VerificationResult> {
     if (!this.emailService) {
-      throw new Error("Email service not configured");
+      throw new InvalidOperationError("Email service not configured");
     }
 
     const userIdVo = UserId.fromString(userId);
     const user = await this.userRepository.findById(userIdVo);
 
     if (!user) {
-      throw new Error("User not found");
+      throw new UserNotFoundError();
     }
 
     if (user.isEmailVerified()) {
@@ -66,7 +70,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -78,7 +82,7 @@ export class VerificationService {
       userId,
       user.getEmail().getValue(),
       null,
-      VerificationType.EMAIL_VERIFICATION
+      VerificationType.EMAIL_VERIFICATION,
     );
     if (!rateLimitCheck.allowed) {
       await this.logAudit(
@@ -87,7 +91,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -98,7 +102,7 @@ export class VerificationService {
 
     await this.tokenRepository.deleteByUserIdAndType(
       userId,
-      VerificationType.EMAIL_VERIFICATION
+      VerificationType.EMAIL_VERIFICATION,
     );
 
     const token = this.generateEmailToken();
@@ -117,13 +121,13 @@ export class VerificationService {
       await this.tokenRepository.save(verificationToken);
       await this.emailService.sendVerificationEmail(
         user.getEmail().getValue(),
-        token
+        token,
       );
       await this.updateRateLimit(
         userId,
         user.getEmail().getValue(),
         null,
-        VerificationType.EMAIL_VERIFICATION
+        VerificationType.EMAIL_VERIFICATION,
       );
       await this.logAudit(
         userId,
@@ -131,7 +135,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.SENT,
-        context
+        context,
       );
 
       return {
@@ -145,22 +149,22 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
-        context
+        context,
       );
-      throw new Error("Failed to send verification email");
+      throw new InvalidOperationError("Failed to send verification email");
     }
   }
 
   async verifyEmail(
     userId: string,
     token: string,
-    context?: VerificationContext
+    context?: VerificationContext,
   ): Promise<VerificationResult> {
     const userIdVo = UserId.fromString(userId);
     const user = await this.userRepository.findById(userIdVo);
 
     if (!user) {
-      throw new Error("User not found");
+      throw new UserNotFoundError();
     }
 
     if (user.isEmailVerified()) {
@@ -170,7 +174,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -180,7 +184,7 @@ export class VerificationService {
 
     const verificationToken = await this.tokenRepository.findByToken(
       token,
-      VerificationType.EMAIL_VERIFICATION
+      VerificationType.EMAIL_VERIFICATION,
     );
 
     if (!verificationToken || verificationToken.getUserId() !== userId) {
@@ -190,7 +194,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -205,7 +209,7 @@ export class VerificationService {
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.EXPIRED,
-        context
+        context,
       );
       return {
         success: false,
@@ -226,7 +230,7 @@ export class VerificationService {
       null,
       VerificationType.EMAIL_VERIFICATION,
       VerificationAction.VERIFIED,
-      context
+      context,
     );
 
     return {
@@ -237,10 +241,10 @@ export class VerificationService {
 
   async sendPasswordResetEmail(
     email: string,
-    context?: VerificationContext
+    context?: VerificationContext,
   ): Promise<VerificationResult> {
     if (!this.emailService) {
-      throw new Error("Email service not configured");
+      throw new InvalidOperationError("Email service not configured");
     }
 
     const emailVo = Email.fromString(email);
@@ -254,7 +258,7 @@ export class VerificationService {
         null,
         VerificationType.PASSWORD_RESET,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: true,
@@ -270,7 +274,7 @@ export class VerificationService {
         null,
         VerificationType.PASSWORD_RESET,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -283,7 +287,7 @@ export class VerificationService {
       userId,
       email,
       null,
-      VerificationType.PASSWORD_RESET
+      VerificationType.PASSWORD_RESET,
     );
     if (!rateLimitCheck.allowed) {
       await this.logAudit(
@@ -292,7 +296,7 @@ export class VerificationService {
         null,
         VerificationType.PASSWORD_RESET,
         VerificationAction.FAILED,
-        context
+        context,
       );
       return {
         success: false,
@@ -303,7 +307,7 @@ export class VerificationService {
 
     await this.tokenRepository.deleteByUserIdAndType(
       userId,
-      VerificationType.PASSWORD_RESET
+      VerificationType.PASSWORD_RESET,
     );
 
     const token = this.generateEmailToken();
@@ -325,7 +329,7 @@ export class VerificationService {
         userId,
         email,
         null,
-        VerificationType.PASSWORD_RESET
+        VerificationType.PASSWORD_RESET,
       );
       await this.logAudit(
         userId,
@@ -333,7 +337,7 @@ export class VerificationService {
         null,
         VerificationType.PASSWORD_RESET,
         VerificationAction.SENT,
-        context
+        context,
       );
 
       return {
@@ -347,15 +351,15 @@ export class VerificationService {
         null,
         VerificationType.PASSWORD_RESET,
         VerificationAction.FAILED,
-        context
+        context,
       );
-      throw new Error("Failed to send password reset email");
+      throw new InvalidOperationError("Failed to send password reset email");
     }
   }
 
   async validatePasswordResetToken(
     email: string,
-    token: string
+    token: string,
   ): Promise<string | null> {
     const emailVo = Email.fromString(email);
     const user = await this.userRepository.findByEmail(emailVo);
@@ -366,7 +370,7 @@ export class VerificationService {
 
     const verificationToken = await this.tokenRepository.findByToken(
       token,
-      VerificationType.PASSWORD_RESET
+      VerificationType.PASSWORD_RESET,
     );
 
     if (
@@ -385,11 +389,11 @@ export class VerificationService {
 
   async consumePasswordResetToken(
     userId: string,
-    token: string
+    token: string,
   ): Promise<boolean> {
     const verificationToken = await this.tokenRepository.findByToken(
       token,
-      VerificationType.PASSWORD_RESET
+      VerificationType.PASSWORD_RESET,
     );
 
     if (!verificationToken || verificationToken.getUserId() !== userId) {
@@ -407,11 +411,11 @@ export class VerificationService {
 
   async resendEmailVerification(
     userId: string,
-    context?: VerificationContext
+    context?: VerificationContext,
   ): Promise<VerificationResult> {
     await this.tokenRepository.deleteByUserIdAndType(
       userId,
-      VerificationType.EMAIL_VERIFICATION
+      VerificationType.EMAIL_VERIFICATION,
     );
     return this.sendEmailVerification(userId, context);
   }
@@ -438,14 +442,14 @@ export class VerificationService {
     userId: string,
     _email: string | null,
     _phone: string | null,
-    type: VerificationType
+    type: VerificationType,
   ): Promise<{
     allowed: boolean;
     resetInMinutes?: number;
   }> {
     const rateLimit = await this.rateLimitRepository.findByUserIdAndType(
       userId,
-      type
+      type,
     );
 
     if (!rateLimit) {
@@ -460,7 +464,7 @@ export class VerificationService {
       const resetAt = rateLimit.getResetAt();
       const now = new Date();
       const resetInMinutes = Math.ceil(
-        (resetAt.getTime() - now.getTime()) / (1000 * 60)
+        (resetAt.getTime() - now.getTime()) / (1000 * 60),
       );
 
       return {
@@ -476,11 +480,11 @@ export class VerificationService {
     userId: string,
     email: string | null,
     phone: string | null,
-    type: VerificationType
+    type: VerificationType,
   ): Promise<void> {
     let rateLimit = await this.rateLimitRepository.findByUserIdAndType(
       userId,
-      type
+      type,
     );
 
     if (!rateLimit || rateLimit.isExpired()) {
@@ -507,7 +511,7 @@ export class VerificationService {
     phone: string | null,
     type: VerificationType,
     action: VerificationAction,
-    context?: VerificationContext
+    context?: VerificationContext,
   ): Promise<void> {
     const auditLog = VerificationAuditLog.create({
       userId,

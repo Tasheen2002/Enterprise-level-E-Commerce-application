@@ -3,6 +3,11 @@ import { PickupReservation } from "../../domain/entities/pickup-reservation.enti
 import { ReservationId } from "../../domain/value-objects/reservation-id.vo";
 import { IPickupReservationRepository } from "../../domain/repositories/pickup-reservation.repository";
 import { StockManagementService } from "./stock-management.service";
+import {
+  DomainValidationError,
+  PickupReservationNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class PickupReservationService {
   constructor(
@@ -18,7 +23,9 @@ export class PickupReservationService {
     expirationMinutes: number = 30,
   ): Promise<PickupReservation> {
     if (qty <= 0) {
-      throw new Error("Reservation quantity must be greater than zero");
+      throw new DomainValidationError(
+        "Reservation quantity must be greater than zero",
+      );
     }
 
     // Calculate expiration time
@@ -50,11 +57,11 @@ export class PickupReservationService {
     );
 
     if (!reservation) {
-      throw new Error(`Reservation with ID ${reservationId} not found`);
+      throw new PickupReservationNotFoundError(reservationId);
     }
 
     if (!reservation.isActive()) {
-      throw new Error("Can only cancel active reservations");
+      throw new InvalidOperationError("Can only cancel active reservations");
     }
 
     // Mark reservation as cancelled (keep record for history)
@@ -74,11 +81,11 @@ export class PickupReservationService {
     );
 
     if (!reservation) {
-      throw new Error(`Reservation with ID ${reservationId} not found`);
+      throw new PickupReservationNotFoundError(reservationId);
     }
 
     if (reservation.isExpired()) {
-      throw new Error("Cannot extend an expired reservation");
+      throw new InvalidOperationError("Cannot extend an expired reservation");
     }
 
     const newExpiresAt = new Date(reservation.getExpiresAt());
@@ -124,11 +131,11 @@ export class PickupReservationService {
     );
 
     if (!reservation) {
-      throw new Error(`Reservation with ID ${reservationId} not found`);
+      throw new PickupReservationNotFoundError(reservationId);
     }
 
     if (!reservation.isActive()) {
-      throw new Error("Can only fulfill active reservations");
+      throw new InvalidOperationError("Can only fulfill active reservations");
     }
 
     // Fulfill stock reservation (removes from inventory)

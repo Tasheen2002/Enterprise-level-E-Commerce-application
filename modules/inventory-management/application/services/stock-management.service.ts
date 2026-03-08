@@ -6,6 +6,10 @@ import { TransactionId } from "../../domain/value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../../domain/value-objects/transaction-reason.vo";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
+import {
+  DomainValidationError,
+  StockNotFoundError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class StockManagementService {
   constructor(
@@ -20,7 +24,7 @@ export class StockManagementService {
     reason: string,
   ): Promise<Stock> {
     if (quantity <= 0) {
-      throw new Error("Quantity must be greater than zero");
+      throw new DomainValidationError("Quantity must be greater than zero");
     }
 
     let stock = await this.stockRepository.findByVariantAndLocation(
@@ -68,9 +72,7 @@ export class StockManagementService {
     );
 
     if (!stock) {
-      throw new Error(
-        `Stock not found for variant ${variantId} at location ${locationId}`,
-      );
+      throw new StockNotFoundError(variantId, locationId);
     }
 
     const updatedStock =
@@ -102,7 +104,9 @@ export class StockManagementService {
     quantity: number,
   ): Promise<{ fromStock: Stock; toStock: Stock }> {
     if (quantity <= 0) {
-      throw new Error("Transfer quantity must be greater than zero");
+      throw new DomainValidationError(
+        "Transfer quantity must be greater than zero",
+      );
     }
 
     const fromStock = await this.stockRepository.findByVariantAndLocation(
@@ -111,9 +115,7 @@ export class StockManagementService {
     );
 
     if (!fromStock) {
-      throw new Error(
-        `Stock not found for variant ${variantId} at location ${fromLocationId}`,
-      );
+      throw new StockNotFoundError(variantId, fromLocationId);
     }
 
     const updatedFromStock = fromStock.removeStock(quantity);
@@ -172,9 +174,7 @@ export class StockManagementService {
     );
 
     if (!stock) {
-      throw new Error(
-        `Stock not found for variant ${variantId} at location ${locationId}`,
-      );
+      throw new StockNotFoundError(variantId, locationId);
     }
 
     const updatedStock = stock.reserveStock(quantity);
@@ -194,9 +194,7 @@ export class StockManagementService {
     );
 
     if (!stock) {
-      throw new Error(
-        `Stock not found for variant ${variantId} at location ${locationId}`,
-      );
+      throw new StockNotFoundError(variantId, locationId);
     }
 
     const updatedStock = stock.fulfillReservation(quantity);
@@ -227,9 +225,7 @@ export class StockManagementService {
     );
 
     if (!stock) {
-      throw new Error(
-        `Stock not found for variant ${variantId} at location ${locationId}`,
-      );
+      throw new StockNotFoundError(variantId, locationId);
     }
 
     const updatedStock = stock.updateThresholds(lowStockThreshold, safetyStock);

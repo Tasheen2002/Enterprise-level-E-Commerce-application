@@ -25,6 +25,12 @@ import {
   RESERVATION_DEFAULT_DURATION_MINUTES,
   DEFAULT_CURRENCY,
 } from "../../domain/constants";
+import {
+  DomainValidationError,
+  CartNotFoundError,
+  CartOwnershipError,
+  InvalidCartStateError,
+} from "../../domain/errors/cart.errors";
 
 // DTOs for service operations
 export interface CreateCartDto {
@@ -310,7 +316,7 @@ export class CartManagementService {
     });
 
     if (!productVariant) {
-      throw new Error("Product variant not found");
+      throw new DomainValidationError("Product variant not found");
     }
 
     // Get the unit price from the product (price is now at product level)
@@ -319,7 +325,7 @@ export class CartManagementService {
     );
 
     if (!product) {
-      throw new Error("Product not found");
+      throw new DomainValidationError("Product not found");
     }
 
     const unitPrice = product.getPrice().getValue();
@@ -328,7 +334,7 @@ export class CartManagementService {
     if (dto.cartId) {
       cart = await this.cartRepository.findById(CartId.fromString(dto.cartId));
       if (!cart) {
-        throw new Error("Cart not found");
+        throw new CartNotFoundError(dto.cartId);
       }
 
       // CRITICAL: Check if this cart has a completed checkout
@@ -355,7 +361,9 @@ export class CartManagementService {
             CartId.fromString(newCartDto.cartId),
           );
         } else {
-          throw new Error("Cannot add items to a cart with a completed order");
+          throw new InvalidCartStateError(
+            "Cannot add items to a cart with a completed order",
+          );
         }
       }
     } else if (dto.userId) {
@@ -389,7 +397,7 @@ export class CartManagementService {
     }
 
     if (!cart) {
-      throw new Error("Unable to find or create cart");
+      throw new CartNotFoundError();
     }
 
     // Validate ownership
@@ -450,7 +458,7 @@ export class CartManagementService {
     );
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(dto.cartId);
     }
 
     // Validate ownership
@@ -484,7 +492,7 @@ export class CartManagementService {
     );
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(dto.cartId);
     }
 
     // Validate ownership
@@ -511,7 +519,7 @@ export class CartManagementService {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     // Validate ownership
@@ -534,7 +542,7 @@ export class CartManagementService {
     );
 
     if (!guestCart) {
-      throw new Error("Guest cart not found");
+      throw new CartNotFoundError(dto.guestToken);
     }
 
     if (dto.mergeWithExisting) {
@@ -636,14 +644,14 @@ export class CartManagementService {
 
     if (cartCartOwnerId) {
       if (!userId || cartCartOwnerId !== userId) {
-        throw new Error("Unauthorized: Cart does not belong to user");
+        throw new CartOwnershipError("Cart does not belong to user");
       }
     } else if (cartGuestToken) {
       if (!guestToken || cartGuestToken !== guestToken) {
-        throw new Error("Unauthorized: Cart does not belong to guest");
+        throw new CartOwnershipError("Cart does not belong to guest");
       }
     } else {
-      throw new Error("Unauthorized: Cart has no owner");
+      throw new CartOwnershipError("Cart has no owner");
     }
   }
 
@@ -827,7 +835,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -847,7 +855,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -886,7 +894,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -907,7 +915,7 @@ export class CartManagementService {
   > {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);

@@ -7,6 +7,11 @@ import {
 } from "../../domain/value-objects/alert-type.vo";
 import { IStockAlertRepository } from "../../domain/repositories/stock-alert.repository";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
+import {
+  StockAlertAlreadyExistsError,
+  StockAlertNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class StockAlertService {
   constructor(
@@ -24,9 +29,7 @@ export class StockAlertService {
     );
 
     if (hasActiveAlert) {
-      throw new Error(
-        `Active ${type} alert already exists for variant ${variantId}`,
-      );
+      throw new StockAlertAlreadyExistsError(type, variantId);
     }
 
     const alert = StockAlert.create({
@@ -46,11 +49,11 @@ export class StockAlertService {
     );
 
     if (!alert) {
-      throw new Error(`Alert with ID ${alertId} not found`);
+      throw new StockAlertNotFoundError(alertId);
     }
 
     if (alert.isResolved()) {
-      throw new Error(`Alert ${alertId} is already resolved`);
+      throw new InvalidOperationError(`Alert ${alertId} is already resolved`);
     }
 
     const resolvedAlert = alert.resolve(new Date());
@@ -64,7 +67,7 @@ export class StockAlertService {
     );
 
     if (!alert) {
-      throw new Error(`Alert with ID ${alertId} not found`);
+      throw new StockAlertNotFoundError(alertId);
     }
 
     await this.stockAlertRepository.delete(AlertId.create(alertId));

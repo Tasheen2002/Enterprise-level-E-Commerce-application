@@ -239,12 +239,7 @@ export class ReservationController {
     try {
       const { reservationId } = request.params;
 
-      const success =
-        await this.reservationService.releaseReservation(reservationId);
-
-      if (!success) {
-        return ResponseHelper.notFound(reply, "Reservation not found");
-      }
+      await this.reservationService.releaseReservation(reservationId);
 
       return ResponseHelper.ok(reply, "Reservation released successfully");
     } catch (error) {

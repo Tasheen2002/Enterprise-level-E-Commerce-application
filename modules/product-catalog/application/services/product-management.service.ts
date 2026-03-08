@@ -58,7 +58,7 @@ export class ProductManagementService {
 
   async getProductById(id: string): Promise<Product | null> {
     if (!id || id.trim().length === 0) {
-      throw new Error("Product ID is required");
+      throw new DomainValidationError("Product ID is required");
     }
 
     try {
@@ -66,7 +66,7 @@ export class ProductManagementService {
       return await this.productRepository.findById(productId);
     } catch (error) {
       if (error instanceof Error && error.message.includes("valid UUID")) {
-        throw new Error("Invalid product ID format");
+        throw new DomainValidationError("Invalid product ID format");
       }
       throw error;
     }
@@ -74,7 +74,7 @@ export class ProductManagementService {
 
   async getProductBySlug(slug: string): Promise<Product | null> {
     if (!slug || slug.trim().length === 0) {
-      throw new Error("Product slug is required");
+      throw new DomainValidationError("Product slug is required");
     }
 
     try {
@@ -85,7 +85,7 @@ export class ProductManagementService {
         error instanceof Error &&
         error.message.includes("lowercase letters, numbers, and hyphens")
       ) {
-        throw new Error("Invalid slug format");
+        throw new DomainValidationError("Invalid slug format");
       }
       throw error;
     }
@@ -168,12 +168,14 @@ export class ProductManagementService {
     options?: ProductQueryOptions,
   ): Promise<Product[]> {
     if (!status || status.trim().length === 0) {
-      throw new Error("Status is required");
+      throw new DomainValidationError("Status is required");
     }
 
     const validStatuses = ["draft", "published", "scheduled"];
     if (!validStatuses.includes(status)) {
-      throw new Error(`Status must be one of: ${validStatuses.join(", ")}`);
+      throw new DomainValidationError(
+        `Status must be one of: ${validStatuses.join(", ")}`,
+      );
     }
 
     return await this.productRepository.findByStatus(status, options);
@@ -184,7 +186,7 @@ export class ProductManagementService {
     options?: ProductQueryOptions,
   ): Promise<Product[]> {
     if (!brand || brand.trim().length === 0) {
-      throw new Error("Brand is required");
+      throw new DomainValidationError("Brand is required");
     }
 
     return await this.productRepository.findByBrand(brand.trim(), options);
@@ -195,7 +197,7 @@ export class ProductManagementService {
     options?: ProductQueryOptions,
   ): Promise<Product[]> {
     if (!categoryId || categoryId.trim().length === 0) {
-      throw new Error("Category ID is required");
+      throw new DomainValidationError("Category ID is required");
     }
 
     return await this.productRepository.findByCategory(categoryId, options);
@@ -206,7 +208,7 @@ export class ProductManagementService {
     data: Partial<CreateProductData>,
   ): Promise<Product | null> {
     if (!id || id.trim().length === 0) {
-      throw new Error("Product ID is required");
+      throw new DomainValidationError("Product ID is required");
     }
 
     const product = await this.getProductById(id);
@@ -284,7 +286,7 @@ export class ProductManagementService {
 
   async deleteProduct(id: string): Promise<boolean> {
     if (!id || id.trim().length === 0) {
-      throw new Error("Product ID is required");
+      throw new DomainValidationError("Product ID is required");
     }
 
     const product = await this.getProductById(id);
@@ -298,7 +300,7 @@ export class ProductManagementService {
       return true;
     } catch (error) {
       if (error instanceof Error && error.message.includes("constraint")) {
-        throw new Error(
+        throw new InvalidOperationError(
           "Cannot delete product: it has associated variants or other dependencies",
         );
       }

@@ -13,6 +13,8 @@ import {
   UserInactiveError,
   InvalidPasswordError,
   EmailAlreadyVerifiedError,
+  DomainValidationError,
+  InvalidOperationError,
 } from "../../domain/errors/user-management.errors";
 import { UserStatus } from "../../domain/entities/user.entity";
 
@@ -78,7 +80,7 @@ export class AuthenticationService {
     },
   ) {
     if (!config.accessTokenSecret || !config.refreshTokenSecret) {
-      throw new Error("JWT secrets are required");
+      throw new DomainValidationError("JWT secrets are required");
     }
     this.accessTokenSecret = config.accessTokenSecret;
     this.refreshTokenSecret = config.refreshTokenSecret;
@@ -132,7 +134,7 @@ export class AuthenticationService {
       const existingUser = await this.userRepository.findByEmail(emailVo);
 
       if (existingUser && !existingUser.getIsGuest()) {
-        throw new Error("Email already registered as regular user");
+        throw new UserAlreadyExistsError(email);
       }
 
       if (existingUser) {
@@ -166,7 +168,7 @@ export class AuthenticationService {
       ) as TokenPayload;
 
       if (payload.type !== "refresh") {
-        throw new Error("Invalid token type");
+        throw new DomainValidationError("Invalid token type");
       }
 
       const userId = UserId.fromString(payload.userId);
@@ -195,7 +197,7 @@ export class AuthenticationService {
       ) {
         throw error;
       }
-      throw new Error("Invalid refresh token");
+      throw new DomainValidationError("Invalid refresh token");
     }
   }
 
@@ -204,7 +206,7 @@ export class AuthenticationService {
       const payload = jwt.verify(token, this.accessTokenSecret) as TokenPayload;
 
       if (payload.type !== "access") {
-        throw new Error("Invalid token type");
+        throw new DomainValidationError("Invalid token type");
       }
 
       const userId = UserId.fromString(payload.userId);
@@ -226,7 +228,7 @@ export class AuthenticationService {
       ) {
         throw error;
       }
-      throw new Error("Invalid access token");
+      throw new DomainValidationError("Invalid access token");
     }
   }
 
@@ -245,10 +247,10 @@ export class AuthenticationService {
           this.refreshTokenSecret,
         ) as TokenPayload;
         if (payload.type !== "refresh" || payload.userId !== userId) {
-          throw new Error("Invalid refresh token");
+          throw new DomainValidationError("Invalid refresh token");
         }
       } catch (error) {
-        throw new Error("Invalid refresh token");
+        throw new DomainValidationError("Invalid refresh token");
       }
     }
 
@@ -269,12 +271,12 @@ export class AuthenticationService {
     }
 
     if (user.getIsGuest()) {
-      throw new Error("Guest users cannot change password");
+      throw new InvalidOperationError("Guest users cannot change password");
     }
 
     const currentPasswordHash = user.getPasswordHash();
     if (!currentPasswordHash) {
-      throw new Error("User has no password set");
+      throw new InvalidOperationError("User has no password set");
     }
 
     const isCurrentPasswordValid = await this.passwordHasher.verify(
@@ -296,7 +298,7 @@ export class AuthenticationService {
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
     if (!newPasswordHash) {
-      throw new Error("Failed to hash password");
+      throw new InvalidOperationError("Failed to hash password");
     }
     user.updatePassword(newPasswordHash);
 
@@ -316,12 +318,12 @@ export class AuthenticationService {
     }
 
     if (user.getIsGuest()) {
-      throw new Error("Guest users cannot change email");
+      throw new InvalidOperationError("Guest users cannot change email");
     }
 
     const passwordHash = user.getPasswordHash();
     if (!passwordHash) {
-      throw new Error("User has no password set");
+      throw new InvalidOperationError("User has no password set");
     }
 
     const isPasswordValid = await this.passwordHasher.verify(
@@ -354,7 +356,7 @@ export class AuthenticationService {
 
     const passwordHash = user.getPasswordHash();
     if (!passwordHash) {
-      throw new Error("User has no password set");
+      throw new InvalidOperationError("User has no password set");
     }
 
     const isPasswordValid = await this.passwordHasher.verify(
@@ -386,7 +388,7 @@ export class AuthenticationService {
 
     const passwordHash = await this.passwordHasher.hash(userData.password);
     if (!passwordHash) {
-      throw new Error("Failed to hash password");
+      throw new InvalidOperationError("Failed to hash password");
     }
 
     let user: User;
@@ -436,7 +438,7 @@ export class AuthenticationService {
     }
 
     if (user.getIsGuest()) {
-      throw new Error("Guest users cannot reset password");
+      throw new InvalidOperationError("Guest users cannot reset password");
     }
 
     const passwordValidation =
@@ -449,7 +451,7 @@ export class AuthenticationService {
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
     if (!newPasswordHash) {
-      throw new Error("Failed to hash password");
+      throw new InvalidOperationError("Failed to hash password");
     }
     user.updatePassword(newPasswordHash);
 

@@ -5,6 +5,10 @@ import {
   AddressData,
 } from "../../domain/value-objects/address.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
+import {
+  AddressNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/user-management.errors";
 
 export interface AddAddressDto {
   userId: string;
@@ -66,7 +70,9 @@ export class AddressManagementService {
     const conflictingAddress =
       await this.addressRepository.findConflictingAddress(userId, address);
     if (conflictingAddress) {
-      throw new Error("A similar address already exists for this user");
+      throw new InvalidOperationError(
+        "A similar address already exists for this user",
+      );
     }
 
     if (shouldBeDefault) {
@@ -83,11 +89,11 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(dto.addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     if (!address.belongsToUser(userId)) {
-      throw new Error("Address does not belong to user");
+      throw new InvalidOperationError("Address does not belong to user");
     }
 
     if (dto.addressData) {
@@ -116,28 +122,27 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     if (!address.belongsToUser(userIdVo)) {
-      throw new Error("Address does not belong to user");
+      throw new InvalidOperationError("Address does not belong to user");
     }
 
     if (!address.canBeDeleted()) {
-      throw new Error("Address cannot be deleted");
+      throw new InvalidOperationError("Address cannot be deleted");
     }
 
     await this.addressRepository.delete(addressId);
 
     // If this was the default address, we might want to set another as default
     if (address.getIsDefault()) {
-      const remainingAddresses = await this.addressRepository.findByUserId(
-        userIdVo
-      );
+      const remainingAddresses =
+        await this.addressRepository.findByUserId(userIdVo);
       if (remainingAddresses.length > 0) {
         await this.addressRepository.setAsDefault(
           remainingAddresses[0].getId(),
-          userIdVo
+          userIdVo,
         );
       }
     }
@@ -152,12 +157,12 @@ export class AddressManagementService {
 
   async getUserAddressesByType(
     userId: string,
-    type: AddressType
+    type: AddressType,
   ): Promise<AddressResponseDto[]> {
     const userIdVo = UserId.fromString(userId);
     const addresses = await this.addressRepository.findByUserIdAndType(
       userIdVo,
-      type
+      type,
     );
 
     return addresses.map((address) => this.mapToResponseDto(address));
@@ -175,11 +180,11 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     if (!address.belongsToUser(userIdVo)) {
-      throw new Error("Address does not belong to user");
+      throw new InvalidOperationError("Address does not belong to user");
     }
 
     await this.addressRepository.setAsDefault(addressId, userIdVo);
@@ -212,7 +217,7 @@ export class AddressManagementService {
       }
     } catch (error) {
       errors.push(
-        error instanceof Error ? error.message : "Invalid address format"
+        error instanceof Error ? error.message : "Invalid address format",
       );
     }
 
@@ -237,7 +242,7 @@ export class AddressManagementService {
 
   async findSimilarAddresses(
     addressData: AddressData,
-    threshold: number = 0.8
+    threshold: number = 0.8,
   ): Promise<AddressResponseDto[]> {
     const tempAddress = Address.create({
       userId: "temp-user-id",
@@ -247,7 +252,7 @@ export class AddressManagementService {
 
     const similarAddresses = await this.addressRepository.findSimilarAddresses(
       tempAddress,
-      threshold
+      threshold,
     );
 
     return similarAddresses.map((address) => this.mapToResponseDto(address));
@@ -268,7 +273,7 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     return address.estimateDeliveryDays();
@@ -278,7 +283,7 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     return address.calculateShippingZone();
@@ -288,7 +293,7 @@ export class AddressManagementService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     return address.requiresCustomsDeclaration();

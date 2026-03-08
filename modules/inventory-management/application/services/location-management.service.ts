@@ -9,6 +9,10 @@ import {
   LocationTypeVO,
 } from "../../domain/value-objects/location-type.vo";
 import { ILocationRepository } from "../../domain/repositories/location.repository";
+import {
+  LocationAlreadyExistsError,
+  LocationNotFoundError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class LocationManagementService {
   constructor(private readonly locationRepository: ILocationRepository) {}
@@ -21,7 +25,7 @@ export class LocationManagementService {
     // Check if location with same name already exists
     const existingLocation = await this.locationRepository.findByName(name);
     if (existingLocation) {
-      throw new Error(`Location with name "${name}" already exists`);
+      throw new LocationAlreadyExistsError(name);
     }
 
     const location = Location.create({
@@ -47,7 +51,7 @@ export class LocationManagementService {
     );
 
     if (!location) {
-      throw new Error(`Location with ID ${locationId} not found`);
+      throw new LocationNotFoundError(locationId);
     }
 
     let updatedLocation = location;
@@ -61,7 +65,7 @@ export class LocationManagementService {
         existingLocation &&
         existingLocation.getLocationId().getValue() !== locationId
       ) {
-        throw new Error(`Location with name "${data.name}" already exists`);
+        throw new LocationAlreadyExistsError(data.name);
       }
       updatedLocation = updatedLocation.updateName(data.name);
     }
@@ -80,7 +84,7 @@ export class LocationManagementService {
     );
 
     if (!location) {
-      throw new Error(`Location with ID ${locationId} not found`);
+      throw new LocationNotFoundError(locationId);
     }
 
     await this.locationRepository.delete(LocationId.create(locationId));

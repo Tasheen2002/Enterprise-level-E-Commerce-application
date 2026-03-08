@@ -5,6 +5,12 @@ import { IPaymentMethodRepository } from "../../domain/repositories/ipayment-met
 import { UserProfile } from "../../domain/entities/user-profile.entity";
 import { User } from "../../domain/entities/user.entity";
 import { UserId } from "../../domain/value-objects/user-id.vo";
+import {
+  UserNotFoundError,
+  AddressNotFoundError,
+  PaymentMethodNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/user-management.errors";
 
 export interface UserProfileDto {
   userId: string;
@@ -76,7 +82,7 @@ export class UserProfileService {
     // Verify user exists
     const user = await this.userRepository.findById(userIdVo);
     if (!user) {
-      throw new Error("User not found");
+      throw new UserNotFoundError();
     }
 
     const profile = await this.userProfileRepository.findByUserId(userIdVo);
@@ -96,7 +102,7 @@ export class UserProfileService {
 
     const profileDto = await this.getUserProfile(userId);
     if (!profileDto) {
-      throw new Error("Profile not found");
+      throw new InvalidOperationError("Profile not found");
     }
 
     const result: UserProfileWithDetails = {
@@ -149,7 +155,7 @@ export class UserProfileService {
     // Verify user exists
     const user = await this.userRepository.findById(userIdVo);
     if (!user) {
-      throw new Error("User not found");
+      throw new UserNotFoundError();
     }
 
     // Update user entity fields if provided
@@ -376,7 +382,7 @@ export class UserProfileService {
     const profile = await this.getUserProfile(userId);
 
     if (!profile) {
-      throw new Error("Profile not found");
+      throw new InvalidOperationError("Profile not found");
     }
 
     const updatedPrefs = { ...profile.prefs, [key]: value };
@@ -404,7 +410,7 @@ export class UserProfileService {
     const profile = await this.getUserProfile(userId);
 
     if (!profile) {
-      throw new Error("Profile not found");
+      throw new InvalidOperationError("Profile not found");
     }
 
     const updatedPrefs = { ...profile.prefs, ...preferences };
@@ -412,7 +418,10 @@ export class UserProfileService {
     return this.updateUserProfile(userId, { prefs: updatedPrefs });
   }
 
-  private async createDefaultProfile(userId: string, user: User): Promise<UserProfileDto> {
+  private async createDefaultProfile(
+    userId: string,
+    user: User,
+  ): Promise<UserProfileDto> {
     const profile = UserProfile.create({
       userId: userId,
       preferences: {},
@@ -432,11 +441,11 @@ export class UserProfileService {
     const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
-      throw new Error("Address not found");
+      throw new AddressNotFoundError();
     }
 
     if (!address.belongsToUser(userId)) {
-      throw new Error("Address does not belong to user");
+      throw new InvalidOperationError("Address does not belong to user");
     }
   }
 
@@ -448,11 +457,11 @@ export class UserProfileService {
       await this.paymentMethodRepository.findById(paymentMethodId);
 
     if (!paymentMethod) {
-      throw new Error("Payment method not found");
+      throw new PaymentMethodNotFoundError();
     }
 
     if (!paymentMethod.belongsToUser(userId)) {
-      throw new Error("Payment method does not belong to user");
+      throw new InvalidOperationError("Payment method does not belong to user");
     }
   }
 
