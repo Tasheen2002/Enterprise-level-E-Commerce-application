@@ -460,12 +460,12 @@ export class AuthenticationService {
 
   async getUserByEmail(
     email: string,
-  ): Promise<{ userId: string; emailVerified: boolean } | null> {
+  ): Promise<{ userId: string; emailVerified: boolean }> {
     const emailVo = Email.fromString(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
     if (!user || user.getIsGuest()) {
-      return null;
+      throw new UserNotFoundError();
     }
 
     return {

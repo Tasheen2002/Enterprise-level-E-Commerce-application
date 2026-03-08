@@ -360,12 +360,12 @@ export class VerificationService {
   async validatePasswordResetToken(
     email: string,
     token: string,
-  ): Promise<string | null> {
+  ): Promise<string> {
     const emailVo = Email.fromString(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
     if (!user) {
-      return null;
+      throw new UserNotFoundError();
     }
 
     const verificationToken = await this.tokenRepository.findByToken(
@@ -377,11 +377,11 @@ export class VerificationService {
       !verificationToken ||
       verificationToken.getUserId() !== user.getId().getValue()
     ) {
-      return null;
+      throw new InvalidOperationError("Invalid or mismatched reset token");
     }
 
     if (!verificationToken.isValid()) {
-      return null;
+      throw new InvalidOperationError("Reset token has expired or is invalid");
     }
 
     return user.getId().getValue();
@@ -390,23 +390,22 @@ export class VerificationService {
   async consumePasswordResetToken(
     userId: string,
     token: string,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const verificationToken = await this.tokenRepository.findByToken(
       token,
       VerificationType.PASSWORD_RESET,
     );
 
     if (!verificationToken || verificationToken.getUserId() !== userId) {
-      return false;
+      throw new InvalidOperationError("Invalid or mismatched reset token");
     }
 
     if (!verificationToken.isValid()) {
-      return false;
+      throw new InvalidOperationError("Reset token has expired or is invalid");
     }
 
     verificationToken.markAsUsed();
     await this.tokenRepository.save(verificationToken);
-    return true;
   }
 
   async resendEmailVerification(

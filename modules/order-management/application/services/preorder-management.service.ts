@@ -197,10 +197,6 @@ export class PreorderManagementService {
   }
 
   async isPreorderReleased(orderItemId: string): Promise<boolean> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new DomainValidationError("Order item ID is required");
-    }
-
     const preorder = await this.getPreorderByOrderItemId(orderItemId);
     if (!preorder) {
       return false;

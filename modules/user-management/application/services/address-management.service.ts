@@ -168,11 +168,15 @@ export class AddressManagementService {
     return addresses.map((address) => this.mapToResponseDto(address));
   }
 
-  async getDefaultAddress(userId: string): Promise<AddressResponseDto | null> {
+  async getDefaultAddress(userId: string): Promise<AddressResponseDto> {
     const userIdVo = UserId.fromString(userId);
     const address = await this.addressRepository.findDefaultByUserId(userIdVo);
 
-    return address ? this.mapToResponseDto(address) : null;
+    if (!address) {
+      throw new AddressNotFoundError();
+    }
+
+    return this.mapToResponseDto(address);
   }
 
   async setDefaultAddress(addressId: string, userId: string): Promise<void> {

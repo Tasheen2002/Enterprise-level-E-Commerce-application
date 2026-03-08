@@ -271,8 +271,14 @@ export class PurchaseOrderManagementService {
     await this.purchaseOrderRepository.delete(PurchaseOrderId.create(poId));
   }
 
-  async getPurchaseOrder(poId: string): Promise<PurchaseOrder | null> {
-    return this.purchaseOrderRepository.findById(PurchaseOrderId.create(poId));
+  async getPurchaseOrder(poId: string): Promise<PurchaseOrder> {
+    const po = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.create(poId),
+    );
+    if (!po) {
+      throw new PurchaseOrderNotFoundError(poId);
+    }
+    return po;
   }
 
   async getPurchaseOrderItems(poId: string): Promise<PurchaseOrderItem[]> {

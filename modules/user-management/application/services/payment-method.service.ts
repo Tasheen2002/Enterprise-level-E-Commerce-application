@@ -249,12 +249,16 @@ export class PaymentMethodService {
 
   async getDefaultPaymentMethod(
     userId: string,
-  ): Promise<PaymentMethodResponseDto | null> {
+  ): Promise<PaymentMethodResponseDto> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethod =
       await this.paymentMethodRepository.findDefaultByUserId(userIdVo);
 
-    return paymentMethod ? this.mapToResponseDto(paymentMethod) : null;
+    if (!paymentMethod) {
+      throw new PaymentMethodNotFoundError();
+    }
+
+    return this.mapToResponseDto(paymentMethod);
   }
 
   async setDefaultPaymentMethod(

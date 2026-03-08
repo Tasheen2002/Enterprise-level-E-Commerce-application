@@ -90,12 +90,22 @@ export class LocationManagementService {
     await this.locationRepository.delete(LocationId.create(locationId));
   }
 
-  async getLocation(locationId: string): Promise<Location | null> {
-    return this.locationRepository.findById(LocationId.create(locationId));
+  async getLocation(locationId: string): Promise<Location> {
+    const location = await this.locationRepository.findById(
+      LocationId.create(locationId),
+    );
+    if (!location) {
+      throw new LocationNotFoundError(locationId);
+    }
+    return location;
   }
 
-  async getLocationByName(name: string): Promise<Location | null> {
-    return this.locationRepository.findByName(name);
+  async getLocationByName(name: string): Promise<Location> {
+    const location = await this.locationRepository.findByName(name);
+    if (!location) {
+      throw new LocationNotFoundError(name);
+    }
+    return location;
   }
 
   async listLocations(options?: {

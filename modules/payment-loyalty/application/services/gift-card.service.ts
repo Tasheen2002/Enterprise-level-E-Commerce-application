@@ -6,6 +6,11 @@ import { GiftCardTransaction } from "../../domain/entities/gift-card-transaction
 import { Money } from "../../domain/value-objects/money.vo";
 import { Currency } from "../../domain/value-objects/currency.vo";
 import { GiftCardTransactionType } from "../../domain/value-objects/gift-card-transaction-type.vo";
+import {
+  GiftCardNotFoundError,
+  GiftCardRedemptionError,
+  InvalidOperationError,
+} from "../../domain/errors/payment-loyalty.errors";
 
 export interface CreateGiftCardDto {
   code: string;
@@ -87,24 +92,28 @@ export class GiftCardService {
     if (dto.userId) {
       const order = await this.orderQueryPort.findOrderOwner(dto.orderId);
       if (!order) {
-        throw new Error("Order not found for gift card redemption");
+        throw new GiftCardRedemptionError(
+          "Order not found for gift card redemption",
+        );
       }
-      if (order.userId && order.userId !== dto.userId) {
-        throw new Error("Forbidden: order does not belong to this user");
+      if (dto.userId && order.userId && order.userId !== dto.userId) {
+        throw new InvalidOperationError(
+          "Forbidden: order does not belong to this user",
+        );
       }
     }
 
     const giftCard = await this.giftCardRepo.findById(dto.giftCardId);
     if (!giftCard) {
-      throw new Error(`Gift card ${dto.giftCardId} not found`);
+      throw new GiftCardNotFoundError(dto.giftCardId);
     }
 
     if (!giftCard.isActive()) {
-      throw new Error("Gift card is not active");
+      throw new GiftCardRedemptionError("Gift card is not active");
     }
 
     if (giftCard.isExpired()) {
-      throw new Error("Gift card has expired");
+      throw new GiftCardRedemptionError("Gift card has expired");
     }
 
     const redeemAmount = Money.fromAmount(
@@ -113,7 +122,7 @@ export class GiftCardService {
     );
 
     if (!giftCard.canRedeem(redeemAmount)) {
-      throw new Error(
+      throw new InvalidOperationError(
         `Insufficient gift card balance. Available: ${giftCard.balance.getAmount()}, Requested: ${dto.amount}`,
       );
     }
@@ -142,7 +151,7 @@ export class GiftCardService {
   ): Promise<GiftCardDto> {
     const giftCard = await this.giftCardRepo.findById(giftCardId);
     if (!giftCard) {
-      throw new Error(`Gift card ${giftCardId} not found`);
+      throw new GiftCardNotFoundError(giftCardId);
     }
 
     const refundAmount = Money.fromAmount(
@@ -167,22 +176,31 @@ export class GiftCardService {
     return this.toGiftCardDto(giftCard);
   }
 
-  async getGiftCardByCode(code: string): Promise<GiftCardDto | null> {
+  async getGiftCardByCode(code: string): Promise<GiftCardDto> {
     const giftCard = await this.giftCardRepo.findByCode(code);
-    return giftCard ? this.toGiftCardDto(giftCard) : null;
+    if (!giftCard) {
+      throw new GiftCardNotFoundError(code);
+    }
+    return this.toGiftCardDto(giftCard);
   }
 
-  async getGiftCardById(giftCardId: string): Promise<GiftCardDto | null> {
+  async getGiftCardById(giftCardId: string): Promise<GiftCardDto> {
     const giftCard = await this.giftCardRepo.findById(giftCardId);
-    return giftCard ? this.toGiftCardDto(giftCard) : null;
+    if (!giftCard) {
+      throw new GiftCardNotFoundError(giftCardId);
+    }
+    return this.toGiftCardDto(giftCard);
   }
 
-  async getGiftCardBalance(codeOrId: string): Promise<number | null> {
+  async getGiftCardBalance(codeOrId: string): Promise<number> {
     let giftCard = await this.giftCardRepo.findByCode(codeOrId);
     if (!giftCard) {
       giftCard = await this.giftCardRepo.findById(codeOrId);
     }
-    return giftCard ? giftCard.balance.getAmount() : null;
+    if (!giftCard) {
+      throw new GiftCardNotFoundError(codeOrId);
+    }
+    return giftCard.balance.getAmount();
   }
 
   async getGiftCardTransactions(
@@ -196,7 +214,7 @@ export class GiftCardService {
   async cancelGiftCard(giftCardId: string): Promise<GiftCardDto> {
     const giftCard = await this.giftCardRepo.findById(giftCardId);
     if (!giftCard) {
-      throw new Error(`Gift card ${giftCardId} not found`);
+      throw new GiftCardNotFoundError(giftCardId);
     }
 
     giftCard.cancel();

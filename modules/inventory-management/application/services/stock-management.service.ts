@@ -23,10 +23,6 @@ export class StockManagementService {
     quantity: number,
     reason: string,
   ): Promise<Stock> {
-    if (quantity <= 0) {
-      throw new DomainValidationError("Quantity must be greater than zero");
-    }
-
     let stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
@@ -103,12 +99,6 @@ export class StockManagementService {
     toLocationId: string,
     quantity: number,
   ): Promise<{ fromStock: Stock; toStock: Stock }> {
-    if (quantity <= 0) {
-      throw new DomainValidationError(
-        "Transfer quantity must be greater than zero",
-      );
-    }
-
     const fromStock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       fromLocationId,
@@ -281,12 +271,14 @@ export class StockManagementService {
     return this.transactionRepository.findByVariant(variantId, options);
   }
 
-  async getTransaction(
-    transactionId: string,
-  ): Promise<InventoryTransaction | null> {
-    return this.transactionRepository.findById(
+  async getTransaction(transactionId: string): Promise<InventoryTransaction> {
+    const transaction = await this.transactionRepository.findById(
       TransactionId.create(transactionId),
     );
+    if (!transaction) {
+      throw new InventoryTransactionNotFoundError(transactionId);
+    }
+    return transaction;
   }
 
   async listTransactions(options?: {

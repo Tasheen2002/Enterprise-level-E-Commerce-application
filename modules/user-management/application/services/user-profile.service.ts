@@ -76,7 +76,7 @@ export class UserProfileService {
     private readonly paymentMethodRepository: IPaymentMethodRepository,
   ) {}
 
-  async getUserProfile(userId: string): Promise<UserProfileDto | null> {
+  async getUserProfile(userId: string): Promise<UserProfileDto> {
     const userIdVo = UserId.fromString(userId);
 
     // Verify user exists
@@ -101,9 +101,6 @@ export class UserProfileService {
     const userIdVo = UserId.fromString(userId);
 
     const profileDto = await this.getUserProfile(userId);
-    if (!profileDto) {
-      throw new InvalidOperationError("Profile not found");
-    }
 
     const result: UserProfileWithDetails = {
       profile: profileDto,

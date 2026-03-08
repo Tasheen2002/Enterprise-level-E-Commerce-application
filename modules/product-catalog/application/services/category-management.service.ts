@@ -79,14 +79,22 @@ export class CategoryManagementService {
     return category;
   }
 
-  async getCategoryById(id: string): Promise<Category | null> {
+  async getCategoryById(id: string): Promise<Category> {
     const categoryId = CategoryId.fromString(id);
-    return await this.categoryRepository.findById(categoryId);
+    const category = await this.categoryRepository.findById(categoryId);
+    if (!category) {
+      throw new CategoryNotFoundError(id);
+    }
+    return category;
   }
 
-  async getCategoryBySlug(slug: string): Promise<Category | null> {
+  async getCategoryBySlug(slug: string): Promise<Category> {
     const slugVo = Slug.fromString(slug);
-    return await this.categoryRepository.findBySlug(slugVo);
+    const category = await this.categoryRepository.findBySlug(slugVo);
+    if (!category) {
+      throw new CategoryNotFoundError(slug);
+    }
+    return category;
   }
 
   async getCategories(
@@ -208,7 +216,7 @@ export class CategoryManagementService {
   async updateCategory(
     id: string,
     updateData: Partial<CreateCategoryData>,
-  ): Promise<Category | null> {
+  ): Promise<Category> {
     const categoryId = CategoryId.fromString(id);
     const category = await this.categoryRepository.findById(categoryId);
 

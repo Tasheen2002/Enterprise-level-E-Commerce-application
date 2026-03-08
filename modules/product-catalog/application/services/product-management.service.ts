@@ -56,14 +56,18 @@ export class ProductManagementService {
     return product;
   }
 
-  async getProductById(id: string): Promise<Product | null> {
+  async getProductById(id: string): Promise<Product> {
     if (!id || id.trim().length === 0) {
       throw new DomainValidationError("Product ID is required");
     }
 
     try {
       const productId = ProductId.fromString(id);
-      return await this.productRepository.findById(productId);
+      const product = await this.productRepository.findById(productId);
+      if (!product) {
+        throw new ProductNotFoundError(id);
+      }
+      return product;
     } catch (error) {
       if (error instanceof Error && error.message.includes("valid UUID")) {
         throw new DomainValidationError("Invalid product ID format");
@@ -72,14 +76,18 @@ export class ProductManagementService {
     }
   }
 
-  async getProductBySlug(slug: string): Promise<Product | null> {
+  async getProductBySlug(slug: string): Promise<Product> {
     if (!slug || slug.trim().length === 0) {
       throw new DomainValidationError("Product slug is required");
     }
 
     try {
       const productSlug = Slug.fromString(slug.trim());
-      return await this.productRepository.findBySlug(productSlug);
+      const product = await this.productRepository.findBySlug(productSlug);
+      if (!product) {
+        throw new ProductNotFoundError(slug);
+      }
+      return product;
     } catch (error) {
       if (
         error instanceof Error &&
@@ -206,15 +214,8 @@ export class ProductManagementService {
   async updateProduct(
     id: string,
     data: Partial<CreateProductData>,
-  ): Promise<Product | null> {
-    if (!id || id.trim().length === 0) {
-      throw new DomainValidationError("Product ID is required");
-    }
-
+  ): Promise<Product> {
     const product = await this.getProductById(id);
-    if (!product) {
-      return null;
-    }
 
     // Update fields if provided
     if (data.title !== undefined) {
@@ -284,20 +285,12 @@ export class ProductManagementService {
     return product;
   }
 
-  async deleteProduct(id: string): Promise<boolean> {
-    if (!id || id.trim().length === 0) {
-      throw new DomainValidationError("Product ID is required");
-    }
-
+  async deleteProduct(id: string): Promise<void> {
     const product = await this.getProductById(id);
-    if (!product) {
-      return false;
-    }
 
     try {
       const productId = ProductId.fromString(id);
       await this.productRepository.delete(productId);
-      return true;
     } catch (error) {
       if (error instanceof Error && error.message.includes("constraint")) {
         throw new InvalidOperationError(

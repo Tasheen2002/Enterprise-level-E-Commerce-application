@@ -99,10 +99,14 @@ export class PickupReservationService {
 
   async getPickupReservation(
     reservationId: string,
-  ): Promise<PickupReservation | null> {
-    return this.pickupReservationRepository.findById(
+  ): Promise<PickupReservation> {
+    const reservation = await this.pickupReservationRepository.findById(
       ReservationId.create(reservationId),
     );
+    if (!reservation) {
+      throw new PickupReservationNotFoundError(reservationId);
+    }
+    return reservation;
   }
 
   async getReservationsByOrder(orderId: string): Promise<PickupReservation[]> {

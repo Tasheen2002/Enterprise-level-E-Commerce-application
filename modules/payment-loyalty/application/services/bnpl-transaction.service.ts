@@ -5,6 +5,11 @@ import {
   BnplTransaction,
   BnplPlan,
 } from "../../domain/entities/bnpl-transaction.entity";
+import {
+  PaymentIntentNotFoundError,
+  BnplTransactionNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/payment-loyalty.errors";
 
 export interface CreateBnplTransactionDto {
   intentId: string;
@@ -42,7 +47,7 @@ export class BnplTransactionService {
     const intent = await this.paymentIntentRepo.findById(intentId);
 
     if (!intent) {
-      throw new Error("Payment intent not found for BNPL");
+      throw new PaymentIntentNotFoundError(intentId);
     }
 
     const orderId = intent.orderIdOrNull;
@@ -51,7 +56,7 @@ export class BnplTransactionService {
     const order = await this.orderQueryPort.findOrderOwner(orderId);
 
     if (order?.userId && order.userId !== userId) {
-      throw new Error(
+      throw new InvalidOperationError(
         "Forbidden: BNPL transaction does not belong to this user",
       );
     }
@@ -79,7 +84,7 @@ export class BnplTransactionService {
   ): Promise<BnplTransactionDto> {
     const transaction = await this.bnplTxnRepo.findById(bnplId);
     if (!transaction) {
-      throw new Error(`BNPL transaction ${bnplId} not found`);
+      throw new BnplTransactionNotFoundError(bnplId);
     }
 
     await this.assertIntentOwnership(transaction.intentId, userId);
@@ -96,7 +101,7 @@ export class BnplTransactionService {
   ): Promise<BnplTransactionDto> {
     const transaction = await this.bnplTxnRepo.findById(bnplId);
     if (!transaction) {
-      throw new Error(`BNPL transaction ${bnplId} not found`);
+      throw new BnplTransactionNotFoundError(bnplId);
     }
 
     await this.assertIntentOwnership(transaction.intentId, userId);
@@ -113,7 +118,7 @@ export class BnplTransactionService {
   ): Promise<BnplTransactionDto> {
     const transaction = await this.bnplTxnRepo.findById(bnplId);
     if (!transaction) {
-      throw new Error(`BNPL transaction ${bnplId} not found`);
+      throw new BnplTransactionNotFoundError(bnplId);
     }
 
     await this.assertIntentOwnership(transaction.intentId, userId);
@@ -130,7 +135,7 @@ export class BnplTransactionService {
   ): Promise<BnplTransactionDto> {
     const transaction = await this.bnplTxnRepo.findById(bnplId);
     if (!transaction) {
-      throw new Error(`BNPL transaction ${bnplId} not found`);
+      throw new BnplTransactionNotFoundError(bnplId);
     }
 
     await this.assertIntentOwnership(transaction.intentId, userId);
@@ -147,7 +152,7 @@ export class BnplTransactionService {
   ): Promise<BnplTransactionDto> {
     const transaction = await this.bnplTxnRepo.findById(bnplId);
     if (!transaction) {
-      throw new Error(`BNPL transaction ${bnplId} not found`);
+      throw new BnplTransactionNotFoundError(bnplId);
     }
 
     await this.assertIntentOwnership(transaction.intentId, userId);

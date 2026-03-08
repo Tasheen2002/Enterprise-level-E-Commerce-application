@@ -7,6 +7,10 @@ import {
   WebhookEventData,
 } from "../../domain/entities/payment-webhook-event.entity";
 import * as crypto from "crypto";
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../../domain/errors/payment-loyalty.errors";
 
 export interface CreateWebhookEventDto {
   provider: string;
@@ -53,7 +57,7 @@ export class PaymentWebhookService {
     }
 
     if (!signature) {
-      throw new Error("Missing webhook signature");
+      throw new DomainValidationError("Missing webhook signature");
     }
 
     const payload =
@@ -71,7 +75,7 @@ export class PaymentWebhookService {
       crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 
     if (!safeEqual) {
-      throw new Error("Invalid webhook signature");
+      throw new InvalidOperationError("Invalid webhook signature");
     }
   }
 

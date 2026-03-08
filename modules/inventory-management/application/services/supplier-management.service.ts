@@ -91,12 +91,22 @@ export class SupplierManagementService {
     await this.supplierRepository.delete(SupplierId.create(supplierId));
   }
 
-  async getSupplier(supplierId: string): Promise<Supplier | null> {
-    return this.supplierRepository.findById(SupplierId.create(supplierId));
+  async getSupplier(supplierId: string): Promise<Supplier> {
+    const supplier = await this.supplierRepository.findById(
+      SupplierId.create(supplierId),
+    );
+    if (!supplier) {
+      throw new SupplierNotFoundError(supplierId);
+    }
+    return supplier;
   }
 
-  async getSupplierByName(name: string): Promise<Supplier | null> {
-    return this.supplierRepository.findByName(name);
+  async getSupplierByName(name: string): Promise<Supplier> {
+    const supplier = await this.supplierRepository.findByName(name);
+    if (!supplier) {
+      throw new SupplierNotFoundError(name);
+    }
+    return supplier;
   }
 
   async listSuppliers(options?: {

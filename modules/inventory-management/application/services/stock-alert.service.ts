@@ -163,8 +163,14 @@ export class StockAlertService {
     return resolvedAlerts;
   }
 
-  async getStockAlert(alertId: string): Promise<StockAlert | null> {
-    return this.stockAlertRepository.findById(AlertId.create(alertId));
+  async getStockAlert(alertId: string): Promise<StockAlert> {
+    const alert = await this.stockAlertRepository.findById(
+      AlertId.create(alertId),
+    );
+    if (!alert) {
+      throw new StockAlertNotFoundError(alertId);
+    }
+    return alert;
   }
 
   async getActiveAlerts(): Promise<StockAlert[]> {
