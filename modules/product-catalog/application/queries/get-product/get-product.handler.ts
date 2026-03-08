@@ -2,20 +2,29 @@ import { IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { ProductManagementService } from "../../services/product-management.service";
 import { GetProductQuery, ProductResult } from "./get-product.query";
 
-export class GetProductHandler implements IQueryHandler<GetProductQuery, QueryResult<ProductResult>> {
-  constructor(private readonly productManagementService: ProductManagementService) {}
+export class GetProductHandler implements IQueryHandler<
+  GetProductQuery,
+  QueryResult<ProductResult>
+> {
+  constructor(
+    private readonly productManagementService: ProductManagementService,
+  ) {}
 
   async handle(query: GetProductQuery): Promise<QueryResult<ProductResult>> {
     try {
       let product;
       if (query.productId) {
-        product = await this.productManagementService.getProductById(query.productId);
+        product = await this.productManagementService.getProductById(
+          query.productId,
+        );
       } else if (query.slug) {
-        product = await this.productManagementService.getProductBySlug(query.slug);
-      }
-
-      if (!product) {
-        return QueryResult.failure<ProductResult>("Product not found");
+        product = await this.productManagementService.getProductBySlug(
+          query.slug,
+        );
+      } else {
+        return QueryResult.failure<ProductResult>(
+          "Either productId or slug is required",
+        );
       }
 
       const result: ProductResult = {
@@ -41,7 +50,9 @@ export class GetProductHandler implements IQueryHandler<GetProductQuery, QueryRe
       return QueryResult.success<ProductResult>(result);
     } catch (error) {
       return QueryResult.failure<ProductResult>(
-        error instanceof Error ? `Failed to retrieve product: ${error.message}` : "Failed to retrieve product",
+        error instanceof Error
+          ? `Failed to retrieve product: ${error.message}`
+          : "Failed to retrieve product",
       );
     }
   }

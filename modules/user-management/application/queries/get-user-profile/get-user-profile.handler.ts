@@ -1,16 +1,23 @@
 import { IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { UserProfileService } from "../../services/user-profile.service";
-import { GetUserProfileQuery, UserProfileResult } from "./get-user-profile.query";
+import {
+  GetUserProfileQuery,
+  UserProfileResult,
+} from "./get-user-profile.query";
 
-export class GetUserProfileHandler implements IQueryHandler<GetUserProfileQuery, QueryResult<UserProfileResult>> {
+export class GetUserProfileHandler implements IQueryHandler<
+  GetUserProfileQuery,
+  QueryResult<UserProfileResult>
+> {
   constructor(private readonly userProfileService: UserProfileService) {}
 
-  async handle(query: GetUserProfileQuery): Promise<QueryResult<UserProfileResult>> {
+  async handle(
+    query: GetUserProfileQuery,
+  ): Promise<QueryResult<UserProfileResult>> {
     try {
-      const profile = await this.userProfileService.getUserProfile(query.userId);
-      if (!profile) {
-        return QueryResult.failure<UserProfileResult>("User profile not found");
-      }
+      const profile = await this.userProfileService.getUserProfile(
+        query.userId,
+      );
       return QueryResult.success<UserProfileResult>({
         userId: profile.userId,
         defaultAddressId: profile.defaultAddressId ?? undefined,
@@ -23,7 +30,9 @@ export class GetUserProfileHandler implements IQueryHandler<GetUserProfileQuery,
       });
     } catch (error) {
       return QueryResult.failure<UserProfileResult>(
-        error instanceof Error ? error.message : "Failed to retrieve user profile",
+        error instanceof Error
+          ? error.message
+          : "Failed to retrieve user profile",
       );
     }
   }

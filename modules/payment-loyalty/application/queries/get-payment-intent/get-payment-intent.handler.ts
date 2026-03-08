@@ -1,5 +1,8 @@
 import { IQueryHandler, QueryResult } from "@/api/src/shared/application";
-import { PaymentService, PaymentIntentDto } from "../../services/payment.service";
+import {
+  PaymentService,
+  PaymentIntentDto,
+} from "../../services/payment.service";
 import { GetPaymentIntentQuery } from "./get-payment-intent.query";
 
 export class GetPaymentIntentHandler implements IQueryHandler<
@@ -18,24 +21,15 @@ export class GetPaymentIntentHandler implements IQueryHandler<
         );
       }
 
-      let intent: PaymentIntentDto | null = null;
-      if (query.intentId) {
-        intent = await this.paymentService.getPaymentIntent(
-          query.intentId,
-          query.userId,
-        );
-      } else if (query.orderId) {
-        intent = await this.paymentService.getPaymentIntentByOrderId(
-          query.orderId,
-          query.userId,
-        );
-      }
-
-      if (!intent) {
-        return QueryResult.failure<PaymentIntentDto>(
-          "Payment intent not found",
-        );
-      }
+      const intent: PaymentIntentDto = query.intentId
+        ? await this.paymentService.getPaymentIntent(
+            query.intentId,
+            query.userId,
+          )
+        : await this.paymentService.getPaymentIntentByOrderId(
+            query.orderId!,
+            query.userId,
+          );
 
       return QueryResult.success<PaymentIntentDto>(intent);
     } catch (error) {
