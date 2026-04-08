@@ -44,6 +44,12 @@ model User {
   addresses         UserAddress[]
   profile           UserProfile?
 
+  @@index([status])
+  @@index([role])
+  @@index([isGuest])
+  @@index([createdAt])
+  @@index([status, role])
+  @@index([emailVerified])
   @@map("users")
   @@schema("user_management")
 }
@@ -56,6 +62,8 @@ model SocialLogin {
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([provider])
   @@map("social_logins")
   @@schema("user_management")
 }
@@ -81,6 +89,10 @@ model UserAddress {
   user                User            @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   defaultUserProfiles UserProfile[]   @relation("DefaultAddress")
 
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([country])
+  @@index([type])
   @@map("user_addresses")
   @@schema("user_management")
 }
@@ -102,6 +114,10 @@ model PaymentMethod {
   user                User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   defaultUserProfiles UserProfile[] @relation("DefaultPaymentMethod")
 
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@index([billingAddressId])
+  @@index([providerRef])
   @@map("payment_methods")
   @@schema("user_management")
 }
@@ -146,6 +162,9 @@ model Product {
 
   @@index([publishAt], map: "idx_products_publish_at")
   @@index([status], map: "idx_products_status")
+  @@index([brand])
+  @@index([status, publishAt])
+  @@index([createdAt])
   @@map("products")
   @@schema("product_catalog")
 }
@@ -181,6 +200,10 @@ model ProductVariant {
   media              VariantMedia[]
 
   @@index([productId], map: "idx_variants_product_id")
+  @@index([productId, color])
+  @@index([productId, size])
+  @@index([barcode])
+  @@index([price])
   @@map("product_variants")
   @@schema("product_catalog")
 }
@@ -195,6 +218,8 @@ model Category {
   children Category[]        @relation("CategoryHierarchy")
   products ProductCategory[]
 
+  @@index([parentId])
+  @@index([position])
   @@map("categories")
   @@schema("product_catalog")
 }
@@ -206,6 +231,7 @@ model ProductCategory {
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([productId, categoryId])
+  @@index([categoryId])
   @@map("product_categories")
   @@schema("product_catalog")
 }
@@ -240,6 +266,9 @@ model ProductMedia {
   asset     MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([productId])
+  @@index([assetId])
+  @@index([productId, position])
   @@map("product_media")
   @@schema("product_catalog")
 }
@@ -261,6 +290,7 @@ model ProductTag {
   kind     String?
   products ProductTagAssociation[]
 
+  @@index([kind])
   @@map("product_tags")
   @@schema("product_catalog")
 }
@@ -272,6 +302,7 @@ model ProductTagAssociation {
   tag       ProductTag @relation(fields: [tagId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([productId, tagId])
+  @@index([tagId])
   @@map("product_tag_associations")
   @@schema("product_catalog")
 }
@@ -347,6 +378,10 @@ model ShoppingCart {
   checkouts             Checkout[]
   user                  User?         @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([guestToken, updatedAt])
+  @@index([reservationExpiresAt])
   @@map("shopping_carts")
   @@schema("cart")
 }
@@ -363,6 +398,9 @@ model CartItem {
   cart              ShoppingCart   @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   variant           ProductVariant @relation(fields: [variantId], references: [id], onUpdate: NoAction)
 
+  @@index([cartId])
+  @@index([variantId])
+  @@index([cartId, variantId])
   @@map("cart_items")
   @@schema("cart")
 }
@@ -377,6 +415,9 @@ model Reservation {
   variant   ProductVariant @relation(fields: [variantId], references: [id], onUpdate: NoAction)
 
   @@unique([cartId, variantId])
+  @@index([cartId])
+  @@index([variantId])
+  @@index([expiresAt])
   @@map("reservations")
   @@schema("cart")
 }
@@ -400,6 +441,9 @@ model Checkout {
 
   @@index([userId], map: "idx_checkouts_user_id")
   @@index([status], map: "idx_checkouts_status")
+  @@index([cartId])
+  @@index([guestToken])
+  @@index([expiresAt])
   @@map("checkouts")
   @@schema("cart")
 }
@@ -437,6 +481,14 @@ model Order {
 
   @@index([userId], map: "idx_orders_user_id")
   @@index([checkoutId], map: "idx_orders_checkout_id")
+  @@index([guestToken])
+  @@index([paymentIntentId])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
   @@map("orders")
   @@schema("order_management")
 }
@@ -458,6 +510,7 @@ model OrderItem {
   preorder        Preorder?
 
   @@index([orderId], map: "idx_order_items_order_id")
+  @@index([variantId])
   @@map("order_items")
   @@schema("order_management")
 }
@@ -485,6 +538,10 @@ model OrderShipment {
   order            Order     @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   pickupLocation   Location? @relation(fields: [pickupLocationId], references: [id], onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([trackingNo])
+  @@index([pickupLocationId])
+  @@index([shippedAt])
   @@map("order_shipments")
   @@schema("order_management")
 }
@@ -498,6 +555,9 @@ model OrderStatusHistory {
   changedBy  String?          @map("changed_by")
   order      Order            @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([changedAt])
+  @@index([toStatus])
   @@map("order_status_history")
   @@schema("order_management")
 }
@@ -508,6 +568,7 @@ model Backorder {
   notifiedAt  DateTime? @map("notified_at") @db.Timestamptz(6)
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([promisedEta])
   @@map("backorders")
   @@schema("order_management")
 }
@@ -518,6 +579,7 @@ model Preorder {
   notifiedAt  DateTime? @map("notified_at") @db.Timestamptz(6)
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([releaseDate])
   @@map("preorders")
   @@schema("order_management")
 }
@@ -530,6 +592,10 @@ model OrderEvent {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([orderId, eventType])
   @@map("order_events")
   @@schema("order_management")
 }
@@ -554,6 +620,11 @@ model Shipment {
   @@index([status], map: "idx_fulfillment_shipments_status")
   @@index([createdAt], map: "idx_fulfillment_shipments_created_at")
   @@index([orderId], map: "idx_shipments_order_id")
+  @@index([carrier])
+  @@index([service])
+  @@index([shippedAt])
+  @@index([deliveredAt])
+  @@index([updatedAt])
   @@map("shipments")
   @@schema("fulfillment")
 }
@@ -570,6 +641,7 @@ model ShipmentItem {
   shipment    Shipment  @relation(fields: [shipmentId], references: [shipmentId], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([shipmentId, orderItemId])
+  @@index([orderItemId])
   @@map("shipment_items")
   @@schema("fulfillment")
 }
@@ -585,6 +657,8 @@ model Location {
   pickupReservations PickupReservation[]
   orderShipments     OrderShipment[]
 
+  @@index([type])
+  @@index([name])
   @@map("locations")
   @@schema("inventory_management")
 }
@@ -600,6 +674,8 @@ model InventoryStock {
   variant           ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([variantId, locationId])
+  @@index([locationId])
+  @@index([onHand])
   @@map("inventory_stocks")
   @@schema("inventory_management")
 }
@@ -617,6 +693,9 @@ model InventoryTransaction {
   variant       ProductVariant   @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([variantId, createdAt], map: "idx_inv_txn_variant")
+  @@index([locationId])
+  @@index([reason])
+  @@index([referenceType, referenceId])
   @@map("inventory_transactions")
   @@schema("inventory_management")
 }
@@ -629,6 +708,10 @@ model StockAlert {
   resolvedAt  DateTime?          @map("resolved_at") @db.Timestamptz(6)
   variant     ProductVariant     @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([variantId])
+  @@index([type])
+  @@index([triggeredAt])
+  @@index([resolvedAt])
   @@map("stock_alerts")
   @@schema("inventory_management")
 }
@@ -640,6 +723,7 @@ model Supplier {
   contacts       Json            @default("[]")
   purchaseOrders PurchaseOrder[]
 
+  @@index([name])
   @@map("suppliers")
   @@schema("inventory_management")
 }
@@ -654,6 +738,10 @@ model PurchaseOrder {
   items      PurchaseOrderItem[]
   supplier   Supplier            @relation(fields: [supplierId], references: [supplierId], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([supplierId])
+  @@index([status])
+  @@index([eta])
+  @@index([status, eta])
   @@map("purchase_orders")
   @@schema("inventory_management")
 }
@@ -667,6 +755,7 @@ model PurchaseOrderItem {
   variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([poId, variantId])
+  @@index([variantId])
   @@map("purchase_order_items")
   @@schema("inventory_management")
 }
@@ -682,6 +771,10 @@ model PickupReservation {
   order         Order          @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([locationId])
+  @@index([variantId])
+  @@index([expiresAt])
   @@map("pickup_reservations")
   @@schema("inventory_management")
 }
@@ -704,6 +797,11 @@ model PaymentIntent {
   transactions     PaymentTransaction[]
   checkout         Checkout?               @relation("PaymentIntentCheckout", fields: [checkoutId], references: [id])
 
+  @@index([orderId])
+  @@index([provider])
+  @@index([status])
+  @@index([clientSecret])
+  @@index([status, createdAt])
   @@map("payment_intents")
   @@schema("payment_loyalty")
 }
@@ -720,6 +818,10 @@ model PaymentTransaction {
   paymentIntent PaymentIntent      @relation(fields: [intentId], references: [intentId], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([intentId], map: "idx_payment_txn_intent_id")
+  @@index([type])
+  @@index([status])
+  @@index([pspRef])
+  @@index([createdAt])
   @@map("payment_transactions")
   @@schema("payment_loyalty")
 }
@@ -736,6 +838,10 @@ model BnplTransaction {
   paymentIntent PaymentIntent? @relation(fields: [intentId], references: [intentId], onUpdate: NoAction)
   orders        Order?         @relation(fields: [orderId], references: [id], onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([intentId])
+  @@index([provider])
+  @@index([status])
   @@map("bnpl_transactions")
   @@schema("payment_loyalty")
 }
@@ -750,6 +856,8 @@ model GiftCard {
   status         String
   transactions   GiftCardTransaction[]
 
+  @@index([status])
+  @@index([expiresAt])
   @@map("gift_cards")
   @@schema("payment_loyalty")
 }
@@ -764,6 +872,10 @@ model GiftCardTransaction {
   giftCard   GiftCard            @relation(fields: [giftCardId], references: [giftCardId], onDelete: Cascade, onUpdate: NoAction)
   orders     Order?              @relation(fields: [orderId], references: [id], onUpdate: NoAction)
 
+  @@index([giftCardId])
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
   @@map("gift_card_transactions")
   @@schema("payment_loyalty")
 }
@@ -778,6 +890,10 @@ model Promotion {
   status     String?
   usages     PromotionUsage[]
 
+  @@index([status])
+  @@index([startsAt])
+  @@index([endsAt])
+  @@index([status, startsAt, endsAt])
   @@map("promotions")
   @@schema("payment_loyalty")
 }
@@ -790,6 +906,7 @@ model PromotionUsage {
   promotion      Promotion @relation(fields: [promoId], references: [promoId], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([promoId, orderId])
+  @@index([orderId])
   @@map("promotion_usage")
   @@schema("payment_loyalty")
 }
@@ -802,6 +919,7 @@ model LoyaltyProgram {
   tiers     Json             @default("[]")
   accounts  LoyaltyAccount[]
 
+  @@index([name])
   @@map("loyalty_programs")
   @@schema("payment_loyalty")
 }
@@ -817,6 +935,10 @@ model LoyaltyAccount {
   users         User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   transactions  LoyaltyTransaction[]
 
+  @@index([userId])
+  @@index([programId])
+  @@index([tier])
+  @@index([pointsBalance])
   @@map("loyalty_accounts")
   @@schema("payment_loyalty")
 }
@@ -831,6 +953,10 @@ model LoyaltyTransaction {
   account     LoyaltyAccount    @relation(fields: [accountId], references: [accountId], onDelete: Cascade, onUpdate: NoAction)
   orders      Order?            @relation(fields: [orderId], references: [id], onUpdate: NoAction)
 
+  @@index([accountId])
+  @@index([orderId])
+  @@index([reason])
+  @@index([createdAt])
   @@map("loyalty_transactions")
   @@schema("payment_loyalty")
 }
@@ -842,6 +968,10 @@ model PaymentWebhookEvent {
   eventData Json     @map("event_data")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  @@index([provider])
+  @@index([eventType])
+  @@index([createdAt])
+  @@index([provider, eventType])
   @@map("payment_webhook_events")
   @@schema("payment_loyalty")
 }
@@ -860,6 +990,14 @@ model SupportTicket {
   users             User?              @relation(fields: [userId], references: [id], onUpdate: NoAction)
   messages          TicketMessage[]
 
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+  @@index([priority])
+  @@index([source])
+  @@index([createdAt])
+  @@index([status, priority])
+  @@index([status, createdAt])
   @@map("support_tickets")
   @@schema("customer_care")
 }
@@ -872,6 +1010,9 @@ model TicketMessage {
   createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   ticket    SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([ticketId])
+  @@index([sender])
+  @@index([createdAt])
   @@map("ticket_messages")
   @@schema("customer_care")
 }
@@ -883,6 +1024,7 @@ model SupportAgent {
   skills       Json          @default("[]")
   chatSessions ChatSession[]
 
+  @@index([name])
   @@map("support_agents")
   @@schema("customer_care")
 }
@@ -900,6 +1042,11 @@ model ChatSession {
   agent     SupportAgent? @relation(fields: [agentId], references: [id], onUpdate: NoAction)
   users     User?         @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([agentId])
+  @@index([status])
+  @@index([startedAt])
+  @@index([agentId, status])
   @@map("chat_sessions")
   @@schema("customer_care")
 }
@@ -916,6 +1063,9 @@ model ChatMessage {
   createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   session     ChatSession         @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([sessionId])
+  @@index([senderType])
+  @@index([createdAt])
   @@map("chat_messages")
   @@schema("customer_care")
 }
@@ -931,6 +1081,11 @@ model ReturnRequest {
   returnItems ReturnItem[]
   orders      Order         @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([orderId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("return_requests")
   @@schema("customer_care")
 }
@@ -946,6 +1101,9 @@ model ReturnItem {
   returnRequest ReturnRequest        @relation(fields: [rmaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([rmaId, orderItemId])
+  @@index([orderItemId])
+  @@index([condition])
+  @@index([disposition])
   @@map("return_items")
   @@schema("customer_care")
 }
@@ -957,6 +1115,8 @@ model Repair {
   status      String?
   order_items OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([orderItemId])
+  @@index([status])
   @@map("repairs")
   @@schema("customer_care")
 }
@@ -972,6 +1132,10 @@ model GoodwillRecord {
   orders    Order?           @relation(fields: [orderId], references: [id], onUpdate: NoAction)
   users     User?            @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([orderId])
+  @@index([type])
+  @@index([createdAt])
   @@map("goodwill_records")
   @@schema("customer_care")
 }
@@ -989,6 +1153,12 @@ model CustomerFeedback {
   support_tickets SupportTicket? @relation(fields: [ticketId], references: [id], onUpdate: NoAction)
   users           User?          @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([ticketId])
+  @@index([orderId])
+  @@index([nps])
+  @@index([csat])
+  @@index([createdAt])
   @@map("customer_feedback")
   @@schema("customer_care")
 }
@@ -1006,6 +1176,10 @@ model Wishlist {
   items       WishlistItem[]
   users       User?          @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([guestToken])
+  @@index([isDefault])
+  @@index([isPublic])
   @@map("wishlists")
   @@schema("engagement")
 }
@@ -1017,6 +1191,7 @@ model WishlistItem {
   wishlist   Wishlist       @relation(fields: [wishlistId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([wishlistId, variantId])
+  @@index([variantId])
   @@map("wishlist_items")
   @@schema("engagement")
 }
@@ -1034,6 +1209,10 @@ model Reminder {
   variant   ProductVariant     @relation(fields: [variantId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([variantId], map: "idx_reminders_variant")
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([optInAt])
   @@map("reminders")
   @@schema("engagement")
 }
@@ -1049,6 +1228,13 @@ model Notification {
   sentAt      DateTime?            @map("sent_at") @db.Timestamptz(6)
   error       String?
 
+  @@index([type])
+  @@index([channel])
+  @@index([templateId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([sentAt])
+  @@index([status, scheduledAt])
   @@map("notifications")
   @@schema("engagement")
 }
@@ -1066,6 +1252,11 @@ model ProductReview {
   users     User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([productId], map: "idx_reviews_product_id")
+  @@index([userId])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
+  @@index([productId, status])
   @@map("product_reviews")
   @@schema("engagement")
 }
@@ -1081,6 +1272,11 @@ model Appointment {
   location   Location?           @relation(fields: [locationId], references: [id], onUpdate: NoAction)
   users      User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([userId])
+  @@index([locationId])
+  @@index([type])
+  @@index([startAt])
+  @@index([locationId, startAt])
   @@map("appointments")
   @@schema("engagement")
 }
@@ -1092,6 +1288,8 @@ model NewsletterSubscription {
   source    String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  @@index([status])
+  @@index([source])
   @@map("newsletter_subscriptions")
   @@schema("engagement")
 }

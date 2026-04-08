@@ -1,5 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { UsersController } from "../controllers/users.controller";
+import {
+  UsersController,
+  ListUsersQuerystring,
+  UpdateUserStatusBody,
+  UpdateUserRoleBody,
+  ToggleEmailVerifiedBody,
+} from "../controllers/users.controller";
 import { authenticate, RolePermissions } from "@/api/src/shared/middleware";
 
 const userIdParam = {
@@ -64,11 +70,11 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.getCurrentUser(request as any, reply),
+    controller.getCurrentUser.bind(controller),
   );
 
   // GET /admin/users — Admin only
-  fastify.get(
+  fastify.get<{ Querystring: ListUsersQuerystring }>(
     "/admin/users",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -115,11 +121,11 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.listUsers(request as any, reply),
+    controller.listUsers.bind(controller),
   );
 
   // GET /users/:userId — Admin only
-  fastify.get(
+  fastify.get<{ Params: { userId: string } }>(
     "/users/:userId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -141,11 +147,14 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.getUser(request as any, reply),
+    controller.getUser.bind(controller),
   );
 
   // PATCH /users/:userId/status — Admin only
-  fastify.patch(
+  fastify.patch<{
+    Params: { userId: string };
+    Body: UpdateUserStatusBody;
+  }>(
     "/users/:userId/status",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -181,11 +190,14 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.updateStatus(request as any, reply),
+    controller.updateStatus.bind(controller),
   );
 
   // PATCH /users/:userId/role — Admin only
-  fastify.patch(
+  fastify.patch<{
+    Params: { userId: string };
+    Body: UpdateUserRoleBody;
+  }>(
     "/users/:userId/role",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -231,11 +243,14 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.updateRole(request as any, reply),
+    controller.updateRole.bind(controller),
   );
 
   // PATCH /users/:userId/email-verified — Admin only
-  fastify.patch(
+  fastify.patch<{
+    Params: { userId: string };
+    Body: ToggleEmailVerifiedBody;
+  }>(
     "/users/:userId/email-verified",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -264,12 +279,11 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.toggleEmailVerification(request as any, reply),
+    controller.toggleEmailVerification.bind(controller),
   );
 
   // DELETE /users/:userId — Admin only
-  fastify.delete(
+  fastify.delete<{ Params: { userId: string } }>(
     "/users/:userId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -290,6 +304,6 @@ export async function registerUserRoutes(
         },
       },
     },
-    (request, reply) => controller.deleteUser(request as any, reply),
+    controller.deleteUser.bind(controller),
   );
 }

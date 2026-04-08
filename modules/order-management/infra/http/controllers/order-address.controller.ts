@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   SetOrderAddressesCommand,
   SetOrderAddressesCommandHandler,
@@ -11,7 +12,7 @@ import {
   OrderManagementService,
 } from "../../../application";
 
-interface AddressData {
+export interface AddressData {
   firstName: string;
   lastName: string;
   addressLine1: string;
@@ -24,7 +25,7 @@ interface AddressData {
   email?: string;
 }
 
-interface SetAddressesRequest {
+export interface SetAddressesRequest {
   Params: { orderId: string };
   Body: {
     billingAddress: AddressData;
@@ -32,17 +33,17 @@ interface SetAddressesRequest {
   };
 }
 
-interface UpdateBillingAddressRequest {
+export interface UpdateBillingAddressRequest {
   Params: { orderId: string };
   Body: AddressData;
 }
 
-interface UpdateShippingAddressRequest {
+export interface UpdateShippingAddressRequest {
   Params: { orderId: string };
   Body: AddressData;
 }
 
-interface GetAddressesRequest {
+export interface GetAddressesRequest {
   Params: { orderId: string };
 }
 
@@ -53,10 +54,18 @@ export class OrderAddressController {
   private getAddressesHandler: GetOrderAddressesHandler;
 
   constructor(orderManagementService: OrderManagementService) {
-    this.setAddressesHandler = new SetOrderAddressesCommandHandler(orderManagementService);
-    this.updateBillingAddressHandler = new UpdateBillingAddressCommandHandler(orderManagementService);
-    this.updateShippingAddressHandler = new UpdateShippingAddressCommandHandler(orderManagementService);
-    this.getAddressesHandler = new GetOrderAddressesHandler(orderManagementService);
+    this.setAddressesHandler = new SetOrderAddressesCommandHandler(
+      orderManagementService,
+    );
+    this.updateBillingAddressHandler = new UpdateBillingAddressCommandHandler(
+      orderManagementService,
+    );
+    this.updateShippingAddressHandler = new UpdateShippingAddressCommandHandler(
+      orderManagementService,
+    );
+    this.getAddressesHandler = new GetOrderAddressesHandler(
+      orderManagementService,
+    );
   }
 
   async setAddresses(
@@ -75,30 +84,14 @@ export class OrderAddressController {
 
       const result = await this.setAddressesHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(201).send({
-          success: true,
-          data: {
-            orderId: result.data?.getOrderId(),
-            billingAddress: result.data?.getBillingAddress().toJSON(),
-            shippingAddress: result.data?.getShippingAddress().toJSON(),
-            isSameAddress: result.data?.isSameAddress(),
-          },
-          message: "Order addresses set successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Order addresses set successfully",
+        201,
+      );
     } catch (error) {
-      request.log.error(error, "Failed to set order addresses");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -112,23 +105,14 @@ export class OrderAddressController {
       const query: GetOrderAddressesQuery = { orderId };
       const result = await this.getAddressesHandler.handle(query);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Order addresses retrieved successfully",
+        "Order addresses not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get order addresses");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -146,30 +130,13 @@ export class OrderAddressController {
 
       const result = await this.updateBillingAddressHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: {
-            orderId: result.data?.getOrderId(),
-            billingAddress: result.data?.getBillingAddress().toJSON(),
-            shippingAddress: result.data?.getShippingAddress().toJSON(),
-            isSameAddress: result.data?.isSameAddress(),
-          },
-          message: "Billing address updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Billing address updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update billing address");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -187,30 +154,13 @@ export class OrderAddressController {
 
       const result = await this.updateShippingAddressHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: {
-            orderId: result.data?.getOrderId(),
-            billingAddress: result.data?.getBillingAddress().toJSON(),
-            shippingAddress: result.data?.getShippingAddress().toJSON(),
-            isSameAddress: result.data?.isSameAddress(),
-          },
-          message: "Shipping address updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Shipping address updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update shipping address");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

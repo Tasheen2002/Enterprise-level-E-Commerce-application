@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/inventory-management.errors";
+
 export class StockId {
   private constructor(
     private readonly variantId: string,
@@ -6,7 +8,9 @@ export class StockId {
 
   static create(variantId: string, locationId: string): StockId {
     if (!variantId || !locationId) {
-      throw new Error("Both variantId and locationId are required");
+      throw new DomainValidationError(
+        "Both variantId and locationId are required",
+      );
     }
     return new StockId(variantId, locationId);
   }

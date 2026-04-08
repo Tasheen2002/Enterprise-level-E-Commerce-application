@@ -4,20 +4,25 @@ import { GuestToken } from "../value-objects/guest-token.vo";
 import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { Currency } from "../value-objects/currency.vo";
 
-export interface CartRepository {
+export interface ICartRepository {
   save(cart: ShoppingCart): Promise<void>;
   findById(cartId: CartId): Promise<ShoppingCart | null>;
   update(cart: ShoppingCart): Promise<void>;
   delete(cartId: CartId): Promise<void>;
   findByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
-  findActiveCartByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
+  findActiveCartByCartOwnerId(
+    userId: CartOwnerId,
+  ): Promise<ShoppingCart | null>;
   existsByCartOwnerId(userId: CartOwnerId): Promise<boolean>;
   findByGuestToken(guestToken: GuestToken): Promise<ShoppingCart | null>;
   findActiveCartByGuestToken(
     guestToken: GuestToken,
   ): Promise<ShoppingCart | null>;
   existsByGuestToken(guestToken: GuestToken): Promise<boolean>;
-  createUserCart(userId: CartOwnerId, currency: Currency): Promise<ShoppingCart>;
+  createUserCart(
+    userId: CartOwnerId,
+    currency: Currency,
+  ): Promise<ShoppingCart>;
   createGuestCart(
     guestToken: GuestToken,
     currency: Currency,

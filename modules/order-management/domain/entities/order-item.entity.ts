@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { ProductSnapshot } from "../value-objects";
+import { DomainValidationError } from "../errors/order-management.errors";
 
 export interface OrderItemProps {
   orderItemId: string;
@@ -32,11 +33,13 @@ export class OrderItem {
 
   static create(props: Omit<OrderItemProps, "orderItemId">): OrderItem {
     if (props.quantity <= 0) {
-      throw new Error("Quantity must be greater than 0");
+      throw new DomainValidationError("Quantity must be greater than 0");
     }
 
     if (props.isGift && props.giftMessage && props.giftMessage.length > 500) {
-      throw new Error("Gift message cannot exceed 500 characters");
+      throw new DomainValidationError(
+        "Gift message cannot exceed 500 characters",
+      );
     }
 
     return new OrderItem({
@@ -84,7 +87,7 @@ export class OrderItem {
 
   updateQuantity(newQuantity: number): void {
     if (newQuantity <= 0) {
-      throw new Error("Quantity must be greater than 0");
+      throw new DomainValidationError("Quantity must be greater than 0");
     }
 
     this.quantity = newQuantity;
@@ -92,7 +95,9 @@ export class OrderItem {
 
   setAsGift(giftMessage?: string): void {
     if (giftMessage && giftMessage.length > 500) {
-      throw new Error("Gift message cannot exceed 500 characters");
+      throw new DomainValidationError(
+        "Gift message cannot exceed 500 characters",
+      );
     }
 
     this.isGift = true;

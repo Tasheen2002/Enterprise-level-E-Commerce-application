@@ -4,7 +4,7 @@ import { CartId } from "../value-objects/cart-id.vo";
 import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 
-export interface CheckoutRepository {
+export interface ICheckoutRepository {
   save(checkout: Checkout): Promise<void>;
   findById(checkoutId: CheckoutId): Promise<Checkout | null>;
   findByCartId(cartId: CartId): Promise<Checkout | null>;

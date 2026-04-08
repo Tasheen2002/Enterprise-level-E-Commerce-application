@@ -1,22 +1,24 @@
-import {
-  CART_ITEM_MIN_QUANTITY,
-  CART_ITEM_MAX_QUANTITY,
-} from "../constants";
+import { CART_ITEM_MIN_QUANTITY, CART_ITEM_MAX_QUANTITY } from "../constants";
+import { DomainValidationError } from "../errors/cart.errors";
 
 export class Quantity {
   private readonly value: number;
 
   constructor(value: number) {
     if (!Number.isInteger(value)) {
-      throw new Error("Quantity must be a whole number");
+      throw new DomainValidationError("Quantity must be a whole number");
     }
 
     if (value < CART_ITEM_MIN_QUANTITY) {
-      throw new Error(`Quantity must be at least ${CART_ITEM_MIN_QUANTITY}`);
+      throw new DomainValidationError(
+        `Quantity must be at least ${CART_ITEM_MIN_QUANTITY}`,
+      );
     }
 
     if (value > CART_ITEM_MAX_QUANTITY) {
-      throw new Error(`Quantity cannot exceed ${CART_ITEM_MAX_QUANTITY}`);
+      throw new DomainValidationError(
+        `Quantity cannot exceed ${CART_ITEM_MAX_QUANTITY}`,
+      );
     }
 
     this.value = value;
@@ -44,7 +46,9 @@ export class Quantity {
 
   multiply(multiplier: number): Quantity {
     if (!Number.isInteger(multiplier) || multiplier < 0) {
-      throw new Error("Multiplier must be a non-negative integer");
+      throw new DomainValidationError(
+        "Multiplier must be a non-negative integer",
+      );
     }
     return new Quantity(this.value * multiplier);
   }

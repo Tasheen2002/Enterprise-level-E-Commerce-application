@@ -1,5 +1,15 @@
 import { FastifyInstance } from "fastify";
-import { CartController } from "../controllers/cart.controller";
+import {
+  CartController,
+  AddToCartRequest,
+  UpdateCartItemRequest,
+  CreateCartRequest,
+  TransferCartRequest,
+  CartQueryParams,
+  UpdateCartEmailBody,
+  UpdateCartShippingInfoBody,
+  UpdateCartAddressesBody,
+} from "../controllers/cart.controller";
 import {
   optionalAuth,
   requireAdmin,
@@ -73,11 +83,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.generateGuestToken.bind(cartController) as any,
+    cartController.generateGuestToken.bind(cartController),
   );
 
   // Get cart by ID
-  fastify.get(
+  fastify.get<{ Params: { cartId: string }; Querystring: CartQueryParams }>(
     "/carts/:cartId",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -216,11 +226,66 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.getCart.bind(cartController) as any,
+    cartController.getCart.bind(cartController),
+  );
+
+  // Get cart summary
+  fastify.get<{
+    Params: { cartId: string };
+    Querystring: CartQueryParams;
+  }>(
+    "/carts/:cartId/summary",
+    {
+      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
+      schema: {
+        description:
+          "Get cart summary (totals, item count, etc.). Requires either Authorization header or X-Guest-Token header.",
+        tags: ["Cart"],
+        summary: "Get Cart Summary",
+        security: [{ bearerAuth: [] }],
+        headers: {
+          type: "object",
+          properties: {
+            "X-Guest-Token": {
+              type: "string",
+              description: "Guest token for unauthenticated users",
+              pattern: "^[a-f0-9]{64}$",
+            },
+          },
+        },
+        params: {
+          type: "object",
+          required: ["cartId"],
+          properties: {
+            cartId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            description: "Cart summary retrieved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+          404: {
+            description: "Cart not found",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: false },
+              error: { type: "string", example: "Cart not found" },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    cartController.getCartSummary.bind(cartController),
   );
 
   // Get active cart by user ID
-  fastify.get(
+  fastify.get<{ Params: { userId: string } }>(
     "/users/:userId/cart",
     {
       preHandler: authenticateUser,
@@ -260,11 +325,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.getActiveCartByUser.bind(cartController) as any,
+    cartController.getActiveCartByUser.bind(cartController),
   );
 
   // Get active cart by guest token
-  fastify.get(
+  fastify.get<{ Params: { guestToken: string } }>(
     "/guests/:guestToken/cart",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -323,11 +388,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.getActiveCartByGuestToken.bind(cartController) as any,
+    cartController.getActiveCartByGuestToken.bind(cartController),
   );
 
   // Create user cart
-  fastify.post(
+  fastify.post<{ Params: { userId: string }; Body: CreateCartRequest }>(
     "/users/:userId/cart",
     {
       preHandler: authenticateUser,
@@ -363,11 +428,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.createUserCart.bind(cartController) as any,
+    cartController.createUserCart.bind(cartController),
   );
 
   // Create guest cart
-  fastify.post(
+  fastify.post<{ Params: { guestToken: string }; Body: CreateCartRequest }>(
     "/guests/:guestToken/cart",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -422,11 +487,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.createGuestCart.bind(cartController) as any,
+    cartController.createGuestCart.bind(cartController),
   );
 
   // Add item to cart
-  fastify.post(
+  fastify.post<{ Body: AddToCartRequest }>(
     "/cart/items",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -517,11 +582,15 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.addToCart.bind(cartController) as any,
+    cartController.addToCart.bind(cartController),
   );
 
   // Update cart item
-  fastify.put(
+  fastify.put<{
+    Params: { cartId: string; variantId: string };
+    Body: UpdateCartItemRequest;
+    Querystring: CartQueryParams;
+  }>(
     "/carts/:cartId/items/:variantId",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -558,11 +627,14 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.updateCartItem.bind(cartController) as any,
+    cartController.updateCartItem.bind(cartController),
   );
 
   // Remove item from cart
-  fastify.delete(
+  fastify.delete<{
+    Params: { cartId: string; variantId: string };
+    Querystring: CartQueryParams;
+  }>(
     "/carts/:cartId/items/:variantId",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -592,11 +664,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.removeFromCart.bind(cartController) as any,
+    cartController.removeFromCart.bind(cartController),
   );
 
   // Clear user cart
-  fastify.delete(
+  fastify.delete<{ Params: { userId: string } }>(
     "/users/:userId/cart",
     {
       preHandler: authenticateUser,
@@ -636,11 +708,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.clearUserCart.bind(cartController) as any,
+    cartController.clearUserCart.bind(cartController),
   );
 
   // Clear guest cart
-  fastify.delete(
+  fastify.delete<{ Params: { guestToken: string } }>(
     "/guests/:guestToken/cart",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -699,11 +771,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.clearGuestCart.bind(cartController) as any,
+    cartController.clearGuestCart.bind(cartController),
   );
 
   // Transfer guest cart to user
-  fastify.post(
+  fastify.post<{ Params: { guestToken: string }; Body: TransferCartRequest }>(
     "/guests/:guestToken/cart/transfer",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -741,7 +813,7 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.transferGuestCartToUser.bind(cartController) as any,
+    cartController.transferGuestCartToUser.bind(cartController),
   );
 
   // Get cart statistics (admin)
@@ -767,7 +839,7 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.getCartStatistics.bind(cartController) as any,
+    cartController.getCartStatistics.bind(cartController),
   );
 
   // Cleanup expired carts (admin)
@@ -798,11 +870,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.cleanupExpiredCarts.bind(cartController) as any,
+    cartController.cleanupExpiredCarts.bind(cartController),
   );
 
   // Update cart email
-  fastify.patch(
+  fastify.patch<{ Params: { cartId: string }; Body: UpdateCartEmailBody }>(
     "/carts/:cartId/email",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -850,11 +922,14 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.updateCartEmail.bind(cartController) as any,
+    cartController.updateCartEmail.bind(cartController),
   );
 
   // Update cart shipping info
-  fastify.patch(
+  fastify.patch<{
+    Params: { cartId: string };
+    Body: UpdateCartShippingInfoBody;
+  }>(
     "/carts/:cartId/shipping",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -903,11 +978,11 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.updateCartShippingInfo.bind(cartController) as any,
+    cartController.updateCartShippingInfo.bind(cartController),
   );
 
   // Update cart addresses
-  fastify.patch(
+  fastify.patch<{ Params: { cartId: string }; Body: UpdateCartAddressesBody }>(
     "/carts/:cartId/addresses",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -972,6 +1047,6 @@ export async function registerCartRoutes(
         },
       },
     },
-    cartController.updateCartAddresses.bind(cartController) as any,
+    cartController.updateCartAddresses.bind(cartController),
   );
 }

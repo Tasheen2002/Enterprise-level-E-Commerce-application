@@ -20,6 +20,11 @@ export interface ProcessBnplParams {
   bnplId: string;
   action: "approve" | "reject" | "activate" | "complete" | "cancel";
 }
+export interface ListBnplTransactionsQuerystring {
+  bnplId?: string;
+  intentId?: string;
+  orderId?: string;
+}
 
 export class BnplTransactionController {
   private createHandler: CreateBnplTransactionHandler;
@@ -76,9 +81,7 @@ export class BnplTransactionController {
   }
 
   async list(
-    request: FastifyRequest<{
-      Querystring: { bnplId?: string; intentId?: string; orderId?: string };
-    }>,
+    request: FastifyRequest<{ Querystring: ListBnplTransactionsQuerystring }>,
     reply: FastifyReply,
   ) {
     const userId = (request as any).user?.userId;

@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export interface ProductSnapshotData {
   productId: string;
   variantId: string;
@@ -49,27 +51,27 @@ export class ProductSnapshot {
 
   static create(data: ProductSnapshotData): ProductSnapshot {
     if (!data.productId || data.productId.trim().length === 0) {
-      throw new Error("Product ID is required");
+      throw new DomainValidationError("Product ID is required");
     }
 
     if (!data.variantId || data.variantId.trim().length === 0) {
-      throw new Error("Variant ID is required");
+      throw new DomainValidationError("Variant ID is required");
     }
 
     if (!data.sku || data.sku.trim().length === 0) {
-      throw new Error("SKU is required");
+      throw new DomainValidationError("SKU is required");
     }
 
     if (!data.name || data.name.trim().length === 0) {
-      throw new Error("Product name is required");
+      throw new DomainValidationError("Product name is required");
     }
 
     if (data.price < 0) {
-      throw new Error("Price cannot be negative");
+      throw new DomainValidationError("Price cannot be negative");
     }
 
     if (data.weight !== undefined && data.weight < 0) {
-      throw new Error("Weight cannot be negative");
+      throw new DomainValidationError("Weight cannot be negative");
     }
 
     return new ProductSnapshot(data);

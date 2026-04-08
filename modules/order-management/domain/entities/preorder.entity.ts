@@ -1,3 +1,8 @@
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../errors/order-management.errors";
+
 export interface PreorderProps {
   orderItemId: string;
   releaseDate?: Date;
@@ -23,11 +28,11 @@ export class Preorder {
 
   static create(props: PreorderProps): Preorder {
     if (!props.orderItemId || props.orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
+      throw new DomainValidationError("Order item ID is required");
     }
 
     if (props.releaseDate && props.releaseDate < new Date()) {
-      throw new Error("Release date must be in the future");
+      throw new DomainValidationError("Release date must be in the future");
     }
 
     return new Preorder(props);
@@ -75,12 +80,14 @@ export class Preorder {
 
   markAsNotified(): void {
     if (this.notifiedAt) {
-      throw new Error("Customer already notified");
+      throw new InvalidOperationError("Customer already notified");
     }
 
     // Validate that the item is released before notifying
     if (this.releaseDate && !this.isReleased()) {
-      throw new Error("Cannot notify customer before release date");
+      throw new InvalidOperationError(
+        "Cannot notify customer before release date",
+      );
     }
 
     this.notifiedAt = new Date();

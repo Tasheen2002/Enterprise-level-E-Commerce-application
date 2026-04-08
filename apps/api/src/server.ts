@@ -10,6 +10,11 @@ import { container } from "./container";
 
 export const createServer = async (): Promise<FastifyInstance> => {
   const server = Fastify({
+    ajv: {
+      customOptions: {
+        keywords: ["example"],
+      },
+    },
     logger:
       process.env.NODE_ENV === "development"
         ? {

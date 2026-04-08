@@ -3,6 +3,11 @@ import {
   BackorderQueryOptions,
 } from "../../domain/repositories/backorder.repository";
 import { Backorder } from "../../domain/entities/backorder.entity";
+import {
+  BackorderNotFoundError,
+  BackorderAlreadyExistsError,
+  DomainValidationError,
+} from "../../domain/errors/order-management.errors";
 
 export interface CreateBackorderData {
   orderItemId: string;
@@ -16,7 +21,7 @@ export class BackorderManagementService {
   async createBackorder(data: CreateBackorderData): Promise<Backorder> {
     // Validate required fields
     if (!data.orderItemId || data.orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
+      throw new DomainValidationError("Order item ID is required");
     }
 
     // Check if backorder already exists for this item
@@ -24,12 +29,12 @@ export class BackorderManagementService {
       data.orderItemId,
     );
     if (existingBackorder) {
-      throw new Error("Backorder already exists for this order item");
+      throw new BackorderAlreadyExistsError(data.orderItemId);
     }
 
     // Validate promised ETA if provided
     if (data.promisedEta && data.promisedEta < new Date()) {
-      throw new Error("Promised ETA cannot be in the past");
+      throw new DomainValidationError("Promised ETA cannot be in the past");
     }
 
     // Create the backorder entity
@@ -45,14 +50,19 @@ export class BackorderManagementService {
     return backorder;
   }
 
-  async getBackorderByOrderItemId(
-    orderItemId: string,
-  ): Promise<Backorder | null> {
+  async getBackorderByOrderItemId(orderItemId: string): Promise<Backorder> {
     if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
+      throw new DomainValidationError("Order item ID is required");
     }
 
-    return await this.backorderRepository.findByOrderItemId(orderItemId);
+    const backorder =
+      await this.backorderRepository.findByOrderItemId(orderItemId);
+
+    if (!backorder) {
+      throw new BackorderNotFoundError(orderItemId);
+    }
+
+    return backorder;
   }
 
   async getAllBackorders(
@@ -85,7 +95,7 @@ export class BackorderManagementService {
     options?: BackorderQueryOptions,
   ): Promise<Backorder[]> {
     if (!date) {
-      throw new Error("Date is required");
+      throw new DomainValidationError("Date is required");
     }
 
     return await this.backorderRepository.findByPromisedEtaBefore(
@@ -94,22 +104,12 @@ export class BackorderManagementService {
     );
   }
 
-  async updatePromisedEta(
-    orderItemId: string,
-    eta: Date,
-  ): Promise<Backorder | null> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
-    }
-
+  async updatePromisedEta(orderItemId: string, eta: Date): Promise<Backorder> {
     if (!eta) {
-      throw new Error("Promised ETA is required");
+      throw new DomainValidationError("Promised ETA is required");
     }
 
     const backorder = await this.getBackorderByOrderItemId(orderItemId);
-    if (!backorder) {
-      return null;
-    }
 
     backorder.updatePromisedEta(eta);
 
@@ -118,15 +118,8 @@ export class BackorderManagementService {
     return backorder;
   }
 
-  async markAsNotified(orderItemId: string): Promise<Backorder | null> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
-    }
-
+  async markAsNotified(orderItemId: string): Promise<Backorder> {
     const backorder = await this.getBackorderByOrderItemId(orderItemId);
-    if (!backorder) {
-      return null;
-    }
 
     backorder.markAsNotified();
 
@@ -137,7 +130,7 @@ export class BackorderManagementService {
 
   async notifyMultipleBackorders(orderItemIds: string[]): Promise<Backorder[]> {
     if (!orderItemIds || orderItemIds.length === 0) {
-      throw new Error("At least one order item ID is required");
+      throw new DomainValidationError("At least one order item ID is required");
     }
 
     const notifiedBackorders: Backorder[] = [];
@@ -155,18 +148,10 @@ export class BackorderManagementService {
     return notifiedBackorders;
   }
 
-  async deleteBackorder(orderItemId: string): Promise<boolean> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
-    }
-
-    const backorder = await this.getBackorderByOrderItemId(orderItemId);
-    if (!backorder) {
-      return false;
-    }
+  async deleteBackorder(orderItemId: string): Promise<void> {
+    await this.getBackorderByOrderItemId(orderItemId);
 
     await this.backorderRepository.delete(orderItemId);
-    return true;
   }
 
   async getBackorderCount(): Promise<number> {
@@ -183,17 +168,13 @@ export class BackorderManagementService {
 
   async backorderExists(orderItemId: string): Promise<boolean> {
     if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
+      throw new DomainValidationError("Order item ID is required");
     }
 
     return await this.backorderRepository.exists(orderItemId);
   }
 
   async isBackorderOverdue(orderItemId: string): Promise<boolean> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
-    }
-
     const backorder = await this.getBackorderByOrderItemId(orderItemId);
     if (!backorder) {
       return false;

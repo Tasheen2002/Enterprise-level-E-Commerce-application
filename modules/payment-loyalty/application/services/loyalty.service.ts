@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { ILoyaltyAccountRepository } from "../../domain/repositories/loyalty-account.repository";
 import { ILoyaltyProgramRepository } from "../../domain/repositories/loyalty-program.repository";
 import { ILoyaltyTransactionRepository } from "../../domain/repositories/loyalty-transaction.repository";
@@ -11,6 +10,12 @@ import {
 } from "../../domain/entities/loyalty-program.entity";
 import { LoyaltyTransaction } from "../../domain/entities/loyalty-transaction.entity";
 import { LoyaltyReason } from "../../domain/value-objects/loyalty-reason.vo";
+import {
+  LoyaltyAccountAlreadyExistsError,
+  LoyaltyAccountNotFoundError,
+  LoyaltyProgramNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/payment-loyalty.errors";
 
 export interface CreateLoyaltyProgramDto {
   name: string;
@@ -62,7 +67,6 @@ export interface LoyaltyTransactionDto {
 
 export class LoyaltyService {
   constructor(
-    private readonly prisma: PrismaClient,
     private readonly loyaltyAccountRepo: ILoyaltyAccountRepository,
     private readonly loyaltyProgramRepo: ILoyaltyProgramRepository,
     private readonly loyaltyTxnRepo: ILoyaltyTransactionRepository,
@@ -93,13 +97,15 @@ export class LoyaltyService {
       programId,
     );
     if (existing) {
-      throw new Error("User is already enrolled in this program");
+      throw new InvalidOperationError(
+        "User is already enrolled in this program",
+      );
     }
 
     // Verify program exists
     const program = await this.loyaltyProgramRepo.findById(programId);
     if (!program) {
-      throw new Error(`Loyalty program ${programId} not found`);
+      throw new LoyaltyProgramNotFoundError(programId);
     }
 
     const account = LoyaltyAccount.create({
@@ -127,7 +133,7 @@ export class LoyaltyService {
     // Get program to check tier updates
     const program = await this.loyaltyProgramRepo.findById(dto.programId);
     if (!program) {
-      throw new Error(`Loyalty program ${dto.programId} not found`);
+      throw new LoyaltyProgramNotFoundError(dto.programId);
     }
 
     // Add points to account
@@ -147,10 +153,8 @@ export class LoyaltyService {
       orderId: dto.orderId || null,
     });
 
-    await this.prisma.$transaction([
-      this.loyaltyAccountRepo.update(account) as any,
-      this.loyaltyTxnRepo.save(transaction) as any,
-    ]);
+    await this.loyaltyAccountRepo.update(account);
+    await this.loyaltyTxnRepo.save(transaction);
 
     return this.toLoyaltyAccountDto(account);
   }
@@ -162,11 +166,13 @@ export class LoyaltyService {
     );
 
     if (!account) {
-      throw new Error("User is not enrolled in this loyalty program");
+      throw new InvalidOperationError(
+        "User is not enrolled in this loyalty program",
+      );
     }
 
     if (!account.hasEnoughPoints(dto.points)) {
-      throw new Error(
+      throw new InvalidOperationError(
         `Insufficient points. Available: ${account.pointsBalance}, Required: ${dto.points}`,
       );
     }
@@ -174,7 +180,7 @@ export class LoyaltyService {
     // Get program to check tier updates
     const program = await this.loyaltyProgramRepo.findById(dto.programId);
     if (!program) {
-      throw new Error(`Loyalty program ${dto.programId} not found`);
+      throw new LoyaltyProgramNotFoundError(dto.programId);
     }
 
     // Subtract points from account
@@ -195,10 +201,8 @@ export class LoyaltyService {
       orderId: dto.orderId,
     });
 
-    await this.prisma.$transaction([
-      this.loyaltyAccountRepo.update(account) as any,
-      this.loyaltyTxnRepo.save(transaction) as any,
-    ]);
+    await this.loyaltyAccountRepo.update(account);
+    await this.loyaltyTxnRepo.save(transaction);
 
     return this.toLoyaltyAccountDto(account);
   }
@@ -209,7 +213,7 @@ export class LoyaltyService {
   ): Promise<number> {
     const program = await this.loyaltyProgramRepo.findById(programId);
     if (!program) {
-      throw new Error(`Loyalty program ${programId} not found`);
+      throw new LoyaltyProgramNotFoundError(programId);
     }
 
     return program.calculatePointsForPurchase(amount);
@@ -218,19 +222,23 @@ export class LoyaltyService {
   async getLoyaltyAccount(
     userId: string,
     programId: string,
-  ): Promise<LoyaltyAccountDto | null> {
+  ): Promise<LoyaltyAccountDto> {
     const account = await this.loyaltyAccountRepo.findByUserIdAndProgramId(
       userId,
       programId,
     );
-    return account ? this.toLoyaltyAccountDto(account) : null;
+    if (!account) {
+      throw new LoyaltyAccountNotFoundError(`${userId}:${programId}`);
+    }
+    return this.toLoyaltyAccountDto(account);
   }
 
-  async getLoyaltyProgram(
-    programId: string,
-  ): Promise<LoyaltyProgramDto | null> {
+  async getLoyaltyProgram(programId: string): Promise<LoyaltyProgramDto> {
     const program = await this.loyaltyProgramRepo.findById(programId);
-    return program ? this.toLoyaltyProgramDto(program) : null;
+    if (!program) {
+      throw new LoyaltyProgramNotFoundError(programId);
+    }
+    return this.toLoyaltyProgramDto(program);
   }
 
   async getAllLoyaltyPrograms(): Promise<LoyaltyProgramDto[]> {
@@ -248,20 +256,26 @@ export class LoyaltyService {
   async getUserPointsBalance(
     userId: string,
     programId: string,
-  ): Promise<number | null> {
+  ): Promise<number> {
     const account = await this.loyaltyAccountRepo.findByUserIdAndProgramId(
       userId,
       programId,
     );
-    return account ? Number(account.pointsBalance) : null;
+    if (!account) {
+      throw new LoyaltyAccountNotFoundError(`${userId}:${programId}`);
+    }
+    return Number(account.pointsBalance);
   }
 
-  async getUserTier(userId: string, programId: string): Promise<string | null> {
+  async getUserTier(userId: string, programId: string): Promise<string> {
     const account = await this.loyaltyAccountRepo.findByUserIdAndProgramId(
       userId,
       programId,
     );
-    return account ? account.tier : null;
+    if (!account) {
+      throw new LoyaltyAccountNotFoundError(`${userId}:${programId}`);
+    }
+    return account.tier;
   }
 
   private async enrollUserInternal(

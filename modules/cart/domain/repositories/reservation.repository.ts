@@ -3,7 +3,7 @@ import { CartId } from "../value-objects/cart-id.vo";
 import { VariantId } from "../value-objects/variant-id.vo";
 import { Quantity } from "../value-objects/quantity.vo";
 
-export interface ReservationRepository {
+export interface IReservationRepository {
   save(reservation: Reservation): Promise<void>;
   findById(reservationId: string): Promise<Reservation | null>;
   update(reservation: Reservation): Promise<void>;

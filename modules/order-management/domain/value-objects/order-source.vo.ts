@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export enum OrderSourceEnum {
   WEB = "web",
   MOBILE = "mobile",
@@ -18,7 +20,7 @@ export class OrderSource {
         normalizedValue as OrderSourceEnum,
       )
     ) {
-      throw new Error(`Invalid order source: ${value}`);
+      throw new DomainValidationError(`Invalid order source: ${value}`);
     }
 
     return new OrderSource(normalizedValue as OrderSourceEnum);

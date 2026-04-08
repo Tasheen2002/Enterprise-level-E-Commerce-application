@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { ProductTagController } from "../controllers/product-tag.controller";
+import { ProductTagController, CreateTagRequest, UpdateTagRequest, BulkCreateTagsRequest, BulkDeleteTagsRequest } from "../controllers/product-tag.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerProductTagRoutes(
@@ -128,7 +128,7 @@ export async function registerProductTagRoutes(
   );
 
   // POST /tags/bulk — Bulk create tags (Admin only, before POST /tags)
-  fastify.post(
+  fastify.post<{ Body: BulkCreateTagsRequest }>(
     "/tags/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -169,11 +169,11 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.createBulkTags.bind(controller) as any,
+    controller.createBulkTags.bind(controller),
   );
 
   // POST /tags — Create tag (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateTagRequest }>(
     "/tags",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -218,11 +218,11 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.createTag.bind(controller) as any,
+    controller.createTag.bind(controller),
   );
 
   // DELETE /tags/bulk — Bulk delete tags (Admin only)
-  fastify.delete(
+  fastify.delete<{ Body: BulkDeleteTagsRequest }>(
     "/tags/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -245,11 +245,11 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.deleteBulkTags.bind(controller) as any,
+    controller.deleteBulkTags.bind(controller),
   );
 
   // PUT /tags/:id — Update tag (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateTagRequest }>(
     "/tags/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -272,11 +272,11 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.updateTag.bind(controller) as any,
+    controller.updateTag.bind(controller),
   );
 
   // DELETE /tags/:id — Delete tag (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/tags/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -292,7 +292,7 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.deleteTag.bind(controller) as any,
+    controller.deleteTag.bind(controller),
   );
 
   // GET /products/:productId/tags — Get tags for a product (public)
@@ -314,7 +314,7 @@ export async function registerProductTagRoutes(
   );
 
   // POST /products/:productId/tags — Associate tags with product (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { productId: string }; Body: { tagIds: string[] } }>(
     "/products/:productId/tags",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -360,11 +360,11 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.associateProductTags.bind(controller) as any,
+    controller.associateProductTags.bind(controller),
   );
 
   // DELETE /products/:productId/tags/:tagId — Remove tag from product (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { productId: string; tagId: string } }>(
     "/products/:productId/tags/:tagId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -401,6 +401,6 @@ export async function registerProductTagRoutes(
         },
       },
     },
-    controller.removeProductTag.bind(controller) as any,
+    controller.removeProductTag.bind(controller),
   );
 }

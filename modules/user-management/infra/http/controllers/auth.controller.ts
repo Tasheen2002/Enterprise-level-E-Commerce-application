@@ -18,6 +18,12 @@ import {
   DeleteUserHandler,
   GetUserByEmailQuery,
   GetUserByEmailHandler,
+  LogoutCommand,
+  LogoutHandler,
+  RefreshTokenCommand,
+  RefreshTokenHandler,
+  DeleteAccountCommand,
+  DeleteAccountHandler,
 } from "../../../application";
 import { AuthenticationService } from "../../../application/services/authentication.service";
 import { IUserRepository } from "../../../domain/repositories/iuser.repository";
@@ -120,6 +126,9 @@ export class AuthController {
   private resetPasswordHandler: ResetPasswordHandler;
   private verifyEmailHandler: VerifyEmailHandler;
   private getUserByEmailHandler: GetUserByEmailHandler;
+  private logoutHandler: LogoutHandler;
+  private refreshTokenHandler: RefreshTokenHandler;
+  private deleteAccountHandler: DeleteAccountHandler;
 
   constructor(
     private readonly authService: AuthenticationService,
@@ -134,13 +143,33 @@ export class AuthController {
     } else {
       this.deleteUserHandler = null as any;
     }
-    this.initiatePasswordResetHandler = new InitiatePasswordResetHandler(authService);
+    this.initiatePasswordResetHandler = new InitiatePasswordResetHandler(
+      authService,
+    );
     this.resetPasswordHandler = new ResetPasswordHandler(authService);
     this.verifyEmailHandler = new VerifyEmailHandler(authService);
     this.getUserByEmailHandler = new GetUserByEmailHandler(authService);
+    this.logoutHandler = new LogoutHandler(TokenBlacklistService);
+    this.refreshTokenHandler = new RefreshTokenHandler(
+      authService,
+      TokenBlacklistService,
+    );
+    if (userRepository) {
+      this.deleteAccountHandler = new DeleteAccountHandler(
+        authService,
+        userRepository,
+        TokenBlacklistService,
+      );
+    } else {
+      this.deleteAccountHandler = null as any;
+    }
   }
 
-  private logSecurityEvent(event: string, details: any, request: FastifyRequest): void {
+  private logSecurityEvent(
+    event: string,
+    details: any,
+    request: FastifyRequest,
+  ): void {
     console.warn(`[SECURITY] ${event}:`, {
       timestamp: new Date().toISOString(),
       ip: request.ip,
@@ -182,10 +211,14 @@ export class AuthController {
           email,
         );
 
-        this.logSecurityEvent("USER_REGISTERED", { userId: result.data.user.id, email, deviceInfo }, request);
+        this.logSecurityEvent(
+          "USER_REGISTERED",
+          { userId: result.data.user.id, email },
+          request,
+        );
 
         // TODO: Send verification email with token
-        console.log(`Email verification token for ${email}: ${verificationToken}`);
+        // Token generated and stored — email service integration pending
 
         return ResponseHelper.success(reply, 201, "Registration successful", {
           accessToken: result.data.accessToken,
@@ -222,21 +255,35 @@ export class AuthController {
       const email = AuthValidation.sanitizeEmail(rawEmail || "");
 
       if (TokenBlacklistService.isAccountLocked(email)) {
-        this.logSecurityEvent("LOGIN_ATTEMPT_ON_LOCKED_ACCOUNT", { email, deviceInfo }, request);
+        this.logSecurityEvent(
+          "LOGIN_ATTEMPT_ON_LOCKED_ACCOUNT",
+          { email, deviceInfo },
+          request,
+        );
         return reply.status(429).send({
           success: false,
           statusCode: 429,
-          message: "Account temporarily locked due to multiple failed login attempts",
+          message:
+            "Account temporarily locked due to multiple failed login attempts",
         });
       }
 
-      const command: LoginUserCommand = { email, password, rememberMe, timestamp: new Date() };
+      const command: LoginUserCommand = {
+        email,
+        password,
+        rememberMe,
+        timestamp: new Date(),
+      };
       const result = await this.loginHandler.handle(command);
 
       if (result.success && result.data) {
         const authResult = result.data as any;
         TokenBlacklistService.clearFailedAttempts(email);
-        this.logSecurityEvent("USER_LOGIN_SUCCESS", { userId: authResult.user.id, email, deviceInfo, rememberMe }, request);
+        this.logSecurityEvent(
+          "USER_LOGIN_SUCCESS",
+          { userId: authResult.user.id, email, deviceInfo, rememberMe },
+          request,
+        );
 
         return ResponseHelper.ok(reply, "Login successful", {
           accessToken: authResult.accessToken,
@@ -256,7 +303,11 @@ export class AuthController {
       }
 
       TokenBlacklistService.recordFailedAttempt(email);
-      this.logSecurityEvent("USER_LOGIN_FAILED", { email, reason: result.error, deviceInfo }, request);
+      this.logSecurityEvent(
+        "USER_LOGIN_FAILED",
+        { email, reason: result.error, deviceInfo },
+        request,
+      );
       ResponseHelper.unauthorized(reply, "Invalid email or password");
     } catch (error) {
       ResponseHelper.error(reply, error);
@@ -269,20 +320,34 @@ export class AuthController {
       const userId = (request as any).user?.userId;
       const deviceInfo = AuthValidation.extractDeviceInfo(request);
 
+      let token: string | undefined;
       if (authHeader) {
         const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/);
         if (tokenMatch) {
-          const token = tokenMatch[1];
-          TokenBlacklistService.blacklistToken(token);
-          if (userId) {
-            this.logSecurityEvent("USER_LOGOUT", { userId, deviceInfo, tokenInvalidated: true }, request);
-          }
+          token = tokenMatch[1];
+        }
+      }
+
+      const command: LogoutCommand = { token, userId, timestamp: new Date() };
+      const result = await this.logoutHandler.handle(command);
+
+      if (result.success) {
+        if (userId) {
+          this.logSecurityEvent(
+            "USER_LOGOUT",
+            { userId, deviceInfo, tokenInvalidated: !!token },
+            request,
+          );
         }
       } else {
         this.logSecurityEvent("LOGOUT_WITHOUT_TOKEN", { deviceInfo }, request);
       }
 
-      ResponseHelper.ok(reply, "Logged out successfully", { action: "logout_complete" });
+      ResponseHelper.ok(
+        reply,
+        "Logged out successfully",
+        result.data || { action: "logout_complete" },
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -296,29 +361,43 @@ export class AuthController {
       const { refreshToken } = request.body;
       const deviceInfo = AuthValidation.extractDeviceInfo(request);
 
-      if (TokenBlacklistService.isTokenBlacklisted(refreshToken)) {
-        this.logSecurityEvent("BLACKLISTED_TOKEN_USED", { token: refreshToken.substring(0, 10) + "...", deviceInfo }, request);
-        return ResponseHelper.unauthorized(reply, "Token has been revoked");
-      }
-
+      let currentAccessToken: string | undefined;
       const authHeader = request.headers.authorization;
       if (authHeader) {
         const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/);
         if (tokenMatch) {
-          TokenBlacklistService.blacklistToken(tokenMatch[1]);
+          currentAccessToken = tokenMatch[1];
         }
       }
 
-      const tokens = await this.authService.refreshToken(refreshToken);
-      TokenBlacklistService.blacklistToken(refreshToken);
-      this.logSecurityEvent("TOKEN_REFRESHED", { deviceInfo, oldTokensInvalidated: true }, request);
+      const command: RefreshTokenCommand = {
+        refreshToken,
+        currentAccessToken,
+        timestamp: new Date(),
+      };
 
-      ResponseHelper.ok(reply, "Token refreshed", {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn,
-        tokenType: "Bearer" as const,
-      });
+      const result = await this.refreshTokenHandler.handle(command);
+
+      if (result.success && result.data) {
+        this.logSecurityEvent(
+          "TOKEN_REFRESHED",
+          { deviceInfo, oldTokensInvalidated: true },
+          request,
+        );
+        ResponseHelper.ok(reply, "Token refreshed", result.data);
+      } else {
+        this.logSecurityEvent(
+          "BLACKLISTED_TOKEN_USED",
+          {
+            deviceInfo,
+          },
+          request,
+        );
+        ResponseHelper.unauthorized(
+          reply,
+          result.error || "Token refresh failed",
+        );
+      }
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -333,28 +412,48 @@ export class AuthController {
       const deviceInfo = AuthValidation.extractDeviceInfo(request);
 
       const email = AuthValidation.sanitizeEmail(rawEmail || "");
-      const command: InitiatePasswordResetCommand = { email, timestamp: new Date() };
-      const resetResult = await this.initiatePasswordResetHandler.handle(command);
+      const command: InitiatePasswordResetCommand = {
+        email,
+        timestamp: new Date(),
+      };
+      const resetResult =
+        await this.initiatePasswordResetHandler.handle(command);
 
       if (resetResult.success && resetResult.data) {
-        if (resetResult.data.exists && resetResult.data.token && resetResult.data.userId) {
+        if (
+          resetResult.data.exists &&
+          resetResult.data.token &&
+          resetResult.data.userId
+        ) {
           TokenBlacklistService.storePasswordResetToken(
             resetResult.data.token,
             resetResult.data.userId,
             email,
           );
-          this.logSecurityEvent("PASSWORD_RESET_REQUESTED", { email, deviceInfo, tokenGenerated: true }, request);
+          this.logSecurityEvent(
+            "PASSWORD_RESET_REQUESTED",
+            { email, deviceInfo, tokenGenerated: true },
+            request,
+          );
           // TODO: Send password reset email
-          console.log(`Password reset token for ${email}: ${resetResult.data.token}`);
+          // Token generated and stored — email service integration pending
         } else {
-          this.logSecurityEvent("PASSWORD_RESET_REQUESTED_INVALID_EMAIL", { email, deviceInfo }, request);
+          this.logSecurityEvent(
+            "PASSWORD_RESET_REQUESTED_INVALID_EMAIL",
+            { email, deviceInfo },
+            request,
+          );
         }
       }
 
       // Always return success to prevent email enumeration
-      ResponseHelper.ok(reply, "If an account with that email exists, password reset instructions have been sent.", {
-        action: "password_reset_sent",
-      });
+      ResponseHelper.ok(
+        reply,
+        "If an account with that email exists, password reset instructions have been sent.",
+        {
+          action: "password_reset_sent",
+        },
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -370,7 +469,10 @@ export class AuthController {
 
       const tokenData = TokenBlacklistService.getPasswordResetToken(token);
       if (!tokenData) {
-        return ResponseHelper.badRequest(reply, "Invalid or expired reset token");
+        return ResponseHelper.badRequest(
+          reply,
+          "Invalid or expired reset token",
+        );
       }
 
       const command: ResetPasswordCommand = {
@@ -385,10 +487,18 @@ export class AuthController {
         return ResponseHelper.fromCommand(reply, result, "");
       }
 
-      this.logSecurityEvent("PASSWORD_RESET_COMPLETED", { userId: tokenData.userId, deviceInfo }, request);
-      ResponseHelper.ok(reply, "Password has been reset successfully. Please log in with your new password.", {
-        action: "password_reset_complete",
-      });
+      this.logSecurityEvent(
+        "PASSWORD_RESET_COMPLETED",
+        { userId: tokenData.userId, deviceInfo },
+        request,
+      );
+      ResponseHelper.ok(
+        reply,
+        "Password has been reset successfully. Please log in with your new password.",
+        {
+          action: "password_reset_complete",
+        },
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -404,17 +514,31 @@ export class AuthController {
 
       const tokenData = TokenBlacklistService.getVerificationToken(token);
       if (!tokenData) {
-        return ResponseHelper.badRequest(reply, "Invalid or expired verification token");
+        return ResponseHelper.badRequest(
+          reply,
+          "Invalid or expired verification token",
+        );
       }
 
-      const command: VerifyEmailCommand = { userId: tokenData.userId, timestamp: new Date() };
+      const command: VerifyEmailCommand = {
+        userId: tokenData.userId,
+        timestamp: new Date(),
+      };
       const result = await this.verifyEmailHandler.handle(command);
 
       if (result.success) {
-        this.logSecurityEvent("EMAIL_VERIFIED", { userId: tokenData.userId, email: tokenData.email, deviceInfo }, request);
-        return ResponseHelper.ok(reply, "Email has been verified successfully. You can now access all features.", {
-          action: "email_verified",
-        });
+        this.logSecurityEvent(
+          "EMAIL_VERIFIED",
+          { userId: tokenData.userId, email: tokenData.email, deviceInfo },
+          request,
+        );
+        return ResponseHelper.ok(
+          reply,
+          "Email has been verified successfully. You can now access all features.",
+          {
+            action: "email_verified",
+          },
+        );
       }
 
       if (result.error === "Email is already verified") {
@@ -441,9 +565,13 @@ export class AuthController {
 
       if (!userResult.success || !userResult.data) {
         // For security, don't reveal if email exists or not
-        return ResponseHelper.ok(reply, "If an account with that email exists, verification email has been sent.", {
-          action: "verification_sent",
-        });
+        return ResponseHelper.ok(
+          reply,
+          "If an account with that email exists, verification email has been sent.",
+          {
+            action: "verification_sent",
+          },
+        );
       }
 
       const userInfo = userResult.data;
@@ -453,15 +581,27 @@ export class AuthController {
       }
 
       const verificationToken = AuthValidation.generateSecureToken();
-      TokenBlacklistService.storeVerificationToken(verificationToken, userInfo.userId, email);
-      this.logSecurityEvent("VERIFICATION_EMAIL_RESENT", { email, deviceInfo }, request);
+      TokenBlacklistService.storeVerificationToken(
+        verificationToken,
+        userInfo.userId,
+        email,
+      );
+      this.logSecurityEvent(
+        "VERIFICATION_EMAIL_RESENT",
+        { email, deviceInfo },
+        request,
+      );
 
       // TODO: Send new verification email
-      console.log(`Resend verification token for ${email}: ${verificationToken}`);
+      // Token generated and stored — email service integration pending
 
-      ResponseHelper.ok(reply, "Verification email has been sent. Please check your inbox.", {
-        action: "verification_sent",
-      });
+      ResponseHelper.ok(
+        reply,
+        "Verification email has been sent. Please check your inbox.",
+        {
+          action: "verification_sent",
+        },
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -493,8 +633,14 @@ export class AuthController {
         return ResponseHelper.fromCommand(reply, result, "");
       }
 
-      this.logSecurityEvent("PASSWORD_CHANGED", { userId, deviceInfo }, request);
-      ResponseHelper.ok(reply, "Password has been changed successfully.", { action: "password_changed" });
+      this.logSecurityEvent(
+        "PASSWORD_CHANGED",
+        { userId, deviceInfo },
+        request,
+      );
+      ResponseHelper.ok(reply, "Password has been changed successfully.", {
+        action: "password_changed",
+      });
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -526,10 +672,18 @@ export class AuthController {
         return ResponseHelper.fromCommand(reply, result, "");
       }
 
-      this.logSecurityEvent("EMAIL_CHANGED", { userId, newEmail, deviceInfo }, request);
-      ResponseHelper.ok(reply, "Email has been changed successfully. Please verify your new email address.", {
-        action: "email_changed",
-      });
+      this.logSecurityEvent(
+        "EMAIL_CHANGED",
+        { userId, newEmail, deviceInfo },
+        request,
+      );
+      ResponseHelper.ok(
+        reply,
+        "Email has been changed successfully. Please verify your new email address.",
+        {
+          action: "email_changed",
+        },
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -548,29 +702,34 @@ export class AuthController {
         return ResponseHelper.unauthorized(reply);
       }
 
-      try {
-        await this.authService.verifyUserPassword(userId, password);
-      } catch (error: any) {
-        return ResponseHelper.unauthorized(reply, error.message || "Password verification failed");
-      }
-
-      const command: DeleteUserCommand = { userId, timestamp: new Date() };
-      const result = await this.deleteUserHandler.handle(command);
-
-      if (!result.success) {
-        return ResponseHelper.fromCommand(reply, result, "");
-      }
-
+      let currentAccessToken: string | undefined;
       const authHeader = request.headers.authorization;
       if (authHeader) {
         const tokenMatch = authHeader.match(/^Bearer\s+(.+)$/);
         if (tokenMatch) {
-          TokenBlacklistService.blacklistToken(tokenMatch[1]);
+          currentAccessToken = tokenMatch[1];
         }
       }
 
-      this.logSecurityEvent("ACCOUNT_DELETED", { userId, deviceInfo }, request);
-      ResponseHelper.ok(reply, "Account has been deleted successfully.");
+      const command: DeleteAccountCommand = {
+        userId,
+        password,
+        currentAccessToken,
+        timestamp: new Date(),
+      };
+
+      const result = await this.deleteAccountHandler.handle(command);
+
+      if (result.success) {
+        this.logSecurityEvent(
+          "ACCOUNT_DELETED",
+          { userId, deviceInfo },
+          request,
+        );
+        ResponseHelper.ok(reply, "Account has been deleted successfully.");
+      } else {
+        ResponseHelper.fromCommand(reply, result, "");
+      }
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -613,8 +772,14 @@ export class AuthController {
     try {
       const { email, userId } = request.body;
       const verificationToken = AuthValidation.generateSecureToken();
-      TokenBlacklistService.storeVerificationToken(verificationToken, userId, email);
-      ResponseHelper.ok(reply, "Test verification token generated", { verificationToken });
+      TokenBlacklistService.storeVerificationToken(
+        verificationToken,
+        userId,
+        email,
+      );
+      ResponseHelper.ok(reply, "Test verification token generated", {
+        verificationToken,
+      });
     } catch (error) {
       ResponseHelper.error(reply, error);
     }

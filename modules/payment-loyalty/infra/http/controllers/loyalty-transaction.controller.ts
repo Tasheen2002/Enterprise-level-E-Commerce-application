@@ -25,6 +25,10 @@ export interface RedeemPointsRequest {
   points: number;
   orderId: string;
 }
+export interface ListLoyaltyTransactionsQuerystring {
+  accountId?: string;
+  orderId?: string;
+}
 
 export class LoyaltyTransactionController {
   private awardHandler: AwardLoyaltyPointsHandler;
@@ -79,11 +83,13 @@ export class LoyaltyTransactionController {
    * List loyalty transactions for an account
    */
   async list(
-    request: FastifyRequest<{ Params: { accountId: string } }>,
+    request: FastifyRequest<{
+      Querystring: ListLoyaltyTransactionsQuerystring;
+    }>,
     reply: FastifyReply,
   ) {
     const query: GetLoyaltyTransactionsQuery = {
-      accountId: request.params.accountId,
+      accountId: request.query.accountId,
       timestamp: new Date(),
     };
     const result = await this.listHandler.handle(query);

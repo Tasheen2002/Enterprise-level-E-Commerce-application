@@ -4,6 +4,8 @@ import {
   ProductQueryOptions,
   ProductSearchOptions,
   ProductCountOptions,
+  ProductEnrichment,
+  ProductMediaEnrichment,
 } from "../../../domain/repositories/product.repository";
 import { Product } from "../../../domain/entities/product.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
@@ -404,5 +406,174 @@ export class ProductRepository implements IProductRepository {
         categoryId,
       },
     });
+  }
+
+  async replaceCategories(
+    productId: string,
+    categoryIds: string[],
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.productCategory.deleteMany({ where: { productId } });
+      if (categoryIds.length > 0) {
+        await tx.productCategory.createMany({
+          data: categoryIds.map((categoryId) => ({ productId, categoryId })),
+        });
+      }
+    });
+  }
+
+  async findWithEnrichment(
+    ids: string[],
+  ): Promise<Map<string, ProductEnrichment>> {
+    const enrichedProducts = await this.prisma.product.findMany({
+      where: { id: { in: ids } },
+      include: {
+        variants: {
+          orderBy: { createdAt: "asc" },
+          take: 10,
+          include: { inventoryStocks: true },
+        },
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: {
+          include: { category: true },
+        },
+      },
+    });
+
+    const enrichmentMap = new Map<string, ProductEnrichment>();
+
+    for (const product of enrichedProducts) {
+      enrichmentMap.set(product.id, {
+        variants:
+          product.variants?.map((v: any) => {
+            const totalInventory =
+              v.inventoryStocks?.reduce(
+                (sum: number, stock: any) =>
+                  sum + (stock.onHand - stock.reserved),
+                0,
+              ) || 0;
+            return {
+              id: v.id,
+              sku: v.sku,
+              size: v.size,
+              color: v.color,
+              inventory: totalInventory,
+            };
+          }) || [],
+        images:
+          product.media?.map((m: any) => ({
+            url: m.asset.storageKey,
+            alt: m.asset.altText,
+            width: m.asset.width,
+            height: m.asset.height,
+          })) || [],
+        categories:
+          product.categories?.map((pc: any) => ({
+            id: pc.category.id,
+            name: pc.category.name,
+            slug: pc.category.slug,
+            position: pc.category.position,
+          })) || [],
+      });
+    }
+
+    return enrichmentMap;
+  }
+
+  async findOneWithEnrichment(id: string): Promise<ProductEnrichment> {
+    const enrichedProduct = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        variants: {
+          orderBy: { createdAt: "asc" },
+          include: { inventoryStocks: true },
+        },
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: {
+          include: { category: true },
+        },
+      },
+    });
+
+    if (!enrichedProduct) {
+      return { variants: [], images: [], categories: [] };
+    }
+
+    return {
+      variants:
+        enrichedProduct.variants?.map((v: any) => {
+          const totalInventory =
+            v.inventoryStocks?.reduce(
+              (sum: number, stock: any) =>
+                sum + (stock.onHand - stock.reserved),
+              0,
+            ) || 0;
+          return {
+            id: v.id,
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            inventory: totalInventory,
+          };
+        }) || [],
+      images:
+        enrichedProduct.media?.map((m: any) => ({
+          url: m.asset.storageKey,
+          alt: m.asset.altText,
+          width: m.asset.width,
+          height: m.asset.height,
+        })) || [],
+      categories:
+        enrichedProduct.categories?.map((pc: any) => ({
+          id: pc.category.id,
+          name: pc.category.name,
+          slug: pc.category.slug,
+          position: pc.category.position,
+        })) || [],
+    };
+  }
+
+  async findMediaEnrichment(id: string): Promise<ProductMediaEnrichment> {
+    const enrichedProduct = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+      },
+    });
+
+    return {
+      images:
+        enrichedProduct?.media?.map((m: any) => ({
+          url: m.asset.storageKey,
+          alt: m.asset.altText,
+          width: m.asset.width,
+          height: m.asset.height,
+        })) || [],
+      media:
+        enrichedProduct?.media?.map((m: any) => ({
+          id: m.id,
+          productId: m.productId,
+          assetId: m.assetId,
+          position: m.position,
+          asset: {
+            id: m.asset.id,
+            storageKey: m.asset.storageKey,
+            altText: m.asset.altText,
+            width: m.asset.width,
+            height: m.asset.height,
+            bytes: m.asset.bytes ? m.asset.bytes.toString() : null,
+            mime: m.asset.mime,
+          },
+        })) || [],
+    };
   }
 }

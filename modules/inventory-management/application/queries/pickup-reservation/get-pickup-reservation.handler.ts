@@ -7,21 +7,17 @@ import { PickupReservationService } from "../../services/pickup-reservation.serv
 
 export class GetPickupReservationHandler implements IQueryHandler<
   GetPickupReservationQuery,
-  QueryResult<PickupReservationResult | null>
+  QueryResult<PickupReservationResult>
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
   async handle(
     query: GetPickupReservationQuery,
-  ): Promise<QueryResult<PickupReservationResult | null>> {
+  ): Promise<QueryResult<PickupReservationResult>> {
     try {
       const reservation = await this.reservationService.getPickupReservation(
         query.reservationId,
       );
-
-      if (!reservation) {
-        return QueryResult.success<PickupReservationResult | null>(null);
-      }
 
       const result: PickupReservationResult = {
         reservationId: reservation.getReservationId().getValue(),

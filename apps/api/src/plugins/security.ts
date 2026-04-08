@@ -5,7 +5,11 @@ import helmet from "@fastify/helmet";
 
 const securityPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL?.split(",") || ["http://localhost:3000"],
+    origin: process.env.FRONTEND_URL?.split(",") || [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://127.0.0.1:3001",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -16,7 +20,8 @@ const securityPlugin: FastifyPluginAsync = async (fastify) => {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcAttr: ["'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
       },
     },

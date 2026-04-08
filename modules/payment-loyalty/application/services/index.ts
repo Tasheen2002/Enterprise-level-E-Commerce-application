@@ -11,5 +11,8 @@ export { LoyaltyAccountService } from "./loyalty-account.service";
 export { LoyaltyProgramService } from "./loyalty-program.service";
 export { LoyaltyTransactionService } from "./loyalty-transaction.service";
 export { PaymentTransactionService } from "./payment-transaction.service";
-export { PaymentWebhookService } from "./payment-webhook.service";
+export {
+  PaymentWebhookService,
+  WebhookSecrets,
+} from "./payment-webhook.service";
 export { PromotionUsageService } from "./promotion-usage.service";

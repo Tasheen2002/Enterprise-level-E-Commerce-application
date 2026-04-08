@@ -9,6 +9,16 @@ import {
 import { OrderItem } from "./order-item.entity";
 import { OrderAddress } from "./order-address.entity";
 import { OrderShipment } from "./order-shipment.entity";
+import {
+  DomainValidationError,
+  OrderNotEditableError,
+  OrderItemNotFoundError,
+  OrderAddressRequiredError,
+  InvalidOperationError,
+  OrderCancellationError,
+  OrderRefundError,
+  InvalidOrderStatusTransitionError,
+} from "../errors/order-management.errors";
 
 export class Order {
   private constructor(
@@ -29,15 +39,19 @@ export class Order {
 
   static create(data: CreateOrderData): Order {
     if (!data.userId && !data.guestToken) {
-      throw new Error("Order must have either userId or guestToken");
+      throw new DomainValidationError(
+        "Order must have either userId or guestToken",
+      );
     }
 
     if (data.userId && data.guestToken) {
-      throw new Error("Order cannot have both userId and guestToken");
+      throw new DomainValidationError(
+        "Order cannot have both userId and guestToken",
+      );
     }
 
     if (!data.items || data.items.length === 0) {
-      throw new Error("Order must have at least one item");
+      throw new DomainValidationError("Order must have at least one item");
     }
 
     const orderId = OrderId.create();
@@ -189,9 +203,7 @@ export class Order {
   // Aggregate root methods - Item management
   addItem(item: OrderItem): void {
     if (this.status.getValue() !== "created") {
-      throw new Error(
-        "Cannot add items to order that is not in created status",
-      );
+      throw new OrderNotEditableError(this.status.getValue());
     }
 
     this.items.push(item);
@@ -201,22 +213,20 @@ export class Order {
 
   removeItem(itemId: string): void {
     if (this.status.getValue() !== "created") {
-      throw new Error(
-        "Cannot remove items from order that is not in created status",
-      );
+      throw new OrderNotEditableError(this.status.getValue());
     }
 
     const index = this.items.findIndex(
       (item) => item.getOrderItemId() === itemId,
     );
     if (index === -1) {
-      throw new Error("Item not found in order");
+      throw new OrderItemNotFoundError(itemId);
     }
 
     this.items.splice(index, 1);
 
     if (this.items.length === 0) {
-      throw new Error("Order must have at least one item");
+      throw new DomainValidationError("Order must have at least one item");
     }
 
     this.recalculateTotals();
@@ -225,14 +235,12 @@ export class Order {
 
   updateItemQuantity(itemId: string, quantity: number): void {
     if (this.status.getValue() !== "created") {
-      throw new Error(
-        "Cannot update item quantity for order that is not in created status",
-      );
+      throw new OrderNotEditableError(this.status.getValue());
     }
 
     const item = this.items.find((item) => item.getOrderItemId() === itemId);
     if (!item) {
-      throw new Error("Item not found in order");
+      throw new OrderItemNotFoundError(itemId);
     }
 
     item.updateQuantity(quantity);
@@ -243,9 +251,7 @@ export class Order {
   // Aggregate root methods - Address management
   setAddress(address: OrderAddress): void {
     if (this.status.getValue() !== "created") {
-      throw new Error(
-        "Cannot set address for order that is not in created status",
-      );
+      throw new OrderNotEditableError(this.status.getValue());
     }
 
     this.address = address;
@@ -255,7 +261,7 @@ export class Order {
   // Aggregate root methods - Shipment management
   createShipment(shipment: OrderShipment): void {
     if (!this.status.isFulfilled() && this.status.getValue() !== "paid") {
-      throw new Error(
+      throw new InvalidOperationError(
         "Cannot create shipment for order that is not paid or fulfilled",
       );
     }
@@ -267,7 +273,7 @@ export class Order {
   // Business logic methods - Status management
   markAsPaid(): void {
     if (!this.address) {
-      throw new Error("Cannot mark order as paid without address");
+      throw new OrderAddressRequiredError();
     }
 
     this.changeStatus(OrderStatus.paid());
@@ -275,7 +281,9 @@ export class Order {
 
   markAsFulfilled(): void {
     if (this.shipments.length === 0) {
-      throw new Error("Cannot mark order as fulfilled without shipments");
+      throw new InvalidOperationError(
+        "Cannot mark order as fulfilled without shipments",
+      );
     }
 
     this.changeStatus(OrderStatus.fulfilled());
@@ -283,7 +291,7 @@ export class Order {
 
   cancel(): void {
     if (this.status.isFulfilled()) {
-      throw new Error("Cannot cancel fulfilled order");
+      throw new OrderCancellationError("Order is already fulfilled");
     }
 
     this.changeStatus(OrderStatus.cancelled());
@@ -291,7 +299,7 @@ export class Order {
 
   refund(): void {
     if (!this.status.isFulfilled() && !this.status.isPaid()) {
-      throw new Error("Can only refund paid or fulfilled orders");
+      throw new OrderRefundError("Order must be paid or fulfilled");
     }
 
     this.changeStatus(OrderStatus.refunded());
@@ -299,8 +307,9 @@ export class Order {
 
   updateStatus(newStatus: OrderStatus): void {
     if (!this.status.canTransitionTo(newStatus)) {
-      throw new Error(
-        `Cannot transition from ${this.status.getValue()} to ${newStatus.getValue()}`,
+      throw new InvalidOrderStatusTransitionError(
+        this.status.getValue(),
+        newStatus.getValue(),
       );
     }
 
@@ -310,8 +319,9 @@ export class Order {
 
   private changeStatus(newStatus: OrderStatus): void {
     if (!this.status.canTransitionTo(newStatus)) {
-      throw new Error(
-        `Cannot transition from ${this.status.getValue()} to ${newStatus.getValue()}`,
+      throw new InvalidOrderStatusTransitionError(
+        this.status.getValue(),
+        newStatus.getValue(),
       );
     }
 

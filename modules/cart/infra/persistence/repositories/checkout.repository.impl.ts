@@ -1,5 +1,5 @@
 import { PrismaClient, CheckoutStatusEnum } from "@prisma/client";
-import { CheckoutRepository } from "../../../domain/repositories/checkout.repository";
+import { ICheckoutRepository } from "../../../domain/repositories/checkout.repository";
 import {
   Checkout,
   CheckoutEntityData,
@@ -9,7 +9,7 @@ import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 
-export class CheckoutRepositoryImpl implements CheckoutRepository {
+export class CheckoutRepositoryImpl implements ICheckoutRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(checkout: Checkout): Promise<void> {

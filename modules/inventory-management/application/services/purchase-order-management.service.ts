@@ -10,6 +10,13 @@ import {
 import { IPurchaseOrderRepository } from "../../domain/repositories/purchase-order.repository";
 import { IPurchaseOrderItemRepository } from "../../domain/repositories/purchase-order-item.repository";
 import { StockManagementService } from "./stock-management.service";
+import {
+  PurchaseOrderNotFoundError,
+  PurchaseOrderNotEditableError,
+  PurchaseOrderItemAlreadyExistsError,
+  PurchaseOrderItemNotFoundError,
+  InvalidOperationError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class PurchaseOrderManagementService {
   constructor(
@@ -44,7 +51,7 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     const updatedPurchaseOrder = purchaseOrder.updateStatus(
@@ -64,7 +71,7 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     const updatedPurchaseOrder = purchaseOrder.updateEta(eta);
@@ -82,11 +89,14 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new Error("Purchase order cannot be edited in current status");
+      throw new PurchaseOrderNotEditableError(
+        poId,
+        purchaseOrder.getStatus().getValue(),
+      );
     }
 
     // Check if item already exists
@@ -97,9 +107,7 @@ export class PurchaseOrderManagementService {
       );
 
     if (existingItem) {
-      throw new Error(
-        `Item with variant ID ${variantId} already exists in this purchase order`,
-      );
+      throw new PurchaseOrderItemAlreadyExistsError(poId, variantId);
     }
 
     const item = PurchaseOrderItem.create({
@@ -123,11 +131,14 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new Error("Purchase order cannot be edited in current status");
+      throw new PurchaseOrderNotEditableError(
+        poId,
+        purchaseOrder.getStatus().getValue(),
+      );
     }
 
     const item = await this.purchaseOrderItemRepository.findByPoAndVariant(
@@ -136,9 +147,7 @@ export class PurchaseOrderManagementService {
     );
 
     if (!item) {
-      throw new Error(
-        `Item with variant ID ${variantId} not found in purchase order`,
-      );
+      throw new PurchaseOrderItemNotFoundError(poId, variantId);
     }
 
     const updatedItem = item.updateOrderedQty(orderedQty);
@@ -155,11 +164,14 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new Error("Purchase order cannot be edited in current status");
+      throw new PurchaseOrderNotEditableError(
+        poId,
+        purchaseOrder.getStatus().getValue(),
+      );
     }
 
     await this.purchaseOrderItemRepository.delete(
@@ -178,7 +190,7 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     const updatedItems: PurchaseOrderItem[] = [];
@@ -191,9 +203,7 @@ export class PurchaseOrderManagementService {
       );
 
       if (!item) {
-        throw new Error(
-          `Item with variant ID ${variantId} not found in purchase order`,
-        );
+        throw new PurchaseOrderItemNotFoundError(poId, variantId);
       }
 
       // Update item received quantity
@@ -248,19 +258,27 @@ export class PurchaseOrderManagementService {
     );
 
     if (!purchaseOrder) {
-      throw new Error(`Purchase order with ID ${poId} not found`);
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
     // Only allow deletion of draft purchase orders
     if (!purchaseOrder.isDraft()) {
-      throw new Error("Only draft purchase orders can be deleted");
+      throw new InvalidOperationError(
+        "Only draft purchase orders can be deleted",
+      );
     }
 
     await this.purchaseOrderRepository.delete(PurchaseOrderId.create(poId));
   }
 
-  async getPurchaseOrder(poId: string): Promise<PurchaseOrder | null> {
-    return this.purchaseOrderRepository.findById(PurchaseOrderId.create(poId));
+  async getPurchaseOrder(poId: string): Promise<PurchaseOrder> {
+    const po = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.create(poId),
+    );
+    if (!po) {
+      throw new PurchaseOrderNotFoundError(poId);
+    }
+    return po;
   }
 
   async getPurchaseOrderItems(poId: string): Promise<PurchaseOrderItem[]> {

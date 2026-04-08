@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export interface AddressSnapshotData {
   firstName: string;
   lastName: string;
@@ -38,31 +40,31 @@ export class AddressSnapshot {
 
   static create(data: AddressSnapshotData): AddressSnapshot {
     if (!data.firstName || data.firstName.trim().length === 0) {
-      throw new Error("First name is required");
+      throw new DomainValidationError("First name is required");
     }
 
     if (!data.lastName || data.lastName.trim().length === 0) {
-      throw new Error("Last name is required");
+      throw new DomainValidationError("Last name is required");
     }
 
     if (!data.addressLine1 || data.addressLine1.trim().length === 0) {
-      throw new Error("Address line 1 is required");
+      throw new DomainValidationError("Address line 1 is required");
     }
 
     if (!data.city || data.city.trim().length === 0) {
-      throw new Error("City is required");
+      throw new DomainValidationError("City is required");
     }
 
     if (!data.state || data.state.trim().length === 0) {
-      throw new Error("State is required");
+      throw new DomainValidationError("State is required");
     }
 
     if (!data.postalCode || data.postalCode.trim().length === 0) {
-      throw new Error("Postal code is required");
+      throw new DomainValidationError("Postal code is required");
     }
 
     if (!data.country || data.country.trim().length === 0) {
-      throw new Error("Country is required");
+      throw new DomainValidationError("Country is required");
     }
 
     return new AddressSnapshot(data);

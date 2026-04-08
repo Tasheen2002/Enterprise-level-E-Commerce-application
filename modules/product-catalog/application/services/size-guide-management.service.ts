@@ -81,11 +81,15 @@ export class SizeGuideManagementService {
   async getSizeGuideByRegionAndCategory(
     region: Region,
     category: string,
-  ): Promise<SizeGuide | null> {
-    return await this.sizeGuideRepository.findByRegionAndCategory(
+  ): Promise<SizeGuide> {
+    const guide = await this.sizeGuideRepository.findByRegionAndCategory(
       region,
       category,
     );
+    if (!guide) {
+      throw new SizeGuideNotFoundError(`${region}:${category}`);
+    }
+    return guide;
   }
 
   async getGeneralSizeGuides(region: Region): Promise<SizeGuide[]> {
@@ -329,9 +333,7 @@ export class SizeGuideManagementService {
     return { created: createdGuides, skipped };
   }
 
-  async deleteMultipleSizeGuides(
-    ids: string[],
-  ): Promise<{
+  async deleteMultipleSizeGuides(ids: string[]): Promise<{
     deleted: string[];
     failed: Array<{ id: string; error: string }>;
   }> {
@@ -377,13 +379,17 @@ export class SizeGuideManagementService {
     }
 
     if (title.trim().length > 200) {
-      throw new DomainValidationError("Size guide title cannot be longer than 200 characters");
+      throw new DomainValidationError(
+        "Size guide title cannot be longer than 200 characters",
+      );
     }
   }
 
   private validateHtmlContent(htmlContent: string): void {
     if (htmlContent.length > 50000) {
-      throw new DomainValidationError("Size guide content cannot exceed 50,000 characters");
+      throw new DomainValidationError(
+        "Size guide content cannot exceed 50,000 characters",
+      );
     }
 
     // Basic HTML validation - check for balanced tags
@@ -408,7 +414,9 @@ export class SizeGuideManagementService {
     }
 
     if (openTags.length > 0) {
-      throw new DomainValidationError(`Unclosed HTML tags: ${openTags.join(", ")}`);
+      throw new DomainValidationError(
+        `Unclosed HTML tags: ${openTags.join(", ")}`,
+      );
     }
   }
 }

@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/inventory-management.errors";
+
 export class TransactionReasonVO {
   private constructor(private readonly value: string) {}
 
@@ -8,7 +10,7 @@ export class TransactionReasonVO {
       normalizedValue.length < 2 ||
       normalizedValue.length > 64
     ) {
-      throw new Error(
+      throw new DomainValidationError(
         "Transaction reason must be between 2 and 64 characters.",
       );
     }

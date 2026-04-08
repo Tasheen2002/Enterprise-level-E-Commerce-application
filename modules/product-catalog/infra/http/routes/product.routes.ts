@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { ProductController } from "../controllers/product.controller";
+import { ProductController, ProductQueryParams, CreateProductRequest, UpdateProductRequest } from "../controllers/product.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerProductRoutes(
@@ -7,7 +7,7 @@ export async function registerProductRoutes(
   controller: ProductController,
 ): Promise<void> {
   // GET /products — List products (public)
-  fastify.get(
+  fastify.get<{ Querystring: ProductQueryParams }>(
     "/products",
     {
       schema: {
@@ -126,7 +126,7 @@ export async function registerProductRoutes(
         },
       },
     },
-    controller.listProducts.bind(controller) as any,
+    controller.listProducts.bind(controller),
   );
 
   // GET /products/slug/:slug — Get by slug (public, registered before /:productId to avoid conflict)
@@ -304,7 +304,7 @@ export async function registerProductRoutes(
   );
 
   // POST /products — Create product (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateProductRequest }>(
     "/products",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -393,11 +393,11 @@ export async function registerProductRoutes(
         },
       },
     },
-    controller.createProduct.bind(controller) as any,
+    controller.createProduct.bind(controller),
   );
 
   // PUT /products/:productId — Update product (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { productId: string }; Body: UpdateProductRequest }>(
     "/products/:productId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -455,11 +455,11 @@ export async function registerProductRoutes(
         },
       },
     },
-    controller.updateProduct.bind(controller) as any,
+    controller.updateProduct.bind(controller),
   );
 
   // DELETE /products/:productId — Delete product (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { productId: string } }>(
     "/products/:productId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -488,6 +488,6 @@ export async function registerProductRoutes(
         },
       },
     },
-    controller.deleteProduct.bind(controller) as any,
+    controller.deleteProduct.bind(controller),
   );
 }

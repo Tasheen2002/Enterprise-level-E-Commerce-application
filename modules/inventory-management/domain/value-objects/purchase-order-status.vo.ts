@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/inventory-management.errors";
+
 export enum PurchaseOrderStatus {
   DRAFT = "draft",
   SENT = "sent",
@@ -16,7 +18,7 @@ export class PurchaseOrderStatusVO {
         normalizedValue as PurchaseOrderStatus,
       )
     ) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid purchase order status: ${value}. Must be one of: ${Object.values(
           PurchaseOrderStatus,
         ).join(", ")}`,

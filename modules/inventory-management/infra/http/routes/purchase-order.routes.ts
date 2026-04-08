@@ -1,7 +1,14 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { PurchaseOrderController } from "../controllers/purchase-order.controller";
+import {
+  PurchaseOrderController,
+  ListPOQuerystring,
+  CreatePOWithItemsBody,
+  UpdatePOStatusBody,
+  ReceivePOItemsBody,
+  UpdatePOEtaBody,
+} from "../controllers/purchase-order.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +59,7 @@ export async function registerPurchaseOrderRoutes(
   controller: PurchaseOrderController,
 ): Promise<void> {
   // List purchase orders
-  fastify.get(
+  fastify.get<{ Querystring: ListPOQuerystring }>(
     "/purchase-orders",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -81,11 +88,49 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.listPurchaseOrders.bind(controller) as any,
+    controller.listPurchaseOrders.bind(controller),
+  );
+
+  // Get overdue purchase orders
+  fastify.get(
+    "/purchase-orders/overdue",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Get all overdue purchase orders (Staff/Admin only)",
+        tags: ["Purchase Orders"],
+        summary: "Get Overdue Purchase Orders",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: { description: "Overdue purchase orders" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.getOverduePurchaseOrders.bind(controller),
+  );
+
+  // Get pending receival purchase orders
+  fastify.get(
+    "/purchase-orders/pending-receival",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Get purchase orders pending receival (Staff/Admin only)",
+        tags: ["Purchase Orders"],
+        summary: "Get Pending Receival",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: { description: "Pending receival purchase orders" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.getPendingReceival.bind(controller),
   );
 
   // Get purchase order
-  fastify.get(
+  fastify.get<{ Params: { poId: string } }>(
     "/purchase-orders/:poId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -107,11 +152,11 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.getPurchaseOrder.bind(controller) as any,
+    controller.getPurchaseOrder.bind(controller),
   );
 
   // Create purchase order with items
-  fastify.post(
+  fastify.post<{ Body: CreatePOWithItemsBody }>(
     "/purchase-orders/full",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -207,11 +252,11 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.createPurchaseOrderWithItems.bind(controller) as any,
+    controller.createPurchaseOrderWithItems.bind(controller),
   );
 
   // Update PO status
-  fastify.put(
+  fastify.put<{ Params: { poId: string }; Body: UpdatePOStatusBody }>(
     "/purchase-orders/:poId/status",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -243,11 +288,49 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.updatePOStatus.bind(controller) as any,
+    controller.updatePOStatus.bind(controller),
+  );
+
+  // Update PO ETA
+  fastify.put<{ Params: { poId: string }; Body: UpdatePOEtaBody }>(
+    "/purchase-orders/:poId/eta",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description:
+          "Update purchase order estimated arrival (Staff/Admin only)",
+        tags: ["Purchase Orders"],
+        summary: "Update PO ETA",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            poId: { type: "string", format: "uuid" },
+          },
+          required: ["poId"],
+        },
+        body: {
+          type: "object",
+          required: ["eta"],
+          properties: {
+            eta: {
+              type: "string",
+              format: "date-time",
+              description: "New estimated arrival date and time",
+            },
+          },
+        },
+        response: {
+          200: { description: "ETA updated successfully" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.updatePOEta.bind(controller),
   );
 
   // Receive PO items
-  fastify.post(
+  fastify.post<{ Params: { poId: string }; Body: ReceivePOItemsBody }>(
     "/purchase-orders/:poId/receive",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -288,11 +371,11 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.receivePOItems.bind(controller) as any,
+    controller.receivePOItems.bind(controller),
   );
 
   // Delete purchase order
-  fastify.delete(
+  fastify.delete<{ Params: { poId: string } }>(
     "/purchase-orders/:poId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -314,6 +397,6 @@ export async function registerPurchaseOrderRoutes(
         },
       },
     },
-    controller.deletePurchaseOrder.bind(controller) as any,
+    controller.deletePurchaseOrder.bind(controller),
   );
 }

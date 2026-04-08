@@ -1,6 +1,13 @@
 import { FastifyInstance } from "fastify";
-import { PromotionController } from "../controllers/promotion.controller";
-import { PromotionUsageController } from "../controllers/promotion-usage.controller";
+import {
+  PromotionController,
+  CreatePromotionRequest,
+  ApplyPromotionRequest,
+} from "../controllers/promotion.controller";
+import {
+  PromotionUsageController,
+  RecordPromotionUsageRequest,
+} from "../controllers/promotion-usage.controller";
 import { authenticateUser, requireAdmin } from "@/api/src/shared/middleware";
 
 const errorResponses = {
@@ -21,7 +28,7 @@ export async function registerPromotionRoutes(
   controller: PromotionController,
   usageController: PromotionUsageController,
 ): Promise<void> {
-  fastify.post(
+  fastify.post<{ Body: CreatePromotionRequest }>(
     "/promotions",
     {
       preHandler: requireAdmin,
@@ -54,14 +61,15 @@ export async function registerPromotionRoutes(
         },
       },
     },
-    controller.create.bind(controller) as any,
+    controller.create.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Body: ApplyPromotionRequest }>(
     "/promotions/apply",
     {
       schema: {
-        description: "Apply a promotion code to calculate discount for an order or cart.",
+        description:
+          "Apply a promotion code to calculate discount for an order or cart.",
         tags: ["Promotions"],
         summary: "Apply Promotion",
         body: {
@@ -89,7 +97,7 @@ export async function registerPromotionRoutes(
         },
       },
     },
-    controller.apply.bind(controller) as any,
+    controller.apply.bind(controller),
   );
 
   fastify.get(
@@ -105,16 +113,22 @@ export async function registerPromotionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
         },
       },
     },
-    controller.listActive.bind(controller) as any,
+    controller.listActive.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{
+    Params: { promoId: string };
+    Body: RecordPromotionUsageRequest;
+  }>(
     "/promotions/:promoId/usage",
     {
       preHandler: authenticateUser,
@@ -150,10 +164,10 @@ export async function registerPromotionRoutes(
         },
       },
     },
-    usageController.record.bind(usageController) as any,
+    usageController.record.bind(usageController),
   );
 
-  fastify.get(
+  fastify.get<{ Params: { promoId: string } }>(
     "/promotions/:promoId/usage",
     {
       preHandler: requireAdmin,
@@ -173,12 +187,15 @@ export async function registerPromotionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
         },
       },
     },
-    usageController.list.bind(usageController) as any,
+    usageController.list.bind(usageController),
   );
 }

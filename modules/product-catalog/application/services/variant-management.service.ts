@@ -86,14 +86,22 @@ export class VariantManagementService {
     return variant;
   }
 
-  async getVariantById(id: string): Promise<ProductVariant | null> {
+  async getVariantById(id: string): Promise<ProductVariant> {
     const variantId = VariantId.fromString(id);
-    return await this.productVariantRepository.findById(variantId);
+    const variant = await this.productVariantRepository.findById(variantId);
+    if (!variant) {
+      throw new ProductVariantNotFoundError(id);
+    }
+    return variant;
   }
 
-  async getVariantBySku(sku: string): Promise<ProductVariant | null> {
+  async getVariantBySku(sku: string): Promise<ProductVariant> {
     const skuVo = SKU.fromString(sku);
-    return await this.productVariantRepository.findBySku(skuVo);
+    const variant = await this.productVariantRepository.findBySku(skuVo);
+    if (!variant) {
+      throw new ProductVariantNotFoundError(sku);
+    }
+    return variant;
   }
 
   async getVariantsByProduct(
@@ -233,12 +241,12 @@ export class VariantManagementService {
   async updateVariant(
     id: string,
     updateData: Partial<CreateVariantData>,
-  ): Promise<ProductVariant | null> {
+  ): Promise<ProductVariant> {
     const variantId = VariantId.fromString(id);
     const variant = await this.productVariantRepository.findById(variantId);
 
     if (!variant) {
-      return null;
+      throw new ProductVariantNotFoundError(id);
     }
 
     // Update SKU if provided

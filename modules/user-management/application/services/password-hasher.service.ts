@@ -1,4 +1,5 @@
 import * as bcrypt from "bcryptjs";
+import { DomainValidationError } from "../../domain/errors/user-management.errors";
 
 export interface IPasswordHasherService {
   hash(password: string | null): Promise<string | null>;
@@ -29,7 +30,7 @@ export class PasswordHasherService implements IPasswordHasherService {
 
     // Regular users must have non-empty passwords
     if (password.length === 0) {
-      throw new Error("Password cannot be empty");
+      throw new DomainValidationError("Password cannot be empty");
     }
 
     return await bcrypt.hash(password, this.saltRounds);
@@ -163,7 +164,7 @@ export class PasswordHasherService implements IPasswordHasherService {
   generateResetToken(): string {
     const timestamp = Date.now().toString(36);
     const randomBytes = Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 36).toString(36)
+      Math.floor(Math.random() * 36).toString(36),
     ).join("");
 
     return `${timestamp}_${randomBytes}`;
@@ -213,7 +214,7 @@ export class PasswordHasherService implements IPasswordHasherService {
 
     if (
       commonPasswords.some((common) =>
-        password.toLowerCase().includes(common.toLowerCase())
+        password.toLowerCase().includes(common.toLowerCase()),
       )
     ) {
       isCommonPassword = true;

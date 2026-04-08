@@ -1,5 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { GiftCardController } from "../controllers/gift-card.controller";
+import {
+  GiftCardController,
+  CreateGiftCardRequest,
+  RedeemGiftCardRequest,
+} from "../controllers/gift-card.controller";
 import { GiftCardTransactionController } from "../controllers/gift-card-transaction.controller";
 import { authenticateUser, requireAdmin } from "@/api/src/shared/middleware";
 
@@ -26,7 +30,7 @@ export async function registerGiftCardRoutes(
   controller: GiftCardController,
   txnController: GiftCardTransactionController,
 ): Promise<void> {
-  fastify.post(
+  fastify.post<{ Body: CreateGiftCardRequest }>(
     "/gift-cards",
     {
       preHandler: requireAdmin,
@@ -61,10 +65,10 @@ export async function registerGiftCardRoutes(
         },
       },
     },
-    controller.create.bind(controller) as any,
+    controller.create.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Params: { giftCardId: string }; Body: RedeemGiftCardRequest }>(
     "/gift-cards/:giftCardId/redeem",
     {
       preHandler: authenticateUser,
@@ -99,10 +103,10 @@ export async function registerGiftCardRoutes(
         },
       },
     },
-    controller.redeem.bind(controller) as any,
+    controller.redeem.bind(controller),
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: { codeOrId: string } }>(
     "/gift-cards/balance",
     {
       schema: {
@@ -127,10 +131,10 @@ export async function registerGiftCardRoutes(
         },
       },
     },
-    controller.getBalance.bind(controller) as any,
+    controller.getBalance.bind(controller),
   );
 
-  fastify.get(
+  fastify.get<{ Params: { giftCardId: string } }>(
     "/gift-cards/:giftCardId/transactions",
     {
       preHandler: requireAdmin,
@@ -150,12 +154,15 @@ export async function registerGiftCardRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
         },
       },
     },
-    txnController.list.bind(txnController) as any,
+    txnController.list.bind(txnController),
   );
 }

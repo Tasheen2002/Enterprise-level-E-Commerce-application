@@ -1,8 +1,6 @@
 import { randomBytes } from "crypto";
-import {
-  GUEST_TOKEN_BYTE_LENGTH,
-  GUEST_TOKEN_HEX_LENGTH,
-} from "../constants";
+import { GUEST_TOKEN_BYTE_LENGTH, GUEST_TOKEN_HEX_LENGTH } from "../constants";
+import { DomainValidationError } from "../errors/cart.errors";
 
 export class GuestToken {
   private readonly value: string;
@@ -10,7 +8,7 @@ export class GuestToken {
   constructor(value?: string) {
     if (value) {
       if (!this.isValidGuestToken(value)) {
-        throw new Error("Invalid guest token format");
+        throw new DomainValidationError("Invalid guest token format");
       }
       this.value = value;
     } else {

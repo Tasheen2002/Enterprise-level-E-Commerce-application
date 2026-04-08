@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/inventory-management.errors";
+
 export enum LocationType {
   WAREHOUSE = "warehouse",
   STORE = "store",
@@ -12,7 +14,7 @@ export class LocationTypeVO {
     if (
       !Object.values(LocationType).includes(normalizedValue as LocationType)
     ) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid location type: ${value}. Must be one of: ${Object.values(
           LocationType,
         ).join(", ")}`,

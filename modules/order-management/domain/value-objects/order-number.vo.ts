@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export class OrderNumber {
   private readonly value: string;
 
@@ -7,11 +9,13 @@ export class OrderNumber {
 
   static create(value: string): OrderNumber {
     if (!value || value.trim().length === 0) {
-      throw new Error("Order number cannot be empty");
+      throw new DomainValidationError("Order number cannot be empty");
     }
 
     if (value.length > 50) {
-      throw new Error("Order number cannot exceed 50 characters");
+      throw new DomainValidationError(
+        "Order number cannot exceed 50 characters",
+      );
     }
 
     return new OrderNumber(value.trim());

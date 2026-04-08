@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreatePreorderCommandHandler,
   CreatePreorderCommand,
@@ -15,33 +16,33 @@ import {
   PreorderManagementService,
 } from "../../../application";
 
-interface CreatePreorderRequest {
+export interface CreatePreorderRequest {
   Body: {
     orderItemId: string;
     releaseDate?: string;
   };
 }
 
-interface UpdatePreorderReleaseDateRequest {
+export interface UpdatePreorderReleaseDateRequest {
   Params: { orderItemId: string };
   Body: {
     releaseDate: string;
   };
 }
 
-interface MarkPreorderNotifiedRequest {
+export interface MarkPreorderNotifiedRequest {
   Params: { orderItemId: string };
 }
 
-interface DeletePreorderRequest {
+export interface DeletePreorderRequest {
   Params: { orderItemId: string };
 }
 
-interface GetPreorderRequest {
+export interface GetPreorderRequest {
   Params: { orderItemId: string };
 }
 
-interface ListPreordersRequest {
+export interface ListPreordersRequest {
   Querystring: {
     limit?: number;
     offset?: number;
@@ -61,8 +62,12 @@ export class PreorderController {
 
   constructor(private readonly preorderService: PreorderManagementService) {
     this.createHandler = new CreatePreorderCommandHandler(preorderService);
-    this.updateReleaseDateHandler = new UpdatePreorderReleaseDateCommandHandler(preorderService);
-    this.markNotifiedHandler = new MarkPreorderNotifiedCommandHandler(preorderService);
+    this.updateReleaseDateHandler = new UpdatePreorderReleaseDateCommandHandler(
+      preorderService,
+    );
+    this.markNotifiedHandler = new MarkPreorderNotifiedCommandHandler(
+      preorderService,
+    );
     this.deleteHandler = new DeletePreorderCommandHandler(preorderService);
     this.getPreorderHandler = new GetPreorderHandler(preorderService);
     this.listPreordersHandler = new ListPreordersHandler(preorderService);
@@ -81,26 +86,14 @@ export class PreorderController {
       };
 
       const result = await this.createHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(201).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Preorder created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Preorder created successfully",
+        201,
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create preorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -115,26 +108,13 @@ export class PreorderController {
       };
 
       const result = await this.updateReleaseDateHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Preorder release date updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Preorder release date updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update preorder release date");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -148,26 +128,13 @@ export class PreorderController {
       };
 
       const result = await this.markNotifiedHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Preorder marked as notified successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Preorder marked as notified successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to mark preorder as notified");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -181,25 +148,13 @@ export class PreorderController {
       };
 
       const result = await this.deleteHandler.handle(command);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Preorder deleted successfully",
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Preorder deleted successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to delete preorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -213,24 +168,14 @@ export class PreorderController {
       };
 
       const result = await this.getPreorderHandler.handle(query);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Preorder retrieved successfully",
+        "Preorder not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get preorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -248,24 +193,13 @@ export class PreorderController {
       };
 
       const result = await this.listPreordersHandler.handle(query);
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Preorders retrieved successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to list preorders");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

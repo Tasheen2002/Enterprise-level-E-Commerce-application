@@ -4,6 +4,13 @@ import {
   RegisterUserRequest,
   LoginUserRequest,
   RefreshTokenRequest,
+  ChangePasswordRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
+  VerifyEmailRequest,
+  ResendVerificationRequest,
+  ChangeEmailRequest,
+  DeleteAccountRequest,
 } from "../controllers/auth.controller";
 import { authenticate } from "@/api/src/shared/middleware";
 import {
@@ -243,8 +250,9 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.changePassword(request, reply),
-  ); // Keeping as any for now as Request type involves ChangePasswordRequest not exported yet
+    (request: FastifyRequest<{ Body: ChangePasswordRequest }>, reply) =>
+      controller.changePassword(request, reply),
+  );
 
   // POST /auth/forgot-password
   fastify.post(
@@ -275,7 +283,8 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.initiatePasswordReset(request, reply),
+    (request: FastifyRequest<{ Body: ForgotPasswordRequest }>, reply) =>
+      controller.initiatePasswordReset(request, reply),
   );
 
   // POST /auth/reset-password
@@ -308,7 +317,8 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.resetPassword(request, reply),
+    (request: FastifyRequest<{ Body: ResetPasswordRequest }>, reply) =>
+      controller.resetPassword(request, reply),
   );
 
   // POST /auth/verify-email
@@ -339,7 +349,8 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.verifyEmail(request, reply),
+    (request: FastifyRequest<{ Body: VerifyEmailRequest }>, reply) =>
+      controller.verifyEmail(request, reply),
   );
 
   // POST /auth/resend-verification
@@ -371,7 +382,8 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.resendVerification(request, reply),
+    (request: FastifyRequest<{ Body: ResendVerificationRequest }>, reply) =>
+      controller.resendVerification(request, reply),
   );
 
   // POST /auth/change-email
@@ -405,7 +417,8 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.changeEmail(request, reply),
+    (request: FastifyRequest<{ Body: ChangeEmailRequest }>, reply) =>
+      controller.changeEmail(request, reply),
   );
 
   // POST /auth/delete-account
@@ -438,6 +451,7 @@ export async function registerAuthRoutes(
         },
       },
     },
-    (request: any, reply) => controller.deleteAccount(request, reply),
+    (request: FastifyRequest<{ Body: DeleteAccountRequest }>, reply) =>
+      controller.deleteAccount(request, reply),
   );
 }

@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export interface OrderEventProps {
   eventId: number;
   orderId: string;
@@ -33,11 +35,11 @@ export class OrderEvent {
     props: Omit<OrderEventProps, "eventId" | "createdAt">,
   ): OrderEvent {
     if (!props.orderId || props.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     if (!props.eventType || props.eventType.trim().length === 0) {
-      throw new Error("Event type is required");
+      throw new DomainValidationError("Event type is required");
     }
 
     return new OrderEvent({

@@ -20,11 +20,22 @@ import { OrderSource } from "../../domain/value-objects/order-source.vo";
 import { Currency } from "../../domain/value-objects/currency.vo";
 import { ProductSnapshot } from "../../domain/value-objects/product-snapshot.vo";
 import { AddressSnapshot } from "../../domain/value-objects/address-snapshot.vo";
-import { VariantManagementService } from "../../../product-catalog/application/services/variant-management.service";
-import { ProductManagementService } from "../../../product-catalog/application/services/product-management.service";
-import { ProductMediaManagementService } from "../../../product-catalog/application/services/product-media-management.service";
-import { StockManagementService } from "../../../inventory-management/application/services/stock-management.service";
+import {
+  IExternalVariantService,
+  IExternalProductService,
+  IExternalProductMediaService,
+  IExternalStockService,
+} from "../../domain/external-services";
 import { OrderEventService } from "./order-event.service";
+import {
+  OrderNotFoundError,
+  OrderAddressNotFoundError,
+  OrderItemNotFoundError,
+  OrderShipmentNotFoundError,
+  OrderStatusHistoryNotFoundError,
+  DomainValidationError,
+  InvalidOperationError,
+} from "../../domain/errors/order-management.errors";
 
 export interface CreateOrderData {
   userId?: string;
@@ -48,26 +59,30 @@ export class OrderManagementService {
     private readonly orderItemRepository: IOrderItemRepository,
     private readonly orderShipmentRepository: IOrderShipmentRepository,
     private readonly orderStatusHistoryRepository: IOrderStatusHistoryRepository,
-    private readonly variantManagementService: VariantManagementService,
-    private readonly productManagementService: ProductManagementService,
-    private readonly productMediaService: ProductMediaManagementService,
-    private readonly stockManagementService: StockManagementService,
+    private readonly variantManagementService: IExternalVariantService,
+    private readonly productManagementService: IExternalProductService,
+    private readonly productMediaService: IExternalProductMediaService,
+    private readonly stockManagementService: IExternalStockService,
     private readonly orderEventService: OrderEventService,
   ) {}
 
   async createOrder(data: CreateOrderData): Promise<Order> {
     // Validate that either userId or guestToken is provided
     if (!data.userId && !data.guestToken) {
-      throw new Error("Order must have either userId or guestToken");
+      throw new DomainValidationError(
+        "Order must have either userId or guestToken",
+      );
     }
 
     if (data.userId && data.guestToken) {
-      throw new Error("Order cannot have both userId and guestToken");
+      throw new DomainValidationError(
+        "Order cannot have both userId and guestToken",
+      );
     }
 
     // Validate items
     if (!data.items || data.items.length === 0) {
-      throw new Error("Order must have at least one item");
+      throw new DomainValidationError("Order must have at least one item");
     }
 
     // Create value objects
@@ -83,7 +98,7 @@ export class OrderManagementService {
         );
 
         if (!variant) {
-          throw new Error(`Variant not found: ${item.variantId}`);
+          throw new OrderItemNotFoundError(item.variantId);
         }
 
         // Fetch product details
@@ -92,7 +107,9 @@ export class OrderManagementService {
         );
 
         if (!product) {
-          throw new Error(`Product not found for variant: ${item.variantId}`);
+          throw new DomainValidationError(
+            `Product not found for variant: ${item.variantId}`,
+          );
         }
 
         // Fetch product media (cover image)
@@ -165,8 +182,7 @@ export class OrderManagementService {
       }),
     );
 
-    const defaultLocationId =
-      data.locationId || (this.getDefaultWarehouseId());
+    const defaultLocationId = data.locationId || this.getDefaultWarehouseId();
     for (const item of orderItems) {
       const stock = await this.stockManagementService.getStock(
         item.variantId,
@@ -174,7 +190,7 @@ export class OrderManagementService {
       );
       const available = stock?.getStockLevel().getAvailable() ?? 0;
       if (available < item.quantity) {
-        throw new Error(
+        throw new InvalidOperationError(
           `Insufficient stock for variant ${item.variantId} at ${defaultLocationId}`,
         );
       }
@@ -219,30 +235,42 @@ export class OrderManagementService {
     return order;
   }
 
-  async getOrderById(id: string): Promise<Order | null> {
+  async getOrderById(id: string): Promise<Order> {
     if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     try {
       const orderId = OrderId.fromString(id);
-      return await this.orderRepository.findById(orderId);
+      const order = await this.orderRepository.findById(orderId);
+
+      if (!order) {
+        throw new OrderNotFoundError(id);
+      }
+
+      return order;
     } catch (error) {
       if (error instanceof Error && error.message.includes("valid UUID")) {
-        throw new Error("Invalid order ID format");
+        throw new DomainValidationError("Invalid order ID format");
       }
       throw error;
     }
   }
 
-  async getOrderByOrderNumber(orderNumber: string): Promise<Order | null> {
+  async getOrderByOrderNumber(orderNumber: string): Promise<Order> {
     if (!orderNumber || orderNumber.trim().length === 0) {
-      throw new Error("Order number is required");
+      throw new DomainValidationError("Order number is required");
     }
 
     try {
       const orderNum = OrderNumber.create(orderNumber.trim());
-      return await this.orderRepository.findByOrderNumber(orderNum);
+      const order = await this.orderRepository.findByOrderNumber(orderNum);
+
+      if (!order) {
+        throw new OrderNotFoundError(orderNumber);
+      }
+
+      return order;
     } catch (error) {
       throw error;
     }
@@ -253,7 +281,7 @@ export class OrderManagementService {
     options?: OrderQueryOptions,
   ): Promise<Order[]> {
     if (!userId || userId.trim().length === 0) {
-      throw new Error("User ID is required");
+      throw new DomainValidationError("User ID is required");
     }
 
     return await this.orderRepository.findByUserId(userId, options);
@@ -264,7 +292,7 @@ export class OrderManagementService {
     options?: OrderQueryOptions,
   ): Promise<Order[]> {
     if (!guestToken || guestToken.trim().length === 0) {
-      throw new Error("Guest token is required");
+      throw new DomainValidationError("Guest token is required");
     }
 
     return await this.orderRepository.findByGuestToken(guestToken, options);
@@ -275,7 +303,7 @@ export class OrderManagementService {
     options?: OrderQueryOptions,
   ): Promise<Order[]> {
     if (!status || status.trim().length === 0) {
-      throw new Error("Status is required");
+      throw new DomainValidationError("Status is required");
     }
 
     const orderStatus = OrderStatus.fromString(status);
@@ -345,18 +373,8 @@ export class OrderManagementService {
     };
   }
 
-  async updateOrderStatus(
-    id: string,
-    newStatus: string,
-  ): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  async updateOrderStatus(id: string, newStatus: string): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -377,7 +395,9 @@ export class OrderManagementService {
         const statusObj = OrderStatus.fromString(newStatus);
         order.updateStatus(statusObj);
       } catch (error: any) {
-        throw new Error(`Failed to update status: ${error.message}`);
+        throw new InvalidOperationError(
+          `Failed to update status: ${error.message}`,
+        );
       }
     }
 
@@ -404,15 +424,8 @@ export class OrderManagementService {
       shipping: number;
       discount: number;
     },
-  ): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  ): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     order.updateTotals(
       totalsData.tax,
@@ -425,15 +438,8 @@ export class OrderManagementService {
     return order;
   }
 
-  async markOrderAsPaid(id: string, changedBy?: string): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  async markOrderAsPaid(id: string, changedBy?: string): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -468,18 +474,8 @@ export class OrderManagementService {
     return order;
   }
 
-  async markOrderAsFulfilled(
-    id: string,
-    changedBy?: string,
-  ): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  async markOrderAsFulfilled(id: string, changedBy?: string): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     const oldStatus = order.getStatus().getValue();
 
@@ -506,9 +502,7 @@ export class OrderManagementService {
           order.getOrderId().getValue(), // Reference the order ID
         );
       } catch (error) {
-        // Log error but don't fail the entire fulfillment
-        // This allows partial fulfillment if some items have stock issues
-        console.error(
+        throw new InvalidOperationError(
           `Failed to adjust inventory for item ${item.getOrderItemId()}: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
       }
@@ -528,15 +522,8 @@ export class OrderManagementService {
     return order;
   }
 
-  async cancelOrder(id: string): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  async cancelOrder(id: string): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     // If order was paid, we need to release reserved stock
     // Only paid orders would have had stock reserved
@@ -571,15 +558,8 @@ export class OrderManagementService {
     return order;
   }
 
-  async refundOrder(id: string): Promise<Order | null> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
+  async refundOrder(id: string): Promise<Order> {
     const order = await this.getOrderById(id);
-    if (!order) {
-      return null;
-    }
 
     order.refund();
 
@@ -588,23 +568,15 @@ export class OrderManagementService {
     return order;
   }
 
-  async deleteOrder(id: string): Promise<boolean> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    const order = await this.getOrderById(id);
-    if (!order) {
-      return false;
-    }
+  async deleteOrder(id: string): Promise<void> {
+    await this.getOrderById(id);
 
     try {
       const orderId = OrderId.fromString(id);
       await this.orderRepository.delete(orderId);
-      return true;
     } catch (error) {
       if (error instanceof Error && error.message.includes("constraint")) {
-        throw new Error(
+        throw new InvalidOperationError(
           "Cannot delete order: it has associated items or other dependencies",
         );
       }
@@ -618,7 +590,7 @@ export class OrderManagementService {
 
   async getOrderCountByStatus(status: string): Promise<number> {
     if (!status || status.trim().length === 0) {
-      throw new Error("Status is required");
+      throw new DomainValidationError("Status is required");
     }
 
     const orderStatus = OrderStatus.fromString(status);
@@ -627,17 +599,13 @@ export class OrderManagementService {
 
   async getOrderCountByUserId(userId: string): Promise<number> {
     if (!userId || userId.trim().length === 0) {
-      throw new Error("User ID is required");
+      throw new DomainValidationError("User ID is required");
     }
 
     return await this.orderRepository.countByUserId(userId);
   }
 
   async orderExists(id: string): Promise<boolean> {
-    if (!id || id.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     const orderId = OrderId.fromString(id);
     return await this.orderRepository.exists(orderId);
   }
@@ -673,19 +641,12 @@ export class OrderManagementService {
       email?: string;
     },
   ): Promise<OrderAddress> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     // Verify order exists
     const order = await this.getOrderById(orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Only allow setting address for orders in 'created' status
     if (order.getStatus().getValue() !== "created") {
-      throw new Error(
+      throw new InvalidOperationError(
         "Cannot set address for order that is not in created status",
       );
     }
@@ -717,18 +678,24 @@ export class OrderManagementService {
     const savedAddress =
       await this.orderAddressRepository.findByOrderId(orderId);
     if (!savedAddress) {
-      throw new Error("Failed to retrieve saved order address");
+      throw new OrderAddressNotFoundError(orderId);
     }
 
     return savedAddress;
   }
 
-  async getOrderAddress(orderId: string): Promise<OrderAddress | null> {
+  async getOrderAddress(orderId: string): Promise<OrderAddress> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.orderAddressRepository.findByOrderId(orderId);
+    const address = await this.orderAddressRepository.findByOrderId(orderId);
+
+    if (!address) {
+      throw new OrderAddressNotFoundError(orderId);
+    }
+
+    return address;
   }
 
   async updateBillingAddress(
@@ -746,14 +713,10 @@ export class OrderManagementService {
       email?: string;
     },
   ): Promise<OrderAddress> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     const orderAddress =
       await this.orderAddressRepository.findByOrderId(orderId);
     if (!orderAddress) {
-      throw new Error("Order address not found. Please set addresses first.");
+      throw new OrderAddressNotFoundError(orderId);
     }
 
     const billingSnapshot = AddressSnapshot.create(billingAddressData);
@@ -765,7 +728,7 @@ export class OrderManagementService {
     const updatedAddress =
       await this.orderAddressRepository.findByOrderId(orderId);
     if (!updatedAddress) {
-      throw new Error("Failed to retrieve updated order address");
+      throw new OrderAddressNotFoundError(orderId);
     }
 
     return updatedAddress;
@@ -786,14 +749,10 @@ export class OrderManagementService {
       email?: string;
     },
   ): Promise<OrderAddress> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     const orderAddress =
       await this.orderAddressRepository.findByOrderId(orderId);
     if (!orderAddress) {
-      throw new Error("Order address not found. Please set addresses first.");
+      throw new OrderAddressNotFoundError(orderId);
     }
 
     const shippingSnapshot = AddressSnapshot.create(shippingAddressData);
@@ -805,7 +764,7 @@ export class OrderManagementService {
     const updatedAddress =
       await this.orderAddressRepository.findByOrderId(orderId);
     if (!updatedAddress) {
-      throw new Error("Failed to retrieve updated order address");
+      throw new OrderAddressNotFoundError(orderId);
     }
 
     return updatedAddress;
@@ -822,14 +781,7 @@ export class OrderManagementService {
     isGift?: boolean;
     giftMessage?: string;
   }): Promise<Order> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Determine location for stock check
     const defaultLocationId = this.getDefaultWarehouseId();
@@ -841,19 +793,21 @@ export class OrderManagementService {
     );
     const available = stock?.getStockLevel().getAvailable() ?? 0;
     if (available < data.quantity) {
-      throw new Error(`Insufficient stock for variant ${data.variantId}`);
+      throw new InvalidOperationError(
+        `Insufficient stock for variant ${data.variantId}`,
+      );
     }
 
     // Fetch variant details to build snapshot
     const variant = await this.variantManagementService.getVariantById(
       data.variantId,
     );
-    if (!variant) throw new Error("Variant not found");
+    if (!variant) throw new OrderItemNotFoundError(data.variantId);
 
     const product = await this.productManagementService.getProductById(
       variant.getProductId().getValue(),
     );
-    if (!product) throw new Error("Product not found");
+    if (!product) throw new DomainValidationError("Product not found");
 
     const productSnapshot = ProductSnapshot.create({
       productId: variant.getProductId().getValue(),
@@ -897,25 +851,14 @@ export class OrderManagementService {
     isGift?: boolean;
     giftMessage?: string;
   }): Promise<Order> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    if (!data.itemId || data.itemId.trim().length === 0) {
-      throw new Error("Item ID is required");
-    }
-
     // Fetch the order
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get the item from the order
     const items = order.getItems();
     const item = items.find((i) => i.getOrderItemId() === data.itemId);
     if (!item) {
-      throw new Error("Order item not found");
+      throw new OrderItemNotFoundError(data.itemId);
     }
 
     // Update quantity if provided
@@ -945,19 +888,8 @@ export class OrderManagementService {
     orderId: string;
     itemId: string;
   }): Promise<Order> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    if (!data.itemId || data.itemId.trim().length === 0) {
-      throw new Error("Item ID is required");
-    }
-
     // Fetch the order
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Remove item from order (this validates business rules)
     order.removeItem(data.itemId);
@@ -969,19 +901,17 @@ export class OrderManagementService {
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     return await this.orderItemRepository.findByOrderId(orderId);
   }
 
-  async getOrderItem(itemId: string): Promise<OrderItem | null> {
-    if (!itemId || itemId.trim().length === 0) {
-      throw new Error("Item ID is required");
+  async getOrderItem(itemId: string): Promise<OrderItem> {
+    const item = await this.orderItemRepository.findById(itemId);
+
+    if (!item) {
+      throw new OrderItemNotFoundError(itemId);
     }
 
-    return await this.orderItemRepository.findById(itemId);
+    return item;
   }
 
   // ============================================================================
@@ -996,15 +926,8 @@ export class OrderManagementService {
     giftReceipt?: boolean;
     pickupLocationId?: string;
   }): Promise<OrderShipment> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Create shipment entity
     const shipment = OrderShipment.create({
@@ -1029,35 +952,20 @@ export class OrderManagementService {
     carrier?: string;
     service?: string;
   }): Promise<OrderShipment> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    if (!data.shipmentId || data.shipmentId.trim().length === 0) {
-      throw new Error("Shipment ID is required");
-    }
-
-    if (!data.trackingNumber || data.trackingNumber.trim().length === 0) {
-      throw new Error("Tracking number is required");
-    }
-
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get shipment
     const shipment = await this.orderShipmentRepository.findById(
       data.shipmentId,
     );
     if (!shipment) {
-      throw new Error("Shipment not found");
+      throw new OrderShipmentNotFoundError(data.shipmentId);
     }
 
     // Verify shipment belongs to order
     if (shipment.getOrderId() !== data.orderId) {
-      throw new Error("Shipment does not belong to this order");
+      throw new InvalidOperationError("Shipment does not belong to this order");
     }
 
     // Update tracking number
@@ -1086,31 +994,20 @@ export class OrderManagementService {
     service: string;
     trackingNumber: string;
   }): Promise<OrderShipment> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    if (!data.shipmentId || data.shipmentId.trim().length === 0) {
-      throw new Error("Shipment ID is required");
-    }
-
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get shipment
     const shipment = await this.orderShipmentRepository.findById(
       data.shipmentId,
     );
     if (!shipment) {
-      throw new Error("Shipment not found");
+      throw new OrderShipmentNotFoundError(data.shipmentId);
     }
 
     // Verify shipment belongs to order
     if (shipment.getOrderId() !== data.orderId) {
-      throw new Error("Shipment does not belong to this order");
+      throw new InvalidOperationError("Shipment does not belong to this order");
     }
 
     // Mark as shipped
@@ -1127,31 +1024,20 @@ export class OrderManagementService {
     shipmentId: string;
     deliveredAt?: Date;
   }): Promise<OrderShipment> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
-    if (!data.shipmentId || data.shipmentId.trim().length === 0) {
-      throw new Error("Shipment ID is required");
-    }
-
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get shipment
     const shipment = await this.orderShipmentRepository.findById(
       data.shipmentId,
     );
     if (!shipment) {
-      throw new Error("Shipment not found");
+      throw new OrderShipmentNotFoundError(data.shipmentId);
     }
 
     // Verify shipment belongs to order
     if (shipment.getOrderId() !== data.orderId) {
-      throw new Error("Shipment does not belong to this order");
+      throw new InvalidOperationError("Shipment does not belong to this order");
     }
 
     // Mark as delivered
@@ -1165,7 +1051,7 @@ export class OrderManagementService {
 
   async getOrderShipments(orderId: string): Promise<OrderShipment[]> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     return await this.orderShipmentRepository.findByOrderId(orderId);
@@ -1174,24 +1060,24 @@ export class OrderManagementService {
   async getShipment(
     orderId: string,
     shipmentId: string,
-  ): Promise<OrderShipment | null> {
+  ): Promise<OrderShipment> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     if (!shipmentId || shipmentId.trim().length === 0) {
-      throw new Error("Shipment ID is required");
+      throw new DomainValidationError("Shipment ID is required");
     }
 
     const shipment = await this.orderShipmentRepository.findById(shipmentId);
 
     if (!shipment) {
-      return null;
+      throw new OrderShipmentNotFoundError(shipmentId);
     }
 
     // Verify shipment belongs to order
     if (shipment.getOrderId() !== orderId) {
-      return null;
+      throw new OrderShipmentNotFoundError(shipmentId);
     }
 
     return shipment;
@@ -1207,19 +1093,12 @@ export class OrderManagementService {
     toStatus: string;
     changedBy?: string;
   }): Promise<OrderStatusHistory> {
-    if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     if (!data.toStatus || data.toStatus.trim().length === 0) {
-      throw new Error("To status is required");
+      throw new DomainValidationError("To status is required");
     }
 
     // Verify order exists
     const order = await this.getOrderById(data.orderId);
-    if (!order) {
-      throw new Error("Order not found");
-    }
 
     // Get current status
     const currentStatus = order.getStatus().getValue();
@@ -1240,7 +1119,7 @@ export class OrderManagementService {
       } else if (statusValue === "refunded") {
         order.refund();
       } else {
-        throw new Error(
+        throw new InvalidOperationError(
           `Cannot set status to ${data.toStatus}. Use specific methods for status transitions.`,
         );
       }
@@ -1268,20 +1147,20 @@ export class OrderManagementService {
     orderId: string,
     options?: StatusHistoryQueryOptions,
   ): Promise<OrderStatusHistory[]> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
-    }
-
     return await this.orderStatusHistoryRepository.findByOrderId(
       orderId,
       options,
     );
   }
 
-  async getStatusHistoryById(
-    historyId: number,
-  ): Promise<OrderStatusHistory | null> {
-    return await this.orderStatusHistoryRepository.findById(historyId);
+  async getStatusHistoryById(historyId: number): Promise<OrderStatusHistory> {
+    const history = await this.orderStatusHistoryRepository.findById(historyId);
+
+    if (!history) {
+      throw new OrderStatusHistoryNotFoundError(historyId.toString());
+    }
+
+    return history;
   }
 
   /**
@@ -1291,7 +1170,7 @@ export class OrderManagementService {
   private getDefaultWarehouseId(): string {
     const locationId = process.env.DEFAULT_STOCK_LOCATION;
     if (!locationId) {
-      throw new Error(
+      throw new DomainValidationError(
         "No warehouse location configured. Please set DEFAULT_STOCK_LOCATION in .env.",
       );
     }

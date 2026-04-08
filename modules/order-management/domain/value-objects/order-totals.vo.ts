@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export interface OrderTotalsData {
   subtotal: number;
   tax: number;
@@ -23,29 +25,29 @@ export class OrderTotals {
 
   static create(data: OrderTotalsData): OrderTotals {
     if (data.subtotal < 0) {
-      throw new Error("Subtotal cannot be negative");
+      throw new DomainValidationError("Subtotal cannot be negative");
     }
 
     if (data.tax < 0) {
-      throw new Error("Tax cannot be negative");
+      throw new DomainValidationError("Tax cannot be negative");
     }
 
     if (data.shipping < 0) {
-      throw new Error("Shipping cannot be negative");
+      throw new DomainValidationError("Shipping cannot be negative");
     }
 
     if (data.discount < 0) {
-      throw new Error("Discount cannot be negative");
+      throw new DomainValidationError("Discount cannot be negative");
     }
 
     if (data.total < 0) {
-      throw new Error("Total cannot be negative");
+      throw new DomainValidationError("Total cannot be negative");
     }
 
     const calculatedTotal =
       data.subtotal + data.tax + data.shipping - data.discount;
     if (Math.abs(calculatedTotal - data.total) > 0.01) {
-      throw new Error("Total does not match calculated total");
+      throw new DomainValidationError("Total does not match calculated total");
     }
 
     return new OrderTotals(data);

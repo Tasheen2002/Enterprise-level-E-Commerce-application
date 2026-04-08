@@ -8,6 +8,8 @@ import { OrderEventController } from "../controllers/order-event.controller";
 import { PreorderController } from "../controllers/preorder.controller";
 import { BackorderController } from "../controllers/backorder.controller";
 import { OrderManagementService } from "../../../application/services/order-management.service";
+import { OrderItemManagementService } from "../../../application/services/order-item-management.service";
+import { ShipmentManagementService } from "../../../application/services/shipment-management.service";
 import { OrderEventService } from "../../../application/services/order-event.service";
 import { PreorderManagementService } from "../../../application/services/preorder-management.service";
 import { BackorderManagementService } from "../../../application/services/backorder-management.service";
@@ -22,6 +24,8 @@ import { registerBackorderRoutes } from "./backorder.routes";
 
 export interface OrderManagementRouteServices {
   orderService: OrderManagementService;
+  orderItemService: OrderItemManagementService;
+  shipmentService: ShipmentManagementService;
   orderEventService: OrderEventService;
   preorderService: PreorderManagementService;
   backorderService: BackorderManagementService;
@@ -31,14 +35,31 @@ export async function registerOrderManagementRoutes(
   fastify: FastifyInstance,
   services: OrderManagementRouteServices,
 ): Promise<void> {
-  const orderController = new OrderController(services.orderService);
-  const orderAddressController = new OrderAddressController(services.orderService);
-  const orderItemController = new OrderItemController(services.orderService);
-  const orderShipmentController = new OrderShipmentController(services.orderService);
-  const orderStatusHistoryController = new OrderStatusHistoryController(services.orderService);
-  const orderEventController = new OrderEventController(services.orderEventService);
+  const orderController = new OrderController(
+    services.orderService,
+    services.shipmentService,
+  );
+  const orderAddressController = new OrderAddressController(
+    services.orderService,
+  );
+  const orderItemController = new OrderItemController(
+    services.orderService,
+    services.orderItemService,
+  );
+  const orderShipmentController = new OrderShipmentController(
+    services.orderService,
+    services.shipmentService,
+  );
+  const orderStatusHistoryController = new OrderStatusHistoryController(
+    services.orderService,
+  );
+  const orderEventController = new OrderEventController(
+    services.orderEventService,
+  );
   const preorderController = new PreorderController(services.preorderService);
-  const backorderController = new BackorderController(services.backorderService);
+  const backorderController = new BackorderController(
+    services.backorderService,
+  );
 
   await fastify.register(
     async (instance) => {
@@ -46,7 +67,10 @@ export async function registerOrderManagementRoutes(
       await registerOrderAddressRoutes(instance, orderAddressController);
       await registerOrderItemRoutes(instance, orderItemController);
       await registerOrderShipmentRoutes(instance, orderShipmentController);
-      await registerOrderStatusHistoryRoutes(instance, orderStatusHistoryController);
+      await registerOrderStatusHistoryRoutes(
+        instance,
+        orderStatusHistoryController,
+      );
       await registerOrderEventRoutes(instance, orderEventController);
       await registerPreorderRoutes(instance, preorderController);
       await registerBackorderRoutes(instance, backorderController);

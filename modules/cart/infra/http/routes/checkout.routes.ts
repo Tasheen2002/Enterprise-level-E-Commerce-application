@@ -1,5 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { CheckoutController } from "../controllers/checkout.controller";
+import {
+  CheckoutController,
+  InitializeCheckoutRequest,
+  CompleteCheckoutRequest,
+  CompleteCheckoutWithOrderRequest,
+} from "../controllers/checkout.controller";
 import { optionalAuth } from "@/api/src/shared/middleware";
 import {
   extractGuestToken,
@@ -31,7 +36,7 @@ export async function registerCheckoutRoutes(
   checkoutController: CheckoutController,
 ): Promise<void> {
   // Initialize checkout
-  fastify.post(
+  fastify.post<{ Body: InitializeCheckoutRequest }>(
     "/checkout/initialize",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -71,11 +76,11 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.initialize.bind(checkoutController) as any,
+    checkoutController.initialize.bind(checkoutController),
   );
 
   // Get checkout
-  fastify.get(
+  fastify.get<{ Params: { checkoutId: string } }>(
     "/checkout/:checkoutId",
     {
       preHandler: [optionalAuth, extractGuestToken],
@@ -112,11 +117,14 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.get.bind(checkoutController) as any,
+    checkoutController.get.bind(checkoutController),
   );
 
   // Complete checkout
-  fastify.post(
+  fastify.post<{
+    Params: { checkoutId: string };
+    Body: CompleteCheckoutRequest;
+  }>(
     "/checkout/:checkoutId/complete",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -161,11 +169,11 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.complete.bind(checkoutController) as any,
+    checkoutController.complete.bind(checkoutController),
   );
 
   // Cancel checkout
-  fastify.post(
+  fastify.post<{ Params: { checkoutId: string } }>(
     "/checkout/:checkoutId/cancel",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -194,11 +202,14 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.cancel.bind(checkoutController) as any,
+    checkoutController.cancel.bind(checkoutController),
   );
 
   // Complete checkout with order creation
-  fastify.post(
+  fastify.post<{
+    Params: { checkoutId: string };
+    Body: CompleteCheckoutWithOrderRequest;
+  }>(
     "/checkout/:checkoutId/complete-with-order",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -294,11 +305,11 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.completeWithOrder.bind(checkoutController) as any,
+    checkoutController.completeWithOrder.bind(checkoutController),
   );
 
   // Get order by checkout ID
-  fastify.get(
+  fastify.get<{ Params: { checkoutId: string } }>(
     "/checkout/:checkoutId/order",
     {
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
@@ -352,6 +363,6 @@ export async function registerCheckoutRoutes(
         },
       },
     },
-    checkoutController.getOrderByCheckoutId.bind(checkoutController) as any,
+    checkoutController.getOrderByCheckoutId.bind(checkoutController),
   );
 }

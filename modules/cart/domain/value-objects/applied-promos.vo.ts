@@ -1,4 +1,5 @@
 import { VALID_PROMO_TYPES, PROMO_MAX_PERCENTAGE } from "../constants";
+import { DomainValidationError } from "../errors/cart.errors";
 
 export interface PromoData {
   id: string;
@@ -26,31 +27,37 @@ export class AppliedPromos {
 
   private validatePromo(promo: PromoData, index: number): void {
     if (!promo.id) {
-      throw new Error(`Promo at index ${index} must have an ID`);
+      throw new DomainValidationError(
+        `Promo at index ${index} must have an ID`,
+      );
     }
 
     if (!promo.code) {
-      throw new Error(`Promo at index ${index} must have a code`);
+      throw new DomainValidationError(
+        `Promo at index ${index} must have a code`,
+      );
     }
 
     if (!(VALID_PROMO_TYPES as readonly string[]).includes(promo.type)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Promo at index ${index} has invalid type: ${promo.type}`,
       );
     }
 
     if (typeof promo.value !== "number" || promo.value < 0) {
-      throw new Error(
+      throw new DomainValidationError(
         `Promo at index ${index} must have a non-negative numeric value`,
       );
     }
 
     if (promo.type === "percentage" && promo.value > PROMO_MAX_PERCENTAGE) {
-      throw new Error(`Percentage promo at index ${index} cannot exceed ${PROMO_MAX_PERCENTAGE}%`);
+      throw new DomainValidationError(
+        `Percentage promo at index ${index} cannot exceed ${PROMO_MAX_PERCENTAGE}%`,
+      );
     }
 
     if (!(promo.appliedAt instanceof Date)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Promo at index ${index} must have a valid appliedAt date`,
       );
     }
@@ -130,7 +137,9 @@ export class AppliedPromos {
 
   addPromo(promo: PromoData): AppliedPromos {
     if (this.hasPromo(promo.id)) {
-      throw new Error(`Promo with ID ${promo.id} is already applied`);
+      throw new DomainValidationError(
+        `Promo with ID ${promo.id} is already applied`,
+      );
     }
 
     return new AppliedPromos([...this.value, promo]);
@@ -140,7 +149,7 @@ export class AppliedPromos {
     const filteredPromos = this.value.filter((promo) => promo.id !== promoId);
 
     if (filteredPromos.length === this.value.length) {
-      throw new Error(`Promo with ID ${promoId} not found`);
+      throw new DomainValidationError(`Promo with ID ${promoId} not found`);
     }
 
     return new AppliedPromos(filteredPromos);
@@ -162,7 +171,9 @@ export class AppliedPromos {
     try {
       const parsed = JSON.parse(json);
       if (!Array.isArray(parsed)) {
-        throw new Error("JSON must represent an array of promos");
+        throw new DomainValidationError(
+          "JSON must represent an array of promos",
+        );
       }
 
       // Convert appliedAt strings back to Date objects
@@ -173,7 +184,7 @@ export class AppliedPromos {
 
       return new AppliedPromos(promos);
     } catch (error) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid promo JSON: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
     }

@@ -4,19 +4,13 @@ import { SupplierManagementService } from "../../services/supplier-management.se
 
 export class GetSupplierHandler implements IQueryHandler<
   GetSupplierQuery,
-  QueryResult<SupplierResult | null>
+  QueryResult<SupplierResult>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
-  async handle(
-    query: GetSupplierQuery,
-  ): Promise<QueryResult<SupplierResult | null>> {
+  async handle(query: GetSupplierQuery): Promise<QueryResult<SupplierResult>> {
     try {
       const supplier = await this.supplierService.getSupplier(query.supplierId);
-
-      if (!supplier) {
-        return QueryResult.success<SupplierResult | null>(null);
-      }
 
       const result: SupplierResult = {
         supplierId: supplier.getSupplierId().getValue(),

@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { ProductMediaController } from "../controllers/product-media.controller";
+import { ProductMediaController, AddMediaToProductRequest, SetProductCoverImageRequest, ReorderProductMediaRequest } from "../controllers/product-media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerProductMediaRoutes(
@@ -72,7 +72,7 @@ export async function registerProductMediaRoutes(
   );
 
   // POST /products/:productId/media/cover — Set cover image (Admin only, before general POST to avoid conflict)
-  fastify.post(
+  fastify.post<{ Params: { productId: string }; Body: SetProductCoverImageRequest }>(
     "/products/:productId/media/cover",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -113,11 +113,11 @@ export async function registerProductMediaRoutes(
         },
       },
     },
-    controller.setProductCoverImage.bind(controller) as any,
+    controller.setProductCoverImage.bind(controller),
   );
 
   // POST /products/:productId/media/reorder — Reorder product media (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { productId: string }; Body: ReorderProductMediaRequest }>(
     "/products/:productId/media/reorder",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -177,11 +177,11 @@ export async function registerProductMediaRoutes(
         },
       },
     },
-    controller.reorderProductMedia.bind(controller) as any,
+    controller.reorderProductMedia.bind(controller),
   );
 
   // POST /products/:productId/media — Add media to product (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { productId: string }; Body: AddMediaToProductRequest }>(
     "/products/:productId/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -236,11 +236,11 @@ export async function registerProductMediaRoutes(
         },
       },
     },
-    controller.addMediaToProduct.bind(controller) as any,
+    controller.addMediaToProduct.bind(controller),
   );
 
   // DELETE /products/:productId/media/:assetId — Remove media from product (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { productId: string; assetId: string } }>(
     "/products/:productId/media/:assetId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -277,6 +277,6 @@ export async function registerProductMediaRoutes(
         },
       },
     },
-    controller.removeMediaFromProduct.bind(controller) as any,
+    controller.removeMediaFromProduct.bind(controller),
   );
 }

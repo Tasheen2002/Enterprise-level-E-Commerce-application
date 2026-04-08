@@ -6,7 +6,7 @@ export async function registerPaymentTransactionRoutes(
   fastify: FastifyInstance,
   controller: PaymentTransactionController,
 ): Promise<void> {
-  fastify.get(
+  fastify.get<{ Params: { intentId: string } }>(
     "/payment-intents/:intentId/transactions",
     {
       preHandler: authenticateUser,
@@ -28,17 +28,23 @@ export async function registerPaymentTransactionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
           401: {
             description: "Unauthorized",
             type: "object",
-            properties: { success: { type: "boolean" }, error: { type: "string" } },
+            properties: {
+              success: { type: "boolean" },
+              error: { type: "string" },
+            },
           },
         },
       },
     },
-    controller.list.bind(controller) as any,
+    controller.list.bind(controller),
   );
 }

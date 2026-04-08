@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export class Currency {
   private readonly value: string;
 
@@ -7,17 +9,21 @@ export class Currency {
 
   static create(value: string): Currency {
     if (!value || value.trim().length === 0) {
-      throw new Error("Currency code cannot be empty");
+      throw new DomainValidationError("Currency code cannot be empty");
     }
 
     const normalizedValue = value.toUpperCase().trim();
 
     if (normalizedValue.length !== 3) {
-      throw new Error("Currency code must be 3 characters (ISO 4217)");
+      throw new DomainValidationError(
+        "Currency code must be 3 characters (ISO 4217)",
+      );
     }
 
     if (!/^[A-Z]{3}$/.test(normalizedValue)) {
-      throw new Error("Currency code must contain only letters");
+      throw new DomainValidationError(
+        "Currency code must contain only letters",
+      );
     }
 
     return new Currency(normalizedValue);

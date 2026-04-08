@@ -4,6 +4,13 @@ import { getStripeConfig } from "../../config/stripe.config";
 import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface CreateStripeIntentBody {
+  orderId: string;
+  amount: number;
+  currency?: string;
+  idempotencyKey?: string;
+}
+
 export class StripeWebhookController {
   private stripeProvider: StripeProvider;
   private webhookSecret: string;
@@ -19,9 +26,12 @@ export class StripeWebhookController {
    *
    * POST /api/payments/stripe/create-intent
    */
-  async createIntent(req: FastifyRequest, reply: FastifyReply) {
+  async createIntent(
+    req: FastifyRequest<{ Body: CreateStripeIntentBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { orderId, amount, currency, idempotencyKey } = req.body as any;
+      const { orderId, amount, currency, idempotencyKey } = req.body;
       const user = (req as any).user;
 
       if (!orderId || !amount) {

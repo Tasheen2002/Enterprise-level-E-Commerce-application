@@ -6,16 +6,16 @@ import { ResponseHelper } from "@/api/src/shared/response.helper";
 // Import middleware for type augmentations (request.guestToken)
 import "../middleware/cart-auth.middleware";
 
-interface InitializeCheckoutRequest {
+export interface InitializeCheckoutRequest {
   cartId: string;
   expiresInMinutes?: number;
 }
 
-interface CompleteCheckoutRequest {
+export interface CompleteCheckoutRequest {
   paymentIntentId: string;
 }
 
-interface CompleteCheckoutWithOrderRequest {
+export interface CompleteCheckoutWithOrderRequest {
   paymentIntentId: string;
   shippingAddress: {
     firstName: string;
@@ -83,7 +83,11 @@ export class CheckoutController {
       const guestToken = request.guestToken;
       const { checkoutId } = request.params;
 
-      const checkout = await this.checkoutService.getCheckout(checkoutId, userId, guestToken);
+      const checkout = await this.checkoutService.getCheckout(
+        checkoutId,
+        userId,
+        guestToken,
+      );
 
       if (!checkout) {
         return ResponseHelper.notFound(reply, "Checkout not found");
@@ -138,7 +142,11 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const checkout = await this.checkoutService.cancelCheckout(checkoutId, userId, guestToken);
+      const checkout = await this.checkoutService.cancelCheckout(
+        checkoutId,
+        userId,
+        guestToken,
+      );
 
       return ResponseHelper.ok(reply, "Checkout cancelled", checkout);
     } catch (error) {
@@ -156,7 +164,10 @@ export class CheckoutController {
   ) {
     try {
       if (!this.checkoutOrderService) {
-        return ResponseHelper.error(reply, new Error("Checkout order service not initialized"));
+        return ResponseHelper.error(
+          reply,
+          new Error("Checkout order service not initialized"),
+        );
       }
 
       const userId = request.user?.userId;
@@ -177,7 +188,11 @@ export class CheckoutController {
         billingAddress: body.billingAddress,
       });
 
-      return ResponseHelper.ok(reply, "Order created successfully from checkout", result);
+      return ResponseHelper.ok(
+        reply,
+        "Order created successfully from checkout",
+        result,
+      );
     } catch (error) {
       request.log.error(error, "Failed to complete checkout and create order");
       return ResponseHelper.error(reply, error);
@@ -190,7 +205,10 @@ export class CheckoutController {
   ) {
     try {
       if (!this.checkoutOrderService) {
-        return ResponseHelper.error(reply, new Error("Checkout order service not initialized"));
+        return ResponseHelper.error(
+          reply,
+          new Error("Checkout order service not initialized"),
+        );
       }
 
       const userId = request.user?.userId;
@@ -201,10 +219,17 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const order = await this.checkoutOrderService.getOrderByCheckoutId(checkoutId, userId, guestToken);
+      const order = await this.checkoutOrderService.getOrderByCheckoutId(
+        checkoutId,
+        userId,
+        guestToken,
+      );
 
       if (!order) {
-        return ResponseHelper.notFound(reply, "Order not found for this checkout");
+        return ResponseHelper.notFound(
+          reply,
+          "Order not found for this checkout",
+        );
       }
 
       return ResponseHelper.ok(reply, "Order retrieved", order);

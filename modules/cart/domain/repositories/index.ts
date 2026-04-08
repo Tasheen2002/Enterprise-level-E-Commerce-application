@@ -1,3 +1,3 @@
-export type { CartRepository } from "./cart.repository";
-export type { ReservationRepository } from "./reservation.repository";
-export type { CheckoutRepository } from "./checkout.repository";
+export type { ICartRepository } from "./cart.repository";
+export type { IReservationRepository } from "./reservation.repository";
+export type { ICheckoutRepository } from "./checkout.repository";

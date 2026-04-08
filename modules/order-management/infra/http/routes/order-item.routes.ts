@@ -1,5 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { OrderItemController } from "../controllers/order-item.controller";
+import {
+  OrderItemController,
+  AddItemRequest,
+  UpdateItemRequest,
+  RemoveItemRequest,
+  GetItemsRequest,
+  GetItemRequest,
+} from "../controllers/order-item.controller";
 import { authenticateUser } from "@/api/src/shared/middleware";
 
 const errorResponses = {
@@ -79,7 +86,7 @@ export async function registerOrderItemRoutes(
   orderItemController: OrderItemController,
 ): Promise<void> {
   // Add item to order
-  fastify.post(
+  fastify.post<AddItemRequest>(
     "/orders/:orderId/items",
     {
       preHandler: authenticateUser,
@@ -135,11 +142,11 @@ export async function registerOrderItemRoutes(
         },
       },
     },
-    orderItemController.addItem.bind(orderItemController) as any,
+    orderItemController.addItem.bind(orderItemController),
   );
 
   // Get all items for an order
-  fastify.get(
+  fastify.get<GetItemsRequest>(
     "/orders/:orderId/items",
     {
       preHandler: authenticateUser,
@@ -171,11 +178,11 @@ export async function registerOrderItemRoutes(
         },
       },
     },
-    orderItemController.getItems.bind(orderItemController) as any,
+    orderItemController.getItems.bind(orderItemController),
   );
 
   // Get single order item by ID
-  fastify.get(
+  fastify.get<GetItemRequest>(
     "/items/:itemId",
     {
       preHandler: authenticateUser,
@@ -204,11 +211,11 @@ export async function registerOrderItemRoutes(
         },
       },
     },
-    orderItemController.getItem.bind(orderItemController) as any,
+    orderItemController.getItem.bind(orderItemController),
   );
 
   // Update order item
-  fastify.patch(
+  fastify.patch<UpdateItemRequest>(
     "/orders/:orderId/items/:itemId",
     {
       preHandler: authenticateUser,
@@ -258,11 +265,11 @@ export async function registerOrderItemRoutes(
         },
       },
     },
-    orderItemController.updateItem.bind(orderItemController) as any,
+    orderItemController.updateItem.bind(orderItemController),
   );
 
   // Remove item from order
-  fastify.delete(
+  fastify.delete<RemoveItemRequest>(
     "/orders/:orderId/items/:itemId",
     {
       preHandler: authenticateUser,
@@ -296,6 +303,6 @@ export async function registerOrderItemRoutes(
         },
       },
     },
-    orderItemController.removeItem.bind(orderItemController) as any,
+    orderItemController.removeItem.bind(orderItemController),
   );
 }

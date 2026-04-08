@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateShipmentCommandHandler,
   UpdateShipmentTrackingCommandHandler,
@@ -7,9 +8,10 @@ import {
   GetOrderShipmentsHandler,
   GetShipmentHandler,
   OrderManagementService,
+  ShipmentManagementService,
 } from "../../../application";
 
-interface CreateShipmentRequest {
+export interface CreateShipmentRequest {
   Params: { orderId: string };
   Body: {
     carrier?: string;
@@ -20,7 +22,7 @@ interface CreateShipmentRequest {
   };
 }
 
-interface MarkShippedRequest {
+export interface MarkShippedRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     carrier: string;
@@ -29,7 +31,7 @@ interface MarkShippedRequest {
   };
 }
 
-interface UpdateTrackingRequest {
+export interface UpdateTrackingRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     trackingNumber: string;
@@ -38,18 +40,18 @@ interface UpdateTrackingRequest {
   };
 }
 
-interface MarkDeliveredRequest {
+export interface MarkDeliveredRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
     deliveredAt?: string;
   };
 }
 
-interface GetShipmentsRequest {
+export interface GetShipmentsRequest {
   Params: { orderId: string };
 }
 
-interface GetShipmentRequest {
+export interface GetShipmentRequest {
   Params: { orderId: string; shipmentId: string };
 }
 
@@ -61,13 +63,24 @@ export class OrderShipmentController {
   private getOrderShipmentsHandler: GetOrderShipmentsHandler;
   private getShipmentHandler: GetShipmentHandler;
 
-  constructor(orderService: OrderManagementService) {
+  constructor(
+    orderService: OrderManagementService,
+    shipmentService: ShipmentManagementService,
+  ) {
     this.createShipmentHandler = new CreateShipmentCommandHandler(orderService);
-    this.updateTrackingHandler = new UpdateShipmentTrackingCommandHandler(orderService);
-    this.markShippedHandler = new MarkShipmentShippedCommandHandler(orderService);
-    this.markDeliveredHandler = new MarkShipmentDeliveredCommandHandler(orderService);
-    this.getOrderShipmentsHandler = new GetOrderShipmentsHandler(orderService);
-    this.getShipmentHandler = new GetShipmentHandler(orderService);
+    this.updateTrackingHandler = new UpdateShipmentTrackingCommandHandler(
+      orderService,
+    );
+    this.markShippedHandler = new MarkShipmentShippedCommandHandler(
+      orderService,
+    );
+    this.markDeliveredHandler = new MarkShipmentDeliveredCommandHandler(
+      orderService,
+    );
+    this.getOrderShipmentsHandler = new GetOrderShipmentsHandler(
+      shipmentService,
+    );
+    this.getShipmentHandler = new GetShipmentHandler(shipmentService);
   }
 
   async createShipment(
@@ -76,7 +89,13 @@ export class OrderShipmentController {
   ): Promise<void> {
     try {
       const { orderId } = request.params;
-      const { carrier, service, trackingNumber, giftReceipt, pickupLocationId } = request.body;
+      const {
+        carrier,
+        service,
+        trackingNumber,
+        giftReceipt,
+        pickupLocationId,
+      } = request.body;
 
       const result = await this.createShipmentHandler.handle({
         orderId,
@@ -87,25 +106,14 @@ export class OrderShipmentController {
         pickupLocationId,
       });
 
-      if (result.success) {
-        return reply.code(201).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Shipment created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Shipment created successfully",
+        201,
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create shipment");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -118,23 +126,9 @@ export class OrderShipmentController {
 
       const result = await this.getOrderShipmentsHandler.handle({ orderId });
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Shipments retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to get order shipments");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -145,25 +139,19 @@ export class OrderShipmentController {
     try {
       const { orderId, shipmentId } = request.params;
 
-      const result = await this.getShipmentHandler.handle({ orderId, shipmentId });
-
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-        });
-      }
-    } catch (error) {
-      request.log.error(error, "Failed to get shipment");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
+      const result = await this.getShipmentHandler.handle({
+        orderId,
+        shipmentId,
       });
+
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Shipment retrieved",
+        "Shipment not found",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -183,25 +171,13 @@ export class OrderShipmentController {
         trackingNumber,
       });
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Shipment marked as shipped successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Shipment marked as shipped",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to mark shipment as shipped");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -221,25 +197,13 @@ export class OrderShipmentController {
         service,
       });
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Shipment tracking updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Tracking updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update shipment tracking");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
@@ -257,25 +221,13 @@ export class OrderShipmentController {
         deliveredAt: deliveredAt ? new Date(deliveredAt) : new Date(),
       });
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Shipment marked as delivered successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Shipment marked as delivered",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to mark shipment as delivered");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

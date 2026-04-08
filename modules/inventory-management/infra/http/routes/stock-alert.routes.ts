@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { StockAlertController } from "../controllers/stock-alert.controller";
+import {
+  StockAlertController,
+  ListAlertsQuerystring,
+  CreateAlertBody,
+} from "../controllers/stock-alert.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +56,7 @@ export async function registerStockAlertRoutes(
   controller: StockAlertController,
 ): Promise<void> {
   // List alerts
-  fastify.get(
+  fastify.get<{ Querystring: ListAlertsQuerystring }>(
     "/alerts",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -75,7 +79,7 @@ export async function registerStockAlertRoutes(
         },
       },
     },
-    controller.listAlerts.bind(controller) as any,
+    controller.listAlerts.bind(controller),
   );
 
   // Get active alerts
@@ -94,11 +98,11 @@ export async function registerStockAlertRoutes(
         },
       },
     },
-    controller.getActiveAlerts.bind(controller) as any,
+    controller.getActiveAlerts.bind(controller),
   );
 
   // Get alert
-  fastify.get(
+  fastify.get<{ Params: { alertId: string } }>(
     "/alerts/:alertId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -120,11 +124,11 @@ export async function registerStockAlertRoutes(
         },
       },
     },
-    controller.getAlert.bind(controller) as any,
+    controller.getAlert.bind(controller),
   );
 
   // Create alert
-  fastify.post(
+  fastify.post<{ Body: CreateAlertBody }>(
     "/alerts",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -147,11 +151,11 @@ export async function registerStockAlertRoutes(
         },
       },
     },
-    controller.createAlert.bind(controller) as any,
+    controller.createAlert.bind(controller),
   );
 
   // Resolve alert
-  fastify.put(
+  fastify.put<{ Params: { alertId: string } }>(
     "/alerts/:alertId/resolve",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -173,6 +177,6 @@ export async function registerStockAlertRoutes(
         },
       },
     },
-    controller.resolveAlert.bind(controller) as any,
+    controller.resolveAlert.bind(controller),
   );
 }

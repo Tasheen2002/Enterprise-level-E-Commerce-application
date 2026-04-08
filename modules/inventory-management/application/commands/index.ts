@@ -34,6 +34,11 @@ export { DeleteSupplierHandler } from "./supplier/delete-supplier.handler";
 // Purchase Order
 export type { CreatePurchaseOrderCommand } from "./purchase-order/create-purchase-order.command";
 export { CreatePurchaseOrderHandler } from "./purchase-order/create-purchase-order.handler";
+export type {
+  CreatePurchaseOrderWithItemsCommand,
+  CreatePurchaseOrderWithItemsResult,
+} from "./purchase-order/create-purchase-order-with-items.command";
+export { CreatePurchaseOrderWithItemsHandler } from "./purchase-order/create-purchase-order-with-items.handler";
 export type { AddPOItemCommand } from "./purchase-order/add-po-item.command";
 export { AddPOItemHandler } from "./purchase-order/add-po-item.handler";
 export type { UpdatePOItemCommand } from "./purchase-order/update-po-item.command";

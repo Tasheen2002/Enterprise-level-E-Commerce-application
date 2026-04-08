@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateBackorderCommandHandler,
   CreateBackorderCommand,
@@ -15,33 +16,33 @@ import {
   BackorderManagementService,
 } from "../../../application";
 
-interface CreateBackorderRequest {
+export interface CreateBackorderRequest {
   Body: {
     orderItemId: string;
     promisedEta?: string;
   };
 }
 
-interface UpdateBackorderEtaRequest {
+export interface UpdateBackorderEtaRequest {
   Params: { orderItemId: string };
   Body: {
     promisedEta: string;
   };
 }
 
-interface MarkBackorderNotifiedRequest {
+export interface MarkBackorderNotifiedRequest {
   Params: { orderItemId: string };
 }
 
-interface DeleteBackorderRequest {
+export interface DeleteBackorderRequest {
   Params: { orderItemId: string };
 }
 
-interface GetBackorderRequest {
+export interface GetBackorderRequest {
   Params: { orderItemId: string };
 }
 
-interface ListBackordersRequest {
+export interface ListBackordersRequest {
   Querystring: {
     limit?: number;
     offset?: number;
@@ -61,8 +62,12 @@ export class BackorderController {
 
   constructor(private readonly backorderService: BackorderManagementService) {
     this.createHandler = new CreateBackorderCommandHandler(backorderService);
-    this.updateEtaHandler = new UpdateBackorderEtaCommandHandler(backorderService);
-    this.markNotifiedHandler = new MarkBackorderNotifiedCommandHandler(backorderService);
+    this.updateEtaHandler = new UpdateBackorderEtaCommandHandler(
+      backorderService,
+    );
+    this.markNotifiedHandler = new MarkBackorderNotifiedCommandHandler(
+      backorderService,
+    );
     this.deleteHandler = new DeleteBackorderCommandHandler(backorderService);
     this.getBackorderHandler = new GetBackorderHandler(backorderService);
     this.listBackordersHandler = new ListBackordersHandler(backorderService);
@@ -71,7 +76,7 @@ export class BackorderController {
   async createBackorder(
     request: FastifyRequest<CreateBackorderRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command: CreateBackorderCommand = {
         orderItemId: request.body.orderItemId,
@@ -82,32 +87,21 @@ export class BackorderController {
 
       const result = await this.createHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(201).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Backorder created successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Backorder created successfully",
+        201,
+      );
     } catch (error) {
-      request.log.error(error, "Failed to create backorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updatePromisedEta(
     request: FastifyRequest<UpdateBackorderEtaRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command: UpdateBackorderEtaCommand = {
         orderItemId: request.params.orderItemId,
@@ -116,32 +110,20 @@ export class BackorderController {
 
       const result = await this.updateEtaHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Backorder promised ETA updated successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Backorder promised ETA updated successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to update backorder ETA");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async markNotified(
     request: FastifyRequest<MarkBackorderNotifiedRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command: MarkBackorderNotifiedCommand = {
         orderItemId: request.params.orderItemId,
@@ -149,32 +131,20 @@ export class BackorderController {
 
       const result = await this.markNotifiedHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data?.toSnapshot(),
-          message: "Backorder marked as notified successfully",
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Backorder marked as notified successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to mark backorder as notified");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteBackorder(
     request: FastifyRequest<DeleteBackorderRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command: DeleteBackorderCommand = {
         orderItemId: request.params.orderItemId,
@@ -182,31 +152,20 @@ export class BackorderController {
 
       const result = await this.deleteHandler.handle(command);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          message: "Backorder deleted successfully",
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-          errors: result.errors,
-        });
-      }
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Backorder deleted successfully",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to delete backorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getBackorder(
     request: FastifyRequest<GetBackorderRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const query: GetBackorderQuery = {
         orderItemId: request.params.orderItemId,
@@ -214,30 +173,21 @@ export class BackorderController {
 
       const result = await this.getBackorderHandler.handle(query);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(404).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Backorder retrieved",
+        "Backorder not found",
+      );
     } catch (error) {
-      request.log.error(error, "Failed to get backorder");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listBackorders(
     request: FastifyRequest<ListBackordersRequest>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const query: ListBackordersQuery = {
         limit: request.query.limit,
@@ -249,23 +199,9 @@ export class BackorderController {
 
       const result = await this.listBackordersHandler.handle(query);
 
-      if (result.success) {
-        return reply.code(200).send({
-          success: true,
-          data: result.data,
-        });
-      } else {
-        return reply.code(400).send({
-          success: false,
-          error: result.error,
-        });
-      }
+      return ResponseHelper.fromQuery(reply, result, "Backorders retrieved");
     } catch (error) {
-      request.log.error(error, "Failed to list backorders");
-      return reply.code(500).send({
-        success: false,
-        error: "Internal server error",
-      });
+      return ResponseHelper.error(reply, error);
     }
   }
 }

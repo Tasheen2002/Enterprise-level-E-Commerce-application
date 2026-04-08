@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/cart.errors";
+
 export enum CheckoutStatusEnum {
   PENDING = "pending",
   COMPLETED = "completed",
@@ -29,7 +31,7 @@ export class CheckoutStatus {
       (v) => v === value,
     );
     if (!enumValue) {
-      throw new Error(`Invalid checkout status: ${value}`);
+      throw new DomainValidationError(`Invalid checkout status: ${value}`);
     }
     return new CheckoutStatus(enumValue);
   }

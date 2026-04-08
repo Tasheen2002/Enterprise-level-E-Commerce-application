@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { MediaManagementService } from "../../../application/services/media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateMediaAssetRequest {
+export interface CreateMediaAssetRequest {
   storageKey: string;
   mime: string;
   width?: number;
@@ -14,11 +14,11 @@ interface CreateMediaAssetRequest {
   renditions?: Record<string, any>;
 }
 
-interface UpdateMediaAssetRequest extends Partial<
+export interface UpdateMediaAssetRequest extends Partial<
   Omit<CreateMediaAssetRequest, "storageKey">
 > {}
 
-interface MediaAssetQueryParams {
+export interface MediaAssetQueryParams {
   page?: number;
   limit?: number;
   mimeType?: string;

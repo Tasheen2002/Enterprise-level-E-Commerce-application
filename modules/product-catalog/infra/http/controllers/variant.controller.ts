@@ -1,9 +1,20 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import {
+  CreateProductVariantCommand,
+  CreateProductVariantHandler,
+  UpdateProductVariantCommand,
+  UpdateProductVariantHandler,
+  DeleteProductVariantCommand,
+  DeleteProductVariantHandler,
+  ListVariantsQuery,
+  ListVariantsHandler,
+  GetVariantQuery,
+  GetVariantHandler,
+} from "../../../application";
 import { VariantManagementService } from "../../../application/services/variant-management.service";
-import { PrismaClient } from "@prisma/client";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateVariantRequest {
+export interface CreateVariantRequest {
   sku: string;
   size?: string;
   color?: string;
@@ -16,9 +27,9 @@ interface CreateVariantRequest {
   restockEta?: string;
 }
 
-interface UpdateVariantRequest extends Partial<CreateVariantRequest> {}
+export interface UpdateVariantRequest extends Partial<CreateVariantRequest> {}
 
-interface VariantQueryParams {
+export interface VariantQueryParams {
   page?: number;
   limit?: number;
   size?: string;
@@ -29,10 +40,19 @@ interface VariantQueryParams {
 }
 
 export class VariantController {
-  constructor(
-    private readonly variantManagementService: VariantManagementService,
-    private readonly prisma?: PrismaClient,
-  ) {}
+  private createVariantHandler: CreateProductVariantHandler;
+  private updateVariantHandler: UpdateProductVariantHandler;
+  private deleteVariantHandler: DeleteProductVariantHandler;
+  private listVariantsHandler: ListVariantsHandler;
+  private getVariantHandler: GetVariantHandler;
+
+  constructor(variantManagementService: VariantManagementService) {
+    this.createVariantHandler = new CreateProductVariantHandler(variantManagementService);
+    this.updateVariantHandler = new UpdateProductVariantHandler(variantManagementService);
+    this.deleteVariantHandler = new DeleteProductVariantHandler(variantManagementService);
+    this.listVariantsHandler = new ListVariantsHandler(variantManagementService);
+    this.getVariantHandler = new GetVariantHandler(variantManagementService);
+  }
 
   async getVariants(
     request: FastifyRequest<{
@@ -42,74 +62,19 @@ export class VariantController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const {
-        page = 1,
-        limit = 20,
-        size,
-        color,
-        inStock,
-        sortBy = "createdAt",
-        sortOrder = "asc",
-      } = request.query;
-
-      const options = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        size,
-        color,
-        inStock,
-        sortBy,
-        sortOrder,
+      const query: ListVariantsQuery = {
+        productId: request.params.productId,
+        page: request.query.page,
+        limit: request.query.limit,
+        size: request.query.size,
+        color: request.query.color,
+        inStock: request.query.inStock,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
       };
 
-      const variants = await this.variantManagementService.getVariantsByProduct(
-        productId,
-        options,
-      );
-
-      // Enrich variants with inventory if prisma is available
-      let enrichedVariants = variants.map((v) => v.toData());
-
-      if (this.prisma) {
-        const variantIds = variants.map((v) => v.getId().getValue());
-        const variantsWithInventory = await this.prisma.productVariant.findMany(
-          {
-            where: { id: { in: variantIds } },
-            include: {
-              inventoryStocks: true,
-            },
-          },
-        );
-
-        enrichedVariants = variants.map((v) => {
-          const data = v.toData();
-          const dbVariant = variantsWithInventory.find(
-            (dbV) => dbV.id === data.id,
-          );
-
-          // Calculate total inventory
-          const totalInventory =
-            dbVariant?.inventoryStocks?.reduce((sum, stock) => {
-              return sum + (stock.onHand - stock.reserved);
-            }, 0) || 0;
-
-          return {
-            ...data,
-            inventory: totalInventory,
-          };
-        });
-      }
-
-      return ResponseHelper.ok(reply, "Variants retrieved successfully", {
-        variants: enrichedVariants,
-        meta: {
-          productId,
-          page: options.page,
-          limit: options.limit,
-          filters: { size, color, inStock },
-        },
-      });
+      const result = await this.listVariantsHandler.handle(query);
+      return ResponseHelper.fromQuery(reply, result, "Variants retrieved successfully");
     } catch (error) {
       request.log.error(error, "Failed to get variants");
       return ResponseHelper.error(reply, error);
@@ -121,31 +86,14 @@ export class VariantController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const variant = await this.variantManagementService.getVariantById(id);
-
-      if (!variant) {
-        return ResponseHelper.notFound(reply, "Variant not found");
-      }
-
-      let enrichedVariant = variant.toData();
-
-      if (this.prisma) {
-        const dbVariant = await this.prisma.productVariant.findUnique({
-          where: { id },
-          include: { inventoryStocks: true },
-        });
-
-        const totalInventory =
-          dbVariant?.inventoryStocks?.reduce((sum, stock) => {
-            return sum + (stock.onHand - stock.reserved);
-          }, 0) || 0;
-
-        enrichedVariant = { ...enrichedVariant, inventory: totalInventory };
-      }
-
-      return ResponseHelper.ok(reply, "Variant retrieved successfully", enrichedVariant);
+      const query: GetVariantQuery = { variantId: request.params.id };
+      const result = await this.getVariantHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Variant retrieved successfully",
+        "Variant not found",
+      );
     } catch (error) {
       request.log.error(error, "Failed to get variant");
       return ResponseHelper.error(reply, error);
@@ -161,31 +109,34 @@ export class VariantController {
   ) {
     try {
       const { productId } = request.params;
-      const variantData = request.body;
+      const body = request.body;
 
-      const createData = {
-        ...variantData,
-        restockEta: variantData.restockEta ? new Date(variantData.restockEta) : undefined,
+      const command: CreateProductVariantCommand = {
+        productId,
+        sku: body.sku,
+        size: body.size,
+        color: body.color,
+        barcode: body.barcode,
+        weightG: body.weightG,
+        dims: body.dims,
+        taxClass: body.taxClass,
+        allowBackorder: body.allowBackorder,
+        allowPreorder: body.allowPreorder,
+        restockEta: body.restockEta ? new Date(body.restockEta) : undefined,
       };
 
-      const variant = await this.variantManagementService.createVariant(productId, createData);
+      const result = await this.createVariantHandler.handle(command);
 
-      return ResponseHelper.created(reply, "Variant created successfully", variant.toData());
+      if (result.success && result.data) {
+        return ResponseHelper.created(
+          reply,
+          "Variant created successfully",
+          result.data.toData(),
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Variant created successfully");
     } catch (error) {
       request.log.error(error, "Failed to create variant");
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("duplicate") || error.message.includes("unique"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Variant with this SKU already exists",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -198,42 +149,34 @@ export class VariantController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const updateData = request.body;
+      const body = request.body;
 
-      const updatePayload = {
-        ...updateData,
-        restockEta: updateData.restockEta ? new Date(updateData.restockEta) : undefined,
+      const command: UpdateProductVariantCommand = {
+        variantId: request.params.id,
+        sku: body.sku,
+        size: body.size,
+        color: body.color,
+        barcode: body.barcode,
+        weightG: body.weightG,
+        dims: body.dims,
+        taxClass: body.taxClass,
+        allowBackorder: body.allowBackorder,
+        allowPreorder: body.allowPreorder,
+        restockEta: body.restockEta ? new Date(body.restockEta) : undefined,
       };
 
-      const variant = await this.variantManagementService.updateVariant(id, updatePayload);
+      const result = await this.updateVariantHandler.handle(command);
 
-      if (!variant) {
-        return ResponseHelper.notFound(reply, "Variant not found");
+      if (result.success && result.data) {
+        return ResponseHelper.ok(
+          reply,
+          "Variant updated successfully",
+          result.data.toData(),
+        );
       }
-
-      return ResponseHelper.ok(reply, "Variant updated successfully", variant.toData());
+      return ResponseHelper.fromCommand(reply, result, "Variant updated successfully");
     } catch (error) {
       request.log.error(error, "Failed to update variant");
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("duplicate") ||
-          error.message.includes("unique") ||
-          error.message.includes("already exists"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: error.message || "Variant with this SKU already exists",
-        });
-      }
-
-      if (error instanceof Error && error.message.includes("found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -243,15 +186,9 @@ export class VariantController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const deleted = await this.variantManagementService.deleteVariant(id);
-
-      if (!deleted) {
-        return ResponseHelper.notFound(reply, "Variant not found");
-      }
-
-      return ResponseHelper.ok(reply, "Variant deleted successfully");
+      const command: DeleteProductVariantCommand = { variantId: request.params.id };
+      const result = await this.deleteVariantHandler.handle(command);
+      return ResponseHelper.fromCommand(reply, result, "Variant deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete variant");
       return ResponseHelper.error(reply, error);

@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { CategoryController } from "../controllers/category.controller";
+import { CategoryController, CategoryQueryParams, CreateCategoryRequest, UpdateCategoryRequest } from "../controllers/category.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerCategoryRoutes(
@@ -7,7 +7,7 @@ export async function registerCategoryRoutes(
   controller: CategoryController,
 ): Promise<void> {
   // GET /categories — List categories (public)
-  fastify.get(
+  fastify.get<{ Querystring: CategoryQueryParams }>(
     "/categories",
     {
       schema: {
@@ -69,7 +69,7 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.getCategories.bind(controller) as any,
+    controller.getCategories.bind(controller),
   );
 
   // GET /categories/hierarchy — Get category tree (public, registered before /:id)
@@ -122,7 +122,7 @@ export async function registerCategoryRoutes(
   );
 
   // POST /categories/reorder — Reorder categories (Admin only, registered before POST /categories to keep specificity)
-  fastify.post(
+  fastify.post<{ Body: { categoryOrders: Array<{ id: string; position: number }> } }>(
     "/categories/reorder",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -150,11 +150,11 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.reorderCategories.bind(controller) as any,
+    controller.reorderCategories.bind(controller),
   );
 
   // POST /categories — Create category (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateCategoryRequest }>(
     "/categories",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -202,11 +202,11 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.createCategory.bind(controller) as any,
+    controller.createCategory.bind(controller),
   );
 
   // PUT /categories/:id — Update category (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateCategoryRequest }>(
     "/categories/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -230,11 +230,11 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.updateCategory.bind(controller) as any,
+    controller.updateCategory.bind(controller),
   );
 
   // DELETE /categories/:id — Delete category (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/categories/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -250,6 +250,6 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.deleteCategory.bind(controller) as any,
+    controller.deleteCategory.bind(controller),
   );
 }

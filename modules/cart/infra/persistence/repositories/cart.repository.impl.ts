@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { CartRepository } from "../../../domain/repositories/cart.repository";
+import { ICartRepository } from "../../../domain/repositories/cart.repository";
 import {
   ShoppingCart,
   ShoppingCartEntityData,
@@ -13,7 +13,7 @@ import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
 
-export class CartRepositoryImpl implements CartRepository {
+export class CartRepositoryImpl implements ICartRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   // Core CRUD operations
@@ -124,7 +124,9 @@ export class CartRepositoryImpl implements CartRepository {
     return this.mapPrismaToEntity(cartData);
   }
 
-  async findActiveCartByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null> {
+  async findActiveCartByCartOwnerId(
+    userId: CartOwnerId,
+  ): Promise<ShoppingCart | null> {
     const cartData = await this.prisma.shoppingCart.findFirst({
       where: {
         userId: userId.getValue(),

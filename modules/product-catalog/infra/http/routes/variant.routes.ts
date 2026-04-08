@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { VariantController } from "../controllers/variant.controller";
+import { VariantController, VariantQueryParams, CreateVariantRequest, UpdateVariantRequest } from "../controllers/variant.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerVariantRoutes(
@@ -7,7 +7,7 @@ export async function registerVariantRoutes(
   controller: VariantController,
 ): Promise<void> {
   // GET /products/:productId/variants — List variants for a product (public)
-  fastify.get(
+  fastify.get<{ Params: { productId: string }; Querystring: VariantQueryParams }>(
     "/products/:productId/variants",
     {
       schema: {
@@ -41,7 +41,7 @@ export async function registerVariantRoutes(
         },
       },
     },
-    controller.getVariants.bind(controller) as any,
+    controller.getVariants.bind(controller),
   );
 
   // GET /variants/:id — Get variant by ID (public)
@@ -63,7 +63,7 @@ export async function registerVariantRoutes(
   );
 
   // POST /products/:productId/variants — Create variant (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { productId: string }; Body: CreateVariantRequest }>(
     "/products/:productId/variants",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -103,11 +103,11 @@ export async function registerVariantRoutes(
         },
       },
     },
-    controller.createVariant.bind(controller) as any,
+    controller.createVariant.bind(controller),
   );
 
   // PUT /variants/:id — Update variant (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateVariantRequest }>(
     "/variants/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -138,11 +138,11 @@ export async function registerVariantRoutes(
         },
       },
     },
-    controller.updateVariant.bind(controller) as any,
+    controller.updateVariant.bind(controller),
   );
 
   // DELETE /variants/:id — Delete variant (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/variants/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -158,6 +158,6 @@ export async function registerVariantRoutes(
         },
       },
     },
-    controller.deleteVariant.bind(controller) as any,
+    controller.deleteVariant.bind(controller),
   );
 }

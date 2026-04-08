@@ -1,6 +1,6 @@
-import { CartRepository } from "../../domain/repositories/cart.repository";
-import { ReservationRepository } from "../../domain/repositories/reservation.repository";
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
+import { IReservationRepository } from "../../domain/repositories/reservation.repository";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
 import {
   ShoppingCart,
   CreateShoppingCartData,
@@ -14,18 +14,23 @@ import { CartOwnerId } from "../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../domain/value-objects/guest-token.vo";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { PromoData } from "../../domain/value-objects/applied-promos.vo";
-import { IProductVariantRepository } from "../../../product-catalog/domain/repositories/product-variant.repository";
-import { VariantId as ProductVariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
-import { IProductRepository } from "../../../product-catalog/domain/repositories/product.repository";
-import { IProductMediaRepository } from "../../../product-catalog/domain/repositories/product-media.repository";
-import { IMediaAssetRepository } from "../../../product-catalog/domain/repositories/media-asset.repository";
-import { ProductId } from "../../../product-catalog/domain/value-objects/product-id.vo";
-import { MediaAssetId } from "../../../product-catalog/domain/entities/media-asset.entity";
-import { SettingsService } from "../../../admin/application/services/settings.service";
+import {
+  IExternalProductVariantRepository,
+  IExternalProductRepository,
+  IExternalProductMediaRepository,
+  IExternalMediaAssetRepository,
+  IExternalSettingsService,
+} from "../../domain/external-services";
 import {
   RESERVATION_DEFAULT_DURATION_MINUTES,
   DEFAULT_CURRENCY,
 } from "../../domain/constants";
+import {
+  DomainValidationError,
+  CartNotFoundError,
+  CartOwnershipError,
+  InvalidCartStateError,
+} from "../../domain/errors/cart.errors";
 
 // DTOs for service operations
 export interface CreateCartDto {
@@ -153,14 +158,14 @@ export interface CartDto {
 
 export class CartManagementService {
   constructor(
-    private readonly cartRepository: CartRepository,
-    private readonly reservationRepository: ReservationRepository,
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly productVariantRepository: IProductVariantRepository,
-    private readonly productRepository: IProductRepository,
-    private readonly productMediaRepository: IProductMediaRepository,
-    private readonly mediaAssetRepository: IMediaAssetRepository,
-    private readonly settingsService: SettingsService,
+    private readonly cartRepository: ICartRepository,
+    private readonly reservationRepository: IReservationRepository,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly productVariantRepository: IExternalProductVariantRepository,
+    private readonly productRepository: IExternalProductRepository,
+    private readonly productMediaRepository: IExternalProductMediaRepository,
+    private readonly mediaAssetRepository: IExternalMediaAssetRepository,
+    private readonly settingsService: IExternalSettingsService,
   ) {}
 
   // Cart creation
@@ -191,7 +196,10 @@ export class CartManagementService {
       currency: dto.currency,
       reservationExpiresAt: new Date(
         Date.now() +
-          (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+          (dto.reservationDurationMinutes ||
+            RESERVATION_DEFAULT_DURATION_MINUTES) *
+            60 *
+            1000,
       ), // Always create with reservation expiry
     };
 
@@ -221,7 +229,10 @@ export class CartManagementService {
         // Safe to reuse - update reservation expiry and return existing cart
         const newExpiryTime = new Date(
           Date.now() +
-            (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+            (dto.reservationDurationMinutes ||
+              RESERVATION_DEFAULT_DURATION_MINUTES) *
+              60 *
+              1000,
         );
         existingCart.updateReservationExpiry(newExpiryTime);
         await this.cartRepository.update(existingCart);
@@ -236,7 +247,10 @@ export class CartManagementService {
       currency: dto.currency,
       reservationExpiresAt: new Date(
         Date.now() +
-          (dto.reservationDurationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES) * 60 * 1000,
+          (dto.reservationDurationMinutes ||
+            RESERVATION_DEFAULT_DURATION_MINUTES) *
+            60 *
+            1000,
       ), // Always create with reservation expiry
     };
 
@@ -297,21 +311,21 @@ export class CartManagementService {
     let cart: ShoppingCart | null = null;
 
     // Fetch product variant
-    const productVariant = await this.productVariantRepository.findById(
-      ProductVariantId.fromString(dto.variantId),
-    );
+    const productVariant = await this.productVariantRepository.findById({
+      getValue: () => dto.variantId,
+    });
 
     if (!productVariant) {
-      throw new Error("Product variant not found");
+      throw new DomainValidationError("Product variant not found");
     }
 
     // Get the unit price from the product (price is now at product level)
     const product = await this.productRepository.findById(
-      ProductId.fromString(productVariant.getProductId().getValue()),
+      productVariant.getProductId(),
     );
 
     if (!product) {
-      throw new Error("Product not found");
+      throw new DomainValidationError("Product not found");
     }
 
     const unitPrice = product.getPrice().getValue();
@@ -320,7 +334,7 @@ export class CartManagementService {
     if (dto.cartId) {
       cart = await this.cartRepository.findById(CartId.fromString(dto.cartId));
       if (!cart) {
-        throw new Error("Cart not found");
+        throw new CartNotFoundError(dto.cartId);
       }
 
       // CRITICAL: Check if this cart has a completed checkout
@@ -347,7 +361,9 @@ export class CartManagementService {
             CartId.fromString(newCartDto.cartId),
           );
         } else {
-          throw new Error("Cannot add items to a cart with a completed order");
+          throw new InvalidCartStateError(
+            "Cannot add items to a cart with a completed order",
+          );
         }
       }
     } else if (dto.userId) {
@@ -381,7 +397,7 @@ export class CartManagementService {
     }
 
     if (!cart) {
-      throw new Error("Unable to find or create cart");
+      throw new CartNotFoundError();
     }
 
     // Validate ownership
@@ -442,7 +458,7 @@ export class CartManagementService {
     );
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(dto.cartId);
     }
 
     // Validate ownership
@@ -476,7 +492,7 @@ export class CartManagementService {
     );
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(dto.cartId);
     }
 
     // Validate ownership
@@ -503,7 +519,7 @@ export class CartManagementService {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     // Validate ownership
@@ -526,7 +542,7 @@ export class CartManagementService {
     );
 
     if (!guestCart) {
-      throw new Error("Guest cart not found");
+      throw new CartNotFoundError(dto.guestToken);
     }
 
     if (dto.mergeWithExisting) {
@@ -628,14 +644,14 @@ export class CartManagementService {
 
     if (cartCartOwnerId) {
       if (!userId || cartCartOwnerId !== userId) {
-        throw new Error("Unauthorized: Cart does not belong to user");
+        throw new CartOwnershipError("Cart does not belong to user");
       }
     } else if (cartGuestToken) {
       if (!guestToken || cartGuestToken !== guestToken) {
-        throw new Error("Unauthorized: Cart does not belong to guest");
+        throw new CartOwnershipError("Cart does not belong to guest");
       }
     } else {
-      throw new Error("Unauthorized: Cart has no owner");
+      throw new CartOwnershipError("Cart has no owner");
     }
   }
 
@@ -728,9 +744,9 @@ export class CartManagementService {
     const variantId = item.getVariantId().getValue();
 
     // Fetch variant details
-    const variant = await this.productVariantRepository.findById(
-      ProductVariantId.fromString(variantId),
-    );
+    const variant = await this.productVariantRepository.findById({
+      getValue: () => variantId,
+    });
 
     let productDetails = undefined;
     let variantDetails = undefined;
@@ -757,11 +773,9 @@ export class CartManagementService {
 
         const images = await Promise.all(
           productMediaList.map(async (media) => {
-            // Convert value-objects MediaAssetId to entity MediaAssetId
-            const assetId = MediaAssetId.fromString(
-              media.getAssetId().getValue(),
+            const asset = await this.mediaAssetRepository.findById(
+              media.getAssetId(),
             );
-            const asset = await this.mediaAssetRepository.findById(assetId);
             return {
               url: asset?.getStorageKey() || "",
               alt: asset?.getAltText() || undefined,
@@ -821,7 +835,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -841,7 +855,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -880,7 +894,7 @@ export class CartManagementService {
   ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);
@@ -893,7 +907,7 @@ export class CartManagementService {
     userId?: string,
     guestToken?: string,
   ): Promise<
-    ReturnType<CartRepository["getCartWithCheckoutInfo"]> extends Promise<
+    ReturnType<ICartRepository["getCartWithCheckoutInfo"]> extends Promise<
       infer T
     >
       ? T
@@ -901,7 +915,7 @@ export class CartManagementService {
   > {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(cartId);
     }
 
     this.validateCartOwnership(cart, userId, guestToken);

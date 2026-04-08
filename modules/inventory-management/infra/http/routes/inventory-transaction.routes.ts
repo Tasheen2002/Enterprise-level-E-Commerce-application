@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { InventoryTransactionController } from "../controllers/inventory-transaction.controller";
+import {
+  InventoryTransactionController,
+  TransactionsByVariantQuerystring,
+  ListTransactionsQuerystring,
+} from "../controllers/inventory-transaction.controller";
 
 const errorResponses = {
   400: {
@@ -51,8 +55,37 @@ export async function registerInventoryTransactionRoutes(
   fastify: FastifyInstance,
   controller: InventoryTransactionController,
 ): Promise<void> {
+  // Get transaction by ID
+  fastify.get<{ Params: { transactionId: string } }>(
+    "/transactions/:transactionId",
+    {
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      schema: {
+        description: "Get a single inventory transaction by ID",
+        tags: ["Inventory Transactions"],
+        summary: "Get Transaction",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            transactionId: { type: "string", format: "uuid" },
+          },
+          required: ["transactionId"],
+        },
+        response: {
+          200: { description: "Transaction details" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.getTransaction.bind(controller),
+  );
+
   // Get transactions by variant
-  fastify.get(
+  fastify.get<{
+    Params: { variantId: string };
+    Querystring: TransactionsByVariantQuerystring;
+  }>(
     "/transactions/variant/:variantId",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -82,11 +115,11 @@ export async function registerInventoryTransactionRoutes(
         },
       },
     },
-    controller.getTransactionsByVariant.bind(controller) as any,
+    controller.getTransactionsByVariant.bind(controller),
   );
 
   // List transactions
-  fastify.get(
+  fastify.get<{ Querystring: ListTransactionsQuerystring }>(
     "/transactions",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -111,6 +144,6 @@ export async function registerInventoryTransactionRoutes(
         },
       },
     },
-    controller.listTransactions.bind(controller) as any,
+    controller.listTransactions.bind(controller),
   );
 }

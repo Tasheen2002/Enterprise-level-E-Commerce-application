@@ -1,8 +1,23 @@
 import { FastifyInstance } from "fastify";
-import { LoyaltyProgramController } from "../controllers/loyalty-program.controller";
-import { LoyaltyAccountController } from "../controllers/loyalty-account.controller";
-import { LoyaltyTransactionController } from "../controllers/loyalty-transaction.controller";
-import { authenticateUser, requireAdmin, requireRole } from "@/api/src/shared/middleware";
+import {
+  LoyaltyProgramController,
+  CreateLoyaltyProgramRequest,
+} from "../controllers/loyalty-program.controller";
+import {
+  LoyaltyAccountController,
+  GetLoyaltyAccountQuerystring,
+} from "../controllers/loyalty-account.controller";
+import {
+  LoyaltyTransactionController,
+  AwardPointsRequest,
+  RedeemPointsRequest,
+  ListLoyaltyTransactionsQuerystring,
+} from "../controllers/loyalty-transaction.controller";
+import {
+  authenticateUser,
+  requireAdmin,
+  requireRole,
+} from "@/api/src/shared/middleware";
 
 const errorResponses = {
   400: {
@@ -30,7 +45,7 @@ export async function registerLoyaltyRoutes(
 ): Promise<void> {
   // ── Programs ────────────────────────────────────────────────────────────────
 
-  fastify.post(
+  fastify.post<{ Body: CreateLoyaltyProgramRequest }>(
     "/loyalty/programs",
     {
       preHandler: requireAdmin,
@@ -62,7 +77,7 @@ export async function registerLoyaltyRoutes(
         },
       },
     },
-    programController.create.bind(programController) as any,
+    programController.create.bind(programController),
   );
 
   fastify.get(
@@ -78,18 +93,21 @@ export async function registerLoyaltyRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
         },
       },
     },
-    programController.list.bind(programController) as any,
+    programController.list.bind(programController),
   );
 
-  // ── Accounts ────────────────────────────────────────────────────────────────
+  // ── Accounts ────────────────────────────────────────────────────────────────────────
 
-  fastify.get(
+  fastify.get<{ Querystring: GetLoyaltyAccountQuerystring }>(
     "/loyalty/account",
     {
       preHandler: authenticateUser,
@@ -119,12 +137,12 @@ export async function registerLoyaltyRoutes(
         },
       },
     },
-    accountController.get.bind(accountController) as any,
+    accountController.get.bind(accountController),
   );
 
-  // ── Transactions ────────────────────────────────────────────────────────────
+  // ── Transactions ────────────────────────────────────────────────────────────────────
 
-  fastify.post(
+  fastify.post<{ Body: AwardPointsRequest }>(
     "/loyalty/points/award",
     {
       preHandler: requireRole(["STAFF"]),
@@ -157,15 +175,16 @@ export async function registerLoyaltyRoutes(
         },
       },
     },
-    txnController.award.bind(txnController) as any,
+    txnController.award.bind(txnController),
   );
 
-  fastify.post(
+  fastify.post<{ Body: RedeemPointsRequest }>(
     "/loyalty/points/redeem",
     {
       preHandler: requireRole(["STAFF"]),
       schema: {
-        description: "Redeem loyalty points for a discount or reward — Staff/Admin only.",
+        description:
+          "Redeem loyalty points for a discount or reward — Staff/Admin only.",
         tags: ["Loyalty Transactions"],
         summary: "Redeem Loyalty Points",
         security: [{ bearerAuth: [] }],
@@ -192,15 +211,16 @@ export async function registerLoyaltyRoutes(
         },
       },
     },
-    txnController.redeem.bind(txnController) as any,
+    txnController.redeem.bind(txnController),
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: ListLoyaltyTransactionsQuerystring }>(
     "/loyalty/transactions",
     {
       preHandler: authenticateUser,
       schema: {
-        description: "List loyalty transaction history filtered by account or order.",
+        description:
+          "List loyalty transaction history filtered by account or order.",
         tags: ["Loyalty Transactions"],
         summary: "List Loyalty Transactions",
         security: [{ bearerAuth: [] }],
@@ -217,13 +237,16 @@ export async function registerLoyaltyRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
           ...errorResponses,
         },
       },
     },
-    txnController.list.bind(txnController) as any,
+    txnController.list.bind(txnController),
   );
 }

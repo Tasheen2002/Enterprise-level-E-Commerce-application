@@ -14,6 +14,23 @@ import {
 import { SupplierManagementService } from "../../../application/services/supplier-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface CreateSupplierBody {
+  name: string;
+  leadTimeDays?: number;
+  contacts?: Array<{ name?: string; email?: string; phone?: string }>;
+}
+
+export interface UpdateSupplierBody {
+  name?: string;
+  leadTimeDays?: number;
+  contacts?: any[];
+}
+
+export interface ListSuppliersQuerystring {
+  limit?: number;
+  offset?: number;
+}
+
 export class SupplierController {
   private createSupplierHandler: CreateSupplierHandler;
   private updateSupplierHandler: UpdateSupplierHandler;
@@ -55,7 +72,7 @@ export class SupplierController {
 
   async listSuppliers(
     request: FastifyRequest<{
-      Querystring: { limit?: number; offset?: number };
+      Querystring: ListSuppliersQuerystring;
     }>,
     reply: FastifyReply,
   ) {
@@ -74,9 +91,12 @@ export class SupplierController {
     }
   }
 
-  async createSupplier(request: FastifyRequest, reply: FastifyReply) {
+  async createSupplier(
+    request: FastifyRequest<{ Body: CreateSupplierBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const body = request.body as any;
+      const body = request.body;
 
       const command: CreateSupplierCommand = {
         name: body.name,
@@ -105,12 +125,15 @@ export class SupplierController {
   }
 
   async updateSupplier(
-    request: FastifyRequest<{ Params: { supplierId: string } }>,
+    request: FastifyRequest<{
+      Params: { supplierId: string };
+      Body: UpdateSupplierBody;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { supplierId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
 
       const command: UpdateSupplierCommand = {
         supplierId,
