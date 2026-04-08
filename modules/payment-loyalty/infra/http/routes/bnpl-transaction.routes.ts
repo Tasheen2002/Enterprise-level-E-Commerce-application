@@ -1,5 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { BnplTransactionController } from "../controllers/bnpl-transaction.controller";
+import {
+  BnplTransactionController,
+  CreateBnplTransactionRequest,
+  ProcessBnplParams,
+  ListBnplTransactionsQuerystring,
+} from "../controllers/bnpl-transaction.controller";
 import { authenticateUser, requireRole } from "@/api/src/shared/middleware";
 
 const errorResponses = {
@@ -19,7 +24,7 @@ export async function registerBnplTransactionRoutes(
   fastify: FastifyInstance,
   controller: BnplTransactionController,
 ): Promise<void> {
-  fastify.post(
+  fastify.post<{ Body: CreateBnplTransactionRequest }>(
     "/bnpl",
     {
       preHandler: authenticateUser,
@@ -50,15 +55,16 @@ export async function registerBnplTransactionRoutes(
         },
       },
     },
-    controller.create.bind(controller) as any,
+    controller.create.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Params: ProcessBnplParams }>(
     "/bnpl/:bnplId/:action",
     {
       preHandler: requireRole(["STAFF"]),
       schema: {
-        description: "Process a BNPL transaction (approve, reject, activate, complete, cancel) — Staff/Admin only.",
+        description:
+          "Process a BNPL transaction (approve, reject, activate, complete, cancel) — Staff/Admin only.",
         tags: ["BNPL"],
         summary: "Process BNPL",
         security: [{ bearerAuth: [] }],
@@ -67,7 +73,10 @@ export async function registerBnplTransactionRoutes(
           required: ["bnplId", "action"],
           properties: {
             bnplId: { type: "string", format: "uuid" },
-            action: { type: "string", enum: ["approve", "reject", "activate", "complete", "cancel"] },
+            action: {
+              type: "string",
+              enum: ["approve", "reject", "activate", "complete", "cancel"],
+            },
           },
         },
         response: {
@@ -83,10 +92,10 @@ export async function registerBnplTransactionRoutes(
         },
       },
     },
-    controller.process.bind(controller) as any,
+    controller.process.bind(controller),
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: ListBnplTransactionsQuerystring }>(
     "/bnpl",
     {
       preHandler: authenticateUser,
@@ -109,13 +118,16 @@ export async function registerBnplTransactionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
           ...errorResponses,
         },
       },
     },
-    controller.list.bind(controller) as any,
+    controller.list.bind(controller),
   );
 }

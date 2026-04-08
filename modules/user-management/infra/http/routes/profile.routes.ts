@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { ProfileController } from "../controllers/profile.controller";
+import { ProfileController, UpdateProfileRequest } from "../controllers/profile.controller";
 import { authenticate } from "@/api/src/shared/middleware";
 
 const profileData = {
@@ -81,11 +81,11 @@ export async function registerProfileRoutes(
         },
       },
     },
-    (request, reply) => controller.getProfile(request as any, reply),
+    controller.getCurrentUserProfile.bind(controller),
   );
 
   // PATCH /users/me/profile
-  fastify.patch(
+  fastify.patch<{ Body: UpdateProfileRequest }>(
     "/users/me/profile",
     {
       preHandler: [authenticate],
@@ -112,6 +112,6 @@ export async function registerProfileRoutes(
         },
       },
     },
-    (request, reply) => controller.updateProfile(request as any, reply),
+    controller.updateCurrentUserProfile.bind(controller),
   );
 }

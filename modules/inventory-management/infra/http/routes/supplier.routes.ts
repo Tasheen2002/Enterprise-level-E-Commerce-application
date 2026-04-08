@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { SupplierController } from "../controllers/supplier.controller";
+import {
+  SupplierController,
+  CreateSupplierBody,
+  UpdateSupplierBody,
+  ListSuppliersQuerystring,
+} from "../controllers/supplier.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +57,7 @@ export async function registerSupplierRoutes(
   controller: SupplierController,
 ): Promise<void> {
   // List suppliers
-  fastify.get(
+  fastify.get<{ Querystring: ListSuppliersQuerystring }>(
     "/suppliers",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -74,11 +79,11 @@ export async function registerSupplierRoutes(
         },
       },
     },
-    controller.listSuppliers.bind(controller) as any,
+    controller.listSuppliers.bind(controller),
   );
 
   // Get supplier
-  fastify.get(
+  fastify.get<{ Params: { supplierId: string } }>(
     "/suppliers/:supplierId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -100,11 +105,11 @@ export async function registerSupplierRoutes(
         },
       },
     },
-    controller.getSupplier.bind(controller) as any,
+    controller.getSupplier.bind(controller),
   );
 
   // Create supplier
-  fastify.post(
+  fastify.post<{ Body: CreateSupplierBody }>(
     "/suppliers",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -138,11 +143,11 @@ export async function registerSupplierRoutes(
         },
       },
     },
-    controller.createSupplier.bind(controller) as any,
+    controller.createSupplier.bind(controller),
   );
 
   // Update supplier
-  fastify.put(
+  fastify.put<{ Params: { supplierId: string }; Body: UpdateSupplierBody }>(
     "/suppliers/:supplierId",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -172,11 +177,11 @@ export async function registerSupplierRoutes(
         },
       },
     },
-    controller.updateSupplier.bind(controller) as any,
+    controller.updateSupplier.bind(controller),
   );
 
   // Delete supplier
-  fastify.delete(
+  fastify.delete<{ Params: { supplierId: string } }>(
     "/suppliers/:supplierId",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -198,6 +203,6 @@ export async function registerSupplierRoutes(
         },
       },
     },
-    controller.deleteSupplier.bind(controller) as any,
+    controller.deleteSupplier.bind(controller),
   );
 }

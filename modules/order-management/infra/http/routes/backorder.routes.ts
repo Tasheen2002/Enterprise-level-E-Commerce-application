@@ -1,9 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { BackorderController } from "../controllers/backorder.controller";
 import {
-  authenticateUser,
-  RolePermissions,
-} from "@/api/src/shared/middleware";
+  BackorderController,
+  CreateBackorderRequest,
+  GetBackorderRequest,
+  ListBackordersRequest,
+  UpdateBackorderEtaRequest,
+  MarkBackorderNotifiedRequest,
+  DeleteBackorderRequest,
+} from "../controllers/backorder.controller";
+import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
 
 const authenticateAdmin = [authenticateUser, RolePermissions.ADMIN_ONLY];
 
@@ -67,7 +72,7 @@ export async function registerBackorderRoutes(
   backorderController: BackorderController,
 ): Promise<void> {
   // Create backorder for an order item
-  fastify.post(
+  fastify.post<CreateBackorderRequest>(
     "/backorders",
     {
       preHandler: authenticateAdmin,
@@ -111,11 +116,11 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.createBackorder.bind(backorderController) as any,
+    backorderController.createBackorder.bind(backorderController),
   );
 
   // Get backorder by order item ID
-  fastify.get(
+  fastify.get<GetBackorderRequest>(
     "/backorders/:orderItemId",
     {
       preHandler: authenticateUser,
@@ -144,11 +149,11 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.getBackorder.bind(backorderController) as any,
+    backorderController.getBackorder.bind(backorderController),
   );
 
   // List backorders with filtering
-  fastify.get(
+  fastify.get<ListBackordersRequest>(
     "/backorders",
     {
       preHandler: authenticateUser,
@@ -218,11 +223,11 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.listBackorders.bind(backorderController) as any,
+    backorderController.listBackorders.bind(backorderController),
   );
 
   // Update backorder promised ETA
-  fastify.patch(
+  fastify.patch<UpdateBackorderEtaRequest>(
     "/backorders/:orderItemId/eta",
     {
       preHandler: authenticateAdmin,
@@ -266,11 +271,11 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.updatePromisedEta.bind(backorderController) as any,
+    backorderController.updatePromisedEta.bind(backorderController),
   );
 
   // Mark backorder customer as notified
-  fastify.post(
+  fastify.post<MarkBackorderNotifiedRequest>(
     "/backorders/:orderItemId/notify",
     {
       preHandler: authenticateAdmin,
@@ -304,11 +309,11 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.markNotified.bind(backorderController) as any,
+    backorderController.markNotified.bind(backorderController),
   );
 
   // Delete backorder
-  fastify.delete(
+  fastify.delete<DeleteBackorderRequest>(
     "/backorders/:orderItemId",
     {
       preHandler: authenticateAdmin,
@@ -340,6 +345,6 @@ export async function registerBackorderRoutes(
         },
       },
     },
-    backorderController.deleteBackorder.bind(backorderController) as any,
+    backorderController.deleteBackorder.bind(backorderController),
   );
 }

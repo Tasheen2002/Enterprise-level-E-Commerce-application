@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { PaymentMethodsController } from "../controllers/payment-methods.controller";
+import { PaymentMethodsController, AddPaymentMethodRequest, UpdatePaymentMethodRequest } from "../controllers/payment-methods.controller";
 import { authenticate } from "@/api/src/shared/middleware";
 
 const paymentMethodObject = {
@@ -73,12 +73,11 @@ export async function registerPaymentMethodRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.getCurrentUserPaymentMethods(request as any, reply),
+    controller.getCurrentUserPaymentMethods.bind(controller),
   );
 
   // POST /users/me/payment-methods
-  fastify.post(
+  fastify.post<{ Body: AddPaymentMethodRequest }>(
     "/users/me/payment-methods",
     {
       preHandler: [authenticate],
@@ -105,12 +104,14 @@ export async function registerPaymentMethodRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.addCurrentUserPaymentMethod(request as any, reply),
+    controller.addCurrentUserPaymentMethod.bind(controller),
   );
 
   // PATCH /users/me/payment-methods/:paymentMethodId
-  fastify.patch(
+  fastify.patch<{
+    Params: { paymentMethodId: string };
+    Body: UpdatePaymentMethodRequest;
+  }>(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preHandler: [authenticate],
@@ -138,12 +139,11 @@ export async function registerPaymentMethodRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.updateCurrentUserPaymentMethod(request as any, reply),
+    controller.updateCurrentUserPaymentMethod.bind(controller),
   );
 
   // DELETE /users/me/payment-methods/:paymentMethodId
-  fastify.delete(
+  fastify.delete<{ Params: { paymentMethodId: string } }>(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preHandler: [authenticate],
@@ -166,12 +166,11 @@ export async function registerPaymentMethodRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.deleteCurrentUserPaymentMethod(request as any, reply),
+    controller.deleteCurrentUserPaymentMethod.bind(controller),
   );
 
   // POST /users/me/payment-methods/:paymentMethodId/set-default
-  fastify.post(
+  fastify.post<{ Params: { paymentMethodId: string } }>(
     "/users/me/payment-methods/:paymentMethodId/set-default",
     {
       preHandler: [authenticate],
@@ -194,7 +193,6 @@ export async function registerPaymentMethodRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.setDefaultPaymentMethod(request as any, reply),
+    controller.setDefaultPaymentMethod.bind(controller),
   );
 }

@@ -15,10 +15,9 @@ import {
 } from "../../../application";
 import { ProductManagementService } from "../../../application/services/product-management.service";
 import { ProductSearchService } from "../../../application/services/product-search.service";
-import { PrismaClient } from "@prisma/client";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateProductRequest {
+export interface CreateProductRequest {
   title: string;
   brand?: string;
   shortDesc?: string;
@@ -36,9 +35,9 @@ interface CreateProductRequest {
   tags?: string[];
 }
 
-interface UpdateProductRequest extends Partial<CreateProductRequest> {}
+export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
 
-interface ProductQueryParams {
+export interface ProductQueryParams {
   page?: number;
   limit?: number;
   status?: "draft" | "published" | "scheduled" | "archived";
@@ -60,15 +59,24 @@ export class ProductController {
 
   constructor(
     private readonly productManagementService: ProductManagementService,
-    private readonly productSearchService: ProductSearchService,
-    private readonly prisma: PrismaClient,
+    productSearchService: ProductSearchService,
   ) {
-    this.createProductHandler = new CreateProductHandler(productManagementService);
-    this.updateProductHandler = new UpdateProductHandler(productManagementService);
-    this.deleteProductHandler = new DeleteProductHandler(productManagementService);
+    this.createProductHandler = new CreateProductHandler(
+      productManagementService,
+    );
+    this.updateProductHandler = new UpdateProductHandler(
+      productManagementService,
+    );
+    this.deleteProductHandler = new DeleteProductHandler(
+      productManagementService,
+    );
     this.getProductHandler = new GetProductHandler(productManagementService);
-    this.listProductsHandler = new ListProductsHandler(productManagementService);
-    this.searchProductsHandler = new SearchProductsHandler(productSearchService);
+    this.listProductsHandler = new ListProductsHandler(
+      productManagementService,
+    );
+    this.searchProductsHandler = new SearchProductsHandler(
+      productSearchService,
+    );
   }
 
   async listProducts(
@@ -102,18 +110,24 @@ export class ProductController {
           brand,
           status,
           sortBy:
-            sortBy === "createdAt" || sortBy === "title" || sortBy === "publishAt"
+            sortBy === "createdAt" ||
+            sortBy === "title" ||
+            sortBy === "publishAt"
               ? sortBy
               : "relevance",
           sortOrder,
         };
 
-        const searchResult = await this.searchProductsHandler.handle(searchQuery);
+        const searchResult =
+          await this.searchProductsHandler.handle(searchQuery);
         if (searchResult.success && searchResult.data) {
           products = searchResult.data.products;
           totalCount = searchResult.data.totalCount;
         } else {
-          return ResponseHelper.error(reply, new Error(searchResult.error ?? "Search failed"));
+          return ResponseHelper.error(
+            reply,
+            new Error(searchResult.error ?? "Search failed"),
+          );
         }
       } else {
         const query: ListProductsQuery = {
@@ -132,7 +146,10 @@ export class ProductController {
           products = result.data.products;
           totalCount = result.data.totalCount;
         } else {
-          return ResponseHelper.error(reply, new Error(result.error ?? "Failed to list products"));
+          return ResponseHelper.error(
+            reply,
+            new Error(result.error ?? "Failed to list products"),
+          );
         }
       }
 
@@ -147,27 +164,12 @@ export class ProductController {
         (p) => p.id || p.productId || p.product_id,
       );
 
-      const enrichedProducts = await this.prisma.product.findMany({
-        where: { id: { in: productIds } },
-        include: {
-          variants: {
-            orderBy: { createdAt: "asc" },
-            take: 10,
-            include: { inventoryStocks: true },
-          },
-          media: {
-            include: { asset: true },
-            orderBy: { position: "asc" },
-          },
-          categories: {
-            include: { category: true },
-          },
-        },
-      });
+      const enrichmentMap =
+        await this.productManagementService.getProductEnrichment(productIds);
 
       const productsWithDetails = normalizedProducts.map((product) => {
         const pId = product.id || product.productId || product.product_id;
-        const enriched = enrichedProducts.find((p) => p.id === pId);
+        const enriched = enrichmentMap.get(pId);
 
         return {
           productId: pId,
@@ -187,28 +189,9 @@ export class ProductController {
           compareAtPrice: product.compareAtPrice,
           createdAt: product.createdAt || product.created_at,
           updatedAt: product.updatedAt || product.updated_at,
-          variants:
-            enriched?.variants?.map((v) => {
-              const totalInventory =
-                v.inventoryStocks?.reduce((sum, stock) => {
-                  return sum + (stock.onHand - stock.reserved);
-                }, 0) || 0;
-              return { id: v.id, sku: v.sku, size: v.size, color: v.color, inventory: totalInventory };
-            }) || [],
-          images:
-            enriched?.media?.map((m) => ({
-              url: m.asset.storageKey,
-              alt: m.asset.altText,
-              width: m.asset.width,
-              height: m.asset.height,
-            })) || [],
-          categories:
-            enriched?.categories?.map((pc) => ({
-              id: pc.category.id,
-              name: pc.category.name,
-              slug: pc.category.slug,
-              position: pc.category.position,
-            })) || [],
+          variants: enriched?.variants || [],
+          images: enriched?.images || [],
+          categories: enriched?.categories || [],
         };
       });
 
@@ -235,41 +218,28 @@ export class ProductController {
       const result = await this.getProductHandler.handle(query);
 
       if (result.success && result.data) {
-        const enrichedProduct = await this.prisma.product.findUnique({
-          where: { id: productId },
-          include: {
-            media: {
-              include: { asset: true },
-              orderBy: { position: "asc" },
-            },
-          },
-        });
-
-        const mappedImages =
-          enrichedProduct?.media?.map((m) => ({
-            url: m.asset.storageKey,
-            alt: m.asset.altText,
-            width: m.asset.width,
-            height: m.asset.height,
-          })) || [];
+        const mediaEnrichment =
+          await this.productManagementService.getProductMediaEnrichment(
+            productId,
+          );
 
         const productWithDetails = {
           ...result.data,
-          slug: result.data?.slug || enrichedProduct?.slug || "",
-          images: mappedImages,
-          media:
-            enrichedProduct?.media?.map((m) => ({
-              ...m,
-              asset: {
-                ...m.asset,
-                bytes: m.asset.bytes ? m.asset.bytes.toString() : null,
-              },
-            })) || [],
+          slug: result.data?.slug || "",
+          images: mediaEnrichment.images,
+          media: mediaEnrichment.media,
         };
 
-        return ResponseHelper.ok(reply, "Product retrieved successfully", productWithDetails);
+        return ResponseHelper.ok(
+          reply,
+          "Product retrieved successfully",
+          productWithDetails,
+        );
       } else {
-        return ResponseHelper.notFound(reply, result.error ?? "Product not found");
+        return ResponseHelper.notFound(
+          reply,
+          result.error ?? "Product not found",
+        );
       }
     } catch (error) {
       request.log.error(error, "Failed to get product");
@@ -288,54 +258,28 @@ export class ProductController {
       const result = await this.getProductHandler.handle(query);
 
       if (result.success && result.data) {
-        const enrichedProduct = (await this.prisma.product.findUnique({
-          where: { id: result.data.productId },
-          include: {
-            variants: {
-              orderBy: { createdAt: "asc" },
-              include: { inventoryStocks: true },
-            },
-            media: {
-              include: { asset: true },
-              orderBy: { position: "asc" },
-            },
-            categories: {
-              include: { category: true },
-            },
-          },
-        })) as any;
-
-        const mappedImages =
-          enrichedProduct?.media?.map((m: any) => ({
-            url: m.asset.storageKey,
-            alt: m.asset.altText,
-            width: m.asset.width,
-            height: m.asset.height,
-          })) || [];
+        const enrichment =
+          await this.productManagementService.getSingleProductEnrichment(
+            result.data.productId,
+          );
 
         const productWithDetails = {
           ...result.data,
-          variants:
-            enrichedProduct?.variants?.map((v: any) => {
-              const totalInventory =
-                v.inventoryStocks?.reduce((sum: number, stock: any) => {
-                  return sum + (stock.onHand - stock.reserved);
-                }, 0) || 0;
-              return { id: v.id, sku: v.sku, size: v.size, color: v.color, inventory: totalInventory };
-            }) || [],
-          images: mappedImages,
-          categories:
-            enrichedProduct?.categories?.map((pc: any) => ({
-              id: pc.category.id,
-              name: pc.category.name,
-              slug: pc.category.slug,
-              position: pc.category.position,
-            })) || [],
+          variants: enrichment.variants,
+          images: enrichment.images,
+          categories: enrichment.categories,
         };
 
-        return ResponseHelper.ok(reply, "Product retrieved successfully", productWithDetails);
+        return ResponseHelper.ok(
+          reply,
+          "Product retrieved successfully",
+          productWithDetails,
+        );
       } else {
-        return ResponseHelper.notFound(reply, result.error ?? "Product not found");
+        return ResponseHelper.notFound(
+          reply,
+          result.error ?? "Product not found",
+        );
       }
     } catch (error) {
       request.log.error(error, "Failed to get product by slug");
@@ -356,7 +300,9 @@ export class ProductController {
         shortDesc: productData.shortDesc,
         longDescHtml: productData.longDescHtml,
         status: productData.status as any,
-        publishAt: productData.publishAt ? new Date(productData.publishAt) : undefined,
+        publishAt: productData.publishAt
+          ? new Date(productData.publishAt)
+          : undefined,
         countryOfOrigin: productData.countryOfOrigin,
         seoTitle: productData.seoTitle,
         seoDescription: productData.seoDescription,
@@ -381,7 +327,12 @@ export class ProductController {
         });
       }
 
-      return ResponseHelper.fromCommand(reply, result, "Product created successfully", 201);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product created successfully",
+        201,
+      );
     } catch (error) {
       request.log.error(error, "Failed to create product");
       return ResponseHelper.error(reply, error);
@@ -406,7 +357,9 @@ export class ProductController {
         shortDesc: updateData.shortDesc,
         longDescHtml: updateData.longDescHtml,
         status: updateData.status as any,
-        publishAt: updateData.publishAt ? new Date(updateData.publishAt) : undefined,
+        publishAt: updateData.publishAt
+          ? new Date(updateData.publishAt)
+          : undefined,
         countryOfOrigin: updateData.countryOfOrigin,
         seoTitle: updateData.seoTitle,
         seoDescription: updateData.seoDescription,
@@ -427,7 +380,11 @@ export class ProductController {
         });
       }
 
-      return ResponseHelper.fromCommand(reply, result, "Product updated successfully");
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product updated successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to update product");
 
@@ -437,7 +394,8 @@ export class ProductController {
 
       if (
         error instanceof Error &&
-        (error.message.includes("duplicate") || error.message.includes("unique"))
+        (error.message.includes("duplicate") ||
+          error.message.includes("unique"))
       ) {
         return reply.status(409).send({
           success: false,
@@ -465,7 +423,11 @@ export class ProductController {
         return ResponseHelper.ok(reply, "Product deleted successfully");
       }
 
-      return ResponseHelper.fromCommand(reply, result, "Product deleted successfully");
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product deleted successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to delete product");
 
@@ -475,13 +437,15 @@ export class ProductController {
 
       if (
         error instanceof Error &&
-        (error.message.includes("constraint") || error.message.includes("foreign key"))
+        (error.message.includes("constraint") ||
+          error.message.includes("foreign key"))
       ) {
         return reply.status(409).send({
           success: false,
           statusCode: 409,
           error: "Conflict",
-          message: "Cannot delete product with existing variants or associations",
+          message:
+            "Cannot delete product with existing variants or associations",
         });
       }
 

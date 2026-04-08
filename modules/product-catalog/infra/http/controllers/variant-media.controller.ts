@@ -5,31 +5,31 @@ import {
 } from "../../../application/services/variant-media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface AddMediaToVariantRequest {
+export interface AddMediaToVariantRequest {
   assetId: string;
 }
 
-interface SetVariantMediaRequest {
+export interface SetVariantMediaRequest {
   assetIds: string[];
 }
 
-interface AddMediaToMultipleVariantsRequest {
+export interface AddMediaToMultipleVariantsRequest {
   variantIds: string[];
   assetId: string;
 }
 
-interface AddMultipleMediaToVariantRequest {
+export interface AddMultipleMediaToVariantRequest {
   variantId: string;
   assetIds: string[];
 }
 
-interface CopyProductVariantMediaRequest {
+export interface CopyProductVariantMediaRequest {
   sourceProductId: string;
   targetProductId: string;
   variantMapping: Record<string, string>;
 }
 
-interface VariantMediaQueryParams extends VariantMediaServiceQueryOptions {}
+export interface VariantMediaQueryParams extends VariantMediaServiceQueryOptions {}
 
 export class VariantMediaController {
   constructor(
@@ -46,7 +46,11 @@ export class VariantMediaController {
       const variantMedia =
         await this.variantMediaManagementService.getVariantMedia(variantId);
 
-      return ResponseHelper.ok(reply, "Variant media retrieved successfully", variantMedia);
+      return ResponseHelper.ok(
+        reply,
+        "Variant media retrieved successfully",
+        variantMedia,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get variant media");
 
@@ -74,7 +78,10 @@ export class VariantMediaController {
         assetId,
       );
 
-      return ResponseHelper.created(reply, "Media added to variant successfully");
+      return ResponseHelper.created(
+        reply,
+        "Media added to variant successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to add media to variant");
 
@@ -110,7 +117,10 @@ export class VariantMediaController {
         assetId,
       );
 
-      return ResponseHelper.ok(reply, "Media removed from variant successfully");
+      return ResponseHelper.ok(
+        reply,
+        "Media removed from variant successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to remove media from variant");
 
@@ -131,7 +141,10 @@ export class VariantMediaController {
 
       await this.variantMediaManagementService.removeAllVariantMedia(variantId);
 
-      return ResponseHelper.ok(reply, "All media removed from variant successfully");
+      return ResponseHelper.ok(
+        reply,
+        "All media removed from variant successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to remove all variant media");
 
@@ -183,7 +196,10 @@ export class VariantMediaController {
         assetId,
       );
 
-      return ResponseHelper.created(reply, `Media added to ${variantIds.length} variants successfully`);
+      return ResponseHelper.created(
+        reply,
+        `Media added to ${variantIds.length} variants successfully`,
+      );
     } catch (error) {
       request.log.error(error, "Failed to add media to multiple variants");
 
@@ -196,18 +212,25 @@ export class VariantMediaController {
   }
 
   async addMultipleMediaToVariant(
-    request: FastifyRequest<{ Body: AddMultipleMediaToVariantRequest }>,
+    request: FastifyRequest<{
+      Params: { variantId: string };
+      Body: { assetIds: string[] };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { variantId, assetIds } = request.body;
+      const { variantId } = request.params;
+      const { assetIds } = request.body;
 
       await this.variantMediaManagementService.addMultipleMediaToVariant(
         variantId,
         assetIds,
       );
 
-      return ResponseHelper.created(reply, `${assetIds.length} media assets added to variant successfully`);
+      return ResponseHelper.created(
+        reply,
+        `${assetIds.length} media assets added to variant successfully`,
+      );
     } catch (error) {
       request.log.error(error, "Failed to add multiple media to variant");
 
@@ -262,7 +285,11 @@ export class VariantMediaController {
           options,
         );
 
-      return ResponseHelper.ok(reply, "Product variant media retrieved successfully", productVariantMedia);
+      return ResponseHelper.ok(
+        reply,
+        "Product variant media retrieved successfully",
+        productVariantMedia,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get product variant media");
 
@@ -287,7 +314,10 @@ export class VariantMediaController {
         variantMapping,
       );
 
-      return ResponseHelper.ok(reply, "Product variant media copied successfully");
+      return ResponseHelper.ok(
+        reply,
+        "Product variant media copied successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to copy product variant media");
 
@@ -309,7 +339,11 @@ export class VariantMediaController {
       const variantIds =
         await this.variantMediaManagementService.getVariantsUsingAsset(assetId);
 
-      return ResponseHelper.ok(reply, "Variants using asset retrieved successfully", variantIds);
+      return ResponseHelper.ok(
+        reply,
+        "Variants using asset retrieved successfully",
+        variantIds,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get variants using asset");
 
@@ -331,7 +365,11 @@ export class VariantMediaController {
       const usageCount =
         await this.variantMediaManagementService.getAssetUsageCount(assetId);
 
-      return ResponseHelper.ok(reply, "Asset usage count retrieved successfully", { assetId, usageCount });
+      return ResponseHelper.ok(
+        reply,
+        "Asset usage count retrieved successfully",
+        { assetId, usageCount },
+      );
     } catch (error) {
       request.log.error(error, "Failed to get asset usage count");
 
@@ -356,7 +394,11 @@ export class VariantMediaController {
           decodeURIComponent(color),
         );
 
-      return ResponseHelper.ok(reply, "Color variant media retrieved successfully", colorVariantMedia);
+      return ResponseHelper.ok(
+        reply,
+        "Color variant media retrieved successfully",
+        colorVariantMedia,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get color variant media");
 
@@ -381,7 +423,11 @@ export class VariantMediaController {
           decodeURIComponent(size),
         );
 
-      return ResponseHelper.ok(reply, "Size variant media retrieved successfully", sizeVariantMedia);
+      return ResponseHelper.ok(
+        reply,
+        "Size variant media retrieved successfully",
+        sizeVariantMedia,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get size variant media");
 
@@ -432,7 +478,11 @@ export class VariantMediaController {
           variantId,
         );
 
-      return ResponseHelper.ok(reply, "Variant media validated successfully", validation);
+      return ResponseHelper.ok(
+        reply,
+        "Variant media validated successfully",
+        validation,
+      );
     } catch (error) {
       request.log.error(error, "Failed to validate variant media");
 
@@ -456,7 +506,11 @@ export class VariantMediaController {
           variantId,
         );
 
-      return ResponseHelper.ok(reply, "Variant media statistics retrieved successfully", statistics);
+      return ResponseHelper.ok(
+        reply,
+        "Variant media statistics retrieved successfully",
+        statistics,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get variant media statistics");
 

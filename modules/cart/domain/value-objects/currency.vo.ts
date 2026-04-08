@@ -1,17 +1,18 @@
 import { SUPPORTED_CURRENCIES, MAJOR_CURRENCIES } from "../constants";
+import { DomainValidationError } from "../errors/cart.errors";
 
 export class Currency {
   private readonly value: string;
 
   constructor(value: string) {
     if (!value) {
-      throw new Error("Currency is required");
+      throw new DomainValidationError("Currency is required");
     }
 
     const upperCaseValue = value.toUpperCase().trim();
 
     if (!this.isValidCurrency(upperCaseValue)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Unsupported currency: ${value}. Supported currencies: ${SUPPORTED_CURRENCIES.join(", ")}`,
       );
     }

@@ -1,11 +1,11 @@
-// Errors
 export * from "./errors";
 
-// Value Objects
 export * from "./value-objects";
 
-// Entities
 export * from "./entities";
 
-// Repository Interfaces
 export * from "./repositories";
+
+export * from "./external-services";
+
+export * from "./constants";

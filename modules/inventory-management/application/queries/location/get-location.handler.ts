@@ -4,19 +4,13 @@ import { LocationManagementService } from "../../services/location-management.se
 
 export class GetLocationHandler implements IQueryHandler<
   GetLocationQuery,
-  QueryResult<LocationResult | null>
+  QueryResult<LocationResult>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
-  async handle(
-    query: GetLocationQuery,
-  ): Promise<QueryResult<LocationResult | null>> {
+  async handle(query: GetLocationQuery): Promise<QueryResult<LocationResult>> {
     try {
       const location = await this.locationService.getLocation(query.locationId);
-
-      if (!location) {
-        return QueryResult.success<LocationResult | null>(null);
-      }
 
       const result: LocationResult = {
         locationId: location.getLocationId().getValue(),

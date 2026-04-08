@@ -7,21 +7,21 @@ import {
 import { SizeGuideQueryOptions } from "../../../domain/repositories/size-guide.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateSizeGuideRequest {
+export interface CreateSizeGuideRequest {
   title: string;
   bodyHtml?: string;
   region: Region;
   category?: string;
 }
 
-interface UpdateSizeGuideRequest {
+export interface UpdateSizeGuideRequest {
   title?: string;
   bodyHtml?: string;
   region?: Region;
   category?: string;
 }
 
-interface SizeGuideQueryParams {
+export interface SizeGuideQueryParams {
   page?: number;
   limit?: number;
   region?: Region;
@@ -31,20 +31,25 @@ interface SizeGuideQueryParams {
   sortOrder?: "asc" | "desc";
 }
 
-interface BulkCreateSizeGuidesRequest {
+export interface BulkCreateSizeGuidesRequest {
   guides: CreateSizeGuideRequest[];
 }
 
-interface BulkDeleteSizeGuidesRequest {
+export interface BulkDeleteSizeGuidesRequest {
   ids: string[];
 }
 
-interface RegionalSizeGuideRequest extends Omit<
+export interface ValidateSizeGuideQueryParams {
+  region: string;
+  category?: string;
+}
+
+export interface RegionalSizeGuideRequest extends Omit<
   CreateSizeGuideRequest,
   "region"
 > {}
 
-interface CategorySizeGuideRequest extends Omit<
+export interface CategorySizeGuideRequest extends Omit<
   CreateSizeGuideRequest,
   "category" | "region"
 > {}
@@ -149,7 +154,11 @@ export class SizeGuideController {
 
       const guide = await this.sizeGuideManagementService.getSizeGuideById(id);
 
-      return ResponseHelper.ok(reply, "Size guide retrieved successfully", guide);
+      return ResponseHelper.ok(
+        reply,
+        "Size guide retrieved successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get size guide");
 
@@ -172,7 +181,11 @@ export class SizeGuideController {
         guideData as CreateSizeGuideData,
       );
 
-      return ResponseHelper.created(reply, "Size guide created successfully", guide);
+      return ResponseHelper.created(
+        reply,
+        "Size guide created successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to create size guide");
 
@@ -181,7 +194,8 @@ export class SizeGuideController {
           success: false,
           statusCode: 409,
           error: "Conflict",
-          message: "Size guide already exists for this region and category combination",
+          message:
+            "Size guide already exists for this region and category combination",
         });
       }
 
@@ -208,7 +222,11 @@ export class SizeGuideController {
       // Serialize entity to plain object
       const serializedGuide = guide.toData ? guide.toData() : guide;
 
-      return ResponseHelper.ok(reply, "Size guide updated successfully", serializedGuide);
+      return ResponseHelper.ok(
+        reply,
+        "Size guide updated successfully",
+        serializedGuide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to update size guide");
 
@@ -221,7 +239,8 @@ export class SizeGuideController {
           success: false,
           statusCode: 409,
           error: "Conflict",
-          message: "Size guide already exists for this region and category combination",
+          message:
+            "Size guide already exists for this region and category combination",
         });
       }
 
@@ -303,20 +322,24 @@ export class SizeGuideController {
             .filter(Boolean)
         : [];
 
-      return ResponseHelper.ok(reply, "Regional size guides retrieved successfully", {
-        sizeGuides: serializedGuides,
-        pagination: {
-          page: pageOptions.page,
-          limit: pageOptions.limit,
-          total: serializedGuides.length,
-          total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
+      return ResponseHelper.ok(
+        reply,
+        "Regional size guides retrieved successfully",
+        {
+          sizeGuides: serializedGuides,
+          pagination: {
+            page: pageOptions.page,
+            limit: pageOptions.limit,
+            total: serializedGuides.length,
+            total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
+          },
+          meta: {
+            region,
+            page: pageOptions.page,
+            limit: pageOptions.limit,
+          },
         },
-        meta: {
-          region,
-          page: pageOptions.page,
-          limit: pageOptions.limit,
-        },
-      });
+      );
     } catch (error) {
       request.log.error(error, "Failed to get regional size guides");
       return ResponseHelper.error(reply, error);
@@ -340,7 +363,11 @@ export class SizeGuideController {
           guideData,
         );
 
-      return ResponseHelper.created(reply, "Regional size guide created successfully", guide);
+      return ResponseHelper.created(
+        reply,
+        "Regional size guide created successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to create regional size guide");
 
@@ -349,7 +376,8 @@ export class SizeGuideController {
           success: false,
           statusCode: 409,
           error: "Conflict",
-          message: "Size guide already exists for this region and category combination",
+          message:
+            "Size guide already exists for this region and category combination",
         });
       }
 
@@ -368,13 +396,17 @@ export class SizeGuideController {
         region as Region,
       );
 
-      return ResponseHelper.ok(reply, "General size guides retrieved successfully", {
-        guides,
-        meta: {
-          region,
-          count: guides.length,
+      return ResponseHelper.ok(
+        reply,
+        "General size guides retrieved successfully",
+        {
+          guides,
+          meta: {
+            region,
+            count: guides.length,
+          },
         },
-      });
+      );
     } catch (error) {
       request.log.error(error, "Failed to get general size guides");
       return ResponseHelper.error(reply, error);
@@ -399,7 +431,11 @@ export class SizeGuideController {
           guideData,
         );
 
-      return ResponseHelper.created(reply, "Category size guide created successfully", guide);
+      return ResponseHelper.created(
+        reply,
+        "Category size guide created successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to create category size guide");
 
@@ -408,7 +444,8 @@ export class SizeGuideController {
           success: false,
           statusCode: 409,
           error: "Conflict",
-          message: "Size guide already exists for this region and category combination",
+          message:
+            "Size guide already exists for this region and category combination",
         });
       }
 
@@ -433,7 +470,11 @@ export class SizeGuideController {
           htmlContent,
         );
 
-      return ResponseHelper.ok(reply, "Size guide content updated successfully", guide);
+      return ResponseHelper.ok(
+        reply,
+        "Size guide content updated successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to update size guide content");
 
@@ -455,7 +496,11 @@ export class SizeGuideController {
       const guide =
         await this.sizeGuideManagementService.clearSizeGuideContent(id);
 
-      return ResponseHelper.ok(reply, "Size guide content cleared successfully", guide);
+      return ResponseHelper.ok(
+        reply,
+        "Size guide content cleared successfully",
+        guide,
+      );
     } catch (error) {
       request.log.error(error, "Failed to clear size guide content");
 
@@ -470,7 +515,11 @@ export class SizeGuideController {
   async getSizeGuideStats(request: FastifyRequest, reply: FastifyReply) {
     try {
       const stats = await this.sizeGuideManagementService.getSizeGuideStats();
-      return ResponseHelper.ok(reply, "Size guide statistics retrieved successfully", stats);
+      return ResponseHelper.ok(
+        reply,
+        "Size guide statistics retrieved successfully",
+        stats,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get size guide statistics");
       return ResponseHelper.error(reply, error);
@@ -482,7 +531,11 @@ export class SizeGuideController {
       const regions =
         await this.sizeGuideManagementService.getAvailableRegions();
 
-      return ResponseHelper.ok(reply, "Available regions retrieved successfully", regions);
+      return ResponseHelper.ok(
+        reply,
+        "Available regions retrieved successfully",
+        regions,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get available regions");
       return ResponseHelper.error(reply, error);
@@ -501,12 +554,16 @@ export class SizeGuideController {
           region as Region,
         );
 
-      return ResponseHelper.ok(reply, "Available categories retrieved successfully", {
-        categories,
-        meta: {
-          region: region || "all",
+      return ResponseHelper.ok(
+        reply,
+        "Available categories retrieved successfully",
+        {
+          categories,
+          meta: {
+            region: region || "all",
+          },
         },
-      });
+      );
     } catch (error) {
       request.log.error(error, "Failed to get available categories");
       return ResponseHelper.error(reply, error);
@@ -569,7 +626,7 @@ export class SizeGuideController {
 
   async validateUniqueness(
     request: FastifyRequest<{
-      Querystring: { region: string; category?: string };
+      Querystring: ValidateSizeGuideQueryParams;
     }>,
     reply: FastifyReply,
   ) {

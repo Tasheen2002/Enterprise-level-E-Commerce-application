@@ -1,7 +1,18 @@
 import { FastifyInstance } from "fastify";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
-import { StockController } from "../controllers/stock.controller";
+import {
+  StockController,
+  ListStocksQuerystring,
+  GetStockParams,
+  VariantParams,
+  AddStockBody,
+  AdjustStockBody,
+  TransferStockBody,
+  ReserveStockBody,
+  FulfillReservationBody,
+  SetStockThresholdsBody,
+} from "../controllers/stock.controller";
 
 const errorResponses = {
   400: {
@@ -52,7 +63,7 @@ export async function registerStockRoutes(
   controller: StockController,
 ): Promise<void> {
   // List stocks
-  fastify.get(
+  fastify.get<{ Querystring: ListStocksQuerystring }>(
     "/stocks",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -112,7 +123,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.listStocks.bind(controller) as any,
+    controller.listStocks.bind(controller),
   );
 
   // Get stock stats
@@ -146,11 +157,49 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStats.bind(controller) as any,
+    controller.getStats.bind(controller),
+  );
+
+  // Get low stock items
+  fastify.get(
+    "/stocks/low-stock",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Get all items with low stock levels (Staff/Admin only)",
+        tags: ["Stock Management"],
+        summary: "Get Low Stock Items",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: { description: "Low stock items" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.getLowStockItems.bind(controller),
+  );
+
+  // Get out of stock items
+  fastify.get(
+    "/stocks/out-of-stock",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Get all items that are out of stock (Staff/Admin only)",
+        tags: ["Stock Management"],
+        summary: "Get Out Of Stock Items",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: { description: "Out of stock items" },
+          ...errorResponses,
+        },
+      },
+    },
+    controller.getOutOfStockItems.bind(controller),
   );
 
   // Get stock by variant and location
-  fastify.get(
+  fastify.get<{ Params: GetStockParams }>(
     "/stocks/:variantId/:locationId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -174,11 +223,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStock.bind(controller) as any,
+    controller.getStock.bind(controller),
   );
 
   // Get stock by variant (all locations)
-  fastify.get(
+  fastify.get<{ Params: VariantParams }>(
     "/stocks/:variantId",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -201,11 +250,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStockByVariant.bind(controller) as any,
+    controller.getStockByVariant.bind(controller),
   );
 
   // Get total available stock
-  fastify.get(
+  fastify.get<{ Params: VariantParams }>(
     "/stocks/:variantId/total",
     {
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
@@ -228,11 +277,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getTotalAvailableStock.bind(controller) as any,
+    controller.getTotalAvailableStock.bind(controller),
   );
 
   // Add stock
-  fastify.post(
+  fastify.post<{ Body: AddStockBody }>(
     "/stocks/add",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -260,11 +309,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.addStock.bind(controller) as any,
+    controller.addStock.bind(controller),
   );
 
   // Adjust stock
-  fastify.post(
+  fastify.post<{ Body: AdjustStockBody }>(
     "/stocks/adjust",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -294,11 +343,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.adjustStock.bind(controller) as any,
+    controller.adjustStock.bind(controller),
   );
 
   // Transfer stock
-  fastify.post(
+  fastify.post<{ Body: TransferStockBody }>(
     "/stocks/transfer",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -323,11 +372,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.transferStock.bind(controller) as any,
+    controller.transferStock.bind(controller),
   );
 
   // Reserve stock
-  fastify.post(
+  fastify.post<{ Body: ReserveStockBody }>(
     "/stocks/reserve",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -351,11 +400,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.reserveStock.bind(controller) as any,
+    controller.reserveStock.bind(controller),
   );
 
   // Fulfill reservation
-  fastify.post(
+  fastify.post<{ Body: FulfillReservationBody }>(
     "/stocks/fulfill",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -379,11 +428,11 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.fulfillReservation.bind(controller) as any,
+    controller.fulfillReservation.bind(controller),
   );
 
   // Set stock thresholds
-  fastify.put(
+  fastify.put<{ Params: GetStockParams; Body: SetStockThresholdsBody }>(
     "/stocks/:variantId/:locationId/thresholds",
     {
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
@@ -413,6 +462,6 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.setStockThresholds.bind(controller) as any,
+    controller.setStockThresholds.bind(controller),
   );
 }

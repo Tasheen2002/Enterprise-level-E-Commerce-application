@@ -1,9 +1,15 @@
 import { FastifyInstance } from "fastify";
-import { ReservationController } from "../controllers/reservation.controller";
 import {
-  requireAdmin,
-  authenticateUser,
-} from "@/api/src/shared/middleware";
+  ReservationController,
+  CreateReservationRequest,
+  ExtendReservationRequest,
+  CheckAvailabilityRequest,
+  RenewReservationRequest,
+  AdjustReservationRequest,
+  BulkReservationRequest,
+  ReservationQueryParams,
+} from "../controllers/reservation.controller";
+import { requireAdmin, authenticateUser } from "@/api/src/shared/middleware";
 
 const authErrorResponses = {
   401: {
@@ -39,7 +45,7 @@ export async function registerReservationRoutes(
   reservationController: ReservationController,
 ): Promise<void> {
   // Create reservation
-  fastify.post(
+  fastify.post<{ Body: CreateReservationRequest }>(
     "/reservations",
     {
       preHandler: authenticateUser,
@@ -96,11 +102,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.createReservation.bind(reservationController) as any,
+    reservationController.createReservation.bind(reservationController),
   );
 
   // Get reservation by ID
-  fastify.get(
+  fastify.get<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: authenticateUser,
@@ -154,11 +160,14 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getReservation.bind(reservationController) as any,
+    reservationController.getReservation.bind(reservationController),
   );
 
   // Get cart reservations
-  fastify.get(
+  fastify.get<{
+    Params: { cartId: string };
+    Querystring: { activeOnly?: boolean };
+  }>(
     "/carts/:cartId/reservations",
     {
       preHandler: authenticateUser,
@@ -220,13 +229,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getCartReservations.bind(
-      reservationController,
-    ) as any,
+    reservationController.getCartReservations.bind(reservationController),
   );
 
   // Get variant reservations
-  fastify.get(
+  fastify.get<{ Params: { variantId: string } }>(
     "/variants/:variantId/reservations",
     {
       schema: {
@@ -279,13 +286,14 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getVariantReservations.bind(
-      reservationController,
-    ) as any,
+    reservationController.getVariantReservations.bind(reservationController),
   );
 
   // Extend reservation
-  fastify.post(
+  fastify.post<{
+    Params: { reservationId: string };
+    Body: ExtendReservationRequest;
+  }>(
     "/reservations/:reservationId/extend",
     {
       preHandler: authenticateUser,
@@ -325,13 +333,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.extendReservation.bind(
-      reservationController,
-    ) as any,
+    reservationController.extendReservation.bind(reservationController),
   );
 
   // Release reservation
-  fastify.delete(
+  fastify.delete<{ Params: { reservationId: string } }>(
     "/reservations/:reservationId",
     {
       preHandler: authenticateUser,
@@ -363,13 +369,11 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.releaseReservation.bind(
-      reservationController,
-    ) as any,
+    reservationController.releaseReservation.bind(reservationController),
   );
 
   // Check availability
-  fastify.get(
+  fastify.get<{ Querystring: CheckAvailabilityRequest }>(
     "/availability",
     {
       schema: {
@@ -405,9 +409,7 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.checkAvailability.bind(
-      reservationController,
-    ) as any,
+    reservationController.checkAvailability.bind(reservationController),
   );
 
   // Get reservation statistics (admin)
@@ -433,8 +435,382 @@ export async function registerReservationRoutes(
         },
       },
     },
-    reservationController.getReservationStatistics.bind(
+    reservationController.getReservationStatistics.bind(reservationController),
+  );
+
+  // Get reservation by variant for a cart
+  fastify.get<{
+    Params: { cartId: string; variantId: string };
+  }>(
+    "/carts/:cartId/reservations/:variantId",
+    {
+      preHandler: authenticateUser,
+      schema: {
+        description:
+          "Get reservation for a specific variant in a cart (requires authentication)",
+        tags: ["Reservations"],
+        summary: "Get Reservation By Variant",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["cartId", "variantId"],
+          properties: {
+            cartId: { type: "string", format: "uuid" },
+            variantId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            description: "Reservation retrieved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+          404: {
+            description: "Reservation not found",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: false },
+              error: { type: "string", example: "Reservation not found" },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.getReservationByVariant.bind(reservationController),
+  );
+
+  // Renew reservation
+  fastify.post<{
+    Params: { reservationId: string };
+    Body: RenewReservationRequest;
+  }>(
+    "/reservations/:reservationId/renew",
+    {
+      preHandler: authenticateUser,
+      schema: {
+        description:
+          "Renew an expired or expiring reservation (requires authentication)",
+        tags: ["Reservations"],
+        summary: "Renew Reservation",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["reservationId"],
+          properties: {
+            reservationId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          properties: {
+            durationMinutes: { type: "integer", minimum: 1, example: 30 },
+          },
+        },
+        response: {
+          200: {
+            description: "Reservation renewed successfully",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+              message: {
+                type: "string",
+                example: "Reservation renewed successfully",
+              },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.renewReservation.bind(reservationController),
+  );
+
+  // Adjust reservation quantity
+  fastify.put<{
+    Params: { cartId: string; variantId: string };
+    Body: AdjustReservationRequest;
+  }>(
+    "/carts/:cartId/reservations/:variantId",
+    {
+      preHandler: authenticateUser,
+      schema: {
+        description:
+          "Adjust reservation quantity for a variant in a cart (requires authentication)",
+        tags: ["Reservations"],
+        summary: "Adjust Reservation",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["cartId", "variantId"],
+          properties: {
+            cartId: { type: "string", format: "uuid" },
+            variantId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["newQuantity"],
+          properties: {
+            newQuantity: { type: "integer", minimum: 1, example: 3 },
+          },
+        },
+        response: {
+          200: {
+            description: "Reservation adjusted successfully",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+              message: {
+                type: "string",
+                example: "Reservation adjusted successfully",
+              },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.adjustReservation.bind(reservationController),
+  );
+
+  // Get total reserved quantity for a variant
+  fastify.get<{ Params: { variantId: string } }>(
+    "/variants/:variantId/reservations/total",
+    {
+      schema: {
+        description: "Get total reserved quantity for a variant",
+        tags: ["Reservations"],
+        summary: "Get Total Reserved Quantity",
+        params: {
+          type: "object",
+          required: ["variantId"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            description: "Total reserved quantity retrieved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: {
+                type: "object",
+                properties: {
+                  variantId: { type: "string", format: "uuid" },
+                  totalReserved: { type: "integer" },
+                },
+              },
+            },
+          },
+          500: authErrorResponses[500],
+        },
+      },
+    },
+    reservationController.getTotalReservedQuantity.bind(reservationController),
+  );
+
+  // Get active reserved quantity for a variant
+  fastify.get<{ Params: { variantId: string } }>(
+    "/variants/:variantId/reservations/active",
+    {
+      schema: {
+        description: "Get active (non-expired) reserved quantity for a variant",
+        tags: ["Reservations"],
+        summary: "Get Active Reserved Quantity",
+        params: {
+          type: "object",
+          required: ["variantId"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            description: "Active reserved quantity retrieved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: {
+                type: "object",
+                properties: {
+                  variantId: { type: "string", format: "uuid" },
+                  activeReserved: { type: "integer" },
+                },
+              },
+            },
+          },
+          500: authErrorResponses[500],
+        },
+      },
+    },
+    reservationController.getActiveReservedQuantity.bind(reservationController),
+  );
+
+  // Create bulk reservations
+  fastify.post<{ Body: BulkReservationRequest }>(
+    "/reservations/bulk",
+    {
+      preHandler: authenticateUser,
+      schema: {
+        description:
+          "Create reservations for multiple items at once (requires authentication)",
+        tags: ["Reservations"],
+        summary: "Create Bulk Reservations",
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["cartId", "items"],
+          properties: {
+            cartId: { type: "string", format: "uuid" },
+            items: {
+              type: "array",
+              minItems: 1,
+              items: {
+                type: "object",
+                required: ["variantId", "quantity"],
+                properties: {
+                  variantId: { type: "string", format: "uuid" },
+                  quantity: { type: "integer", minimum: 1 },
+                },
+              },
+            },
+            durationMinutes: { type: "integer", minimum: 1, example: 30 },
+          },
+        },
+        response: {
+          201: {
+            description: "All reservations created successfully",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+          207: {
+            description: "Partial success — some reservations failed",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.createBulkReservations.bind(reservationController),
+  );
+
+  // Get reservations by status (admin)
+  fastify.get<{ Querystring: ReservationQueryParams }>(
+    "/admin/reservations/by-status",
+    {
+      preHandler: [requireAdmin],
+      schema: {
+        description: "Get reservations filtered by status (admin only)",
+        tags: ["Reservations Admin"],
+        summary: "Get Reservations By Status",
+        security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: {
+              type: "string",
+              enum: ["active", "expiring_soon", "expired", "recently_expired"],
+            },
+          },
+        },
+        response: {
+          200: {
+            description: "Reservations retrieved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.getReservationsByStatus.bind(reservationController),
+  );
+
+  // Resolve reservation conflicts (admin)
+  fastify.post<{ Params: { variantId: string } }>(
+    "/admin/reservations/:variantId/resolve-conflicts",
+    {
+      preHandler: [requireAdmin],
+      schema: {
+        description: "Resolve reservation conflicts for a variant (admin only)",
+        tags: ["Reservations Admin"],
+        summary: "Resolve Reservation Conflicts",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["variantId"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            description: "Conflicts resolved",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: { type: "object", additionalProperties: true },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.resolveReservationConflicts.bind(
       reservationController,
-    ) as any,
+    ),
+  );
+
+  // Optimize reservations (admin)
+  fastify.post(
+    "/admin/reservations/optimize",
+    {
+      preHandler: [requireAdmin],
+      schema: {
+        description:
+          "Optimize active reservations — cleanup and defragment (admin only)",
+        tags: ["Reservations Admin"],
+        summary: "Optimize Reservations",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            description: "Optimization completed",
+            type: "object",
+            properties: {
+              success: { type: "boolean", example: true },
+              data: {
+                type: "object",
+                properties: {
+                  optimizedCount: { type: "integer" },
+                },
+              },
+            },
+          },
+          ...authErrorResponses,
+        },
+      },
+    },
+    reservationController.optimizeReservations.bind(reservationController),
   );
 }

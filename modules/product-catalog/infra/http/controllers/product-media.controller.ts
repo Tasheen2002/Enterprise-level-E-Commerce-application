@@ -7,17 +7,17 @@ import {
 } from "../../../application/services/product-media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface AddMediaToProductRequest {
+export interface AddMediaToProductRequest {
   assetId: string;
   position?: number;
   isCover?: boolean;
 }
 
-interface SetProductCoverImageRequest {
+export interface SetProductCoverImageRequest {
   assetId: string;
 }
 
-interface ReorderProductMediaRequest {
+export interface ReorderProductMediaRequest {
   reorderData: ProductMediaReorderData[];
 }
 

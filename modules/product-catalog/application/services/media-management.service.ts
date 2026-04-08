@@ -56,7 +56,9 @@ export class MediaManagementService {
       data.storageKey,
     );
     if (existingAsset) {
-      throw new InvalidOperationError("Media asset with this storage key already exists");
+      throw new InvalidOperationError(
+        "Media asset with this storage key already exists",
+      );
     }
 
     // Validate MIME type
@@ -92,13 +94,21 @@ export class MediaManagementService {
     return asset;
   }
 
-  async getAssetById(id: string): Promise<MediaAsset | null> {
+  async getAssetById(id: string): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
-    return await this.mediaAssetRepository.findById(assetId);
+    const asset = await this.mediaAssetRepository.findById(assetId);
+    if (!asset) {
+      throw new MediaAssetNotFoundError(id);
+    }
+    return asset;
   }
 
-  async getAssetByStorageKey(storageKey: string): Promise<MediaAsset | null> {
-    return await this.mediaAssetRepository.findByStorageKey(storageKey);
+  async getAssetByStorageKey(storageKey: string): Promise<MediaAsset> {
+    const asset = await this.mediaAssetRepository.findByStorageKey(storageKey);
+    if (!asset) {
+      throw new MediaAssetNotFoundError(storageKey);
+    }
+    return asset;
   }
 
   async getAllAssets(
@@ -246,7 +256,7 @@ export class MediaManagementService {
   async updateAsset(
     id: string,
     updateData: Partial<CreateMediaAssetData>,
-  ): Promise<MediaAsset | null> {
+  ): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
 
@@ -261,23 +271,22 @@ export class MediaManagementService {
     return asset;
   }
 
-  async deleteAsset(id: string): Promise<boolean> {
+  async deleteAsset(id: string): Promise<void> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
 
     if (!asset) {
-      return false;
+      throw new MediaAssetNotFoundError(id);
     }
 
     await this.mediaAssetRepository.delete(assetId);
-    return true;
   }
 
   async addRendition(
     id: string,
     name: string,
     renditionData: any,
-  ): Promise<MediaAsset | null> {
+  ): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
 
@@ -297,7 +306,7 @@ export class MediaManagementService {
   async removeRendition(
     id: string,
     renditionName: string,
-  ): Promise<MediaAsset | null> {
+  ): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
 
@@ -501,7 +510,9 @@ export class MediaManagementService {
     const existingAsset =
       await this.mediaAssetRepository.findByStorageKey(newStorageKey);
     if (existingAsset) {
-      throw new InvalidOperationError("Asset with this storage key already exists");
+      throw new InvalidOperationError(
+        "Asset with this storage key already exists",
+      );
     }
 
     const duplicateData: CreateMediaAssetData = {
@@ -522,7 +533,7 @@ export class MediaManagementService {
   async updateStorageKey(
     id: string,
     newStorageKey: string,
-  ): Promise<MediaAsset | null> {
+  ): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
 
@@ -534,7 +545,9 @@ export class MediaManagementService {
     const existingAsset =
       await this.mediaAssetRepository.findByStorageKey(newStorageKey);
     if (existingAsset && !existingAsset.getId().equals(assetId)) {
-      throw new InvalidOperationError("Asset with this storage key already exists");
+      throw new InvalidOperationError(
+        "Asset with this storage key already exists",
+      );
     }
 
     asset.updateStorageKey(newStorageKey);

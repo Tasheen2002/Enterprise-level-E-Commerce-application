@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { ReservationRepository } from "../../../domain/repositories/reservation.repository";
+import { IReservationRepository } from "../../../domain/repositories/reservation.repository";
 import {
   Reservation,
   ReservationEntityData,
@@ -7,12 +7,12 @@ import {
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { Quantity } from "../../../domain/value-objects/quantity.vo";
-import { StockManagementService } from "../../../../inventory-management/application/services/stock-management.service";
+import { IExternalStockService } from "../../../domain/external-services";
 
-export class ReservationRepositoryImpl implements ReservationRepository {
+export class ReservationRepositoryImpl implements IReservationRepository {
   constructor(
     private readonly prisma: PrismaClient,
-    private readonly stockService?: StockManagementService,
+    private readonly stockService?: IExternalStockService,
   ) {}
 
   // Core CRUD operations
@@ -412,32 +412,16 @@ export class ReservationRepositoryImpl implements ReservationRepository {
     };
   }
 
-  // TODO: Implement this method to call your inventory service
   private async getVariantInventory(variantId: string): Promise<number> {
-    if (this.stockService) {
-      try {
-        // Call the actual inventory service to get available stock
-        const availableStock =
-          await this.stockService.getTotalAvailableStock(variantId);
-        return availableStock;
-      } catch (error) {
-        console.error(
-          `Error fetching inventory for variant ${variantId}:`,
-          error,
-        );
-        // Fallback to hardcoded value if inventory service fails
-        console.warn(
-          `⚠️  Falling back to hardcoded inventory for variant ${variantId}`,
-        );
-        return 1000;
-      }
-    } else {
-      // TEMPORARY: Return hardcoded value until inventory service is properly injected
-      console.warn(
-        `⚠️  Using hardcoded inventory for variant ${variantId}. StockService not injected!`,
+    if (!this.stockService) {
+      throw new Error(
+        `Cannot check inventory for variant ${variantId}: StockService not injected`,
       );
-      return 1000;
     }
+
+    const availableStock =
+      await this.stockService.getTotalAvailableStock(variantId);
+    return availableStock;
   }
 
   async reserveInventory(

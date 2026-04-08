@@ -1,9 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { OrderStatusHistoryController } from "../controllers/order-status-history.controller";
 import {
-  authenticateUser,
-  RolePermissions,
-} from "@/api/src/shared/middleware";
+  OrderStatusHistoryController,
+  LogStatusChangeRequest,
+  GetStatusHistoryRequest,
+} from "../controllers/order-status-history.controller";
+import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
 
 const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
 
@@ -78,7 +79,7 @@ export async function registerOrderStatusHistoryRoutes(
   orderStatusHistoryController: OrderStatusHistoryController,
 ): Promise<void> {
   // Log order status change
-  fastify.post(
+  fastify.post<LogStatusChangeRequest>(
     "/orders/:orderId/status-history",
     {
       preHandler: authenticateStaff,
@@ -134,11 +135,11 @@ export async function registerOrderStatusHistoryRoutes(
     },
     orderStatusHistoryController.logStatusChange.bind(
       orderStatusHistoryController,
-    ) as any,
+    ),
   );
 
   // Get order status history
-  fastify.get(
+  fastify.get<GetStatusHistoryRequest>(
     "/orders/:orderId/status-history",
     {
       preHandler: authenticateUser,
@@ -188,6 +189,6 @@ export async function registerOrderStatusHistoryRoutes(
     },
     orderStatusHistoryController.getStatusHistory.bind(
       orderStatusHistoryController,
-    ) as any,
+    ),
   );
 }

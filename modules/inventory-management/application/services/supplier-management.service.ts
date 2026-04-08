@@ -5,6 +5,10 @@ import {
 } from "../../domain/entities/supplier.entity";
 import { SupplierId } from "../../domain/value-objects/supplier-id.vo";
 import { ISupplierRepository } from "../../domain/repositories/supplier.repository";
+import {
+  SupplierAlreadyExistsError,
+  SupplierNotFoundError,
+} from "../../domain/errors/inventory-management.errors";
 
 export class SupplierManagementService {
   constructor(private readonly supplierRepository: ISupplierRepository) {}
@@ -17,7 +21,7 @@ export class SupplierManagementService {
     // Check if supplier with same name already exists
     const existingSupplier = await this.supplierRepository.findByName(name);
     if (existingSupplier) {
-      throw new Error(`Supplier with name "${name}" already exists`);
+      throw new SupplierAlreadyExistsError(name);
     }
 
     const supplier = Supplier.create({
@@ -44,7 +48,7 @@ export class SupplierManagementService {
     );
 
     if (!supplier) {
-      throw new Error(`Supplier with ID ${supplierId} not found`);
+      throw new SupplierNotFoundError(supplierId);
     }
 
     let updatedSupplier = supplier;
@@ -58,7 +62,7 @@ export class SupplierManagementService {
         existingSupplier &&
         existingSupplier.getSupplierId().getValue() !== supplierId
       ) {
-        throw new Error(`Supplier with name "${data.name}" already exists`);
+        throw new SupplierAlreadyExistsError(data.name);
       }
       updatedSupplier = updatedSupplier.updateName(data.name);
     }
@@ -81,18 +85,28 @@ export class SupplierManagementService {
     );
 
     if (!supplier) {
-      throw new Error(`Supplier with ID ${supplierId} not found`);
+      throw new SupplierNotFoundError(supplierId);
     }
 
     await this.supplierRepository.delete(SupplierId.create(supplierId));
   }
 
-  async getSupplier(supplierId: string): Promise<Supplier | null> {
-    return this.supplierRepository.findById(SupplierId.create(supplierId));
+  async getSupplier(supplierId: string): Promise<Supplier> {
+    const supplier = await this.supplierRepository.findById(
+      SupplierId.create(supplierId),
+    );
+    if (!supplier) {
+      throw new SupplierNotFoundError(supplierId);
+    }
+    return supplier;
   }
 
-  async getSupplierByName(name: string): Promise<Supplier | null> {
-    return this.supplierRepository.findByName(name);
+  async getSupplierByName(name: string): Promise<Supplier> {
+    const supplier = await this.supplierRepository.findByName(name);
+    if (!supplier) {
+      throw new SupplierNotFoundError(name);
+    }
+    return supplier;
   }
 
   async listSuppliers(options?: {

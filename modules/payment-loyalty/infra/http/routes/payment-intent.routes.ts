@@ -1,5 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { PaymentIntentController } from "../controllers/payment-intent.controller";
+import {
+  PaymentIntentController,
+  CreatePaymentIntentRequest,
+  ProcessPaymentRequest,
+  RefundPaymentRequest,
+  VoidPaymentRequest,
+  GetPaymentIntentQuerystring,
+} from "../controllers/payment-intent.controller";
 import { authenticateUser, requireRole } from "@/api/src/shared/middleware";
 
 const errorResponses = {
@@ -33,7 +40,7 @@ export async function registerPaymentIntentRoutes(
   fastify: FastifyInstance,
   controller: PaymentIntentController,
 ): Promise<void> {
-  fastify.post(
+  fastify.post<{ Body: CreatePaymentIntentRequest }>(
     "/payment-intents",
     {
       preHandler: authenticateUser,
@@ -67,10 +74,10 @@ export async function registerPaymentIntentRoutes(
         },
       },
     },
-    controller.create.bind(controller) as any,
+    controller.create.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Body: ProcessPaymentRequest }>(
     "/payment-intents/process",
     {
       preHandler: authenticateUser,
@@ -100,15 +107,16 @@ export async function registerPaymentIntentRoutes(
         },
       },
     },
-    controller.process.bind(controller) as any,
+    controller.process.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Body: RefundPaymentRequest }>(
     "/payment-intents/refund",
     {
       preHandler: requireRole(["STAFF"]),
       schema: {
-        description: "Refund a captured payment (full or partial) — Staff/Admin only.",
+        description:
+          "Refund a captured payment (full or partial) — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Refund Payment",
         security: [{ bearerAuth: [] }],
@@ -134,15 +142,16 @@ export async function registerPaymentIntentRoutes(
         },
       },
     },
-    controller.refund.bind(controller) as any,
+    controller.refund.bind(controller),
   );
 
-  fastify.post(
+  fastify.post<{ Body: VoidPaymentRequest }>(
     "/payment-intents/void",
     {
       preHandler: requireRole(["STAFF"]),
       schema: {
-        description: "Void an authorized (not yet captured) payment — Staff/Admin only.",
+        description:
+          "Void an authorized (not yet captured) payment — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Void Payment",
         security: [{ bearerAuth: [] }],
@@ -167,10 +176,10 @@ export async function registerPaymentIntentRoutes(
         },
       },
     },
-    controller.void.bind(controller) as any,
+    controller.void.bind(controller),
   );
 
-  fastify.get(
+  fastify.get<{ Querystring: GetPaymentIntentQuerystring }>(
     "/payment-intents",
     {
       preHandler: authenticateUser,
@@ -199,6 +208,6 @@ export async function registerPaymentIntentRoutes(
         },
       },
     },
-    controller.get.bind(controller) as any,
+    controller.get.bind(controller),
   );
 }

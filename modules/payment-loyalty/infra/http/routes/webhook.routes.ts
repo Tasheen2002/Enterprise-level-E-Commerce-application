@@ -1,6 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { PaymentWebhookController } from "../controllers/payment-webhook.controller";
-import { StripeWebhookController } from "../controllers/stripe-webhook.controller";
+import {
+  PaymentWebhookController,
+  WebhookFilterParams,
+} from "../controllers/payment-webhook.controller";
+import {
+  StripeWebhookController,
+  CreateStripeIntentBody,
+} from "../controllers/stripe-webhook.controller";
 import { requireAdmin, optionalAuth } from "@/api/src/shared/middleware";
 
 export async function registerWebhookRoutes(
@@ -9,7 +15,7 @@ export async function registerWebhookRoutes(
   stripeController: StripeWebhookController,
 ): Promise<void> {
   // Stripe: create PaymentIntent and return client_secret for frontend
-  fastify.post(
+  fastify.post<{ Body: CreateStripeIntentBody }>(
     "/payments/stripe/create-intent",
     {
       preHandler: optionalAuth,
@@ -40,17 +46,23 @@ export async function registerWebhookRoutes(
           400: {
             description: "Bad request",
             type: "object",
-            properties: { success: { type: "boolean" }, error: { type: "string" } },
+            properties: {
+              success: { type: "boolean" },
+              error: { type: "string" },
+            },
           },
           500: {
             description: "Internal server error",
             type: "object",
-            properties: { success: { type: "boolean" }, error: { type: "string" } },
+            properties: {
+              success: { type: "boolean" },
+              error: { type: "string" },
+            },
           },
         },
       },
     },
-    stripeController.createIntent.bind(stripeController) as any,
+    stripeController.createIntent.bind(stripeController),
   );
 
   // Stripe webhook (no auth — validated by Stripe signature)
@@ -59,16 +71,17 @@ export async function registerWebhookRoutes(
     {
       config: { rawBody: true },
       schema: {
-        description: "Stripe webhook endpoint. Stripe POSTs signed events here.",
+        description:
+          "Stripe webhook endpoint. Stripe POSTs signed events here.",
         tags: ["Stripe"],
         summary: "Stripe Webhook",
       },
     },
-    stripeController.handleWebhook.bind(stripeController) as any,
+    stripeController.handleWebhook.bind(stripeController),
   );
 
   // Generic webhook event log (admin)
-  fastify.get(
+  fastify.get<{ Querystring: WebhookFilterParams }>(
     "/webhooks/events",
     {
       preHandler: requireAdmin,
@@ -92,12 +105,15 @@ export async function registerWebhookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object", additionalProperties: true } },
+              data: {
+                type: "array",
+                items: { type: "object", additionalProperties: true },
+              },
             },
           },
         },
       },
     },
-    webhookController.listWebhookEvents.bind(webhookController) as any,
+    webhookController.listWebhookEvents.bind(webhookController),
   );
 }

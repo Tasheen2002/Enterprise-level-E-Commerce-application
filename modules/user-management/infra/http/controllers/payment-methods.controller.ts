@@ -6,6 +6,8 @@ import {
   UpdatePaymentMethodHandler,
   DeletePaymentMethodCommand,
   DeletePaymentMethodHandler,
+  SetDefaultPaymentMethodCommand,
+  SetDefaultPaymentMethodHandler,
   ListPaymentMethodsQuery,
   ListPaymentMethodsHandler,
 } from "../../../application";
@@ -33,15 +35,27 @@ export class PaymentMethodsController {
   private addPaymentMethodHandler: AddPaymentMethodHandler;
   private updatePaymentMethodHandler: UpdatePaymentMethodHandler;
   private deletePaymentMethodHandler: DeletePaymentMethodHandler;
+  private setDefaultPaymentMethodHandler: SetDefaultPaymentMethodHandler;
   private listPaymentMethodsHandler: ListPaymentMethodsHandler;
   private paymentMethodService: PaymentMethodService;
 
   constructor(paymentMethodService: PaymentMethodService) {
     this.paymentMethodService = paymentMethodService;
-    this.addPaymentMethodHandler = new AddPaymentMethodHandler(paymentMethodService);
-    this.updatePaymentMethodHandler = new UpdatePaymentMethodHandler(paymentMethodService);
-    this.deletePaymentMethodHandler = new DeletePaymentMethodHandler(paymentMethodService);
-    this.listPaymentMethodsHandler = new ListPaymentMethodsHandler(paymentMethodService);
+    this.addPaymentMethodHandler = new AddPaymentMethodHandler(
+      paymentMethodService,
+    );
+    this.updatePaymentMethodHandler = new UpdatePaymentMethodHandler(
+      paymentMethodService,
+    );
+    this.deletePaymentMethodHandler = new DeletePaymentMethodHandler(
+      paymentMethodService,
+    );
+    this.setDefaultPaymentMethodHandler = new SetDefaultPaymentMethodHandler(
+      paymentMethodService,
+    );
+    this.listPaymentMethodsHandler = new ListPaymentMethodsHandler(
+      paymentMethodService,
+    );
   }
 
   async addPaymentMethod(
@@ -53,7 +67,16 @@ export class PaymentMethodsController {
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const { type, brand, last4, expMonth, expYear, billingAddressId, providerRef, isDefault } = request.body;
+      const {
+        type,
+        brand,
+        last4,
+        expMonth,
+        expYear,
+        billingAddressId,
+        providerRef,
+        isDefault,
+      } = request.body;
 
       const command: AddPaymentMethodCommand = {
         userId,
@@ -147,7 +170,16 @@ export class PaymentMethodsController {
         return ResponseHelper.unauthorized(reply);
       }
 
-      const { type, brand, last4, expMonth, expYear, billingAddressId, providerRef, isDefault } = request.body;
+      const {
+        type,
+        brand,
+        last4,
+        expMonth,
+        expYear,
+        billingAddressId,
+        providerRef,
+        isDefault,
+      } = request.body;
 
       const command: AddPaymentMethodCommand = {
         userId,
@@ -230,8 +262,14 @@ export class PaymentMethodsController {
 
       const { paymentMethodId } = request.params;
 
-      await this.paymentMethodService.deletePaymentMethod(paymentMethodId, userId);
-      ResponseHelper.ok(reply, "Payment method deleted", { paymentMethodId, userId });
+      const command: DeletePaymentMethodCommand = {
+        paymentMethodId,
+        userId,
+        timestamp: new Date(),
+      };
+
+      const result = await this.deletePaymentMethodHandler.handle(command);
+      ResponseHelper.fromCommand(reply, result, "Payment method deleted");
     } catch (error) {
       ResponseHelper.error(reply, error);
     }
@@ -248,8 +286,19 @@ export class PaymentMethodsController {
       }
 
       const { paymentMethodId } = request.params;
-      await this.paymentMethodService.setDefaultPaymentMethod(paymentMethodId, userId);
-      ResponseHelper.ok(reply, "Default payment method updated");
+
+      const command: SetDefaultPaymentMethodCommand = {
+        paymentMethodId,
+        userId,
+        timestamp: new Date(),
+      };
+
+      const result = await this.setDefaultPaymentMethodHandler.handle(command);
+      ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Default payment method updated",
+      );
     } catch (error) {
       ResponseHelper.error(reply, error);
     }

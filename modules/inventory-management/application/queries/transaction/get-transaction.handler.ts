@@ -7,19 +7,15 @@ import { StockManagementService } from "../../services/stock-management.service"
 
 export class GetTransactionHandler implements IQueryHandler<
   GetTransactionQuery,
-  QueryResult<TransactionResult | null>
+  QueryResult<TransactionResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(
     query: GetTransactionQuery,
-  ): Promise<QueryResult<TransactionResult | null>> {
+  ): Promise<QueryResult<TransactionResult>> {
     try {
       const txn = await this.stockService.getTransaction(query.transactionId);
-
-      if (!txn) {
-        return QueryResult.success<TransactionResult | null>(null);
-      }
 
       const result: TransactionResult = {
         invTxnId: txn.getInvTxnId().getValue(),

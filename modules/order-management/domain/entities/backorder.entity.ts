@@ -1,3 +1,8 @@
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../errors/order-management.errors";
+
 export interface BackorderProps {
   orderItemId: string;
   promisedEta?: Date;
@@ -23,11 +28,11 @@ export class Backorder {
 
   static create(props: BackorderProps): Backorder {
     if (!props.orderItemId || props.orderItemId.trim().length === 0) {
-      throw new Error("Order item ID is required");
+      throw new DomainValidationError("Order item ID is required");
     }
 
     if (props.promisedEta && props.promisedEta < new Date()) {
-      throw new Error("Promised ETA must be in the future");
+      throw new DomainValidationError("Promised ETA must be in the future");
     }
 
     return new Backorder(props);
@@ -67,7 +72,7 @@ export class Backorder {
 
   updatePromisedEta(eta: Date): void {
     if (eta < new Date()) {
-      throw new Error("Promised ETA cannot be in the past");
+      throw new DomainValidationError("Promised ETA cannot be in the past");
     }
 
     this.promisedEta = eta;
@@ -75,7 +80,7 @@ export class Backorder {
 
   markAsNotified(): void {
     if (this.notifiedAt) {
-      throw new Error("Customer already notified");
+      throw new InvalidOperationError("Customer already notified");
     }
 
     this.notifiedAt = new Date();

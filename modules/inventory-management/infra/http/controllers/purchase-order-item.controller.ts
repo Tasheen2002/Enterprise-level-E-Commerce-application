@@ -12,6 +12,15 @@ import {
 import { PurchaseOrderManagementService } from "../../../application/services/purchase-order-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface AddPOItemBody {
+  variantId: string;
+  orderedQty: number;
+}
+
+export interface UpdatePOItemBody {
+  orderedQty: number;
+}
+
 export class PurchaseOrderItemController {
   private addPOItemHandler: AddPOItemHandler;
   private updatePOItemHandler: UpdatePOItemHandler;
@@ -45,12 +54,12 @@ export class PurchaseOrderItemController {
   }
 
   async addItem(
-    request: FastifyRequest<{ Params: { poId: string } }>,
+    request: FastifyRequest<{ Params: { poId: string }; Body: AddPOItemBody }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
 
       const command: AddPOItemCommand = {
         poId,
@@ -85,12 +94,13 @@ export class PurchaseOrderItemController {
   async updateItem(
     request: FastifyRequest<{
       Params: { poId: string; variantId: string };
+      Body: UpdatePOItemBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId, variantId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
 
       const command: UpdatePOItemCommand = {
         poId,

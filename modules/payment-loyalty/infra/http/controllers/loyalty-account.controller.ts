@@ -6,6 +6,11 @@ import {
 import { LoyaltyService } from "../../../application/services/loyalty.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface GetLoyaltyAccountQuerystring {
+  userId: string;
+  programId: string;
+}
+
 export class LoyaltyAccountController {
   private getHandler: GetLoyaltyAccountHandler;
 
@@ -14,10 +19,10 @@ export class LoyaltyAccountController {
   }
 
   async get(
-    request: FastifyRequest<{ Params: { userId: string; programId: string } }>,
+    request: FastifyRequest<{ Querystring: GetLoyaltyAccountQuerystring }>,
     reply: FastifyReply,
   ) {
-    const { userId, programId } = request.params;
+    const { userId, programId } = request.query;
     const query: GetLoyaltyAccountQuery = {
       userId,
       programId,

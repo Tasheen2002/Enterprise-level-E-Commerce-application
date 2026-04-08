@@ -1,5 +1,4 @@
 import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
 import { registerAuthRoutes } from "./auth.routes";
 import { registerProfileRoutes } from "./profile.routes";
 import { registerAddressRoutes } from "./addresses.routes";
@@ -14,29 +13,37 @@ import { AuthenticationService } from "../../../application/services/authenticat
 import { UserProfileService } from "../../../application/services/user-profile.service";
 import { AddressManagementService } from "../../../application/services/address-management.service";
 import { PaymentMethodService } from "../../../application/services/payment-method.service";
-import { UserRepository } from "../../persistence/repositories/user.repository";
-import { AddressRepository } from "../../persistence/repositories/address.repository";
+import { IUserRepository } from "../../../domain/repositories/iuser.repository";
+import { IAddressRepository } from "../../../domain/repositories/iaddress.repository";
+
+export interface UserManagementRouteServices {
+  authService: AuthenticationService;
+  profileService: UserProfileService;
+  addressService: AddressManagementService;
+  paymentMethodService: PaymentMethodService;
+  userRepository: IUserRepository;
+  addressRepository: IAddressRepository;
+}
 
 export async function registerUserManagementRoutes(
   fastify: FastifyInstance,
-  services: {
-    authService: AuthenticationService;
-    profileService: UserProfileService;
-    addressService: AddressManagementService;
-    paymentMethodService: PaymentMethodService;
-    prisma: PrismaClient;
-  },
+  services: UserManagementRouteServices,
 ) {
-  // Initialize repositories
-  const userRepository = new UserRepository(services.prisma);
-  const addressRepository = new AddressRepository(services.prisma);
-
   // Initialize controllers
-  const authController = new AuthController(services.authService, userRepository);
+  const authController = new AuthController(
+    services.authService,
+    services.userRepository,
+  );
   const profileController = new ProfileController(services.profileService);
   const addressesController = new AddressesController(services.addressService);
-  const paymentMethodsController = new PaymentMethodsController(services.paymentMethodService);
-  const usersController = new UsersController(services.profileService, userRepository, addressRepository);
+  const paymentMethodsController = new PaymentMethodsController(
+    services.paymentMethodService,
+  );
+  const usersController = new UsersController(
+    services.profileService,
+    services.userRepository,
+    services.addressRepository,
+  );
 
   await fastify.register(
     async (instance) => {

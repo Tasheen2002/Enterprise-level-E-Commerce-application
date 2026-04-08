@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client";
 import { IPromotionRepository } from "../../domain/repositories/promotion.repository";
 import { IPromotionUsageRepository } from "../../domain/repositories/promotion-usage.repository";
 import {
@@ -8,6 +7,7 @@ import {
 import { PromotionUsage } from "../../domain/entities/promotion-usage.entity";
 import { Money } from "../../domain/value-objects/money.vo";
 import { Currency } from "../../domain/value-objects/currency.vo";
+import { PromotionNotFoundError } from "../../domain/errors/payment-loyalty.errors";
 
 export interface CreatePromotionDto {
   code?: string;
@@ -60,7 +60,6 @@ export interface ApplyPromotionResult {
 
 export class PromotionService {
   constructor(
-    private readonly prisma: PrismaClient,
     private readonly promotionRepo: IPromotionRepository,
     private readonly promotionUsageRepo: IPromotionUsageRepository,
   ) {}
@@ -174,7 +173,7 @@ export class PromotionService {
   async deactivatePromotion(promoId: string): Promise<PromotionDto> {
     const promotion = await this.promotionRepo.findById(promoId);
     if (!promotion) {
-      throw new Error(`Promotion ${promoId} not found`);
+      throw new PromotionNotFoundError(promoId);
     }
 
     promotion.deactivate();
@@ -186,7 +185,7 @@ export class PromotionService {
   async activatePromotion(promoId: string): Promise<PromotionDto> {
     const promotion = await this.promotionRepo.findById(promoId);
     if (!promotion) {
-      throw new Error(`Promotion ${promoId} not found`);
+      throw new PromotionNotFoundError(promoId);
     }
 
     promotion.activate();

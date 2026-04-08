@@ -7,19 +7,15 @@ import { PurchaseOrderManagementService } from "../../services/purchase-order-ma
 
 export class GetPurchaseOrderHandler implements IQueryHandler<
   GetPurchaseOrderQuery,
-  QueryResult<PurchaseOrderResult | null>
+  QueryResult<PurchaseOrderResult>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
   async handle(
     query: GetPurchaseOrderQuery,
-  ): Promise<QueryResult<PurchaseOrderResult | null>> {
+  ): Promise<QueryResult<PurchaseOrderResult>> {
     try {
       const purchaseOrder = await this.poService.getPurchaseOrder(query.poId);
-
-      if (!purchaseOrder) {
-        return QueryResult.success<PurchaseOrderResult | null>(null);
-      }
 
       const result: PurchaseOrderResult = {
         poId: purchaseOrder.getPoId().getValue(),

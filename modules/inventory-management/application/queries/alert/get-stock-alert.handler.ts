@@ -4,19 +4,15 @@ import { StockAlertService } from "../../services/stock-alert.service";
 
 export class GetStockAlertHandler implements IQueryHandler<
   GetStockAlertQuery,
-  QueryResult<StockAlertResult | null>
+  QueryResult<StockAlertResult>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
   async handle(
     query: GetStockAlertQuery,
-  ): Promise<QueryResult<StockAlertResult | null>> {
+  ): Promise<QueryResult<StockAlertResult>> {
     try {
       const alert = await this.stockAlertService.getStockAlert(query.alertId);
-
-      if (!alert) {
-        return QueryResult.success<StockAlertResult | null>(null);
-      }
 
       const result: StockAlertResult = {
         alertId: alert.getAlertId().getValue(),

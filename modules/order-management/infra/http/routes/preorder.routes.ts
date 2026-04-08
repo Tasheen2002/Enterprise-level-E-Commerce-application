@@ -1,9 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { PreorderController } from "../controllers/preorder.controller";
 import {
-  authenticateUser,
-  RolePermissions,
-} from "@/api/src/shared/middleware";
+  PreorderController,
+  CreatePreorderRequest,
+  GetPreorderRequest,
+  ListPreordersRequest,
+  UpdatePreorderReleaseDateRequest,
+  MarkPreorderNotifiedRequest,
+  DeletePreorderRequest,
+} from "../controllers/preorder.controller";
+import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
 
 const authenticateAdmin = [authenticateUser, RolePermissions.ADMIN_ONLY];
 
@@ -68,7 +73,7 @@ export async function registerPreorderRoutes(
   preorderController: PreorderController,
 ): Promise<void> {
   // Create preorder for an order item
-  fastify.post(
+  fastify.post<CreatePreorderRequest>(
     "/preorders",
     {
       preHandler: authenticateAdmin,
@@ -111,11 +116,11 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.createPreorder.bind(preorderController) as any,
+    preorderController.createPreorder.bind(preorderController),
   );
 
   // Get preorder by order item ID
-  fastify.get(
+  fastify.get<GetPreorderRequest>(
     "/preorders/:orderItemId",
     {
       preHandler: authenticateUser,
@@ -144,11 +149,11 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.getPreorder.bind(preorderController) as any,
+    preorderController.getPreorder.bind(preorderController),
   );
 
   // List preorders with filtering
-  fastify.get(
+  fastify.get<ListPreordersRequest>(
     "/preorders",
     {
       preHandler: authenticateUser,
@@ -218,11 +223,11 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.listPreorders.bind(preorderController) as any,
+    preorderController.listPreorders.bind(preorderController),
   );
 
   // Update preorder release date
-  fastify.patch(
+  fastify.patch<UpdatePreorderReleaseDateRequest>(
     "/preorders/:orderItemId/release-date",
     {
       preHandler: authenticateAdmin,
@@ -266,11 +271,11 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.updateReleaseDate.bind(preorderController) as any,
+    preorderController.updateReleaseDate.bind(preorderController),
   );
 
   // Mark preorder customer as notified
-  fastify.post(
+  fastify.post<MarkPreorderNotifiedRequest>(
     "/preorders/:orderItemId/notify",
     {
       preHandler: authenticateAdmin,
@@ -304,11 +309,11 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.markNotified.bind(preorderController) as any,
+    preorderController.markNotified.bind(preorderController),
   );
 
   // Delete preorder
-  fastify.delete(
+  fastify.delete<DeletePreorderRequest>(
     "/preorders/:orderItemId",
     {
       preHandler: authenticateAdmin,
@@ -340,6 +345,6 @@ export async function registerPreorderRoutes(
         },
       },
     },
-    preorderController.deletePreorder.bind(preorderController) as any,
+    preorderController.deletePreorder.bind(preorderController),
   );
 }

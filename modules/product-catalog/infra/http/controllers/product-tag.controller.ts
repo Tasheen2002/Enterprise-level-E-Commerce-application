@@ -3,12 +3,12 @@ import { ProductTagManagementService } from "../../../application/services/produ
 import { ProductTagQueryOptions } from "../../../domain/repositories/product-tag.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateTagRequest {
+export interface CreateTagRequest {
   tag: string;
   kind?: string;
 }
 
-interface UpdateTagRequest extends Partial<CreateTagRequest> {}
+export interface UpdateTagRequest extends Partial<CreateTagRequest> {}
 
 interface TagQueryParams {
   page?: number;
@@ -18,11 +18,11 @@ interface TagQueryParams {
   sortOrder?: "asc" | "desc";
 }
 
-interface BulkCreateTagsRequest {
+export interface BulkCreateTagsRequest {
   tags: CreateTagRequest[];
 }
 
-interface BulkDeleteTagsRequest {
+export interface BulkDeleteTagsRequest {
   ids: string[];
 }
 

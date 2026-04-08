@@ -12,6 +12,20 @@ import {
 import { PickupReservationService } from "../../../application/services/pickup-reservation.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface ListReservationsQuerystring {
+  orderId?: string;
+  locationId?: string;
+  activeOnly?: boolean | string;
+}
+
+export interface CreateReservationBody {
+  orderId: string;
+  variantId: string;
+  locationId: string;
+  qty: number;
+  expirationMinutes?: number;
+}
+
 export class PickupReservationController {
   private createReservationHandler: CreatePickupReservationHandler;
   private cancelReservationHandler: CancelPickupReservationHandler;
@@ -52,9 +66,12 @@ export class PickupReservationController {
     }
   }
 
-  async listReservations(request: FastifyRequest, reply: FastifyReply) {
+  async listReservations(
+    request: FastifyRequest<{ Querystring: ListReservationsQuerystring }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const queryParams = request.query as any;
+      const queryParams = request.query;
       let activeOnly: boolean = true; // Default to true as per schema
       if (typeof queryParams.activeOnly !== "undefined") {
         if (typeof queryParams.activeOnly === "boolean") {
@@ -76,9 +93,12 @@ export class PickupReservationController {
     }
   }
 
-  async createReservation(request: FastifyRequest, reply: FastifyReply) {
+  async createReservation(
+    request: FastifyRequest<{ Body: CreateReservationBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const body = request.body as any;
+      const body = request.body;
       const command: CreatePickupReservationCommand = {
         orderId: body.orderId,
         variantId: body.variantId,

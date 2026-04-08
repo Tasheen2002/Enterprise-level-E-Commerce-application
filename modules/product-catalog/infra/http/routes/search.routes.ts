@@ -1,5 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { SearchController } from "../controllers/search.controller";
+import {
+  SearchController,
+  SearchQueryParams,
+  SearchSuggestionsQueryParams,
+  SearchFiltersQueryParams,
+} from "../controllers/search.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerSearchRoutes(
@@ -7,7 +12,7 @@ export async function registerSearchRoutes(
   controller: SearchController,
 ): Promise<void> {
   // GET /search — Search products (public)
-  fastify.get(
+  fastify.get<{ Querystring: SearchQueryParams }>(
     "/search",
     {
       schema: {
@@ -87,11 +92,11 @@ export async function registerSearchRoutes(
         },
       },
     },
-    controller.searchProducts.bind(controller) as any,
+    controller.searchProducts.bind(controller),
   );
 
   // GET /search/suggestions — Get search suggestions (public)
-  fastify.get(
+  fastify.get<{ Querystring: SearchSuggestionsQueryParams }>(
     "/search/suggestions",
     {
       schema: {
@@ -127,7 +132,7 @@ export async function registerSearchRoutes(
         },
       },
     },
-    controller.getSearchSuggestions.bind(controller) as any,
+    controller.getSearchSuggestions.bind(controller),
   );
 
   // GET /search/popular — Get popular searches (public)
@@ -144,7 +149,7 @@ export async function registerSearchRoutes(
   );
 
   // GET /search/filters — Get available search filters (public)
-  fastify.get(
+  fastify.get<{ Querystring: SearchFiltersQueryParams }>(
     "/search/filters",
     {
       schema: {
@@ -159,7 +164,7 @@ export async function registerSearchRoutes(
         },
       },
     },
-    controller.getSearchFilters.bind(controller) as any,
+    controller.getSearchFilters.bind(controller),
   );
 
   // GET /search/stats — Get search statistics (Staff+)

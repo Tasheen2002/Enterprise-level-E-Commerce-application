@@ -1,11 +1,16 @@
 import { FastifyInstance } from "fastify";
-import { AddressesController } from "../controllers/addresses.controller";
+import {
+  AddressesController,
+  AddAddressRequest,
+  UpdateAddressRequest,
+  ListAddressesQueryParams,
+} from "../controllers/addresses.controller";
 import { authenticate } from "@/api/src/shared/middleware";
 
 const addressObject = {
   type: "object",
   properties: {
-    id: { type: "string", format: "uuid" },
+    addressId: { type: "string", format: "uuid" },
     userId: { type: "string", format: "uuid" },
     type: { type: "string", enum: ["shipping", "billing"] },
     firstName: { type: "string" },
@@ -50,7 +55,7 @@ export async function registerAddressRoutes(
   controller: AddressesController,
 ) {
   // GET /users/me/addresses
-  fastify.get(
+  fastify.get<{ Querystring: ListAddressesQueryParams }>(
     "/users/me/addresses",
     {
       preHandler: [authenticate],
@@ -66,18 +71,24 @@ export async function registerAddressRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "array", items: addressObject },
+              data: {
+                type: "object",
+                properties: {
+                  userId: { type: "string" },
+                  addresses: { type: "array", items: addressObject },
+                  totalCount: { type: "number" },
+                },
+              },
             },
           },
         },
       },
     },
-    (request, reply) =>
-      controller.getCurrentUserAddresses(request as any, reply),
+    controller.getCurrentUserAddresses.bind(controller),
   );
 
   // POST /users/me/addresses
-  fastify.post(
+  fastify.post<{ Body: AddAddressRequest }>(
     "/users/me/addresses",
     {
       preHandler: [authenticate],
@@ -113,11 +124,14 @@ export async function registerAddressRoutes(
         },
       },
     },
-    (request, reply) => controller.addCurrentUserAddress(request as any, reply),
+    controller.addCurrentUserAddress.bind(controller),
   );
 
   // PATCH /users/me/addresses/:addressId
-  fastify.patch(
+  fastify.patch<{
+    Params: { addressId: string };
+    Body: UpdateAddressRequest;
+  }>(
     "/users/me/addresses/:addressId",
     {
       preHandler: [authenticate],
@@ -145,12 +159,11 @@ export async function registerAddressRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.updateCurrentUserAddress(request as any, reply),
+    controller.updateCurrentUserAddress.bind(controller),
   );
 
   // DELETE /users/me/addresses/:addressId
-  fastify.delete(
+  fastify.delete<{ Params: { addressId: string } }>(
     "/users/me/addresses/:addressId",
     {
       preHandler: [authenticate],
@@ -173,12 +186,11 @@ export async function registerAddressRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.deleteCurrentUserAddress(request as any, reply),
+    controller.deleteCurrentUserAddress.bind(controller),
   );
 
   // POST /users/me/addresses/:addressId/set-default
-  fastify.post(
+  fastify.post<{ Params: { addressId: string } }>(
     "/users/me/addresses/:addressId/set-default",
     {
       preHandler: [authenticate],
@@ -200,6 +212,6 @@ export async function registerAddressRoutes(
         },
       },
     },
-    (request, reply) => controller.setDefaultAddress(request as any, reply),
+    controller.setDefaultAddress.bind(controller),
   );
 }

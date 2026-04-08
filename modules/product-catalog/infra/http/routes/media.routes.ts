@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { MediaController } from "../controllers/media.controller";
+import { MediaController, CreateMediaAssetRequest, UpdateMediaAssetRequest, MediaAssetQueryParams } from "../controllers/media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerMediaRoutes(
@@ -7,7 +7,7 @@ export async function registerMediaRoutes(
   controller: MediaController,
 ): Promise<void> {
   // GET /media — List media assets (Staff+)
-  fastify.get(
+  fastify.get<{ Querystring: MediaAssetQueryParams }>(
     "/media",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -46,11 +46,11 @@ export async function registerMediaRoutes(
         },
       },
     },
-    controller.getMediaAssets.bind(controller) as any,
+    controller.getMediaAssets.bind(controller),
   );
 
   // GET /media/:id — Get media asset by ID (Staff+)
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     "/media/:id",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -66,11 +66,11 @@ export async function registerMediaRoutes(
         },
       },
     },
-    controller.getMediaAsset.bind(controller) as any,
+    controller.getMediaAsset.bind(controller),
   );
 
   // POST /media — Create media asset (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateMediaAssetRequest }>(
     "/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -116,11 +116,11 @@ export async function registerMediaRoutes(
         },
       },
     },
-    controller.createMediaAsset.bind(controller) as any,
+    controller.createMediaAsset.bind(controller),
   );
 
   // PUT /media/:id — Update media asset (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateMediaAssetRequest }>(
     "/media/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -149,11 +149,11 @@ export async function registerMediaRoutes(
         },
       },
     },
-    controller.updateMediaAsset.bind(controller) as any,
+    controller.updateMediaAsset.bind(controller),
   );
 
   // DELETE /media/:id — Delete media asset (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/media/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -169,6 +169,6 @@ export async function registerMediaRoutes(
         },
       },
     },
-    controller.deleteMediaAsset.bind(controller) as any,
+    controller.deleteMediaAsset.bind(controller),
   );
 }

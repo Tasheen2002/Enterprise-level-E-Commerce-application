@@ -1,5 +1,17 @@
 import { FastifyInstance } from "fastify";
-import { EditorialLookController } from "../controllers/editorial-look.controller";
+import {
+  EditorialLookController,
+  CreateEditorialLookRequest,
+  UpdateEditorialLookRequest,
+  BulkCreateEditorialLooksRequest,
+  BulkDeleteEditorialLooksRequest,
+  BulkPublishEditorialLooksRequest,
+  SchedulePublicationRequest,
+  SetHeroImageRequest,
+  UpdateStoryContentRequest,
+  SetLookProductsRequest,
+  DuplicateEditorialLookRequest,
+} from "../controllers/editorial-look.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerEditorialLookRoutes(
@@ -138,7 +150,7 @@ export async function registerEditorialLookRoutes(
   );
 
   // POST /editorial-looks/bulk — Bulk create editorial looks (Admin only, before POST /editorial-looks)
-  fastify.post(
+  fastify.post<{ Body: BulkCreateEditorialLooksRequest }>(
     "/editorial-looks/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -170,11 +182,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.createBulkEditorialLooks.bind(controller) as any,
+    controller.createBulkEditorialLooks.bind(controller),
   );
 
   // POST /editorial-looks/bulk/publish — Bulk publish editorial looks (Admin only)
-  fastify.post(
+  fastify.post<{ Body: BulkPublishEditorialLooksRequest }>(
     "/editorial-looks/bulk/publish",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -196,7 +208,7 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.publishBulkEditorialLooks.bind(controller) as any,
+    controller.publishBulkEditorialLooks.bind(controller),
   );
 
   // POST /editorial-looks/process-scheduled — Process scheduled publications (Admin only)
@@ -211,11 +223,11 @@ export async function registerEditorialLookRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.processScheduledPublications.bind(controller) as any,
+    controller.processScheduledPublications.bind(controller),
   );
 
   // POST /editorial-looks — Create editorial look (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateEditorialLookRequest }>(
     "/editorial-looks",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -258,11 +270,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.createEditorialLook.bind(controller) as any,
+    controller.createEditorialLook.bind(controller),
   );
 
   // POST /editorial-looks/:id/publish — Publish a look (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     "/editorial-looks/:id/publish",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -288,11 +300,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.publishEditorialLook.bind(controller) as any,
+    controller.publishEditorialLook.bind(controller),
   );
 
   // POST /editorial-looks/:id/unpublish — Unpublish a look (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string } }>(
     "/editorial-looks/:id/unpublish",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -308,11 +320,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.unpublishEditorialLook.bind(controller) as any,
+    controller.unpublishEditorialLook.bind(controller),
   );
 
   // POST /editorial-looks/:id/schedule — Schedule publication (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string }; Body: SchedulePublicationRequest }>(
     "/editorial-looks/:id/schedule",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -335,11 +347,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.schedulePublication.bind(controller) as any,
+    controller.schedulePublication.bind(controller),
   );
 
   // POST /editorial-looks/:id/duplicate — Duplicate a look (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string }; Body: DuplicateEditorialLookRequest }>(
     "/editorial-looks/:id/duplicate",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -355,11 +367,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.duplicateEditorialLook.bind(controller) as any,
+    controller.duplicateEditorialLook.bind(controller),
   );
 
   // POST /editorial-looks/:id/hero — Set hero image (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string }; Body: SetHeroImageRequest }>(
     "/editorial-looks/:id/hero",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -382,11 +394,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.setHeroImage.bind(controller) as any,
+    controller.setHeroImage.bind(controller),
   );
 
   // POST /editorial-looks/:id/products — Set products in a look (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string }; Body: SetLookProductsRequest }>(
     "/editorial-looks/:id/products",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -413,11 +425,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.setLookProducts.bind(controller) as any,
+    controller.setLookProducts.bind(controller),
   );
 
   // POST /editorial-looks/:id/products/:productId — Add product to look (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { id: string; productId: string } }>(
     "/editorial-looks/:id/products/:productId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -436,11 +448,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.addProductToLook.bind(controller) as any,
+    controller.addProductToLook.bind(controller),
   );
 
   // PUT /editorial-looks/:id/story — Update story content (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateStoryContentRequest }>(
     "/editorial-looks/:id/story",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -463,11 +475,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.updateStoryContent.bind(controller) as any,
+    controller.updateStoryContent.bind(controller),
   );
 
   // PUT /editorial-looks/:id — Update editorial look (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateEditorialLookRequest }>(
     "/editorial-looks/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -492,11 +504,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.updateEditorialLook.bind(controller) as any,
+    controller.updateEditorialLook.bind(controller),
   );
 
   // DELETE /editorial-looks/bulk — Bulk delete editorial looks (Admin only)
-  fastify.delete(
+  fastify.delete<{ Body: BulkDeleteEditorialLooksRequest }>(
     "/editorial-looks/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -519,11 +531,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.deleteBulkEditorialLooks.bind(controller) as any,
+    controller.deleteBulkEditorialLooks.bind(controller),
   );
 
   // DELETE /editorial-looks/:id/hero — Remove hero image (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/editorial-looks/:id/hero",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -539,11 +551,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.removeHeroImage.bind(controller) as any,
+    controller.removeHeroImage.bind(controller),
   );
 
   // DELETE /editorial-looks/:id/story — Clear story content (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/editorial-looks/:id/story",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -559,11 +571,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.clearStoryContent.bind(controller) as any,
+    controller.clearStoryContent.bind(controller),
   );
 
   // DELETE /editorial-looks/:id/products/:productId — Remove product from look (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string; productId: string } }>(
     "/editorial-looks/:id/products/:productId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -582,11 +594,11 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.removeProductFromLook.bind(controller) as any,
+    controller.removeProductFromLook.bind(controller),
   );
 
   // DELETE /editorial-looks/:id — Delete editorial look (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/editorial-looks/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -602,6 +614,6 @@ export async function registerEditorialLookRoutes(
         },
       },
     },
-    controller.deleteEditorialLook.bind(controller) as any,
+    controller.deleteEditorialLook.bind(controller),
   );
 }

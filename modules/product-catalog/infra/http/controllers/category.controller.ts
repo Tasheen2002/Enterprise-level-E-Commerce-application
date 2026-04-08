@@ -1,16 +1,32 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import {
+  CreateCategoryCommand,
+  CreateCategoryHandler,
+  UpdateCategoryCommand,
+  UpdateCategoryHandler,
+  DeleteCategoryCommand,
+  DeleteCategoryHandler,
+  ReorderCategoriesCommand,
+  ReorderCategoriesHandler,
+  GetCategoryQuery,
+  GetCategoryHandler,
+  ListCategoriesQuery,
+  ListCategoriesHandler,
+  GetCategoryHierarchyQuery,
+  GetCategoryHierarchyHandler,
+} from "../../../application";
 import { CategoryManagementService } from "../../../application/services/category-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateCategoryRequest {
+export interface CreateCategoryRequest {
   name: string;
   parentId?: string;
   position?: number;
 }
 
-interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
+export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
 
-interface CategoryQueryParams {
+export interface CategoryQueryParams {
   page?: number;
   limit?: number;
   parentId?: string;
@@ -20,47 +36,56 @@ interface CategoryQueryParams {
 }
 
 export class CategoryController {
-  constructor(
-    private readonly categoryManagementService: CategoryManagementService,
-  ) {}
+  private createCategoryHandler: CreateCategoryHandler;
+  private updateCategoryHandler: UpdateCategoryHandler;
+  private deleteCategoryHandler: DeleteCategoryHandler;
+  private reorderCategoriesHandler: ReorderCategoriesHandler;
+  private getCategoryHandler: GetCategoryHandler;
+  private listCategoriesHandler: ListCategoriesHandler;
+  private getCategoryHierarchyHandler: GetCategoryHierarchyHandler;
+
+  constructor(categoryManagementService: CategoryManagementService) {
+    this.createCategoryHandler = new CreateCategoryHandler(
+      categoryManagementService,
+    );
+    this.updateCategoryHandler = new UpdateCategoryHandler(
+      categoryManagementService,
+    );
+    this.deleteCategoryHandler = new DeleteCategoryHandler(
+      categoryManagementService,
+    );
+    this.reorderCategoriesHandler = new ReorderCategoriesHandler(
+      categoryManagementService,
+    );
+    this.getCategoryHandler = new GetCategoryHandler(categoryManagementService);
+    this.listCategoriesHandler = new ListCategoriesHandler(
+      categoryManagementService,
+    );
+    this.getCategoryHierarchyHandler = new GetCategoryHierarchyHandler(
+      categoryManagementService,
+    );
+  }
 
   async getCategories(
     request: FastifyRequest<{ Querystring: CategoryQueryParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const {
-        page = 1,
-        limit = 50,
-        parentId,
-        includeChildren = false,
-        sortBy = "position",
-        sortOrder = "asc",
-      } = request.query;
-
-      const options = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        parentId,
-        includeChildren,
-        sortBy,
-        sortOrder,
+      const query: ListCategoriesQuery = {
+        page: request.query.page,
+        limit: request.query.limit,
+        parentId: request.query.parentId,
+        includeChildren: request.query.includeChildren,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
       };
 
-      const categories = await this.categoryManagementService.getCategories(options);
-      const mappedData = categories.map((category) => category.toData());
-
-      return ResponseHelper.ok(reply, "Categories retrieved successfully", {
-        categories: mappedData,
-        meta: {
-          page: options.page,
-          limit: options.limit,
-          parentId: options.parentId || null,
-          includeChildren: options.includeChildren,
-          sortBy: options.sortBy,
-          sortOrder: options.sortOrder,
-        },
-      });
+      const result = await this.listCategoriesHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Categories retrieved successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to get categories");
       return ResponseHelper.error(reply, error);
@@ -72,15 +97,14 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const category = await this.categoryManagementService.getCategoryById(id);
-
-      if (!category) {
-        return ResponseHelper.notFound(reply, "Category not found");
-      }
-
-      return ResponseHelper.ok(reply, "Category retrieved successfully", category.toData());
+      const query: GetCategoryQuery = { categoryId: request.params.id };
+      const result = await this.getCategoryHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Category retrieved successfully",
+        "Category not found",
+      );
     } catch (error) {
       request.log.error(error, "Failed to get category");
       return ResponseHelper.error(reply, error);
@@ -92,15 +116,14 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const { slug } = request.params;
-
-      const category = await this.categoryManagementService.getCategoryBySlug(slug);
-
-      if (!category) {
-        return ResponseHelper.notFound(reply, "Category not found");
-      }
-
-      return ResponseHelper.ok(reply, "Category retrieved successfully", category.toData());
+      const query: GetCategoryQuery = { slug: request.params.slug };
+      const result = await this.getCategoryHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Category retrieved successfully",
+        "Category not found",
+      );
     } catch (error) {
       request.log.error(error, "Failed to get category by slug");
       return ResponseHelper.error(reply, error);
@@ -112,37 +135,28 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const categoryData = request.body;
+      const body = request.body;
+      const command: CreateCategoryCommand = {
+        name: body.name,
+        parentId: body.parentId,
+        position: body.position,
+      };
 
-      const category = await this.categoryManagementService.createCategory(categoryData);
+      const result = await this.createCategoryHandler.handle(command);
 
-      return ResponseHelper.created(reply, "Category created successfully", category.toData());
+      if (result.success && result.data) {
+        return ResponseHelper.created(
+          reply,
+          "Category created successfully",
+          result.data.toData(),
+        );
+      }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Category creation failed",
+      );
     } catch (error) {
       request.log.error(error, "Failed to create category");
-
-      if (error instanceof Error) {
-        if (error.message.includes("duplicate") || error.message.includes("unique")) {
-          return reply.status(409).send({
-            success: false,
-            statusCode: 409,
-            error: "Conflict",
-            message: "Category with this name or slug already exists",
-          });
-        }
-
-        if (error.message.includes("parent") || error.message.includes("not found")) {
-          return ResponseHelper.badRequest(reply, "Parent category not found");
-        }
-
-        if (error.message.includes("circular") || error.message.includes("hierarchy")) {
-          return ResponseHelper.badRequest(reply, "Invalid category hierarchy - would create circular reference");
-        }
-
-        if (error.message.includes("UUID") || error.message.includes("uuid")) {
-          return ResponseHelper.badRequest(reply, "Invalid parent ID format - must be a valid UUID");
-        }
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -156,43 +170,30 @@ export class CategoryController {
   ) {
     try {
       const { id } = request.params;
-      const updateData = request.body;
+      const body = request.body;
+      const command: UpdateCategoryCommand = {
+        categoryId: id,
+        name: body.name,
+        parentId: body.parentId,
+        position: body.position,
+      };
 
-      const category = await this.categoryManagementService.updateCategory(id, updateData);
+      const result = await this.updateCategoryHandler.handle(command);
 
-      if (!category) {
-        return ResponseHelper.notFound(reply, "Category not found");
+      if (result.success && result.data) {
+        return ResponseHelper.ok(
+          reply,
+          "Category updated successfully",
+          result.data.toData(),
+        );
       }
-
-      return ResponseHelper.ok(reply, "Category updated successfully", category.toData());
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Category updated successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to update category");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Category not found");
-      }
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("duplicate") || error.message.includes("unique"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Category with this name or slug already exists",
-        });
-      }
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("parent") ||
-          error.message.includes("circular") ||
-          error.message.includes("hierarchy"))
-      ) {
-        return ResponseHelper.badRequest(reply, "Invalid category hierarchy - would create circular reference or parent not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -202,42 +203,28 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const deleted = await this.categoryManagementService.deleteCategory(id);
-
-      if (!deleted) {
-        return ResponseHelper.notFound(reply, "Category not found");
-      }
-
-      return ResponseHelper.ok(reply, "Category deleted successfully");
+      const command: DeleteCategoryCommand = { categoryId: request.params.id };
+      const result = await this.deleteCategoryHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Category deleted successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to delete category");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Category not found");
-      }
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("children") || error.message.includes("constraint"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Cannot delete category with existing subcategories or products",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getCategoryHierarchy(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const hierarchy = await this.categoryManagementService.getCategoryHierarchy();
-      return ResponseHelper.ok(reply, "Category hierarchy retrieved successfully", hierarchy);
+      const query: GetCategoryHierarchyQuery = {};
+      const result = await this.getCategoryHierarchyHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Category hierarchy retrieved successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to get category hierarchy");
       return ResponseHelper.error(reply, error);
@@ -251,18 +238,17 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const { categoryOrders } = request.body;
-
-      await this.categoryManagementService.reorderCategories(categoryOrders);
-
-      return ResponseHelper.ok(reply, "Categories reordered successfully");
+      const command: ReorderCategoriesCommand = {
+        categoryOrders: request.body.categoryOrders,
+      };
+      const result = await this.reorderCategoriesHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Categories reordered successfully",
+      );
     } catch (error) {
       request.log.error(error, "Failed to reorder categories");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "One or more categories not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }

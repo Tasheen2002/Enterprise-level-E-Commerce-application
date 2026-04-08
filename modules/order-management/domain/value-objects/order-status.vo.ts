@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/order-management.errors";
+
 export enum OrderStatusEnum {
   CREATED = "created",
   PENDING = "pending",
@@ -27,7 +29,7 @@ export class OrderStatus {
         normalizedValue as OrderStatusEnum,
       )
     ) {
-      throw new Error(`Invalid order status: ${value}`);
+      throw new DomainValidationError(`Invalid order status: ${value}`);
     }
 
     return new OrderStatus(normalizedValue as OrderStatusEnum);

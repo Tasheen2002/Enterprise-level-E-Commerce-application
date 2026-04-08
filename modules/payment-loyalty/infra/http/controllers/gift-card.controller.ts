@@ -6,8 +6,6 @@ import {
   RedeemGiftCardHandler,
   GetGiftCardBalanceQuery,
   GetGiftCardBalanceHandler,
-  GetGiftCardTransactionsQuery,
-  GetGiftCardTransactionsHandler,
 } from "../../../application";
 import { GiftCardService } from "../../../application/services/gift-card.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
@@ -31,13 +29,11 @@ export class GiftCardController {
   private createHandler: CreateGiftCardHandler;
   private redeemHandler: RedeemGiftCardHandler;
   private balanceHandler: GetGiftCardBalanceHandler;
-  private txnsHandler: GetGiftCardTransactionsHandler;
 
   constructor(private readonly giftCardService: GiftCardService) {
     this.createHandler = new CreateGiftCardHandler(giftCardService);
     this.redeemHandler = new RedeemGiftCardHandler(giftCardService);
     this.balanceHandler = new GetGiftCardBalanceHandler(giftCardService);
-    this.txnsHandler = new GetGiftCardTransactionsHandler(giftCardService);
   }
 
   async create(
@@ -103,22 +99,6 @@ export class GiftCardController {
       result,
       "Gift card balance retrieved",
       "Gift card not found",
-    );
-  }
-
-  async getTransactions(
-    request: FastifyRequest<{ Params: { giftCardId: string } }>,
-    reply: FastifyReply,
-  ) {
-    const query: GetGiftCardTransactionsQuery = {
-      giftCardId: request.params.giftCardId,
-      timestamp: new Date(),
-    };
-    const result = await this.txnsHandler.handle(query);
-    return ResponseHelper.fromQuery(
-      reply,
-      result,
-      "Gift card transactions retrieved",
     );
   }
 }

@@ -4,7 +4,7 @@ import { CreateEditorialLookData } from "../../../domain/entities/editorial-look
 import { EditorialLookQueryOptions } from "../../../domain/repositories/editorial-look.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-interface CreateEditorialLookRequest {
+export interface CreateEditorialLookRequest {
   title: string;
   storyHtml?: string;
   heroAssetId?: string;
@@ -12,14 +12,14 @@ interface CreateEditorialLookRequest {
   productIds?: string[];
 }
 
-interface UpdateEditorialLookRequest {
+export interface UpdateEditorialLookRequest {
   title?: string;
   storyHtml?: string;
   heroAssetId?: string | null;
   publishedAt?: string | null;
 }
 
-interface EditorialLookQueryParams {
+export interface EditorialLookQueryParams {
   page?: number;
   limit?: number;
   published?: boolean;
@@ -32,35 +32,35 @@ interface EditorialLookQueryParams {
   sortOrder?: "asc" | "desc";
 }
 
-interface BulkCreateEditorialLooksRequest {
+export interface BulkCreateEditorialLooksRequest {
   looks: CreateEditorialLookRequest[];
 }
 
-interface BulkDeleteEditorialLooksRequest {
+export interface BulkDeleteEditorialLooksRequest {
   ids: string[];
 }
 
-interface BulkPublishEditorialLooksRequest {
+export interface BulkPublishEditorialLooksRequest {
   ids: string[];
 }
 
-interface SchedulePublicationRequest {
+export interface SchedulePublicationRequest {
   publishDate: string;
 }
 
-interface SetHeroImageRequest {
+export interface SetHeroImageRequest {
   assetId: string;
 }
 
-interface UpdateStoryContentRequest {
+export interface UpdateStoryContentRequest {
   storyHtml: string;
 }
 
-interface SetLookProductsRequest {
+export interface SetLookProductsRequest {
   productIds: string[];
 }
 
-interface DuplicateEditorialLookRequest {
+export interface DuplicateEditorialLookRequest {
   newTitle: string;
 }
 

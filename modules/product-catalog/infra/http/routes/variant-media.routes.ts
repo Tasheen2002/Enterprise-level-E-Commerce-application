@@ -1,5 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { VariantMediaController } from "../controllers/variant-media.controller";
+import {
+  VariantMediaController,
+  AddMediaToVariantRequest,
+  SetVariantMediaRequest,
+  AddMediaToMultipleVariantsRequest,
+  AddMultipleMediaToVariantRequest,
+  CopyProductVariantMediaRequest,
+} from "../controllers/variant-media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerVariantMediaRoutes(
@@ -43,7 +50,7 @@ export async function registerVariantMediaRoutes(
   );
 
   // GET /media/:assetId/variants — Get variants using a specific asset (Staff+)
-  fastify.get(
+  fastify.get<{ Params: { assetId: string } }>(
     "/media/:assetId/variants",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -59,11 +66,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.getVariantsUsingAsset.bind(controller) as any,
+    controller.getVariantsUsingAsset.bind(controller),
   );
 
   // GET /media/:assetId/usage-count — Get usage count for an asset (Staff+)
-  fastify.get(
+  fastify.get<{ Params: { assetId: string } }>(
     "/media/:assetId/usage-count",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -79,11 +86,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.getAssetUsageCount.bind(controller) as any,
+    controller.getAssetUsageCount.bind(controller),
   );
 
   // GET /variants/media/unused-assets — Get unused media assets (Staff+)
-  fastify.get(
+  fastify.get<{ Querystring: { productId?: string } }>(
     "/variants/media/unused-assets",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -94,12 +101,12 @@ export async function registerVariantMediaRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.getUnusedAssets.bind(controller) as any,
+    controller.getUnusedAssets.bind(controller),
   );
 
-  // GET /variants/media/statistics — Get variant media statistics (Staff+)
-  fastify.get(
-    "/variants/media/statistics",
+  // GET /variants/:variantId/media/statistics — Get variant media statistics (Staff+)
+  fastify.get<{ Params: { variantId: string } }>(
+    "/variants/:variantId/media/statistics",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
@@ -107,9 +114,14 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Get Variant Media Statistics",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["variantId"],
+          properties: { variantId: { type: "string", format: "uuid" } },
+        },
       },
     },
-    controller.getVariantMediaStatistics.bind(controller) as any,
+    controller.getVariantMediaStatistics.bind(controller),
   );
 
   // GET /variants/:variantId/media/color — Get color-specific variant media (public)
@@ -151,7 +163,7 @@ export async function registerVariantMediaRoutes(
   );
 
   // POST /variants/media/copy — Copy variant media between products (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CopyProductVariantMediaRequest }>(
     "/variants/media/copy",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -176,11 +188,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.copyProductVariantMedia.bind(controller) as any,
+    controller.copyProductVariantMedia.bind(controller),
   );
 
   // POST /variants/media/bulk-assign — Add media to multiple variants (Admin only)
-  fastify.post(
+  fastify.post<{ Body: AddMediaToMultipleVariantsRequest }>(
     "/variants/media/bulk-assign",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -203,11 +215,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.addMediaToMultipleVariants.bind(controller) as any,
+    controller.addMediaToMultipleVariants.bind(controller),
   );
 
   // POST /variants/:variantId/media/set — Set (replace) all media for a variant (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { variantId: string }; Body: SetVariantMediaRequest }>(
     "/variants/:variantId/media/set",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -234,11 +246,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.setVariantMedia.bind(controller) as any,
+    controller.setVariantMedia.bind(controller),
   );
 
   // POST /variants/:variantId/media/bulk — Add multiple media assets to a variant (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { variantId: string }; Body: { assetIds: string[] } }>(
     "/variants/:variantId/media/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -265,34 +277,39 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.addMultipleMediaToVariant.bind(controller) as any,
+    controller.addMultipleMediaToVariant.bind(controller),
   );
 
-  // POST /variants/:variantId/media/:assetId/duplicate — Duplicate variant media (Admin only)
-  fastify.post(
-    "/variants/:variantId/media/:assetId/duplicate",
+  // POST /variants/:sourceVariantId/media/duplicate-to/:targetVariantId — Duplicate variant media (Admin only)
+  fastify.post<{
+    Params: { sourceVariantId: string; targetVariantId: string };
+  }>(
+    "/variants/:sourceVariantId/media/duplicate-to/:targetVariantId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
-        description: "Duplicate a media asset association for a variant",
+        description: "Duplicate all media from one variant to another",
         tags: ["Variant Media"],
         summary: "Duplicate Variant Media",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          required: ["variantId", "assetId"],
+          required: ["sourceVariantId", "targetVariantId"],
           properties: {
-            variantId: { type: "string", format: "uuid" },
-            assetId: { type: "string", format: "uuid" },
+            sourceVariantId: { type: "string", format: "uuid" },
+            targetVariantId: { type: "string", format: "uuid" },
           },
         },
       },
     },
-    controller.duplicateVariantMedia.bind(controller) as any,
+    controller.duplicateVariantMedia.bind(controller),
   );
 
   // POST /variants/:variantId/media — Add media to a variant (Admin only)
-  fastify.post(
+  fastify.post<{
+    Params: { variantId: string };
+    Body: AddMediaToVariantRequest;
+  }>(
     "/variants/:variantId/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -345,11 +362,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.addMediaToVariant.bind(controller) as any,
+    controller.addMediaToVariant.bind(controller),
   );
 
   // POST /variants/:variantId/media/validate — Validate variant media (Staff+)
-  fastify.post(
+  fastify.post<{ Params: { variantId: string } }>(
     "/variants/:variantId/media/validate",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -366,11 +383,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.validateVariantMedia.bind(controller) as any,
+    controller.validateVariantMedia.bind(controller),
   );
 
   // DELETE /variants/:variantId/media — Remove all media from a variant (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { variantId: string } }>(
     "/variants/:variantId/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -386,11 +403,11 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.removeAllVariantMedia.bind(controller) as any,
+    controller.removeAllVariantMedia.bind(controller),
   );
 
   // DELETE /variants/:variantId/media/:assetId — Remove specific media from a variant (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { variantId: string; assetId: string } }>(
     "/variants/:variantId/media/:assetId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -427,6 +444,6 @@ export async function registerVariantMediaRoutes(
         },
       },
     },
-    controller.removeMediaFromVariant.bind(controller) as any,
+    controller.removeMediaFromVariant.bind(controller),
   );
 }

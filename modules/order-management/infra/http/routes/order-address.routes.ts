@@ -1,5 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { OrderAddressController } from "../controllers/order-address.controller";
+import {
+  OrderAddressController,
+  SetAddressesRequest,
+  GetAddressesRequest,
+  UpdateBillingAddressRequest,
+  UpdateShippingAddressRequest,
+} from "../controllers/order-address.controller";
 import { authenticateUser } from "@/api/src/shared/middleware";
 
 const errorResponses = {
@@ -77,7 +83,7 @@ export async function registerOrderAddressRoutes(
   orderAddressController: OrderAddressController,
 ): Promise<void> {
   // Set order addresses (billing & shipping)
-  fastify.post(
+  fastify.post<SetAddressesRequest>(
     "/orders/:orderId/addresses",
     {
       preHandler: authenticateUser,
@@ -143,11 +149,11 @@ export async function registerOrderAddressRoutes(
         },
       },
     },
-    orderAddressController.setAddresses.bind(orderAddressController) as any,
+    orderAddressController.setAddresses.bind(orderAddressController),
   );
 
   // Get order addresses
-  fastify.get(
+  fastify.get<GetAddressesRequest>(
     "/orders/:orderId/addresses",
     {
       preHandler: authenticateUser,
@@ -176,11 +182,11 @@ export async function registerOrderAddressRoutes(
         },
       },
     },
-    orderAddressController.getAddresses.bind(orderAddressController) as any,
+    orderAddressController.getAddresses.bind(orderAddressController),
   );
 
   // Update billing address
-  fastify.patch(
+  fastify.patch<UpdateBillingAddressRequest>(
     "/orders/:orderId/addresses/billing",
     {
       preHandler: authenticateUser,
@@ -226,13 +232,11 @@ export async function registerOrderAddressRoutes(
         },
       },
     },
-    orderAddressController.updateBillingAddress.bind(
-      orderAddressController,
-    ) as any,
+    orderAddressController.updateBillingAddress.bind(orderAddressController),
   );
 
   // Update shipping address
-  fastify.patch(
+  fastify.patch<UpdateShippingAddressRequest>(
     "/orders/:orderId/addresses/shipping",
     {
       preHandler: authenticateUser,
@@ -278,8 +282,6 @@ export async function registerOrderAddressRoutes(
         },
       },
     },
-    orderAddressController.updateShippingAddress.bind(
-      orderAddressController,
-    ) as any,
+    orderAddressController.updateShippingAddress.bind(orderAddressController),
   );
 }

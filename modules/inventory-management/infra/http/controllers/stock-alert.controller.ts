@@ -14,6 +14,17 @@ import {
 import { StockAlertService } from "../../../application/services/stock-alert.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface ListAlertsQuerystring {
+  limit?: number;
+  offset?: number;
+  includeResolved?: boolean | string;
+}
+
+export interface CreateAlertBody {
+  variantId: string;
+  type: string;
+}
+
 export class StockAlertController {
   private createAlertHandler: CreateStockAlertHandler;
   private resolveAlertHandler: ResolveStockAlertHandler;
@@ -58,9 +69,12 @@ export class StockAlertController {
     }
   }
 
-  async listAlerts(request: FastifyRequest, reply: FastifyReply) {
+  async listAlerts(
+    request: FastifyRequest<{ Querystring: ListAlertsQuerystring }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const queryParams = request.query as any;
+      const queryParams = request.query;
       let includeResolved: boolean | undefined = undefined;
       if (typeof queryParams.includeResolved !== "undefined") {
         if (typeof queryParams.includeResolved === "boolean") {
@@ -83,9 +97,12 @@ export class StockAlertController {
     }
   }
 
-  async createAlert(request: FastifyRequest, reply: FastifyReply) {
+  async createAlert(
+    request: FastifyRequest<{ Body: CreateAlertBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const body = request.body as any;
+      const body = request.body;
       const command: CreateStockAlertCommand = {
         variantId: body.variantId,
         type: body.type,

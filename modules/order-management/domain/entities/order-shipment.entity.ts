@@ -1,4 +1,10 @@
 import { randomUUID } from "crypto";
+import {
+  DomainValidationError,
+  ShipmentAlreadyShippedError,
+  ShipmentAlreadyDeliveredError,
+  InvalidOperationError,
+} from "../errors/order-management.errors";
 
 export interface OrderShipmentProps {
   shipmentId: string;
@@ -37,7 +43,9 @@ export class OrderShipment {
 
   static create(props: Omit<OrderShipmentProps, "shipmentId">): OrderShipment {
     if (props.deliveredAt && !props.shippedAt) {
-      throw new Error("Cannot have deliveredAt without shippedAt");
+      throw new DomainValidationError(
+        "Cannot have deliveredAt without shippedAt",
+      );
     }
 
     if (
@@ -45,7 +53,9 @@ export class OrderShipment {
       props.shippedAt &&
       props.deliveredAt < props.shippedAt
     ) {
-      throw new Error("Delivered date cannot be before shipped date");
+      throw new DomainValidationError(
+        "Delivered date cannot be before shipped date",
+      );
     }
 
     return new OrderShipment({
@@ -115,7 +125,7 @@ export class OrderShipment {
     trackingNumber: string,
   ): void {
     if (this.shippedAt) {
-      throw new Error("Shipment already marked as shipped");
+      throw new ShipmentAlreadyShippedError(this.shipmentId);
     }
 
     this.carrier = carrier;
@@ -126,11 +136,13 @@ export class OrderShipment {
 
   markAsDelivered(): void {
     if (!this.shippedAt) {
-      throw new Error("Cannot mark as delivered before shipped");
+      throw new InvalidOperationError(
+        "Cannot mark as delivered before shipped",
+      );
     }
 
     if (this.deliveredAt) {
-      throw new Error("Shipment already marked as delivered");
+      throw new ShipmentAlreadyDeliveredError(this.shipmentId);
     }
 
     this.deliveredAt = new Date();

@@ -15,6 +15,29 @@ import {
 import { LocationManagementService } from "../../../application/services/location-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface CreateLocationBody {
+  type: string;
+  name: string;
+  address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+}
+
+export interface UpdateLocationBody {
+  name?: string;
+  address?: any;
+}
+
+export interface ListLocationsQuerystring {
+  limit?: number;
+  offset?: number;
+  type?: string;
+}
+
 export class LocationController {
   private createLocationHandler: CreateLocationHandler;
   private updateLocationHandler: UpdateLocationHandler;
@@ -56,7 +79,7 @@ export class LocationController {
 
   async listLocations(
     request: FastifyRequest<{
-      Querystring: { limit?: number; offset?: number; type?: string };
+      Querystring: ListLocationsQuerystring;
     }>,
     reply: FastifyReply,
   ) {
@@ -102,9 +125,12 @@ export class LocationController {
     }
   }
 
-  async createLocation(request: FastifyRequest, reply: FastifyReply) {
+  async createLocation(
+    request: FastifyRequest<{ Body: CreateLocationBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const body = request.body as any;
+      const body = request.body;
 
       // Map API address to domain model
       const address = body.address
@@ -153,12 +179,15 @@ export class LocationController {
   }
 
   async updateLocation(
-    request: FastifyRequest<{ Params: { locationId: string } }>,
+    request: FastifyRequest<{
+      Params: { locationId: string };
+      Body: UpdateLocationBody;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { locationId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
 
       const command: UpdateLocationCommand = {
         locationId,

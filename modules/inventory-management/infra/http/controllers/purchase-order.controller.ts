@@ -2,6 +2,8 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreatePurchaseOrderCommand,
   CreatePurchaseOrderHandler,
+  CreatePurchaseOrderWithItemsCommand,
+  CreatePurchaseOrderWithItemsHandler,
   AddPOItemCommand,
   AddPOItemHandler,
   UpdatePOItemCommand,
@@ -20,12 +22,61 @@ import {
   GetPOItemsHandler,
   ListPurchaseOrdersQuery,
   ListPurchaseOrdersHandler,
+  GetOverduePurchaseOrdersQuery,
+  GetOverduePurchaseOrdersHandler,
+  GetPendingReceivalQuery,
+  GetPendingReceivalHandler,
+  UpdatePOEtaCommand,
+  UpdatePOEtaHandler,
 } from "../../../application";
 import { PurchaseOrderManagementService } from "../../../application/services/purchase-order-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
+export interface CreatePOBody {
+  supplierId: string;
+  eta?: string;
+}
+
+export interface CreatePOWithItemsBody {
+  supplierId: string;
+  eta?: string;
+  items: Array<{ variantId: string; orderedQty: number }>;
+}
+
+export interface ListPOQuerystring {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  supplierId?: string;
+  sortBy?: "createdAt" | "updatedAt" | "eta";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface UpdatePOStatusBody {
+  status: string;
+}
+
+export interface ReceivePOItemsBody {
+  locationId: string;
+  items: Array<{ variantId: string; receivedQty: number }>;
+}
+
+export interface AddPOItemBody {
+  variantId: string;
+  orderedQty: number;
+}
+
+export interface UpdatePOItemBody {
+  orderedQty: number;
+}
+
+export interface UpdatePOEtaBody {
+  eta: string;
+}
+
 export class PurchaseOrderController {
   private createPurchaseOrderHandler: CreatePurchaseOrderHandler;
+  private createPurchaseOrderWithItemsHandler: CreatePurchaseOrderWithItemsHandler;
   private addPOItemHandler: AddPOItemHandler;
   private updatePOItemHandler: UpdatePOItemHandler;
   private removePOItemHandler: RemovePOItemHandler;
@@ -35,9 +86,14 @@ export class PurchaseOrderController {
   private getPurchaseOrderHandler: GetPurchaseOrderHandler;
   private getPOItemsHandler: GetPOItemsHandler;
   private listPurchaseOrdersHandler: ListPurchaseOrdersHandler;
+  private getOverduePurchaseOrdersHandler: GetOverduePurchaseOrdersHandler;
+  private getPendingReceivalHandler: GetPendingReceivalHandler;
+  private updatePOEtaHandler: UpdatePOEtaHandler;
 
   constructor(private readonly poService: PurchaseOrderManagementService) {
     this.createPurchaseOrderHandler = new CreatePurchaseOrderHandler(poService);
+    this.createPurchaseOrderWithItemsHandler =
+      new CreatePurchaseOrderWithItemsHandler(poService);
     this.addPOItemHandler = new AddPOItemHandler(poService);
     this.updatePOItemHandler = new UpdatePOItemHandler(poService);
     this.removePOItemHandler = new RemovePOItemHandler(poService);
@@ -47,6 +103,11 @@ export class PurchaseOrderController {
     this.getPurchaseOrderHandler = new GetPurchaseOrderHandler(poService);
     this.getPOItemsHandler = new GetPOItemsHandler(poService);
     this.listPurchaseOrdersHandler = new ListPurchaseOrdersHandler(poService);
+    this.getOverduePurchaseOrdersHandler = new GetOverduePurchaseOrdersHandler(
+      poService,
+    );
+    this.getPendingReceivalHandler = new GetPendingReceivalHandler(poService);
+    this.updatePOEtaHandler = new UpdatePOEtaHandler(poService);
   }
 
   async getPurchaseOrder(
@@ -68,9 +129,12 @@ export class PurchaseOrderController {
     }
   }
 
-  async createPurchaseOrder(request: FastifyRequest, reply: FastifyReply) {
+  async createPurchaseOrder(
+    request: FastifyRequest<{ Body: CreatePOBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const body = request.body as any;
+      const body = request.body;
       const command: CreatePurchaseOrderCommand = {
         supplierId: body.supplierId,
         eta: body.eta ? new Date(body.eta) : undefined,
@@ -103,78 +167,25 @@ export class PurchaseOrderController {
   }
 
   async createPurchaseOrderWithItems(
-    request: FastifyRequest,
+    request: FastifyRequest<{ Body: CreatePOWithItemsBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const body = request.body as any;
-      const errors: string[] = [];
-
-      // Validation
-      if (!body.supplierId || body.supplierId.trim().length === 0) {
-        errors.push("supplierId: Supplier ID is required");
-      }
-
-      if (!Array.isArray(body.items) || body.items.length === 0) {
-        errors.push("items: At least one item is required");
-      } else {
-        // Validate each item
-        body.items.forEach((item: any, index: number) => {
-          if (!item.variantId || item.variantId.trim().length === 0) {
-            errors.push(`items[${index}].variantId: Variant ID is required`);
-          }
-          if (!item.orderedQty || item.orderedQty <= 0) {
-            errors.push(
-              `items[${index}].orderedQty: Ordered quantity must be greater than 0`,
-            );
-          }
-        });
-      }
-
-      if (body.eta && isNaN(Date.parse(body.eta))) {
-        errors.push("eta: Invalid date format");
-      }
-
-      if (errors.length > 0) {
-        return ResponseHelper.badRequest(reply, "Validation failed", errors);
-      }
-
-      const command: CreatePurchaseOrderCommand = {
+      const body = request.body;
+      const command: CreatePurchaseOrderWithItemsCommand = {
         supplierId: body.supplierId,
         eta: body.eta ? new Date(body.eta) : undefined,
+        items: body.items,
       };
 
-      const result = await this.createPurchaseOrderHandler.handle(command);
+      const result =
+        await this.createPurchaseOrderWithItemsHandler.handle(command);
 
       if (result.success && result.data) {
-        const po = result.data;
-        // Add items if provided
-        const items = Array.isArray(body.items) ? body.items : [];
-        const addedItems = [];
-        for (const item of items) {
-          if (item.variantId && item.orderedQty) {
-            const addItemResult = await this.addPOItemHandler.handle({
-              poId: po.getPoId().getValue(),
-              variantId: item.variantId,
-              orderedQty: item.orderedQty,
-            });
-            if (addItemResult.success && addItemResult.data) {
-              addedItems.push(addItemResult.data);
-            }
-          }
-        }
         return ResponseHelper.created(
           reply,
           "Purchase order with items created successfully",
-          {
-            poId: po.getPoId().getValue(),
-            supplierId: po.getSupplierId().getValue(),
-            eta: po.getEta(),
-            status: po.getStatus().getValue(),
-            createdAt: po.getCreatedAt(),
-            updatedAt: po.getUpdatedAt(),
-            items: addedItems,
-          },
+          result.data,
         );
       }
       return ResponseHelper.badRequest(
@@ -186,9 +197,12 @@ export class PurchaseOrderController {
     }
   }
 
-  async listPurchaseOrders(request: FastifyRequest, reply: FastifyReply) {
+  async listPurchaseOrders(
+    request: FastifyRequest<{ Querystring: ListPOQuerystring }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const query = request.query as any;
+      const query = request.query;
       const listQuery: ListPurchaseOrdersQuery = {
         limit: query.limit ? Number(query.limit) : undefined,
         offset: query.offset ? Number(query.offset) : undefined,
@@ -228,12 +242,12 @@ export class PurchaseOrderController {
   }
 
   async addPOItem(
-    request: FastifyRequest<{ Params: { poId: string } }>,
+    request: FastifyRequest<{ Params: { poId: string }; Body: AddPOItemBody }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
       const command: AddPOItemCommand = {
         poId,
         variantId: body.variantId,
@@ -253,12 +267,15 @@ export class PurchaseOrderController {
   }
 
   async updatePOItem(
-    request: FastifyRequest<{ Params: { poId: string; variantId: string } }>,
+    request: FastifyRequest<{
+      Params: { poId: string; variantId: string };
+      Body: UpdatePOItemBody;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId, variantId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
       const command: UpdatePOItemCommand = {
         poId,
         variantId,
@@ -296,12 +313,15 @@ export class PurchaseOrderController {
   }
 
   async updatePOStatus(
-    request: FastifyRequest<{ Params: { poId: string } }>,
+    request: FastifyRequest<{
+      Params: { poId: string };
+      Body: UpdatePOStatusBody;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
       const command: UpdatePOStatusCommand = { poId, status: body.status };
 
       const result = await this.updatePOStatusHandler.handle(command);
@@ -323,12 +343,15 @@ export class PurchaseOrderController {
   }
 
   async receivePOItems(
-    request: FastifyRequest<{ Params: { poId: string } }>,
+    request: FastifyRequest<{
+      Params: { poId: string };
+      Body: ReceivePOItemsBody;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId } = request.params;
-      const body = request.body as any;
+      const body = request.body;
       const command: ReceivePOItemsCommand = {
         poId,
         locationId: body.locationId,
@@ -340,6 +363,68 @@ export class PurchaseOrderController {
         reply,
         result,
         "Items received successfully",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getOverduePurchaseOrders(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const query: GetOverduePurchaseOrdersQuery = {};
+      const result = await this.getOverduePurchaseOrdersHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Overdue purchase orders retrieved",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getPendingReceival(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const query: GetPendingReceivalQuery = {};
+      const result = await this.getPendingReceivalHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Pending receival purchase orders retrieved",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async updatePOEta(
+    request: FastifyRequest<{
+      Params: { poId: string };
+      Body: UpdatePOEtaBody;
+    }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { poId } = request.params;
+      const { eta } = request.body;
+      const command: UpdatePOEtaCommand = {
+        poId,
+        eta: new Date(eta),
+      };
+
+      const result = await this.updatePOEtaHandler.handle(command);
+
+      if (result.success && result.data) {
+        const po = result.data;
+        return ResponseHelper.ok(reply, "ETA updated successfully", {
+          poId: po.getPoId().getValue(),
+          eta: po.getEta(),
+          status: po.getStatus().getValue(),
+        });
+      }
+      return ResponseHelper.badRequest(
+        reply,
+        result.error || "Failed to update ETA",
       );
     } catch (error) {
       return ResponseHelper.error(reply, error);

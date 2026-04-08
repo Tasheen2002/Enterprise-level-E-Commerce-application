@@ -4,20 +4,16 @@ import { StockManagementService } from "../../services/stock-management.service"
 
 export class GetStockHandler implements IQueryHandler<
   GetStockQuery,
-  QueryResult<StockResult | null>
+  QueryResult<StockResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(query: GetStockQuery): Promise<QueryResult<StockResult | null>> {
+  async handle(query: GetStockQuery): Promise<QueryResult<StockResult>> {
     try {
       const stock = await this.stockService.getStock(
         query.variantId,
         query.locationId,
       );
-
-      if (!stock) {
-        return QueryResult.success<StockResult | null>(null);
-      }
 
       const stockLevel = stock.getStockLevel();
       const result: StockResult = {
@@ -37,6 +33,7 @@ export class GetStockHandler implements IQueryHandler<
       return QueryResult.failure(
         error instanceof Error ? error.message : "Unknown error occurred",
       );
+    }
     }
   }
 }

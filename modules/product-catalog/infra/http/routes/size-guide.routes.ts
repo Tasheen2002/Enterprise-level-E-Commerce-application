@@ -1,5 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { SizeGuideController } from "../controllers/size-guide.controller";
+import {
+  SizeGuideController,
+  CreateSizeGuideRequest,
+  UpdateSizeGuideRequest,
+  SizeGuideQueryParams,
+  BulkCreateSizeGuidesRequest,
+  BulkDeleteSizeGuidesRequest,
+  RegionalSizeGuideRequest,
+  ValidateSizeGuideQueryParams,
+} from "../controllers/size-guide.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 export async function registerSizeGuideRoutes(
@@ -7,7 +16,7 @@ export async function registerSizeGuideRoutes(
   controller: SizeGuideController,
 ): Promise<void> {
   // GET /size-guides — List size guides (public)
-  fastify.get(
+  fastify.get<{ Querystring: SizeGuideQueryParams }>(
     "/size-guides",
     {
       schema: {
@@ -22,8 +31,16 @@ export async function registerSizeGuideRoutes(
             region: { type: "string", enum: ["UK", "US", "EU"] },
             category: { type: "string" },
             hasContent: { type: "boolean" },
-            sortBy: { type: "string", enum: ["title", "region", "category"], default: "title" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+            sortBy: {
+              type: "string",
+              enum: ["title", "region", "category"],
+              default: "title",
+            },
+            sortOrder: {
+              type: "string",
+              enum: ["asc", "desc"],
+              default: "asc",
+            },
           },
         },
       },
@@ -60,7 +77,7 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/categories — Get available categories (public, before /:id)
-  fastify.get(
+  fastify.get<{ Querystring: { region?: string } }>(
     "/size-guides/categories",
     {
       schema: {
@@ -73,7 +90,7 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/general — Get general (non-regional) size guides (public, before /:id)
-  fastify.get(
+  fastify.get<{ Params: { region: string } }>(
     "/size-guides/general",
     {
       schema: {
@@ -86,7 +103,10 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/region/:region — Get size guides by region (public)
-  fastify.get(
+  fastify.get<{
+    Params: { region: string };
+    Querystring: Omit<SizeGuideQueryParams, "region">;
+  }>(
     "/size-guides/region/:region",
     {
       schema: {
@@ -104,7 +124,7 @@ export async function registerSizeGuideRoutes(
   );
 
   // GET /size-guides/:id — Get size guide by ID (public)
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     "/size-guides/:id",
     {
       schema: {
@@ -122,7 +142,7 @@ export async function registerSizeGuideRoutes(
   );
 
   // POST /size-guides/bulk — Bulk create size guides (Admin only, before POST /size-guides)
-  fastify.post(
+  fastify.post<{ Body: BulkCreateSizeGuidesRequest }>(
     "/size-guides/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -153,11 +173,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.createBulkSizeGuides.bind(controller) as any,
+    controller.createBulkSizeGuides.bind(controller),
   );
 
   // POST /size-guides/region/:region — Create regional size guide (Admin only)
-  fastify.post(
+  fastify.post<{ Params: { region: string }; Body: RegionalSizeGuideRequest }>(
     "/size-guides/region/:region",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -182,11 +202,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.createRegionalSizeGuide.bind(controller) as any,
+    controller.createRegionalSizeGuide.bind(controller),
   );
 
   // POST /size-guides — Create size guide (Admin only)
-  fastify.post(
+  fastify.post<{ Body: CreateSizeGuideRequest }>(
     "/size-guides",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -200,8 +220,15 @@ export async function registerSizeGuideRoutes(
           required: ["title", "region"],
           properties: {
             title: { type: "string", description: "Size guide title" },
-            bodyHtml: { type: "string", description: "Size guide content in HTML" },
-            region: { type: "string", enum: ["UK", "US", "EU"], description: "Region" },
+            bodyHtml: {
+              type: "string",
+              description: "Size guide content in HTML",
+            },
+            region: {
+              type: "string",
+              enum: ["UK", "US", "EU"],
+              description: "Region",
+            },
             category: { type: "string", description: "Product category" },
           },
         },
@@ -225,11 +252,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.createSizeGuide.bind(controller) as any,
+    controller.createSizeGuide.bind(controller),
   );
 
   // PUT /size-guides/:id/content — Update size guide content (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: { htmlContent: string } }>(
     "/size-guides/:id/content",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -245,18 +272,18 @@ export async function registerSizeGuideRoutes(
         },
         body: {
           type: "object",
-          required: ["bodyHtml"],
+          required: ["htmlContent"],
           properties: {
-            bodyHtml: { type: "string" },
+            htmlContent: { type: "string" },
           },
         },
       },
     },
-    controller.updateSizeGuideContent.bind(controller) as any,
+    controller.updateSizeGuideContent.bind(controller),
   );
 
   // PUT /size-guides/:id — Update size guide (Admin only)
-  fastify.put(
+  fastify.put<{ Params: { id: string }; Body: UpdateSizeGuideRequest }>(
     "/size-guides/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -281,11 +308,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.updateSizeGuide.bind(controller) as any,
+    controller.updateSizeGuide.bind(controller),
   );
 
   // DELETE /size-guides/bulk — Bulk delete size guides (Admin only)
-  fastify.delete(
+  fastify.delete<{ Body: BulkDeleteSizeGuidesRequest }>(
     "/size-guides/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -308,11 +335,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.deleteBulkSizeGuides.bind(controller) as any,
+    controller.deleteBulkSizeGuides.bind(controller),
   );
 
   // DELETE /size-guides/:id/content — Clear size guide content (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/size-guides/:id/content",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -328,11 +355,11 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.clearSizeGuideContent.bind(controller) as any,
+    controller.clearSizeGuideContent.bind(controller),
   );
 
   // DELETE /size-guides/:id — Delete size guide (Admin only)
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     "/size-guides/:id",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -348,6 +375,28 @@ export async function registerSizeGuideRoutes(
         },
       },
     },
-    controller.deleteSizeGuide.bind(controller) as any,
+    controller.deleteSizeGuide.bind(controller),
+  );
+
+  // GET /size-guides/validate — Validate size guide uniqueness (public)
+  fastify.get<{ Querystring: ValidateSizeGuideQueryParams }>(
+    "/size-guides/validate",
+    {
+      schema: {
+        description:
+          "Validate size guide uniqueness for a region/category combination",
+        tags: ["Size Guides"],
+        summary: "Validate Size Guide Uniqueness",
+        querystring: {
+          type: "object",
+          required: ["region"],
+          properties: {
+            region: { type: "string", enum: ["UK", "US", "EU"] },
+            category: { type: "string" },
+          },
+        },
+      },
+    },
+    controller.validateUniqueness.bind(controller),
   );
 }

@@ -1,5 +1,12 @@
 import { FastifyInstance } from "fastify";
-import { OrderController } from "../controllers/order.controller";
+import {
+  OrderController,
+  CreateOrderBody,
+  TrackOrderQuerystring,
+  ListOrdersQuerystring,
+  UpdateOrderStatusBody,
+  UpdateOrderTotalsBody,
+} from "../controllers/order.controller";
 import {
   optionalAuth,
   authenticateUser,
@@ -58,7 +65,7 @@ export async function registerOrderRoutes(
   orderController: OrderController,
 ): Promise<void> {
   // Public order tracking (no authentication required)
-  fastify.get(
+  fastify.get<{ Querystring: TrackOrderQuerystring }>(
     "/orders/track",
     {
       schema: {
@@ -189,11 +196,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.trackOrder.bind(orderController) as any,
+    orderController.trackOrder.bind(orderController),
   );
 
   // Create new order
-  fastify.post(
+  fastify.post<{ Body: CreateOrderBody }>(
     "/orders",
     {
       preHandler: optionalAuth,
@@ -283,11 +290,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.createOrder.bind(orderController) as any,
+    orderController.createOrder.bind(orderController),
   );
 
   // Get order by order number (must be before /orders/:orderId to avoid route conflict)
-  fastify.get(
+  fastify.get<{ Params: { orderNumber: string } }>(
     "/orders/number/:orderNumber",
     {
       preHandler: authenticateUser,
@@ -367,11 +374,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.getOrderByOrderNumber.bind(orderController) as any,
+    orderController.getOrderByOrderNumber.bind(orderController),
   );
 
   // Get order by ID
-  fastify.get(
+  fastify.get<{ Params: { orderId: string } }>(
     "/orders/:orderId",
     {
       preHandler: authenticateUser,
@@ -451,11 +458,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.getOrder.bind(orderController) as any,
+    orderController.getOrder.bind(orderController),
   );
 
   // List orders with pagination and filters
-  fastify.get(
+  fastify.get<{ Querystring: ListOrdersQuerystring }>(
     "/orders",
     {
       preHandler: authenticateUser,
@@ -606,11 +613,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.listOrders.bind(orderController) as any,
+    orderController.listOrders.bind(orderController),
   );
 
   // Update order status
-  fastify.patch(
+  fastify.patch<{ Params: { orderId: string }; Body: UpdateOrderStatusBody }>(
     "/orders/:orderId/status",
     {
       preHandler: authenticateUser,
@@ -684,11 +691,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.updateOrderStatus.bind(orderController) as any,
+    orderController.updateOrderStatus.bind(orderController),
   );
 
   // Update order totals
-  fastify.patch(
+  fastify.patch<{ Params: { orderId: string }; Body: UpdateOrderTotalsBody }>(
     "/orders/:orderId/totals",
     {
       preHandler: authenticateStaff,
@@ -766,11 +773,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.updateOrderTotals.bind(orderController) as any,
+    orderController.updateOrderTotals.bind(orderController),
   );
 
   // Mark order as paid
-  fastify.post(
+  fastify.post<{ Params: { orderId: string } }>(
     "/orders/:orderId/mark-paid",
     {
       preHandler: authenticateStaff,
@@ -810,11 +817,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.markOrderAsPaid.bind(orderController) as any,
+    orderController.markOrderAsPaid.bind(orderController),
   );
 
   // Mark order as fulfilled
-  fastify.post(
+  fastify.post<{ Params: { orderId: string } }>(
     "/orders/:orderId/mark-fulfilled",
     {
       preHandler: authenticateStaff,
@@ -854,11 +861,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.markOrderAsFulfilled.bind(orderController) as any,
+    orderController.markOrderAsFulfilled.bind(orderController),
   );
 
   // Cancel order
-  fastify.post(
+  fastify.post<{ Params: { orderId: string } }>(
     "/orders/:orderId/cancel",
     {
       preHandler: authenticateUser,
@@ -898,11 +905,11 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.cancelOrder.bind(orderController) as any,
+    orderController.cancelOrder.bind(orderController),
   );
 
   // Delete order
-  fastify.delete(
+  fastify.delete<{ Params: { orderId: string } }>(
     "/orders/:orderId",
     {
       preHandler: authenticateAdmin,
@@ -934,6 +941,6 @@ export async function registerOrderRoutes(
         },
       },
     },
-    orderController.deleteOrder.bind(orderController) as any,
+    orderController.deleteOrder.bind(orderController),
   );
 }

@@ -3,6 +3,10 @@ import {
   OrderEventQueryOptions,
 } from "../../domain/repositories/order-event.repository";
 import { OrderEvent } from "../../domain/entities/order-event.entity";
+import {
+  OrderEventNotFoundError,
+  DomainValidationError,
+} from "../../domain/errors/order-management.errors";
 
 export enum OrderEventTypes {
   ORDER_CREATED = "order.created",
@@ -37,11 +41,11 @@ export class OrderEventService {
   async logEvent(data: LogEventData): Promise<OrderEvent> {
     // Validate required fields
     if (!data.orderId || data.orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     if (!data.eventType || data.eventType.trim().length === 0) {
-      throw new Error("Event type is required");
+      throw new DomainValidationError("Event type is required");
     }
 
     // Create the order event entity
@@ -230,12 +234,18 @@ export class OrderEventService {
     });
   }
 
-  async getEventById(eventId: number): Promise<OrderEvent | null> {
+  async getEventById(eventId: number): Promise<OrderEvent> {
     if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new Error("Valid event ID is required");
+      throw new DomainValidationError("Valid event ID is required");
     }
 
-    return await this.orderEventRepository.findById(eventId);
+    const event = await this.orderEventRepository.findById(eventId);
+
+    if (!event) {
+      throw new OrderEventNotFoundError(eventId.toString());
+    }
+
+    return event;
   }
 
   async getEventsByOrderId(
@@ -243,7 +253,7 @@ export class OrderEventService {
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     return await this.orderEventRepository.findByOrderId(orderId, options);
@@ -254,7 +264,7 @@ export class OrderEventService {
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]> {
     if (!eventType || eventType.trim().length === 0) {
-      throw new Error("Event type is required");
+      throw new DomainValidationError("Event type is required");
     }
 
     return await this.orderEventRepository.findByEventType(eventType, options);
@@ -266,11 +276,11 @@ export class OrderEventService {
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     if (!eventType || eventType.trim().length === 0) {
-      throw new Error("Event type is required");
+      throw new DomainValidationError("Event type is required");
     }
 
     return await this.orderEventRepository.findByOrderIdAndEventType(
@@ -286,7 +296,7 @@ export class OrderEventService {
 
   async getLatestEventForOrder(orderId: string): Promise<OrderEvent | null> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     return await this.orderEventRepository.getLatestByOrderId(orderId);
@@ -297,7 +307,7 @@ export class OrderEventService {
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     const defaultOptions: OrderEventQueryOptions = {
@@ -312,23 +322,19 @@ export class OrderEventService {
     );
   }
 
-  async deleteEvent(eventId: number): Promise<boolean> {
+  async deleteEvent(eventId: number): Promise<void> {
     if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new Error("Valid event ID is required");
+      throw new DomainValidationError("Valid event ID is required");
     }
 
-    const event = await this.getEventById(eventId);
-    if (!event) {
-      return false;
-    }
+    await this.getEventById(eventId);
 
     await this.orderEventRepository.delete(eventId);
-    return true;
   }
 
   async deleteAllEventsByOrderId(orderId: string): Promise<void> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     await this.orderEventRepository.deleteByOrderId(orderId);
@@ -336,7 +342,7 @@ export class OrderEventService {
 
   async getEventCountByOrder(orderId: string): Promise<number> {
     if (!orderId || orderId.trim().length === 0) {
-      throw new Error("Order ID is required");
+      throw new DomainValidationError("Order ID is required");
     }
 
     return await this.orderEventRepository.countByOrderId(orderId);
@@ -344,7 +350,7 @@ export class OrderEventService {
 
   async getEventCountByType(eventType: string): Promise<number> {
     if (!eventType || eventType.trim().length === 0) {
-      throw new Error("Event type is required");
+      throw new DomainValidationError("Event type is required");
     }
 
     return await this.orderEventRepository.countByEventType(eventType);
@@ -352,7 +358,7 @@ export class OrderEventService {
 
   async eventExists(eventId: number): Promise<boolean> {
     if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new Error("Valid event ID is required");
+      throw new DomainValidationError("Valid event ID is required");
     }
 
     return await this.orderEventRepository.exists(eventId);

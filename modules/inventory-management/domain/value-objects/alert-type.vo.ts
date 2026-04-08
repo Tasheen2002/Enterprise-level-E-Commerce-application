@@ -1,3 +1,5 @@
+import { DomainValidationError } from "../errors/inventory-management.errors";
+
 export enum AlertType {
   LOW_STOCK = "low_stock",
   OOS = "oos",
@@ -10,7 +12,7 @@ export class AlertTypeVO {
   static create(value: string): AlertTypeVO {
     const normalizedValue = value.toLowerCase();
     if (!Object.values(AlertType).includes(normalizedValue as AlertType)) {
-      throw new Error(
+      throw new DomainValidationError(
         `Invalid alert type: ${value}. Must be one of: ${Object.values(
           AlertType,
         ).join(", ")}`,

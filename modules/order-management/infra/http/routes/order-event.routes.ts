@@ -1,9 +1,11 @@
 import { FastifyInstance } from "fastify";
-import { OrderEventController } from "../controllers/order-event.controller";
 import {
-  authenticateUser,
-  RolePermissions,
-} from "@/api/src/shared/middleware";
+  OrderEventController,
+  LogEventRequest,
+  GetEventsRequest,
+  GetEventRequest,
+} from "../controllers/order-event.controller";
+import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
 
 const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
 
@@ -67,7 +69,7 @@ export async function registerOrderEventRoutes(
   orderEventController: OrderEventController,
 ): Promise<void> {
   // Log an event for an order
-  fastify.post(
+  fastify.post<LogEventRequest>(
     "/orders/:orderId/events",
     {
       preHandler: authenticateStaff,
@@ -114,11 +116,11 @@ export async function registerOrderEventRoutes(
         },
       },
     },
-    orderEventController.logEvent.bind(orderEventController) as any,
+    orderEventController.logEvent.bind(orderEventController),
   );
 
   // Get all events for an order
-  fastify.get(
+  fastify.get<GetEventsRequest>(
     "/orders/:orderId/events",
     {
       preHandler: authenticateUser,
@@ -183,11 +185,11 @@ export async function registerOrderEventRoutes(
         },
       },
     },
-    orderEventController.getEvents.bind(orderEventController) as any,
+    orderEventController.getEvents.bind(orderEventController),
   );
 
   // Get single event by ID
-  fastify.get(
+  fastify.get<GetEventRequest>(
     "/orders/:orderId/events/:eventId",
     {
       preHandler: authenticateUser,
@@ -217,6 +219,6 @@ export async function registerOrderEventRoutes(
         },
       },
     },
-    orderEventController.getEvent.bind(orderEventController) as any,
+    orderEventController.getEvent.bind(orderEventController),
   );
 }

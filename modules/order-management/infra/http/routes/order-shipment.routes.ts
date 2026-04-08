@@ -1,9 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { OrderShipmentController } from "../controllers/order-shipment.controller";
 import {
-  authenticateUser,
-  RolePermissions,
-} from "@/api/src/shared/middleware";
+  OrderShipmentController,
+  CreateShipmentRequest,
+  GetShipmentsRequest,
+  GetShipmentRequest,
+  MarkShippedRequest,
+  UpdateTrackingRequest,
+  MarkDeliveredRequest,
+} from "../controllers/order-shipment.controller";
+import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
 
 const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
 
@@ -74,7 +79,7 @@ export async function registerOrderShipmentRoutes(
   orderShipmentController: OrderShipmentController,
 ): Promise<void> {
   // Create shipment for an order
-  fastify.post(
+  fastify.post<CreateShipmentRequest>(
     "/orders/:orderId/shipments",
     {
       preHandler: authenticateUser,
@@ -131,11 +136,11 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.createShipment.bind(orderShipmentController) as any,
+    orderShipmentController.createShipment.bind(orderShipmentController),
   );
 
   // Get all shipments for an order
-  fastify.get(
+  fastify.get<GetShipmentsRequest>(
     "/orders/:orderId/shipments",
     {
       preHandler: authenticateUser,
@@ -167,11 +172,11 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.getShipments.bind(orderShipmentController) as any,
+    orderShipmentController.getShipments.bind(orderShipmentController),
   );
 
   // Get single shipment
-  fastify.get(
+  fastify.get<GetShipmentRequest>(
     "/orders/:orderId/shipments/:shipmentId",
     {
       preHandler: authenticateUser,
@@ -201,11 +206,11 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.getShipment.bind(orderShipmentController) as any,
+    orderShipmentController.getShipment.bind(orderShipmentController),
   );
 
   // Mark shipment as shipped
-  fastify.post(
+  fastify.post<MarkShippedRequest>(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
       preHandler: authenticateUser,
@@ -249,11 +254,11 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.markShipped.bind(orderShipmentController) as any,
+    orderShipmentController.markShipped.bind(orderShipmentController),
   );
 
   // Update shipment tracking
-  fastify.patch(
+  fastify.patch<UpdateTrackingRequest>(
     "/orders/:orderId/shipments/:shipmentId/tracking",
     {
       preHandler: authenticateStaff,
@@ -299,11 +304,11 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.updateTracking.bind(orderShipmentController) as any,
+    orderShipmentController.updateTracking.bind(orderShipmentController),
   );
 
   // Mark shipment as delivered
-  fastify.post(
+  fastify.post<MarkDeliveredRequest>(
     "/orders/:orderId/shipments/:shipmentId/mark-delivered",
     {
       preHandler: authenticateUser,
@@ -347,6 +352,6 @@ export async function registerOrderShipmentRoutes(
         },
       },
     },
-    orderShipmentController.markDelivered.bind(orderShipmentController) as any,
+    orderShipmentController.markDelivered.bind(orderShipmentController),
   );
 }

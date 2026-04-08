@@ -22,10 +22,71 @@ import {
   GetTotalAvailableStockHandler,
   ListStocksQuery,
   ListStocksHandler,
+  GetLowStockItemsQuery,
+  GetLowStockItemsHandler,
+  GetOutOfStockItemsQuery,
+  GetOutOfStockItemsHandler,
 } from "../../../application";
 import { StockManagementService } from "../../../application/services/stock-management.service";
-import { PickupReservationService } from "../../../application/services/pickup-reservation.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+
+export interface ListStocksQuerystring {
+  limit?: number;
+  offset?: number;
+  q?: string;
+  search?: string;
+  status?: "low_stock" | "out_of_stock" | "in_stock";
+  locationId?: string;
+  sortBy?: "available" | "onHand" | "location" | "product";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface GetStockParams {
+  variantId: string;
+  locationId: string;
+}
+
+export interface VariantParams {
+  variantId: string;
+}
+
+export interface AddStockBody {
+  variantId: string;
+  locationId: string;
+  quantity: number;
+  reason: string;
+}
+
+export interface AdjustStockBody {
+  variantId: string;
+  locationId: string;
+  quantityDelta: number;
+  reason: string;
+}
+
+export interface TransferStockBody {
+  variantId: string;
+  fromLocationId: string;
+  toLocationId: string;
+  quantity: number;
+}
+
+export interface ReserveStockBody {
+  variantId: string;
+  locationId: string;
+  quantity: number;
+}
+
+export interface FulfillReservationBody {
+  variantId: string;
+  locationId: string;
+  quantity: number;
+}
+
+export interface SetStockThresholdsBody {
+  lowStockThreshold?: number;
+  safetyStock?: number;
+}
 
 export class StockController {
   private addStockHandler: AddStockHandler;
@@ -39,11 +100,10 @@ export class StockController {
   private getStockStatsHandler: GetStockStatsHandler;
   private getTotalAvailableStockHandler: GetTotalAvailableStockHandler;
   private listStocksHandler: ListStocksHandler;
+  private getLowStockItemsHandler: GetLowStockItemsHandler;
+  private getOutOfStockItemsHandler: GetOutOfStockItemsHandler;
 
-  constructor(
-    private readonly stockService: StockManagementService,
-    private readonly reservationService?: PickupReservationService,
-  ) {
+  constructor(private readonly stockService: StockManagementService) {
     // Initialize command handlers
     this.addStockHandler = new AddStockHandler(stockService);
     this.adjustStockHandler = new AdjustStockHandler(stockService);
@@ -64,6 +124,10 @@ export class StockController {
       stockService,
     );
     this.listStocksHandler = new ListStocksHandler(stockService);
+    this.getLowStockItemsHandler = new GetLowStockItemsHandler(stockService);
+    this.getOutOfStockItemsHandler = new GetOutOfStockItemsHandler(
+      stockService,
+    );
   }
 
   async getStats(request: FastifyRequest, reply: FastifyReply) {
@@ -79,7 +143,7 @@ export class StockController {
 
   async getStock(
     request: FastifyRequest<{
-      Params: { variantId: string; locationId: string };
+      Params: GetStockParams;
     }>,
     reply: FastifyReply,
   ) {
@@ -104,7 +168,7 @@ export class StockController {
   }
 
   async getStockByVariant(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: FastifyRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -126,7 +190,7 @@ export class StockController {
   }
 
   async getTotalAvailableStock(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: FastifyRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -149,16 +213,7 @@ export class StockController {
 
   async listStocks(
     request: FastifyRequest<{
-      Querystring: {
-        limit?: number;
-        offset?: number;
-        q?: string;
-        search?: string;
-        status?: "low_stock" | "out_of_stock" | "in_stock";
-        locationId?: string;
-        sortBy?: "available" | "onHand" | "location" | "product";
-        sortOrder?: "asc" | "desc";
-      };
+      Querystring: ListStocksQuerystring;
     }>,
     reply: FastifyReply,
   ) {
@@ -191,14 +246,37 @@ export class StockController {
     }
   }
 
+  async getLowStockItems(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const query: GetLowStockItemsQuery = {};
+      const result = await this.getLowStockItemsHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Low stock items retrieved",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getOutOfStockItems(request: FastifyRequest, reply: FastifyReply) {
+    try {
+      const query: GetOutOfStockItemsQuery = {};
+      const result = await this.getOutOfStockItemsHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Out of stock items retrieved",
+      );
+    } catch (error) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async addStock(
     request: FastifyRequest<{
-      Body: {
-        variantId: string;
-        locationId: string;
-        quantity: number;
-        reason: string;
-      };
+      Body: AddStockBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -219,12 +297,7 @@ export class StockController {
 
   async adjustStock(
     request: FastifyRequest<{
-      Body: {
-        variantId: string;
-        locationId: string;
-        quantityDelta: number;
-        reason: string;
-      };
+      Body: AdjustStockBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -244,12 +317,7 @@ export class StockController {
 
   async transferStock(
     request: FastifyRequest<{
-      Body: {
-        variantId: string;
-        fromLocationId: string;
-        toLocationId: string;
-        quantity: number;
-      };
+      Body: TransferStockBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -269,11 +337,7 @@ export class StockController {
 
   async reserveStock(
     request: FastifyRequest<{
-      Body: {
-        variantId: string;
-        locationId: string;
-        quantity: number;
-      };
+      Body: ReserveStockBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -293,11 +357,7 @@ export class StockController {
 
   async fulfillReservation(
     request: FastifyRequest<{
-      Body: {
-        variantId: string;
-        locationId: string;
-        quantity: number;
-      };
+      Body: FulfillReservationBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -317,11 +377,8 @@ export class StockController {
 
   async setStockThresholds(
     request: FastifyRequest<{
-      Params: { variantId: string; locationId: string };
-      Body: {
-        lowStockThreshold?: number;
-        safetyStock?: number;
-      };
+      Params: GetStockParams;
+      Body: SetStockThresholdsBody;
     }>,
     reply: FastifyReply,
   ) {

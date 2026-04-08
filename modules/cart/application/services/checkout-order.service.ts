@@ -1,13 +1,23 @@
-import { PrismaClient, CheckoutStatusEnum } from "@prisma/client";
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
-import { CartRepository } from "../../domain/repositories/cart.repository";
-import { ReservationRepository } from "../../domain/repositories/reservation.repository";
-import { StockManagementService } from "../../../inventory-management/application/services/stock-management.service";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
+import { IReservationRepository } from "../../domain/repositories/reservation.repository";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
-import { IProductRepository } from "../../../product-catalog/domain/repositories/product.repository";
-import { IProductVariantRepository } from "../../../product-catalog/domain/repositories/product-variant.repository";
-import { ProductSnapshot } from "../../../order-management/domain/value-objects/product-snapshot.vo";
-import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
+import {
+  IExternalProductRepository,
+  IExternalProductVariantRepository,
+  IExternalStockService,
+  IProductSnapshotFactory,
+  ICheckoutCompletionPort,
+  CheckoutOrderResult,
+} from "../../domain/external-services";
+import {
+  CartNotFoundError,
+  CheckoutNotFoundError,
+  CartOwnershipError,
+  InvalidCheckoutStateError,
+  InvalidCartStateError,
+  DomainValidationError,
+} from "../../domain/errors/cart.errors";
 
 export interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
@@ -38,354 +48,215 @@ export interface CompleteCheckoutWithOrderDto {
   };
 }
 
-export interface OrderResult {
-  orderId: string;
-  orderNo: string;
-  checkoutId: string;
-  paymentIntentId: string;
-  totalAmount: number;
-  currency: string;
-  status: string;
-  createdAt: Date;
-  items: any[];
-}
+export type OrderResult = CheckoutOrderResult;
 
 export class CheckoutOrderService {
   constructor(
-    private readonly prisma: PrismaClient,
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly reservationRepository: ReservationRepository,
-    private readonly stockManagementService: StockManagementService,
-    private readonly productRepository: IProductRepository,
-    private readonly productVariantRepository: IProductVariantRepository,
+    private readonly completionPort: ICheckoutCompletionPort,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly reservationRepository: IReservationRepository,
+    private readonly stockService: IExternalStockService,
+    private readonly productRepository: IExternalProductRepository,
+    private readonly productVariantRepository: IExternalProductVariantRepository,
+    private readonly snapshotFactory: IProductSnapshotFactory,
+    private readonly config: { defaultStockLocation?: string },
   ) {}
 
   async completeCheckoutWithOrder(
     dto: CompleteCheckoutWithOrderDto,
   ): Promise<OrderResult> {
-    // Use Prisma transaction to ensure atomicity
-    return await this.prisma.$transaction(async (tx) => {
-      // 1. Get and validate checkout
-      const checkoutId = CheckoutId.fromString(dto.checkoutId);
-      const checkout = await this.checkoutRepository.findById(checkoutId);
+    // ---- Phase 1: Validate domain state ----
 
-      if (!checkout) {
-        throw new Error("Checkout not found");
-      }
+    const checkoutId = CheckoutId.fromString(dto.checkoutId);
+    const checkout = await this.checkoutRepository.findById(checkoutId);
 
-      // Validate checkout is still valid
-      if (checkout.isExpired()) {
-        throw new Error("Checkout has expired");
-      }
+    if (!checkout) {
+      throw new CheckoutNotFoundError(dto.checkoutId);
+    }
 
-      if (!checkout.isPending()) {
-        throw new Error("Checkout is not in pending state");
-      }
+    if (checkout.isExpired()) {
+      throw new InvalidCheckoutStateError("Checkout has expired");
+    }
 
-      // 2. Get cart and validate it has items
-      const cart = await this.cartRepository.findById(checkout.getCartId());
+    if (!checkout.isPending()) {
+      throw new InvalidCheckoutStateError("Checkout is not in pending state");
+    }
 
-      if (!cart) {
-        throw new Error("Cart not found");
-      }
+    const cart = await this.cartRepository.findById(checkout.getCartId());
 
-      if (cart.isEmpty()) {
-        throw new Error("Cannot create order from empty cart");
-      }
+    if (!cart) {
+      throw new CartNotFoundError(checkout.getCartId().getValue());
+    }
 
-      // 3. Verify payment intent exists and is authorized
-      // Try to find by checkoutId first (common during checkout flow)
-      let paymentIntent = await tx.paymentIntent.findUnique({
-        where: { checkoutId: dto.checkoutId },
+    if (cart.isEmpty()) {
+      throw new InvalidCartStateError("Cannot create order from empty cart");
+    }
+
+    // ---- Phase 2: Validate payment via port ----
+
+    const paymentIntent = await this.completionPort.findPaymentIntent(
+      dto.checkoutId,
+      dto.paymentIntentId,
+    );
+
+    if (!paymentIntent) {
+      throw new DomainValidationError("Payment intent not found");
+    }
+
+    const validStatuses = ["authorized", "captured", "requires_action"];
+    if (!validStatuses.includes(paymentIntent.status)) {
+      throw new InvalidCheckoutStateError(
+        `Payment intent is not authorized. Current status: ${paymentIntent.status}`,
+      );
+    }
+
+    if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
+      throw new CartOwnershipError("Checkout does not belong to user");
+    }
+
+    if (
+      dto.guestToken &&
+      checkout.getGuestToken()?.toString() !== dto.guestToken &&
+      !validStatuses.includes(paymentIntent.status)
+    ) {
+      throw new CartOwnershipError("Checkout does not belong to guest");
+    }
+
+    // ---- Phase 3: Idempotency check via port ----
+
+    const existingOrder = await this.completionPort.findExistingOrder(
+      dto.checkoutId,
+    );
+    if (existingOrder) {
+      return existingOrder;
+    }
+
+    // ---- Phase 4: Prepare order data ----
+
+    const orderNo = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+    const cartSnapshot = cart.toSnapshot();
+    const subtotal = cart.getSubtotal();
+    const total = checkout.getTotalAmount();
+    const cartItemTotal = cart.getTotal();
+    const shipping = total - cartItemTotal;
+
+    const totals = {
+      subtotal,
+      tax: 0,
+      shipping,
+      discount: subtotal - cartItemTotal,
+      total,
+    };
+
+    // Build product snapshots for each cart item
+    const orderItems: Array<{
+      variantId: string;
+      qty: number;
+      productSnapshot: Record<string, unknown>;
+      isGift: boolean;
+      giftMessage?: string;
+    }> = [];
+
+    for (const item of cartSnapshot.items || []) {
+      const variant = await this.productVariantRepository.findById({
+        getValue: () => item.variantId,
       });
 
-      // If not found by checkoutId, try by intentId (for backward compatibility)
-      if (!paymentIntent) {
-        paymentIntent = await tx.paymentIntent.findUnique({
-          where: { intentId: dto.paymentIntentId },
-        });
+      if (!variant) {
+        throw new DomainValidationError(`Variant not found: ${item.variantId}`);
       }
 
-      if (!paymentIntent) {
-        throw new Error("Payment intent not found");
-      }
-
-      // Accept authorized, captured, or requires_action (for mock/testing)
-      const validStatuses = ["authorized", "captured", "requires_action"];
-      if (!validStatuses.includes(paymentIntent.status)) {
-        throw new Error(
-          `Payment intent is not authorized. Current status: ${paymentIntent.status}`,
-        );
-      }
-
-      if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
-        throw new Error("Checkout does not belong to user");
-      }
-
-      if (
-        dto.guestToken &&
-        checkout.getGuestToken()?.toString() !== dto.guestToken &&
-        !validStatuses.includes(paymentIntent.status)
-      ) {
-        throw new Error("Checkout does not belong to guest");
-      }
-
-      // 4. Generate unique order number
-      const orderNo = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-
-      // 5. Calculate order totals from cart
-      const cartSnapshot = cart.toSnapshot();
-      const subtotal = cart.getSubtotal();
-      // Use checkout total which includes shipping
-      const total = checkout.getTotalAmount();
-      const cartItemTotal = cart.getTotal(); // Total of items (subtotal - discounts)
-
-      const shipping = total - cartItemTotal;
-
-      const totals = {
-        subtotal,
-        tax: 0,
-        shipping,
-        discount: subtotal - cartItemTotal,
-        total,
-      };
-
-      const existingOrder = await tx.order.findFirst({
-        where: { checkoutId: dto.checkoutId },
-        include: { items: true },
-      });
-
-      if (existingOrder) {
-        return {
-          orderId: existingOrder.id,
-          orderNo: existingOrder.orderNo,
-          checkoutId: dto.checkoutId,
-          paymentIntentId: dto.paymentIntentId,
-          totalAmount: checkout.getTotalAmount(),
-          currency: checkout.getCurrency().toString(),
-          status: existingOrder.status,
-          createdAt: existingOrder.createdAt,
-          items: existingOrder.items,
-        };
-      }
-
-      const order = await tx.order.create({
-        data: {
-          orderNo,
-          userId: checkout.getCartOwnerId()?.toString(),
-          guestToken: checkout.getGuestToken()?.toString(),
-          checkoutId: checkout.getCheckoutId().toString(),
-          paymentIntentId: dto.paymentIntentId,
-          totals: totals as any,
-          status: "created",
-          source: "web",
-          currency: checkout.getCurrency().toString(),
-        },
-      });
-
-      const orderItems = [];
-      for (const item of cartSnapshot.items || []) {
-        // Fetch variant and product to build a valid snapshot
-        const variantId = VariantId.fromString(item.variantId);
-        const variant = await this.productVariantRepository.findById(variantId);
-
-        if (!variant) {
-          throw new Error(`Variant not found: ${item.variantId}`);
-        }
-
-        const product = await this.productRepository.findById(
-          variant.getProductId(),
-        );
-
-        if (!product) {
-          throw new Error(`Product not found for variant: ${item.variantId}`);
-        }
-
-        // Create valid ProductSnapshot
-        const productSnapshot = ProductSnapshot.create({
-          productId: product.getId().getValue(),
-          variantId: variant.getId().getValue(),
-          sku: variant.getSku().getValue(),
-          name: product.getTitle(),
-          variantName:
-            [variant.getSize(), variant.getColor()]
-              .filter(Boolean)
-              .join(" / ") || undefined,
-          price: product.getPrice().getValue(), // DB price (price is at product level)
-          imageUrl: undefined, // You might want to fetch images too
-          weight: variant.getWeightG() || undefined,
-          attributes: {
-            size: variant.getSize(),
-            color: variant.getColor(),
-          },
-        });
-
-        const orderItem = await tx.orderItem.create({
-          data: {
-            orderId: order.id,
-            variantId: item.variantId,
-            qty: item.quantity,
-            productSnapshot: productSnapshot.toJSON() as any,
-            isGift: item.isGift,
-            giftMessage: item.giftMessage,
-          },
-        });
-        orderItems.push(orderItem);
-      }
-
-      // Select warehouse for order fulfillment
-      const warehouseId = await this.selectWarehouseForOrder(
-        cartSnapshot.items || [],
-        dto.shippingAddress,
-        tx,
+      const product = await this.productRepository.findById(
+        variant.getProductId(),
       );
 
-      // Remove stock from inventory (no reservation was made during cart creation)
-      for (const item of cartSnapshot.items || []) {
-        await this.stockManagementService.adjustStock(
-          item.variantId,
-          warehouseId,
-          -item.quantity, // Negative to remove stock
-          "order",
-          order.id, // Reference the order ID
+      if (!product) {
+        throw new DomainValidationError(
+          `Product not found for variant: ${item.variantId}`,
         );
       }
 
-      await this.reservationRepository.deleteByCartId(checkout.getCartId());
-
-      // Fetch email from ShoppingCart (stored in DB but not in domain entity)
-      const cartData = await tx.shoppingCart.findUnique({
-        where: { id: checkout.getCartId().toString() },
-        select: { email: true },
-      });
-      const cartEmail = cartData?.email;
-
-      await tx.orderAddress.create({
-        data: {
-          orderId: order.id,
-          shippingSnapshot: { ...dto.shippingAddress, email: cartEmail } as any,
-          billingSnapshot: {
-            ...(dto.billingAddress || dto.shippingAddress),
-            email: cartEmail,
-          } as any,
+      const productSnapshot = this.snapshotFactory.create({
+        productId: product.getId().getValue(),
+        variantId: variant.getId().getValue(),
+        sku: variant.getSku().getValue(),
+        name: product.getTitle(),
+        variantName:
+          [variant.getSize(), variant.getColor()].filter(Boolean).join(" / ") ||
+          undefined,
+        price: product.getPrice().getValue(),
+        imageUrl: undefined,
+        weight: variant.getWeightG() || undefined,
+        attributes: {
+          size: variant.getSize(),
+          color: variant.getColor(),
         },
       });
 
-      await tx.paymentIntent.update({
-        where: { intentId: paymentIntent.intentId },
-        data: {
-          orderId: order.id,
-          checkoutId: dto.checkoutId,
-        },
+      orderItems.push({
+        variantId: item.variantId,
+        qty: item.quantity,
+        productSnapshot: productSnapshot.toJSON() as unknown as Record<
+          string,
+          unknown
+        >,
+        isGift: item.isGift,
+        giftMessage: item.giftMessage,
       });
+    }
 
-      await tx.checkout.update({
-        where: { id: dto.checkoutId },
-        data: {
-          status: CheckoutStatusEnum.completed,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+    // Resolve warehouse
+    const warehouseId = await this.resolveWarehouseId();
 
-      await tx.order.update({
-        where: { id: order.id },
-        data: {
-          status: "paid",
-        },
-      });
+    // Get cart email for address records
+    const cartEmail = await this.completionPort.getCartEmail(
+      checkout.getCartId().toString(),
+    );
 
-      // Track purchase event in analytics
-      try {
-        await tx.analyticsEvent.create({
-          data: {
-            eventType: "purchase",
-            userId: dto.userId || undefined,
-            guestToken: dto.guestToken || undefined,
-            sessionId: `purchase-${order.id}`,
-            eventTimestamp: new Date(),
-            eventData: {
-              orderId: order.id,
-              orderNo: orderNo,
-              amount: total,
-              currency: checkout.getCurrency().toString(),
-              itemCount: cartSnapshot.items?.length || 0,
-            },
-          },
-        });
-      } catch {
-        // Don't fail the order if analytics tracking fails
-      }
+    // ---- Phase 5: Atomic persistence via port ----
 
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: order.id,
-          fromStatus: "created",
-          toStatus: "paid",
-          changedBy: dto.userId || "system",
-        },
-      });
-
-      await tx.orderEvent.create({
-        data: {
-          orderId: order.id,
-          eventType: "order_created",
-          payload: {
-            checkoutId: dto.checkoutId,
-            paymentIntentId: dto.paymentIntentId,
-            source: "checkout",
-          } as any,
-        },
-      });
-
-      // Clear the cart items after successful order creation
-      const cartIdToDelete = checkout.getCartId().toString();
-
-      const deleteResult = await tx.cartItem.deleteMany({
-        where: { cartId: cartIdToDelete },
-      });
-
-      // Clear cart addresses and shipping info to prevent reuse of old details
-      await tx.shoppingCart.update({
-        where: { id: cartIdToDelete },
-        data: {
-          shippingFirstName: null,
-          shippingLastName: null,
-          shippingAddress1: null,
-          shippingAddress2: null,
-          shippingCity: null,
-          shippingProvince: null,
-          shippingPostalCode: null,
-          shippingCountryCode: null,
-          shippingPhone: null,
-          billingFirstName: null,
-          billingLastName: null,
-          billingAddress1: null,
-          billingAddress2: null,
-          billingCity: null,
-          billingProvince: null,
-          billingPostalCode: null,
-          billingCountryCode: null,
-          billingPhone: null,
-          shippingMethod: null,
-          shippingOption: null,
-          email: null, // Depending on if we want to keep email or not. Safest is to clear everything given Guest Token persistence.
-        } as any, // Cast to any because some fields might be optional in Prisma types but we want to force null
-      });
-
-      return {
-        orderId: order.id,
-        orderNo: order.orderNo,
-        checkoutId: dto.checkoutId,
-        paymentIntentId: dto.paymentIntentId,
-        totalAmount: checkout.getTotalAmount(),
-        currency: checkout.getCurrency().toString(),
-        status: "paid",
-        createdAt: order.createdAt,
-        items: orderItems,
-      };
+    const result = await this.completionPort.persistCheckoutOrder({
+      orderNo,
+      userId: checkout.getCartOwnerId()?.toString(),
+      guestToken: checkout.getGuestToken()?.toString(),
+      checkoutId: dto.checkoutId,
+      paymentIntentId: dto.paymentIntentId,
+      currency: checkout.getCurrency().toString(),
+      totals,
+      items: orderItems,
+      shippingAddress: { ...dto.shippingAddress, email: cartEmail },
+      billingAddress: {
+        ...(dto.billingAddress || dto.shippingAddress),
+        email: cartEmail,
+      },
+      email: cartEmail ?? undefined,
+      cartId: checkout.getCartId().toString(),
+      stockAdjustments: (cartSnapshot.items || []).map((item) => ({
+        variantId: item.variantId,
+        warehouseId,
+        quantity: -item.quantity,
+      })),
     });
+
+    // ---- Phase 6: Post-persistence side effects ----
+
+    // Adjust stock (external service, not part of the order transaction)
+    for (const item of cartSnapshot.items || []) {
+      await this.stockService.adjustStock(
+        item.variantId,
+        warehouseId,
+        -item.quantity,
+        "order",
+        result.orderId,
+      );
+    }
+
+    // Clean up reservations
+    await this.reservationRepository.deleteByCartId(checkout.getCartId());
+
+    return result;
   }
 
   async getOrderByCheckoutId(
@@ -393,73 +264,25 @@ export class CheckoutOrderService {
     userId?: string,
     guestToken?: string,
   ): Promise<OrderResult | null> {
-    // Find the order associated with this checkout
-    const order = await this.prisma.order.findFirst({
-      where: {
-        checkoutId: checkoutId,
-        ...(userId ? { userId } : { guestToken }),
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    if (!order) {
-      return null;
-    }
-
-    // Extract totals from JSONB field
-    const totals = order.totals as any;
-    const totalAmount = totals?.total || 0;
-
-    // Transform to OrderResult format
-    return {
-      orderId: order.id,
-      orderNo: order.orderNo,
-      checkoutId: order.checkoutId!,
-      paymentIntentId: order.paymentIntentId || "",
-      totalAmount: Number(totalAmount) || 0,
-      currency: order.currency,
-      status: order.status,
-      createdAt: order.createdAt,
-      items: order.items.map((item: any) => ({
-        id: item.id,
-        productId: item.productSnapshot?.productId || item.productId,
-        variantId: item.variantId,
-        quantity: item.qty,
-        price: Number(item.productSnapshot?.price || item.price) || 0,
-      })),
-    };
+    return this.completionPort.findOrderByCheckoutId(
+      checkoutId,
+      userId,
+      guestToken,
+    );
   }
 
-  private async selectWarehouseForOrder(
-    items: any[],
-    shippingAddress: any,
-    tx: any,
-  ): Promise<string> {
-    // Strategy 1: Use configured default warehouse
-    if (process.env.DEFAULT_STOCK_LOCATION) {
-      return process.env.DEFAULT_STOCK_LOCATION;
+  private async resolveWarehouseId(): Promise<string> {
+    if (this.config.defaultStockLocation) {
+      return this.config.defaultStockLocation;
     }
 
-    // Strategy 2: Query first warehouse from database
-    const warehouse = await tx.location.findFirst({
-      where: {
-        type: "warehouse",
-      },
-    });
-
-    if (!warehouse) {
-      throw new Error(
+    const warehouseId = await this.stockService.findWarehouseId();
+    if (!warehouseId) {
+      throw new DomainValidationError(
         "No warehouse location found. Please configure DEFAULT_STOCK_LOCATION in .env or create a warehouse location in the database.",
       );
     }
 
-    return warehouse.id;
-
-    // Future strategies can be added here:
-    // - Distance-based: Calculate nearest warehouse to shipping address
-    // - Inventory-based: Find warehouse with all items in stock
-    // - Hybrid: Combine proximity + availability
+    return warehouseId;
   }
 }

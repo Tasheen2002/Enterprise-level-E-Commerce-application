@@ -1,13 +1,20 @@
-import { CheckoutRepository } from "../../domain/repositories/checkout.repository";
-import { CartRepository } from "../../domain/repositories/cart.repository";
+import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
+import { ICartRepository } from "../../domain/repositories/cart.repository";
 import {
   Checkout,
   CreateCheckoutData,
 } from "../../domain/entities/checkout.entity";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
-import { SettingsService } from "../../../admin/application/services/settings.service";
+import { IExternalSettingsService } from "../../domain/external-services";
 import { CHECKOUT_DEFAULT_EXPIRY_MINUTES } from "../../domain/constants";
+import {
+  CartNotFoundError,
+  CartOwnershipError,
+  CheckoutNotFoundError,
+  InvalidCheckoutStateError,
+  InvalidOperationError,
+} from "../../domain/errors/cart.errors";
 
 export interface InitializeCheckoutDto {
   cartId: string;
@@ -38,9 +45,9 @@ export interface CheckoutDto {
 
 export class CheckoutService {
   constructor(
-    private readonly checkoutRepository: CheckoutRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly settingsService: SettingsService,
+    private readonly checkoutRepository: ICheckoutRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly settingsService: IExternalSettingsService,
   ) {}
 
   async initializeCheckout(dto: InitializeCheckoutDto): Promise<CheckoutDto> {
@@ -49,16 +56,16 @@ export class CheckoutService {
     const cart = await this.cartRepository.findById(cartId);
 
     if (!cart) {
-      throw new Error("Cart not found");
+      throw new CartNotFoundError(dto.cartId);
     }
 
     // Validate cart belongs to user or guest
     if (dto.userId && cart.getCartOwnerId()?.toString() !== dto.userId) {
-      throw new Error("Cart does not belong to user");
+      throw new CartOwnershipError("Cart does not belong to user");
     }
 
     if (dto.guestToken && cart.getGuestToken()?.toString() !== dto.guestToken) {
-      throw new Error("Cart does not belong to guest");
+      throw new CartOwnershipError("Cart does not belong to guest");
     }
 
     // Calculate total amount with shipping
@@ -94,7 +101,7 @@ export class CheckoutService {
     // Fetch the checkout back to get the actual ID (in case it was upserted)
     const savedCheckout = await this.checkoutRepository.findByCartId(cartId);
     if (!savedCheckout) {
-      throw new Error("Failed to create checkout");
+      throw new InvalidOperationError("Failed to create checkout");
     }
 
     return this.mapCheckoutToDto(savedCheckout);
@@ -114,11 +121,11 @@ export class CheckoutService {
 
     // Validate ownership
     if (userId && checkout.getCartOwnerId()?.toString() !== userId) {
-      throw new Error("Checkout does not belong to user");
+      throw new CartOwnershipError("Checkout does not belong to user");
     }
 
     if (guestToken && checkout.getGuestToken()?.toString() !== guestToken) {
-      throw new Error("Checkout does not belong to guest");
+      throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
     return this.mapCheckoutToDto(checkout);
@@ -129,28 +136,28 @@ export class CheckoutService {
     const checkout = await this.checkoutRepository.findById(checkoutId);
 
     if (!checkout) {
-      throw new Error("Checkout not found");
+      throw new CheckoutNotFoundError(dto.checkoutId);
     }
 
     // Validate ownership
     if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
-      throw new Error("Checkout does not belong to user");
+      throw new CartOwnershipError("Checkout does not belong to user");
     }
 
     if (
       dto.guestToken &&
       checkout.getGuestToken()?.toString() !== dto.guestToken
     ) {
-      throw new Error("Checkout does not belong to guest");
+      throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
     // Validate checkout is still valid
     if (checkout.isExpired()) {
-      throw new Error("Checkout has expired");
+      throw new InvalidCheckoutStateError("Checkout has expired");
     }
 
     if (!checkout.isPending()) {
-      throw new Error("Checkout is not in pending state");
+      throw new InvalidCheckoutStateError("Checkout is not in pending state");
     }
 
     // Link payment intent and mark as completed
@@ -170,16 +177,16 @@ export class CheckoutService {
     const checkout = await this.checkoutRepository.findById(id);
 
     if (!checkout) {
-      throw new Error("Checkout not found");
+      throw new CheckoutNotFoundError(checkoutId);
     }
 
     // Validate ownership
     if (userId && checkout.getCartOwnerId()?.toString() !== userId) {
-      throw new Error("Checkout does not belong to user");
+      throw new CartOwnershipError("Checkout does not belong to user");
     }
 
     if (guestToken && checkout.getGuestToken()?.toString() !== guestToken) {
-      throw new Error("Checkout does not belong to guest");
+      throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
     checkout.markAsCancelled();

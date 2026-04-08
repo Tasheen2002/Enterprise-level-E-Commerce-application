@@ -35,10 +35,7 @@ export async function registerInventoryManagementRoutes(
   fastify: FastifyInstance,
   services: InventoryManagementRouteServices,
 ): Promise<void> {
-  const stockController = new StockController(
-    services.stockService,
-    services.reservationService,
-  );
+  const stockController = new StockController(services.stockService);
   const locationController = new LocationController(services.locationService);
   const supplierController = new SupplierController(services.supplierService);
   const poController = new PurchaseOrderController(services.poService);
