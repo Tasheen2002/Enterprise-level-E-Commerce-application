@@ -16,7 +16,7 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors/user-management.errors";
-import { UserStatus } from "../../domain/entities/user.entity";
+import { UserStatus } from "../../domain/enums/user-status.enum";
 
 export interface LoginCredentials {
   email: string;
@@ -255,7 +255,7 @@ export class AuthenticationService {
     }
 
     user.recordLogout();
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
   }
 
   async changePassword(
@@ -302,7 +302,7 @@ export class AuthenticationService {
     }
     user.updatePassword(newPasswordHash);
 
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
   }
 
   async changeEmail(
@@ -343,7 +343,7 @@ export class AuthenticationService {
     }
 
     user.updateEmail(newEmail);
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
   }
 
   async verifyUserPassword(userId: string, password: string): Promise<void> {
@@ -398,7 +398,7 @@ export class AuthenticationService {
         existingUser.updatePhone(userData.phone);
       }
       user = existingUser;
-      await this.userRepository.update(user);
+      await this.userRepository.save(user);
     } else {
       user = User.create({
         email: userData.email,
@@ -455,7 +455,7 @@ export class AuthenticationService {
     }
     user.updatePassword(newPasswordHash);
 
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
   }
 
   async getUserByEmail(
@@ -487,7 +487,7 @@ export class AuthenticationService {
     }
 
     user.verifyEmail();
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
   }
 
   getAccessTokenExpirationTimeInSeconds(): number {

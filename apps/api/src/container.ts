@@ -17,6 +17,46 @@ import { PaymentMethodService } from "../../../modules/user-management/applicati
 import { PasswordHasherService } from "../../../modules/user-management/application/services/password-hasher.service";
 import { VerificationService } from "../../../modules/user-management/application/services/verification.service";
 
+// User Management — Handlers
+import { RegisterUserHandler } from "../../../modules/user-management/application/commands/register-user.command";
+import { LoginUserHandler } from "../../../modules/user-management/application/commands/login-user.command";
+import { LogoutHandler } from "../../../modules/user-management/application/commands/logout.command";
+import { RefreshTokenHandler } from "../../../modules/user-management/application/commands/refresh-token.command";
+import { ChangePasswordHandler } from "../../../modules/user-management/application/commands/change-password.command";
+import { ChangeEmailHandler } from "../../../modules/user-management/application/commands/change-email.command";
+import { InitiatePasswordResetHandler } from "../../../modules/user-management/application/commands/initiate-password-reset.command";
+import { ResetPasswordHandler } from "../../../modules/user-management/application/commands/reset-password.command";
+import { VerifyEmailHandler } from "../../../modules/user-management/application/commands/verify-email.command";
+import { DeleteAccountHandler } from "../../../modules/user-management/application/commands/delete-account.command";
+import { UpdateProfileHandler } from "../../../modules/user-management/application/commands/update-profile.command";
+import { AddAddressHandler } from "../../../modules/user-management/application/commands/add-address.command";
+import { UpdateAddressHandler } from "../../../modules/user-management/application/commands/update-address.command";
+import { DeleteAddressHandler } from "../../../modules/user-management/application/commands/delete-address.command";
+import { AddPaymentMethodHandler } from "../../../modules/user-management/application/commands/add-payment-method.command";
+import { UpdatePaymentMethodHandler } from "../../../modules/user-management/application/commands/update-payment-method.command";
+import { DeletePaymentMethodHandler } from "../../../modules/user-management/application/commands/delete-payment-method.command";
+import { SetDefaultPaymentMethodHandler } from "../../../modules/user-management/application/commands/set-default-payment-method.command";
+import { UpdateUserStatusHandler } from "../../../modules/user-management/application/commands/update-user-status.command";
+import { UpdateUserRoleHandler } from "../../../modules/user-management/application/commands/update-user-role.command";
+import { DeleteUserHandler } from "../../../modules/user-management/application/commands/delete-user.command";
+import { ToggleUserEmailVerifiedHandler } from "../../../modules/user-management/application/commands/toggle-user-email-verified.command";
+import { GetUserProfileHandler } from "../../../modules/user-management/application/queries/get-user-profile.query";
+import { GetUserByEmailHandler } from "../../../modules/user-management/application/queries/get-user-by-email.query";
+import { GetUserDetailsHandler } from "../../../modules/user-management/application/queries/get-user-details.query";
+import { ListAddressesHandler } from "../../../modules/user-management/application/queries/list-addresses.query";
+import { ListPaymentMethodsHandler } from "../../../modules/user-management/application/queries/list-payment-methods.query";
+import { ListUsersHandler } from "../../../modules/user-management/application/queries/list-user.query";
+
+// User Management — Controllers
+import { AuthController } from "../../../modules/user-management/infra/http/controllers/auth.controller";
+import { ProfileController } from "../../../modules/user-management/infra/http/controllers/profile.controller";
+import { AddressesController } from "../../../modules/user-management/infra/http/controllers/addresses.controller";
+import { PaymentMethodsController } from "../../../modules/user-management/infra/http/controllers/payment-methods.controller";
+import { UsersController } from "../../../modules/user-management/infra/http/controllers/users.controller";
+
+// User Management — Token Blacklist
+import { TokenBlacklistService } from "../../../modules/user-management/infra/http/security/token-blacklist";
+
 // Product Catalog — Repositories
 import {
   ProductRepository,
@@ -229,6 +269,55 @@ export class Container {
     this.services.set("userRepository", userRepository);
     this.services.set("addressRepository", addressRepository);
     this.services.set("prisma", prisma);
+
+    // Handlers
+    const registerHandler = new RegisterUserHandler(authService);
+    const loginHandler = new LoginUserHandler(authService);
+    const logoutHandler = new LogoutHandler(TokenBlacklistService);
+    const refreshTokenHandler = new RefreshTokenHandler(authService, TokenBlacklistService);
+    const changePasswordHandler = new ChangePasswordHandler(authService);
+    const changeEmailHandler = new ChangeEmailHandler(authService);
+    const initiatePasswordResetHandler = new InitiatePasswordResetHandler(authService);
+    const resetPasswordHandler = new ResetPasswordHandler(authService);
+    const verifyEmailHandler = new VerifyEmailHandler(authService);
+    const getUserByEmailHandler = new GetUserByEmailHandler(authService);
+    const deleteAccountHandler = new DeleteAccountHandler(authService, userRepository, TokenBlacklistService);
+    const getProfileHandler = new GetUserProfileHandler(profileService);
+    const updateProfileHandler = new UpdateProfileHandler(profileService);
+    const addAddressHandler = new AddAddressHandler(addressService);
+    const updateAddressHandler = new UpdateAddressHandler(addressService);
+    const deleteAddressHandler = new DeleteAddressHandler(addressService);
+    const listAddressesHandler = new ListAddressesHandler(addressService);
+    const addPaymentMethodHandler = new AddPaymentMethodHandler(paymentMethodService);
+    const updatePaymentMethodHandler = new UpdatePaymentMethodHandler(paymentMethodService);
+    const deletePaymentMethodHandler = new DeletePaymentMethodHandler(paymentMethodService);
+    const setDefaultPaymentMethodHandler = new SetDefaultPaymentMethodHandler(paymentMethodService);
+    const listPaymentMethodsHandler = new ListPaymentMethodsHandler(paymentMethodService);
+    const getUserDetailsHandler = new GetUserDetailsHandler(userRepository, addressRepository);
+    const listUsersHandler = new ListUsersHandler(userRepository);
+    const updateUserStatusHandler = new UpdateUserStatusHandler(userRepository);
+    const updateUserRoleHandler = new UpdateUserRoleHandler(userRepository);
+    const deleteUserHandler = new DeleteUserHandler(userRepository);
+    const toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(userRepository);
+
+    // Controllers
+    const authController = new AuthController(
+      registerHandler, loginHandler, logoutHandler, refreshTokenHandler,
+      changePasswordHandler, changeEmailHandler, initiatePasswordResetHandler,
+      resetPasswordHandler, verifyEmailHandler, getUserByEmailHandler,
+      deleteAccountHandler, TokenBlacklistService,
+    );
+    const profileController = new ProfileController(getProfileHandler, updateProfileHandler);
+    const addressesController = new AddressesController(addAddressHandler, updateAddressHandler, deleteAddressHandler, listAddressesHandler);
+    const paymentMethodsController = new PaymentMethodsController(addPaymentMethodHandler, updatePaymentMethodHandler, deletePaymentMethodHandler, setDefaultPaymentMethodHandler, listPaymentMethodsHandler);
+    const usersController = new UsersController(getProfileHandler, getUserDetailsHandler, listUsersHandler, updateUserStatusHandler, updateUserRoleHandler, deleteUserHandler, toggleUserEmailVerifiedHandler);
+
+    // Store controllers
+    this.services.set("authController", authController);
+    this.services.set("profileController", profileController);
+    this.services.set("addressesController", addressesController);
+    this.services.set("paymentMethodsController", paymentMethodsController);
+    this.services.set("usersController", usersController);
 
     // ============================================
     // Product Catalog Module
@@ -599,14 +688,12 @@ export class Container {
 
   getUserManagementServices() {
     return {
-      authService: this.get<AuthenticationService>("authService"),
-      profileService: this.get<UserProfileService>("profileService"),
-      addressService: this.get<AddressManagementService>("addressService"),
-      paymentMethodService: this.get<PaymentMethodService>(
-        "paymentMethodService",
-      ),
-      userRepository: this.get<UserRepository>("userRepository"),
-      addressRepository: this.get<AddressRepository>("addressRepository"),
+      authController: this.get<AuthController>("authController"),
+      profileController: this.get<ProfileController>("profileController"),
+      addressesController: this.get<AddressesController>("addressesController"),
+      paymentMethodsController: this.get<PaymentMethodsController>("paymentMethodsController"),
+      usersController: this.get<UsersController>("usersController"),
+      prisma: this.get<PrismaClient>("prisma"),
     };
   }
 

@@ -4,7 +4,10 @@ import { IAddressRepository } from "../../domain/repositories/iaddress.repositor
 import {
   PaymentMethod,
   PaymentMethodType,
+  PaymentMethodDTO,
 } from "../../domain/entities/payment-method.entity";
+import { PaymentMethodId } from "../../domain/value-objects/payment-method-id";
+import { AddressId } from "../../domain/value-objects/address-id";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import {
   UserNotFoundError,
@@ -39,28 +42,6 @@ export interface UpdatePaymentMethodDto {
   isDefault?: boolean;
 }
 
-export interface PaymentMethodResponseDto {
-  id: string;
-  userId: string;
-  type: string;
-  brand?: string | null;
-  last4?: string | null;
-  expMonth?: number | null;
-  expYear?: number | null;
-  billingAddressId?: string | null;
-  providerRef?: string | null;
-  isDefault: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  isExpired?: boolean;
-  billingAddress?: {
-    id: string;
-    addressLine1: string;
-    city: string;
-    country: string;
-  };
-}
-
 export interface PaymentMethodValidationResult {
   isValid: boolean;
   errors: string[];
@@ -76,7 +57,7 @@ export class PaymentMethodService {
 
   async addPaymentMethod(
     dto: AddPaymentMethodDto,
-  ): Promise<PaymentMethodResponseDto> {
+  ): Promise<PaymentMethodDTO> {
     const userId = UserId.fromString(dto.userId);
 
     // Verify user exists
@@ -124,15 +105,16 @@ export class PaymentMethodService {
 
     await this.paymentMethodRepository.save(paymentMethod);
 
-    return this.mapToResponseDto(paymentMethod);
+    return PaymentMethod.toDTO(paymentMethod);
   }
 
   async updatePaymentMethod(
     dto: UpdatePaymentMethodDto,
-  ): Promise<PaymentMethodResponseDto> {
+  ): Promise<PaymentMethodDTO> {
     const userId = UserId.fromString(dto.userId);
+    const paymentMethodIdVo = PaymentMethodId.fromString(dto.paymentMethodId);
     const paymentMethod = await this.paymentMethodRepository.findById(
-      dto.paymentMethodId,
+      paymentMethodIdVo,
     );
 
     if (!paymentMethod) {
@@ -173,9 +155,9 @@ export class PaymentMethodService {
       }
     }
 
-    await this.paymentMethodRepository.update(paymentMethod);
+    await this.paymentMethodRepository.save(paymentMethod);
 
-    return this.mapToResponseDto(paymentMethod);
+    return PaymentMethod.toDTO(paymentMethod);
   }
 
   async deletePaymentMethod(
@@ -183,8 +165,9 @@ export class PaymentMethodService {
     userId: string,
   ): Promise<void> {
     const userIdVo = UserId.fromString(userId);
+    const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
     const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodId);
+      await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
     if (!paymentMethod) {
       throw new PaymentMethodNotFoundError();
@@ -198,7 +181,7 @@ export class PaymentMethodService {
       throw new InvalidOperationError("Payment method cannot be deleted");
     }
 
-    await this.paymentMethodRepository.delete(paymentMethodId);
+    await this.paymentMethodRepository.delete(paymentMethodIdVo);
 
     // If this was the default payment method, set another as default
     if (paymentMethod.getIsDefault()) {
@@ -215,41 +198,17 @@ export class PaymentMethodService {
 
   async getUserPaymentMethods(
     userId: string,
-  ): Promise<PaymentMethodResponseDto[]> {
+  ): Promise<PaymentMethodDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethods =
       await this.paymentMethodRepository.findByUserId(userIdVo);
 
-    const responseDtos = await Promise.all(
-      paymentMethods.map(async (method) => {
-        const dto = this.mapToResponseDto(method);
-
-        // Add billing address details if available
-        if (method.getBillingAddressId()) {
-          const address = await this.addressRepository.findById(
-            method.getBillingAddressId()!,
-          );
-          if (address) {
-            const addressData = address.getAddressValue().toData();
-            dto.billingAddress = {
-              id: address.getId(),
-              addressLine1: addressData.addressLine1,
-              city: addressData.city,
-              country: addressData.country,
-            };
-          }
-        }
-
-        return dto;
-      }),
-    );
-
-    return responseDtos;
+    return paymentMethods.map((method) => PaymentMethod.toDTO(method));
   }
 
   async getDefaultPaymentMethod(
     userId: string,
-  ): Promise<PaymentMethodResponseDto> {
+  ): Promise<PaymentMethodDTO> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethod =
       await this.paymentMethodRepository.findDefaultByUserId(userIdVo);
@@ -258,7 +217,7 @@ export class PaymentMethodService {
       throw new PaymentMethodNotFoundError();
     }
 
-    return this.mapToResponseDto(paymentMethod);
+    return PaymentMethod.toDTO(paymentMethod);
   }
 
   async setDefaultPaymentMethod(
@@ -266,8 +225,9 @@ export class PaymentMethodService {
     userId: string,
   ): Promise<void> {
     const userIdVo = UserId.fromString(userId);
+    const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
     const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodId);
+      await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
     if (!paymentMethod) {
       throw new PaymentMethodNotFoundError();
@@ -277,24 +237,24 @@ export class PaymentMethodService {
       throw new InvalidOperationError("Payment method does not belong to user");
     }
 
-    await this.paymentMethodRepository.setAsDefault(paymentMethodId, userIdVo);
+    await this.paymentMethodRepository.setAsDefault(paymentMethodIdVo, userIdVo);
   }
 
   async getPaymentMethodsByType(
     userId: string,
     type: PaymentMethodType,
-  ): Promise<PaymentMethodResponseDto[]> {
+  ): Promise<PaymentMethodDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethods =
       await this.paymentMethodRepository.findByUserIdAndType(userIdVo, type);
 
-    return paymentMethods.map((method) => this.mapToResponseDto(method));
+    return paymentMethods.map((method) => PaymentMethod.toDTO(method));
   }
 
   async getExpiringPaymentMethods(
     userId: string,
     monthsAhead: number = 3,
-  ): Promise<PaymentMethodResponseDto[]> {
+  ): Promise<PaymentMethodDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const allPaymentMethods =
       await this.paymentMethodRepository.findByUserId(userIdVo);
@@ -304,14 +264,15 @@ export class PaymentMethodService {
       method.isExpiringSoon(monthsAhead),
     );
 
-    return expiringMethods.map((method) => this.mapToResponseDto(method));
+    return expiringMethods.map((method) => PaymentMethod.toDTO(method));
   }
 
   async validatePaymentMethod(
     paymentMethodId: string,
   ): Promise<PaymentMethodValidationResult> {
+    const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
     const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodId);
+      await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
     if (!paymentMethod) {
       return {
@@ -343,7 +304,7 @@ export class PaymentMethodService {
     // Validate billing address if present
     if (paymentMethod.getBillingAddressId()) {
       const address = await this.addressRepository.findById(
-        paymentMethod.getBillingAddressId()!,
+        AddressId.fromString(paymentMethod.getBillingAddressId()!),
       );
       if (!address) {
         errors.push("Billing address not found");
@@ -410,7 +371,7 @@ export class PaymentMethodService {
     addressId: string,
     userId: UserId,
   ): Promise<void> {
-    const address = await this.addressRepository.findById(addressId);
+    const address = await this.addressRepository.findById(AddressId.fromString(addressId));
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -491,29 +452,4 @@ export class PaymentMethodService {
     };
   }
 
-  private mapToResponseDto(
-    paymentMethod: PaymentMethod,
-  ): PaymentMethodResponseDto {
-    const dto: PaymentMethodResponseDto = {
-      id: paymentMethod.getId(),
-      userId: paymentMethod.getUserId().getValue(),
-      type: paymentMethod.getType().toString(),
-      brand: paymentMethod.getBrand(),
-      last4: paymentMethod.getLast4(),
-      expMonth: paymentMethod.getExpMonth(),
-      expYear: paymentMethod.getExpYear(),
-      billingAddressId: paymentMethod.getBillingAddressId(),
-      providerRef: paymentMethod.getProviderRef(),
-      isDefault: paymentMethod.getIsDefault(),
-      createdAt: paymentMethod.getCreatedAt(),
-      updatedAt: paymentMethod.getUpdatedAt(),
-    };
-
-    // Add expiration status for cards
-    if (paymentMethod.getType() === PaymentMethodType.CARD) {
-      dto.isExpired = paymentMethod.isExpired();
-    }
-
-    return dto;
-  }
 }

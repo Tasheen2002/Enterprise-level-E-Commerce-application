@@ -2,8 +2,10 @@ import { IUserRepository } from "../../domain/repositories/iuser.repository";
 import { IUserProfileRepository } from "../../domain/repositories/iuser-profile.repository";
 import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
 import { IPaymentMethodRepository } from "../../domain/repositories/ipayment-method.repository";
-import { UserProfile } from "../../domain/entities/user-profile.entity";
-import { User } from "../../domain/entities/user.entity";
+import { UserProfile, UserProfileDTO } from "../../domain/entities/user-profile.entity";
+import { User, UserDTO } from "../../domain/entities/user.entity";
+import { AddressId } from "../../domain/value-objects/address-id";
+import { PaymentMethodId } from "../../domain/value-objects/payment-method-id";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import {
   UserNotFoundError,
@@ -109,12 +111,12 @@ export class UserProfileService {
     // Get default address details
     if (profileDto.defaultAddressId) {
       const address = await this.addressRepository.findById(
-        profileDto.defaultAddressId,
+        AddressId.fromString(profileDto.defaultAddressId),
       );
       if (address) {
         const addressData = address.getAddressValue().toData();
         result.defaultAddress = {
-          id: address.getId(),
+          id: address.getId().getValue(),
           type: address.getType().toString(),
           addressLine1: addressData.addressLine1,
           city: addressData.city,
@@ -127,12 +129,12 @@ export class UserProfileService {
     // Get default payment method details
     if (profileDto.defaultPaymentMethodId) {
       const paymentMethod = await this.paymentMethodRepository.findById(
-        profileDto.defaultPaymentMethodId,
+        PaymentMethodId.fromString(profileDto.defaultPaymentMethodId),
       );
       if (paymentMethod) {
         result.defaultPaymentMethod = {
-          id: paymentMethod.getId(),
-          type: paymentMethod.getType(),
+          id: paymentMethod.getId().getValue(),
+          type: paymentMethod.getType().toString(),
           brand: paymentMethod.getBrand() || undefined,
           last4: paymentMethod.getLast4() || undefined,
           isDefault: paymentMethod.getIsDefault(),
@@ -177,7 +179,7 @@ export class UserProfileService {
       if (dto.residentOf !== undefined) user.updateResidentOf(dto.residentOf);
       if (dto.nationality !== undefined)
         user.updateNationality(dto.nationality);
-      await this.userRepository.update(user);
+      await this.userRepository.save(user);
     }
 
     let profile = await this.userProfileRepository.findByUserId(userIdVo);
@@ -249,7 +251,7 @@ export class UserProfileService {
         profile!.setPreferredSizes(dto.preferredSizes);
       }
 
-      await this.userProfileRepository.update(profile!);
+      await this.userProfileRepository.save(profile!);
     }
 
     return this.mapToDto(profile!, user);
@@ -274,7 +276,7 @@ export class UserProfileService {
       await this.userProfileRepository.save(profile);
     } else {
       profile.setDefaultAddress(addressId);
-      await this.userProfileRepository.update(profile);
+      await this.userProfileRepository.save(profile);
     }
   }
 
@@ -300,7 +302,7 @@ export class UserProfileService {
       await this.userProfileRepository.save(profile);
     } else {
       profile.setDefaultPaymentMethod(paymentMethodId);
-      await this.userProfileRepository.update(profile);
+      await this.userProfileRepository.save(profile);
     }
   }
 
@@ -435,7 +437,7 @@ export class UserProfileService {
     addressId: string,
     userId: UserId,
   ): Promise<void> {
-    const address = await this.addressRepository.findById(addressId);
+    const address = await this.addressRepository.findById(AddressId.fromString(addressId));
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -451,7 +453,7 @@ export class UserProfileService {
     userId: UserId,
   ): Promise<void> {
     const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodId);
+      await this.paymentMethodRepository.findById(PaymentMethodId.fromString(paymentMethodId));
 
     if (!paymentMethod) {
       throw new PaymentMethodNotFoundError();
@@ -463,15 +465,10 @@ export class UserProfileService {
   }
 
   private mapToDto(profile: UserProfile, user: User): UserProfileDto {
+    const profileDTO = UserProfile.toDTO(profile);
     return {
-      userId: profile.getUserId().getValue(),
-      defaultAddressId: profile.getDefaultAddressId(),
-      defaultPaymentMethodId: profile.getDefaultPaymentMethodId(),
-      prefs: profile.getPreferences(),
-      locale: profile.getLocale()?.getValue() ?? null,
-      currency: profile.getCurrency()?.getValue() ?? null,
-      stylePreferences: profile.getStylePreferences(),
-      preferredSizes: profile.getPreferredSizes(),
+      ...profileDTO,
+      // Merge user entity fields into profile DTO
       firstName: user.getFirstName(),
       lastName: user.getLastName(),
       phone: user.getPhone()?.getValue() ?? null,

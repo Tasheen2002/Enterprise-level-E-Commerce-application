@@ -1,26 +1,73 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IUserProfileRepository } from "../../../domain/repositories/iuser-profile.repository";
-import { UserProfile } from "../../../domain/entities/user-profile.entity";
+import {
+  UserProfile,
+  UserProfileProps,
+  UserPreferences,
+  StylePreferences,
+  PreferredSizes,
+} from "../../../domain/entities/user-profile.entity";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
+import { Currency } from "../../../domain/value-objects/currency.vo";
+import { Locale } from "../../../domain/value-objects/locale.vo";
 
-export class UserProfileRepository implements IUserProfileRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class UserProfileRepository
+  extends PrismaRepository<UserProfile>
+  implements IUserProfileRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  // Maps a Prisma record to a UserProfile domain entity
+  private toDomain(data: any): UserProfile {
+    const props: UserProfileProps = {
+      userId: UserId.fromString(data.userId),
+      defaultAddressId: data.defaultAddressId,
+      defaultPaymentMethodId: data.defaultPaymentMethodId,
+      preferences: (data.prefs || {}) as UserPreferences,
+      locale: data.locale ? new Locale(data.locale) : null,
+      currency: data.currency ? new Currency(data.currency) : null,
+      stylePreferences: (data.stylePreferences || {}) as StylePreferences,
+      preferredSizes: (data.preferredSizes || {}) as PreferredSizes,
+    };
+
+    return UserProfile.reconstitute(props);
+  }
+
+  // Maps a UserProfile domain entity to a Prisma-compatible persistence object
+  private toPersistence(userProfile: UserProfile): {
+    create: Prisma.UserProfileUncheckedCreateInput;
+    update: Prisma.UserProfileUncheckedUpdateInput;
+  } {
+    const create = {
+      userId: userProfile.getUserId().getValue(),
+      defaultAddressId: userProfile.getDefaultAddressId(),
+      defaultPaymentMethodId: userProfile.getDefaultPaymentMethodId(),
+      prefs: userProfile.getPreferences(),
+      locale: userProfile.getLocale()?.getValue() || null,
+      currency: userProfile.getCurrency()?.getValue() || null,
+      stylePreferences: userProfile.getStylePreferences(),
+      preferredSizes: userProfile.getPreferredSizes(),
+    };
+
+    const { userId, ...update } = create;
+
+    return { create, update };
+  }
 
   async save(userProfile: UserProfile): Promise<void> {
-    const data = userProfile.toDatabaseRow();
+    const data = this.toPersistence(userProfile);
 
-    await this.prisma.userProfile.create({
-      data: {
-        userId: data.user_id,
-        defaultAddressId: data.default_address_id,
-        defaultPaymentMethodId: data.default_payment_method_id,
-        prefs: data.prefs,
-        locale: data.locale,
-        currency: data.currency,
-        stylePreferences: data.style_preferences,
-        preferredSizes: data.preferred_sizes,
-      },
+    await this.prisma.userProfile.upsert({
+      where: { userId: userProfile.getUserId().getValue() },
+      create: data.create,
+      update: data.update,
     });
+
+    await this.dispatchEvents(userProfile);
   }
 
   async findByUserId(userId: UserId): Promise<UserProfile | null> {
@@ -32,182 +79,12 @@ export class UserProfileRepository implements IUserProfileRepository {
       return null;
     }
 
-    return UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData));
-  }
-
-  async update(userProfile: UserProfile): Promise<void> {
-    const data = userProfile.toDatabaseRow();
-
-    await this.prisma.userProfile.update({
-      where: { userId: data.user_id },
-      data: {
-        defaultAddressId: data.default_address_id,
-        defaultPaymentMethodId: data.default_payment_method_id,
-        prefs: data.prefs,
-        locale: data.locale,
-        currency: data.currency,
-        stylePreferences: data.style_preferences,
-        preferredSizes: data.preferred_sizes,
-      },
-    });
+    return this.toDomain(profileData);
   }
 
   async delete(userId: UserId): Promise<void> {
     await this.prisma.userProfile.delete({
       where: { userId: userId.getValue() },
     });
-  }
-
-  async findByDefaultAddressId(addressId: string): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { defaultAddressId: addressId },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async findByDefaultPaymentMethodId(
-    paymentMethodId: string
-  ): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { defaultPaymentMethodId: paymentMethodId },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async findByLocale(locale: string): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { locale },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async findByCurrency(currency: string): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { currency },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async existsByUserId(userId: UserId): Promise<boolean> {
-    const count = await this.prisma.userProfile.count({
-      where: { userId: userId.getValue() },
-    });
-    return count > 0;
-  }
-
-  async findIncompleteProfiles(): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: {
-        OR: [{ locale: null }, { currency: null }, { defaultAddressId: null }],
-      },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async findProfilesNeedingSetup(): Promise<UserProfile[]> {
-    const profiles = await this.prisma.userProfile.findMany({
-      where: {
-        AND: [{ defaultAddressId: null }, { defaultPaymentMethodId: null }],
-      },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async getProfileCompletionStats(): Promise<{
-    total: number;
-    complete: number;
-    incomplete: number;
-    averageCompletion: number;
-  }> {
-    const total = await this.prisma.userProfile.count();
-
-    const complete = await this.prisma.userProfile.count({
-      where: {
-        AND: [
-          { locale: { not: null } },
-          { currency: { not: null } },
-          { defaultAddressId: { not: null } },
-        ],
-      },
-    });
-
-    const incomplete = total - complete;
-    const averageCompletion =
-      total > 0 ? Math.round((complete / total) * 100) : 0;
-
-    return {
-      total,
-      complete,
-      incomplete,
-      averageCompletion,
-    };
-  }
-
-  async findByUserIds(userIds: UserId[]): Promise<UserProfile[]> {
-    const userIdValues = userIds.map((id) => id.getValue());
-
-    const profiles = await this.prisma.userProfile.findMany({
-      where: { userId: { in: userIdValues } },
-    });
-
-    return profiles.map((profileData) =>
-      UserProfile.fromDatabaseRow(this.mapPrismaToRow(profileData))
-    );
-  }
-
-  async updateDefaultAddress(
-    userId: UserId,
-    addressId: string | null
-  ): Promise<void> {
-    await this.prisma.userProfile.update({
-      where: { userId: userId.getValue() },
-      data: {
-        defaultAddressId: addressId,
-      },
-    });
-  }
-
-  async updateDefaultPaymentMethod(
-    userId: UserId,
-    paymentMethodId: string | null
-  ): Promise<void> {
-    await this.prisma.userProfile.update({
-      where: { userId: userId.getValue() },
-      data: {
-        defaultPaymentMethodId: paymentMethodId,
-      },
-    });
-  }
-
-  // Helper method to map Prisma result to domain row format
-  private mapPrismaToRow(profileData: any): any {
-    return {
-      user_id: profileData.userId,
-      default_address_id: profileData.defaultAddressId,
-      default_payment_method_id: profileData.defaultPaymentMethodId,
-      prefs: profileData.prefs,
-      locale: profileData.locale,
-      currency: profileData.currency,
-      style_preferences: profileData.stylePreferences,
-      preferred_sizes: profileData.preferredSizes,
-    };
   }
 }

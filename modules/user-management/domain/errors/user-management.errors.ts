@@ -1,15 +1,16 @@
-import { DomainError } from "@/api/src/shared/domain/domain-error";
+import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 export class DomainValidationError extends DomainError {
   constructor(message: string) {
-    super(message, 400);
+    super(message, 'VALIDATION_ERROR', 400);
   }
 }
 
 export class UserNotFoundError extends DomainError {
   constructor(identifier?: string) {
     super(
-      identifier ? `User '${identifier}' not found` : "User not found",
+      identifier ? `User '${identifier}' not found` : 'User not found',
+      'USER_NOT_FOUND',
       404,
     );
   }
@@ -17,62 +18,79 @@ export class UserNotFoundError extends DomainError {
 
 export class UserAlreadyExistsError extends DomainError {
   constructor(email: string) {
-    super(`User with email '${email}' already exists`, 409);
+    super(`User with email '${email}' already exists`, 'USER_ALREADY_EXISTS', 409);
   }
 }
 
 export class InvalidCredentialsError extends DomainError {
   constructor() {
-    super("Invalid email or password", 401);
+    super('Invalid email or password', 'INVALID_CREDENTIALS', 401);
   }
 }
 
 export class UserBlockedError extends DomainError {
   constructor() {
-    super("Your account has been blocked. Please contact support.", 403);
+    super(
+      'Your account has been blocked. Please contact support.',
+      'USER_BLOCKED',
+      403,
+    );
   }
 }
 
 export class EmailNotVerifiedError extends DomainError {
   constructor() {
-    super("Please verify your email address before proceeding.", 403);
+    super(
+      'Please verify your email address before proceeding.',
+      'EMAIL_NOT_VERIFIED',
+      403,
+    );
   }
 }
 
 export class InvalidVerificationTokenError extends DomainError {
   constructor() {
-    super("Verification token is invalid or has expired", 400);
+    super(
+      'Verification token is invalid or has expired',
+      'INVALID_VERIFICATION_TOKEN',
+      400,
+    );
   }
 }
 
 export class VerificationRateLimitError extends DomainError {
   constructor() {
-    super("Too many verification attempts. Please try again later.", 429);
+    super(
+      'Too many verification attempts. Please try again later.',
+      'VERIFICATION_RATE_LIMIT',
+      429,
+    );
   }
 }
 
 export class InvalidPasswordError extends DomainError {
-  constructor(message = "Password does not meet requirements") {
-    super(message, 400);
+  constructor(message = 'Password does not meet requirements') {
+    super(message, 'INVALID_PASSWORD', 400);
   }
 }
 
 export class TwoFactorRequiredError extends DomainError {
   constructor() {
-    super("Two-factor authentication is required", 401);
+    super('Two-factor authentication is required', 'TWO_FACTOR_REQUIRED', 401);
   }
 }
 
 export class InvalidTwoFactorCodeError extends DomainError {
   constructor() {
-    super("Invalid two-factor authentication code", 401);
+    super('Invalid two-factor authentication code', 'INVALID_TWO_FACTOR_CODE', 401);
   }
 }
 
 export class AddressNotFoundError extends DomainError {
   constructor(addressId?: string) {
     super(
-      addressId ? `Address '${addressId}' not found` : "Address not found",
+      addressId ? `Address '${addressId}' not found` : 'Address not found',
+      'ADDRESS_NOT_FOUND',
       404,
     );
   }
@@ -83,7 +101,8 @@ export class PaymentMethodNotFoundError extends DomainError {
     super(
       paymentMethodId
         ? `Payment method '${paymentMethodId}' not found`
-        : "Payment method not found",
+        : 'Payment method not found',
+      'PAYMENT_METHOD_NOT_FOUND',
       404,
     );
   }
@@ -91,14 +110,15 @@ export class PaymentMethodNotFoundError extends DomainError {
 
 export class EmailAlreadyVerifiedError extends DomainError {
   constructor() {
-    super("Email is already verified", 400);
+    super('Email is already verified', 'EMAIL_ALREADY_VERIFIED', 400);
   }
 }
 
 export class UserInactiveError extends DomainError {
   constructor() {
     super(
-      "Account is inactive. Please contact support to reactivate your account.",
+      'Account is inactive. Please contact support to reactivate your account.',
+      'USER_INACTIVE',
       403,
     );
   }
@@ -106,6 +126,6 @@ export class UserInactiveError extends DomainError {
 
 export class InvalidOperationError extends DomainError {
   constructor(message: string) {
-    super(message, 422);
+    super(message, 'INVALID_OPERATION', 422);
   }
 }

@@ -1,118 +1,88 @@
-import { VerificationType } from "./verification-token.entity";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { VerificationType } from '../enums/verification-type.enum';
 
-export { VerificationType };
-
-export class VerificationRateLimit {
-  private constructor(
-    private readonly rateLimitId: string,
-    private readonly userId: string | null,
-    private readonly email: string | null,
-    private readonly phone: string | null,
-    private readonly type: VerificationType,
-    private attempts: number,
-    private lastAttemptAt: Date,
-    private readonly resetAt: Date
-  ) {}
-
-  static create(data: CreateVerificationRateLimitData): VerificationRateLimit {
-    const rateLimitId = crypto.randomUUID();
-    const now = new Date();
-
-    return new VerificationRateLimit(
-      rateLimitId,
-      data.userId || null,
-      data.email || null,
-      data.phone || null,
-      data.type,
-      1,
-      now,
-      data.resetAt
-    );
-  }
-
-  static fromDatabaseRow(row: VerificationRateLimitRow): VerificationRateLimit {
-    return new VerificationRateLimit(
-      row.rate_limit_id,
-      row.user_id,
-      row.email,
-      row.phone,
-      row.type,
-      row.attempts,
-      row.last_attempt_at,
-      row.reset_at
-    );
-  }
-
-  getRateLimitId(): string {
-    return this.rateLimitId;
-  }
-
-  getUserId(): string | null {
-    return this.userId;
-  }
-
-  getEmail(): string | null {
-    return this.email;
-  }
-
-  getPhone(): string | null {
-    return this.phone;
-  }
-
-  getType(): VerificationType {
-    return this.type;
-  }
-
-  getAttempts(): number {
-    return this.attempts;
-  }
-
-  getLastAttemptAt(): Date {
-    return this.lastAttemptAt;
-  }
-
-  getResetAt(): Date {
-    return this.resetAt;
-  }
-
-  isExpired(): boolean {
-    return new Date() > this.resetAt;
-  }
-
-  incrementAttempts(): void {
-    this.attempts++;
-    this.lastAttemptAt = new Date();
-  }
-
-  toDatabaseRow(): VerificationRateLimitRow {
-    return {
-      rate_limit_id: this.rateLimitId,
-      user_id: this.userId,
-      email: this.email,
-      phone: this.phone,
-      type: this.type,
-      attempts: this.attempts,
-      last_attempt_at: this.lastAttemptAt,
-      reset_at: this.resetAt,
-    };
-  }
-}
-
-export interface CreateVerificationRateLimitData {
-  userId?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  type: VerificationType;
-  resetAt: Date;
-}
-
-export interface VerificationRateLimitRow {
-  rate_limit_id: string;
-  user_id: string | null;
+export interface VerificationRateLimitProps {
+  rateLimitId: string;
+  userId: string | null;
   email: string | null;
   phone: string | null;
   type: VerificationType;
   attempts: number;
-  last_attempt_at: Date;
-  reset_at: Date;
+  lastAttemptAt: Date;
+  resetAt: Date;
+}
+
+export class VerificationRateLimit extends AggregateRoot {
+  private props: VerificationRateLimitProps;
+
+  private constructor(props: VerificationRateLimitProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    userId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    type: VerificationType;
+    resetAt: Date;
+  }): VerificationRateLimit {
+    const now = new Date();
+
+    return new VerificationRateLimit({
+      rateLimitId: crypto.randomUUID(),
+      userId: params.userId || null,
+      email: params.email || null,
+      phone: params.phone || null,
+      type: params.type,
+      attempts: 1,
+      lastAttemptAt: now,
+      resetAt: params.resetAt,
+    });
+  }
+
+  static reconstitute(props: VerificationRateLimitProps): VerificationRateLimit {
+    return new VerificationRateLimit(props);
+  }
+
+  get rateLimitId(): string {
+    return this.props.rateLimitId;
+  }
+
+  get userId(): string | null {
+    return this.props.userId;
+  }
+
+  get email(): string | null {
+    return this.props.email;
+  }
+
+  get phone(): string | null {
+    return this.props.phone;
+  }
+
+  get type(): VerificationType {
+    return this.props.type;
+  }
+
+  get attempts(): number {
+    return this.props.attempts;
+  }
+
+  get lastAttemptAt(): Date {
+    return this.props.lastAttemptAt;
+  }
+
+  get resetAt(): Date {
+    return this.props.resetAt;
+  }
+
+  isExpired(): boolean {
+    return new Date() > this.props.resetAt;
+  }
+
+  incrementAttempts(): void {
+    this.props.attempts++;
+    this.props.lastAttemptAt = new Date();
+  }
 }

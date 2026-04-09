@@ -15,7 +15,11 @@ export default fp(
     // User Management Module
     // ============================================
     const userManagementServices = container.getUserManagementServices();
-    await registerUserManagementRoutes(fastify, userManagementServices);
+    await registerUserManagementRoutes(
+      fastify,
+      userManagementServices,
+      userManagementServices.prisma
+    );
     fastify.log.info("✓ User Management module registered");
 
     // ============================================

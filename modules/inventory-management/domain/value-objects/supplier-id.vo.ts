@@ -1,4 +1,4 @@
-import { UuidId } from "@/api/src/shared/domain/value-objects/uuid-id.base";
+import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
 
 export class SupplierId extends UuidId {
   private constructor(value: string) {

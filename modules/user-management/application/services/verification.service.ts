@@ -4,15 +4,11 @@ import { IVerificationRateLimitRepository } from "../../domain/repositories/iver
 import { IVerificationAuditLogRepository } from "../../domain/repositories/iverification-audit-log.repository";
 import { Email } from "../../domain/value-objects/email.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
-import {
-  VerificationToken,
-  VerificationType,
-} from "../../domain/entities/verification-token.entity";
+import { VerificationToken } from "../../domain/entities/verification-token.entity";
 import { VerificationRateLimit } from "../../domain/entities/verification-rate-limit.entity";
-import {
-  VerificationAuditLog,
-  VerificationAction,
-} from "../../domain/entities/verification-audit-log.entity";
+import { VerificationAuditLog } from "../../domain/entities/verification-audit-log.entity";
+import { VerificationType } from "../../domain/enums/verification-type.enum";
+import { VerificationAction } from "../../domain/enums/verification-action.enum";
 import {
   UserNotFoundError,
   InvalidOperationError,
@@ -187,7 +183,7 @@ export class VerificationService {
       VerificationType.EMAIL_VERIFICATION,
     );
 
-    if (!verificationToken || verificationToken.getUserId() !== userId) {
+    if (!verificationToken || verificationToken.userId !== userId) {
       await this.logAudit(
         userId,
         user.getEmail().getValue(),
@@ -223,7 +219,7 @@ export class VerificationService {
     await this.tokenRepository.save(verificationToken);
 
     user.verifyEmail();
-    await this.userRepository.update(user);
+    await this.userRepository.save(user);
     await this.logAudit(
       userId,
       user.getEmail().getValue(),
@@ -375,7 +371,7 @@ export class VerificationService {
 
     if (
       !verificationToken ||
-      verificationToken.getUserId() !== user.getId().getValue()
+      verificationToken.userId !== user.getId().getValue()
     ) {
       throw new InvalidOperationError("Invalid or mismatched reset token");
     }
@@ -396,7 +392,7 @@ export class VerificationService {
       VerificationType.PASSWORD_RESET,
     );
 
-    if (!verificationToken || verificationToken.getUserId() !== userId) {
+    if (!verificationToken || verificationToken.userId !== userId) {
       throw new InvalidOperationError("Invalid or mismatched reset token");
     }
 
@@ -459,8 +455,8 @@ export class VerificationService {
       return { allowed: true };
     }
 
-    if (rateLimit.getAttempts() >= this.MAX_ATTEMPTS_PER_HOUR) {
-      const resetAt = rateLimit.getResetAt();
+    if (rateLimit.attempts >= this.MAX_ATTEMPTS_PER_HOUR) {
+      const resetAt = rateLimit.resetAt;
       const now = new Date();
       const resetInMinutes = Math.ceil(
         (resetAt.getTime() - now.getTime()) / (1000 * 60),

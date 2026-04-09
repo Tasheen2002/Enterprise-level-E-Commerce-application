@@ -1,88 +1,82 @@
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { UserId } from "../value-objects/user-id.vo";
 import { Currency } from "../value-objects/currency.vo";
 import { Locale } from "../value-objects/locale.vo";
 import { InvalidOperationError } from "../errors/user-management.errors";
 
-export class UserProfile {
-  private constructor(
-    private readonly userId: UserId,
-    private defaultAddressId: string | null,
-    private defaultPaymentMethodId: string | null,
-    private preferences: UserPreferences,
-    private locale: Locale | null,
-    private currency: Currency | null,
-    private stylePreferences: StylePreferences,
-    private preferredSizes: PreferredSizes
-  ) {}
+// Props interface
+export interface UserProfileProps {
+  userId: UserId;
+  defaultAddressId: string | null;
+  defaultPaymentMethodId: string | null;
+  preferences: UserPreferences;
+  locale: Locale | null;
+  currency: Currency | null;
+  stylePreferences: StylePreferences;
+  preferredSizes: PreferredSizes;
+}
+
+export class UserProfile extends AggregateRoot {
+  private props: UserProfileProps;
+
+  private constructor(props: UserProfileProps) {
+    super();
+    this.props = props;
+  }
 
   // Factory methods
-  static create(data: CreateUserProfileData): UserProfile {
-    const userId = UserId.fromString(data.userId);
-
-    return new UserProfile(
-      userId,
-      data.defaultAddressId || null,
-      data.defaultPaymentMethodId || null,
-      data.preferences || {},
-      data.locale ? new Locale(data.locale) : null,
-      data.currency
-        ? new Currency(data.currency)
+  static create(params: {
+    userId: string;
+    defaultAddressId?: string;
+    defaultPaymentMethodId?: string;
+    preferences?: UserPreferences;
+    locale?: string;
+    currency?: string;
+    stylePreferences?: StylePreferences;
+    preferredSizes?: PreferredSizes;
+  }): UserProfile {
+    return new UserProfile({
+      userId: UserId.fromString(params.userId),
+      defaultAddressId: params.defaultAddressId || null,
+      defaultPaymentMethodId: params.defaultPaymentMethodId || null,
+      preferences: params.preferences || {},
+      locale: params.locale ? new Locale(params.locale) : null,
+      currency: params.currency
+        ? new Currency(params.currency)
         : Currency.getDefaultCurrency(),
-      data.stylePreferences || {},
-      data.preferredSizes || {}
-    );
+      stylePreferences: params.stylePreferences || {},
+      preferredSizes: params.preferredSizes || {},
+    });
   }
 
-  static reconstitute(data: UserProfileData): UserProfile {
-    return new UserProfile(
-      UserId.fromString(data.userId),
-      data.defaultAddressId,
-      data.defaultPaymentMethodId,
-      data.preferences,
-      data.locale ? new Locale(data.locale) : null,
-      data.currency ? new Currency(data.currency) : null,
-      data.stylePreferences,
-      data.preferredSizes
-    );
-  }
-
-  static fromDatabaseRow(row: UserProfileRow): UserProfile {
-    return new UserProfile(
-      UserId.fromString(row.user_id),
-      row.default_address_id,
-      row.default_payment_method_id,
-      row.prefs, // Maps database "prefs" to entity "preferences"
-      row.locale ? new Locale(row.locale) : null,
-      row.currency ? new Currency(row.currency) : null,
-      row.style_preferences,
-      row.preferred_sizes
-    );
+  static reconstitute(props: UserProfileProps): UserProfile {
+    return new UserProfile(props);
   }
 
   // Getters
   getUserId(): UserId {
-    return this.userId;
+    return this.props.userId;
   }
   getDefaultAddressId(): string | null {
-    return this.defaultAddressId;
+    return this.props.defaultAddressId;
   }
   getDefaultPaymentMethodId(): string | null {
-    return this.defaultPaymentMethodId;
+    return this.props.defaultPaymentMethodId;
   }
   getPreferences(): UserPreferences {
-    return { ...this.preferences };
+    return { ...this.props.preferences };
   }
   getLocale(): Locale | null {
-    return this.locale;
+    return this.props.locale;
   }
   getCurrency(): Currency | null {
-    return this.currency;
+    return this.props.currency;
   }
   getStylePreferences(): StylePreferences {
-    return { ...this.stylePreferences };
+    return { ...this.props.stylePreferences };
   }
   getPreferredSizes(): PreferredSizes {
-    return { ...this.preferredSizes };
+    return { ...this.props.preferredSizes };
   }
 
   // Address management
@@ -91,15 +85,15 @@ export class UserProfile {
       throw new InvalidOperationError("Address ID is required");
     }
 
-    this.defaultAddressId = addressId;
+    this.props.defaultAddressId = addressId;
   }
 
   removeDefaultAddress(): void {
-    this.defaultAddressId = null;
+    this.props.defaultAddressId = null;
   }
 
   hasDefaultAddress(): boolean {
-    return !!this.defaultAddressId;
+    return !!this.props.defaultAddressId;
   }
 
   // Payment method management
@@ -108,26 +102,26 @@ export class UserProfile {
       throw new InvalidOperationError("Payment method ID is required");
     }
 
-    this.defaultPaymentMethodId = paymentMethodId;
+    this.props.defaultPaymentMethodId = paymentMethodId;
   }
 
   removeDefaultPaymentMethod(): void {
-    this.defaultPaymentMethodId = null;
+    this.props.defaultPaymentMethodId = null;
   }
 
   hasDefaultPaymentMethod(): boolean {
-    return !!this.defaultPaymentMethodId;
+    return !!this.props.defaultPaymentMethodId;
   }
 
   // Locale and currency management
   setLocale(locale: string): void {
     const localeVO = new Locale(locale);
-    this.locale = localeVO;
+    this.props.locale = localeVO;
   }
 
   setCurrency(currency: string): void {
     const currencyVO = new Currency(currency);
-    this.currency = currencyVO;
+    this.props.currency = currencyVO;
   }
 
   // Preferences management
@@ -136,14 +130,14 @@ export class UserProfile {
       throw new InvalidOperationError("Preference key is required");
     }
 
-    this.preferences = {
-      ...this.preferences,
+    this.props.preferences = {
+      ...this.props.preferences,
       [key]: value,
     };
   }
 
   setPreferences(preferences: UserPreferences): void {
-    this.preferences = { ...preferences };
+    this.props.preferences = { ...preferences };
   }
 
   removePreference(key: string): void {
@@ -151,12 +145,12 @@ export class UserProfile {
       throw new InvalidOperationError("Preference key is required");
     }
 
-    const { [key]: removed, ...remainingPreferences } = this.preferences;
-    this.preferences = remainingPreferences;
+    const { [key]: removed, ...remainingPreferences } = this.props.preferences;
+    this.props.preferences = remainingPreferences;
   }
 
   getPreference(key: string): any {
-    return this.preferences[key];
+    return this.props.preferences[key];
   }
 
   // Style preferences management
@@ -165,18 +159,18 @@ export class UserProfile {
       throw new InvalidOperationError("Style category is required");
     }
 
-    this.stylePreferences = {
-      ...this.stylePreferences,
+    this.props.stylePreferences = {
+      ...this.props.stylePreferences,
       [category]: preferences,
     };
   }
 
   setStylePreferences(stylePreferences: StylePreferences): void {
-    this.stylePreferences = { ...stylePreferences };
+    this.props.stylePreferences = { ...stylePreferences };
   }
 
   getStylePreference(category: string): any {
-    return this.stylePreferences[category];
+    return this.props.stylePreferences[category];
   }
 
   // Common style preference methods
@@ -210,18 +204,18 @@ export class UserProfile {
       throw new InvalidOperationError("Category and size are required");
     }
 
-    this.preferredSizes = {
-      ...this.preferredSizes,
+    this.props.preferredSizes = {
+      ...this.props.preferredSizes,
       [category]: size,
     };
   }
 
   setPreferredSizes(preferredSizes: PreferredSizes): void {
-    this.preferredSizes = { ...preferredSizes };
+    this.props.preferredSizes = { ...preferredSizes };
   }
 
   getPreferredSize(category: string): string | undefined {
-    return this.preferredSizes[category];
+    return this.props.preferredSizes[category];
   }
 
   // Common size categories
@@ -260,9 +254,9 @@ export class UserProfile {
   // Profile completeness
   isComplete(): boolean {
     return !!(
-      this.locale &&
-      this.currency &&
-      this.defaultAddressId &&
+      this.props.locale &&
+      this.props.currency &&
+      this.props.defaultAddressId &&
       this.hasBasicSizes()
     );
   }
@@ -275,10 +269,10 @@ export class UserProfile {
     let score = 0;
     const totalFields = 6;
 
-    if (this.locale) score++;
-    if (this.currency) score++;
-    if (this.defaultAddressId) score++;
-    if (this.defaultPaymentMethodId) score++;
+    if (this.props.locale) score++;
+    if (this.props.currency) score++;
+    if (this.props.defaultAddressId) score++;
+    if (this.props.defaultPaymentMethodId) score++;
     if (this.hasBasicSizes()) score++;
     if (this.getFavoriteColors().length > 0) score++;
 
@@ -287,68 +281,33 @@ export class UserProfile {
 
   // Business methods
   belongsToUser(userId: UserId): boolean {
-    return this.userId.equals(userId);
+    return this.props.userId.equals(userId);
   }
 
   isSetupForShopping(): boolean {
-    return !!(this.defaultAddressId && this.defaultPaymentMethodId);
+    return !!(this.props.defaultAddressId && this.props.defaultPaymentMethodId);
   }
 
-  // Convert to data for persistence
-  toData(): UserProfileData {
+  // Static DTO conversion — called by service, NEVER by handler or controller
+  static toDTO(profile: UserProfile): UserProfileDTO {
     return {
-      userId: this.userId.getValue(),
-      defaultAddressId: this.defaultAddressId,
-      defaultPaymentMethodId: this.defaultPaymentMethodId,
-      preferences: this.preferences,
-      locale: this.locale?.getValue() || null,
-      currency: this.currency?.getValue() || null,
-      stylePreferences: this.stylePreferences,
-      preferredSizes: this.preferredSizes,
-    };
-  }
-
-  toDatabaseRow(): UserProfileRow {
-    return {
-      user_id: this.userId.getValue(),
-      default_address_id: this.defaultAddressId,
-      default_payment_method_id: this.defaultPaymentMethodId,
-      prefs: this.preferences, // Maps entity "preferences" to database "prefs"
-      locale: this.locale?.getValue() || null,
-      currency: this.currency?.getValue() || null,
-      style_preferences: this.stylePreferences,
-      preferred_sizes: this.preferredSizes,
+      userId: profile.props.userId.getValue(),
+      defaultAddressId: profile.props.defaultAddressId,
+      defaultPaymentMethodId: profile.props.defaultPaymentMethodId,
+      preferences: { ...profile.props.preferences },
+      locale: profile.props.locale?.getValue() || null,
+      currency: profile.props.currency?.getValue() || null,
+      stylePreferences: { ...profile.props.stylePreferences },
+      preferredSizes: { ...profile.props.preferredSizes },
     };
   }
 
   equals(other: UserProfile): boolean {
-    return this.userId.equals(other.userId);
+    return this.props.userId.equals(other.props.userId);
   }
 }
 
 // Supporting types and interfaces
-export interface CreateUserProfileData {
-  userId: string;
-  defaultAddressId?: string;
-  defaultPaymentMethodId?: string;
-  preferences?: UserPreferences;
-  locale?: string;
-  currency?: string;
-  stylePreferences?: StylePreferences;
-  preferredSizes?: PreferredSizes;
-}
-
-export interface UserProfileData {
-  userId: string;
-  defaultAddressId: string | null;
-  defaultPaymentMethodId: string | null;
-  preferences: UserPreferences;
-  locale: string | null;
-  currency: string | null;
-  stylePreferences: StylePreferences;
-  preferredSizes: PreferredSizes;
-}
-
 export interface UserPreferences {
   [key: string]: any;
   // Common preferences
@@ -393,14 +352,14 @@ export interface PreferredSizes {
 
 export type SizeSystem = "US" | "EU" | "UK" | "Asian";
 
-// Database row interface matching PostgreSQL schema
-export interface UserProfileRow {
-  user_id: string;
-  default_address_id: string | null;
-  default_payment_method_id: string | null;
-  prefs: UserPreferences; // Maps to database "prefs" column (JSONB)
+// DTO Interface
+export interface UserProfileDTO {
+  userId: string;
+  defaultAddressId: string | null;
+  defaultPaymentMethodId: string | null;
+  preferences: UserPreferences;
   locale: string | null;
   currency: string | null;
-  style_preferences: StylePreferences; // JSONB
-  preferred_sizes: PreferredSizes; // JSONB
+  stylePreferences: StylePreferences;
+  preferredSizes: PreferredSizes;
 }
