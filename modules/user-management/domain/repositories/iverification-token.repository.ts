@@ -1,7 +1,5 @@
-import {
-  VerificationToken,
-  VerificationType,
-} from "../entities/verification-token.entity";
+import { VerificationToken } from "../entities/verification-token.entity";
+import { VerificationType } from "../enums/verification-type.enum";
 
 export interface IVerificationTokenRepository {
   save(token: VerificationToken): Promise<void>;

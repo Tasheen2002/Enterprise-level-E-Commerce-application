@@ -34,14 +34,10 @@ export interface IUserRepository {
   save(user: User): Promise<void>;
   findById(id: UserId): Promise<User | null>;
   findByEmail(email: Email): Promise<User | null>;
-  update(user: User): Promise<void>;
   delete(id: UserId): Promise<void>;
 
   // Query operations
   findByPhone(phone: string): Promise<User | null>;
-  findActiveUsers(limit?: number, offset?: number): Promise<User[]>;
-  findGuestUsers(limit?: number, offset?: number): Promise<User[]>;
-  findUnverifiedUsers(limit?: number, offset?: number): Promise<User[]>;
 
   /** Read-side: returns plain DTOs directly — no entity hydration. */
   findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItemDTO[]; total: number }>;
@@ -49,10 +45,7 @@ export interface IUserRepository {
   // Business operations
   existsByEmail(email: Email): Promise<boolean>;
   existsByPhone(phone: string): Promise<boolean>;
-  countActiveUsers(): Promise<number>;
-  countGuestUsers(): Promise<number>;
 
   // Batch operations
   findByIds(ids: UserId[]): Promise<User[]>;
-  deleteInactiveSince(date: Date): Promise<number>;
 }

@@ -1,8 +1,6 @@
-import {
-  VerificationAuditLog,
-  VerificationType,
-  VerificationAction,
-} from "../entities/verification-audit-log.entity";
+import { VerificationAuditLog } from "../entities/verification-audit-log.entity";
+import { VerificationType } from "../enums/verification-type.enum";
+import { VerificationAction } from "../enums/verification-action.enum";
 
 export interface IVerificationAuditLogRepository {
   save(auditLog: VerificationAuditLog): Promise<void>;
