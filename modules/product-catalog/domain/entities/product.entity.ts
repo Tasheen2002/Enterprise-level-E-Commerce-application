@@ -2,7 +2,7 @@ import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
 import { Price } from "../value-objects/price.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
-import { AggregateRoot } from "@/api/src/shared/domain/aggregate-root";
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 
 export enum ProductStatus {
   DRAFT = "draft",
