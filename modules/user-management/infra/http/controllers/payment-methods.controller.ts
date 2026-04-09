@@ -1,67 +1,49 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import {
-  AddPaymentMethodCommand,
-  AddPaymentMethodHandler,
-  UpdatePaymentMethodCommand,
-  UpdatePaymentMethodHandler,
-  DeletePaymentMethodCommand,
-  DeletePaymentMethodHandler,
-  SetDefaultPaymentMethodCommand,
-  SetDefaultPaymentMethodHandler,
-  ListPaymentMethodsQuery,
-  ListPaymentMethodsHandler,
-} from "../../../application";
-import { PaymentMethodService } from "../../../application/services/payment-method.service";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-// Request DTOs
-export interface AddPaymentMethodRequest {
-  type: "card" | "wallet" | "bank" | "cod" | "gift_card";
-  brand?: string;
-  last4?: string;
-  expMonth?: number;
-  expYear?: number;
-  billingAddressId?: string;
-  providerRef?: string;
-  isDefault?: boolean;
-}
-
-export interface UpdatePaymentMethodRequest {
-  billingAddressId?: string;
-  isDefault?: boolean;
-}
+import {
+  AddPaymentMethodInput,
+  AddPaymentMethodHandler,
+} from "../../../application/commands/add-payment-method.command";
+import {
+  UpdatePaymentMethodInput,
+  UpdatePaymentMethodHandler,
+} from "../../../application/commands/update-payment-method.command";
+import {
+  DeletePaymentMethodInput,
+  DeletePaymentMethodHandler,
+} from "../../../application/commands/delete-payment-method.command";
+import {
+  SetDefaultPaymentMethodInput,
+  SetDefaultPaymentMethodHandler,
+} from "../../../application/commands/set-default-payment-method.command";
+import {
+  ListPaymentMethodsInput,
+  ListPaymentMethodsHandler,
+} from "../../../application/queries/list-payment-methods.query";
 
 export class PaymentMethodsController {
-  private addPaymentMethodHandler: AddPaymentMethodHandler;
-  private updatePaymentMethodHandler: UpdatePaymentMethodHandler;
-  private deletePaymentMethodHandler: DeletePaymentMethodHandler;
-  private setDefaultPaymentMethodHandler: SetDefaultPaymentMethodHandler;
-  private listPaymentMethodsHandler: ListPaymentMethodsHandler;
-  private paymentMethodService: PaymentMethodService;
-
-  constructor(paymentMethodService: PaymentMethodService) {
-    this.paymentMethodService = paymentMethodService;
-    this.addPaymentMethodHandler = new AddPaymentMethodHandler(
-      paymentMethodService,
-    );
-    this.updatePaymentMethodHandler = new UpdatePaymentMethodHandler(
-      paymentMethodService,
-    );
-    this.deletePaymentMethodHandler = new DeletePaymentMethodHandler(
-      paymentMethodService,
-    );
-    this.setDefaultPaymentMethodHandler = new SetDefaultPaymentMethodHandler(
-      paymentMethodService,
-    );
-    this.listPaymentMethodsHandler = new ListPaymentMethodsHandler(
-      paymentMethodService,
-    );
-  }
+  constructor(
+    private readonly addPaymentMethodHandler: AddPaymentMethodHandler,
+    private readonly updatePaymentMethodHandler: UpdatePaymentMethodHandler,
+    private readonly deletePaymentMethodHandler: DeletePaymentMethodHandler,
+    private readonly setDefaultPaymentMethodHandler: SetDefaultPaymentMethodHandler,
+    private readonly listPaymentMethodsHandler: ListPaymentMethodsHandler,
+  ) {}
 
   async addPaymentMethod(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string };
-      Body: AddPaymentMethodRequest;
+      Body: {
+        type: "card" | "wallet" | "bank" | "cod" | "gift_card";
+        brand?: string;
+        last4?: string;
+        expMonth?: number;
+        expYear?: number;
+        billingAddressId?: string;
+        providerRef?: string;
+        isDefault?: boolean;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -78,7 +60,7 @@ export class PaymentMethodsController {
         isDefault,
       } = request.body;
 
-      const command: AddPaymentMethodCommand = {
+      const command: AddPaymentMethodInput = {
         userId,
         type,
         brand,
@@ -92,30 +74,42 @@ export class PaymentMethodsController {
       };
 
       const result = await this.addPaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method added", 201);
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method added",
+        201,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listPaymentMethods(
-    request: FastifyRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query: ListPaymentMethodsQuery = { userId, timestamp: new Date() };
+      const query: ListPaymentMethodsInput = { userId, timestamp: new Date() };
       const result = await this.listPaymentMethodsHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "Payment methods retrieved");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Payment methods retrieved",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updatePaymentMethod(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string; paymentMethodId: string };
-      Body: UpdatePaymentMethodRequest;
+      Body: {
+        billingAddressId?: string;
+        isDefault?: boolean;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -123,7 +117,7 @@ export class PaymentMethodsController {
       const { userId, paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
 
-      const command: UpdatePaymentMethodCommand = {
+      const command: UpdatePaymentMethodInput = {
         paymentMethodId,
         userId,
         billingAddressId,
@@ -132,14 +126,18 @@ export class PaymentMethodsController {
       };
 
       const result = await this.updatePaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method updated",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deletePaymentMethod(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string; paymentMethodId: string };
     }>,
     reply: FastifyReply,
@@ -147,160 +145,162 @@ export class PaymentMethodsController {
     try {
       const { userId, paymentMethodId } = request.params;
 
-      const command: DeletePaymentMethodCommand = {
+      const command: DeletePaymentMethodInput = {
         paymentMethodId,
         userId,
         timestamp: new Date(),
       };
 
       const result = await this.deletePaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method deleted");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method deleted",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async addCurrentUserPaymentMethod(
-    request: FastifyRequest<{ Body: AddPaymentMethodRequest }>,
-    reply: FastifyReply,
-  ): Promise<void> {
-    try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
-      const {
-        type,
-        brand,
-        last4,
-        expMonth,
-        expYear,
-        billingAddressId,
-        providerRef,
-        isDefault,
-      } = request.body;
-
-      const command: AddPaymentMethodCommand = {
-        userId,
-        type,
-        brand,
-        last4,
-        expMonth,
-        expYear,
-        billingAddressId,
-        providerRef,
-        isDefault,
-        timestamp: new Date(),
+    request: AuthenticatedRequest<{
+      Body: {
+        type: "card" | "wallet" | "bank" | "cod" | "gift_card";
+        brand?: string;
+        last4?: string;
+        expMonth?: number;
+        expYear?: number;
+        billingAddressId?: string;
+        providerRef?: string;
+        isDefault?: boolean;
       };
-
-      const result = await this.addPaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method added", 201);
-    } catch (error) {
-      ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCurrentUserPaymentMethods(
-    request: FastifyRequest,
-    reply: FastifyReply,
-  ): Promise<void> {
-    try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
-      const query: ListPaymentMethodsQuery = { userId, timestamp: new Date() };
-      const result = await this.listPaymentMethodsHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "Payment methods retrieved");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updateCurrentUserPaymentMethod(
-    request: FastifyRequest<{
-      Params: { paymentMethodId: string };
-      Body: UpdatePaymentMethodRequest;
     }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
+      const command: AddPaymentMethodInput = {
+        userId: request.user.userId,
+        type: request.body.type,
+        brand: request.body.brand,
+        last4: request.body.last4,
+        expMonth: request.body.expMonth,
+        expYear: request.body.expYear,
+        billingAddressId: request.body.billingAddressId,
+        providerRef: request.body.providerRef,
+        isDefault: request.body.isDefault,
+        timestamp: new Date(),
+      };
 
+      const result = await this.addPaymentMethodHandler.handle(command);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method added",
+        201,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getCurrentUserPaymentMethods(
+    request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const query: ListPaymentMethodsInput = {
+        userId: request.user.userId,
+        timestamp: new Date(),
+      };
+      const result = await this.listPaymentMethodsHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Payment methods retrieved",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async updateCurrentUserPaymentMethod(
+    request: AuthenticatedRequest<{
+      Params: { paymentMethodId: string };
+      Body: {
+        billingAddressId?: string;
+        isDefault?: boolean;
+      };
+    }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
       const { paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
 
-      const command: UpdatePaymentMethodCommand = {
+      const command: UpdatePaymentMethodInput = {
         paymentMethodId,
-        userId,
+        userId: request.user.userId,
         billingAddressId,
         isDefault,
         timestamp: new Date(),
       };
 
       const result = await this.updatePaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method updated",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteCurrentUserPaymentMethod(
-    request: FastifyRequest<{ Params: { paymentMethodId: string } }>,
+    request: AuthenticatedRequest<{ Params: { paymentMethodId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
       const { paymentMethodId } = request.params;
 
-      const command: DeletePaymentMethodCommand = {
+      const command: DeletePaymentMethodInput = {
         paymentMethodId,
-        userId,
+        userId: request.user.userId,
         timestamp: new Date(),
       };
 
       const result = await this.deletePaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Payment method deleted");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Payment method deleted",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async setDefaultPaymentMethod(
-    request: FastifyRequest<{ Params: { paymentMethodId: string } }>,
+    request: AuthenticatedRequest<{ Params: { paymentMethodId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
       const { paymentMethodId } = request.params;
 
-      const command: SetDefaultPaymentMethodCommand = {
+      const command: SetDefaultPaymentMethodInput = {
         paymentMethodId,
-        userId,
+        userId: request.user.userId,
         timestamp: new Date(),
       };
 
       const result = await this.setDefaultPaymentMethodHandler.handle(command);
-      ResponseHelper.fromCommand(
+      return ResponseHelper.fromCommand(
         reply,
         result,
         "Default payment method updated",
       );
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 }

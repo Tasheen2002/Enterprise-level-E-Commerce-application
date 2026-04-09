@@ -1,153 +1,135 @@
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { UserId } from "../value-objects/user-id.vo";
+import { AddressId } from "../value-objects/address-id";
 import {
   Address as AddressVO,
   AddressData,
   AddressType,
 } from "../value-objects/address.vo";
+import { ShippingZone } from "../enums/shipping-zone.enum";
 
-export class Address {
-  private constructor(
-    private readonly id: string, // UUID from database
-    private readonly userId: UserId,
-    private addressValue: AddressVO,
-    private type: AddressType,
-    private isDefault: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
-  ) {}
+export { ShippingZone, AddressId };
+
+// Props interface
+export interface AddressProps {
+  id: AddressId;
+  userId: UserId;
+  addressValue: AddressVO;
+  type: AddressType;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export class Address extends AggregateRoot {
+  private props: AddressProps;
+
+  private constructor(props: AddressProps) {
+    super();
+    this.props = props;
+  }
 
   // Factory methods
-  static create(data: CreateAddressData): Address {
-    const addressId = crypto.randomUUID();
-    const userId = UserId.fromString(data.userId);
-    const addressValue = AddressVO.fromData(data.addressData);
+  static create(params: {
+    userId: string;
+    addressData: AddressData;
+    type: AddressType;
+    isDefault?: boolean;
+  }): Address {
     const now = new Date();
 
-    return new Address(
-      addressId,
-      userId,
-      addressValue,
-      data.type,
-      data.isDefault || false,
-      now,
-      now,
-    );
+    return new Address({
+      id: AddressId.create(),
+      userId: UserId.fromString(params.userId),
+      addressValue: AddressVO.fromData(params.addressData),
+      type: params.type,
+      isDefault: params.isDefault || false,
+      createdAt: now,
+      updatedAt: now,
+    });
   }
 
-  static reconstitute(data: AddressEntityData): Address {
-    return new Address(
-      data.id,
-      UserId.fromString(data.userId),
-      AddressVO.fromData(data.addressData),
-      data.type,
-      data.isDefault,
-      data.createdAt,
-      data.updatedAt,
-    );
-  }
-
-  // Factory method from database row
-  static fromDatabaseRow(row: UserAddressRow): Address {
-    return new Address(
-      row.address_id,
-      UserId.fromString(row.user_id),
-      // Map flat database columns to nested VO
-      AddressVO.fromData({
-        firstName: row.first_name || undefined,
-        lastName: row.last_name || undefined,
-        company: row.company || undefined,
-        addressLine1: row.address_line_1,
-        addressLine2: row.address_line_2 || undefined,
-        city: row.city,
-        state: row.state || undefined,
-        postalCode: row.postal_code || undefined,
-        country: row.country,
-        phone: row.phone || undefined,
-      }),
-      AddressType.fromString(row.type),
-      row.is_default,
-      row.created_at,
-      row.updated_at,
-    );
+  static reconstitute(props: AddressProps): Address {
+    return new Address(props);
   }
 
   // Getters
-  getId(): string {
-    return this.id;
+  getId(): AddressId {
+    return this.props.id;
   }
   getUserId(): UserId {
-    return this.userId;
+    return this.props.userId;
   }
   getAddressValue(): AddressVO {
-    return this.addressValue;
+    return this.props.addressValue;
   }
   getType(): AddressType {
-    return this.type;
+    return this.props.type;
   }
   getIsDefault(): boolean {
-    return this.isDefault;
+    return this.props.isDefault;
   }
   getCreatedAt(): Date {
-    return this.createdAt;
+    return this.props.createdAt;
   }
   getUpdatedAt(): Date {
-    return this.updatedAt;
+    return this.props.updatedAt;
   }
 
   // Business logic methods
   updateAddress(newAddressData: AddressData): void {
     const newAddressValue = AddressVO.fromData(newAddressData);
 
-    if (this.addressValue.equals(newAddressValue)) {
+    if (this.props.addressValue.equals(newAddressValue)) {
       return; // No change needed
     }
 
-    this.addressValue = newAddressValue;
-    this.touch();
+    this.props.addressValue = newAddressValue;
+    this.props.updatedAt = new Date();
   }
 
   setAsDefault(): void {
-    if (this.isDefault) {
+    if (this.props.isDefault) {
       return; // Already default
     }
 
-    this.isDefault = true;
-    this.touch();
+    this.props.isDefault = true;
+    this.props.updatedAt = new Date();
   }
 
   removeAsDefault(): void {
-    if (!this.isDefault) {
+    if (!this.props.isDefault) {
       return; // Already not default
     }
 
-    this.isDefault = false;
-    this.touch();
+    this.props.isDefault = false;
+    this.props.updatedAt = new Date();
   }
 
   changeType(newType: AddressType): void {
-    if (this.type === newType) {
+    if (this.props.type === newType) {
       return; // No change needed
     }
 
-    this.type = newType;
-    this.touch();
+    this.props.type = newType;
+    this.props.updatedAt = new Date();
   }
 
   // Validation methods
   isValidForShipping(): boolean {
-    return this.addressValue.isShippable();
+    return this.props.addressValue.isShippable();
   }
 
   isValidForBilling(): boolean {
-    return this.addressValue.isComplete();
+    return this.props.addressValue.isComplete();
   }
 
   isSameAddress(other: Address): boolean {
-    return this.addressValue.equals(other.addressValue);
+    return this.props.addressValue.equals(other.props.addressValue);
   }
 
   belongsToUser(userId: UserId): boolean {
-    return this.userId.equals(userId);
+    return this.props.userId.equals(userId);
   }
 
   canBeDeleted(): boolean {
@@ -156,7 +138,7 @@ export class Address {
 
   // Address-specific business methods
   calculateShippingZone(): ShippingZone {
-    const country = this.addressValue.getCountry();
+    const country = this.props.addressValue.getCountry();
 
     switch (country) {
       case "US":
@@ -193,7 +175,7 @@ export class Address {
   }
 
   isInternationalShipping(fromCountry: string = "US"): boolean {
-    return this.addressValue.isInternational(fromCountry);
+    return this.props.addressValue.isInternational(fromCountry);
   }
 
   requiresCustomsDeclaration(): boolean {
@@ -202,8 +184,8 @@ export class Address {
 
   // Tax-related methods
   getTaxJurisdiction(): string {
-    const country = this.addressValue.getCountry();
-    const state = this.addressValue.getState();
+    const country = this.props.addressValue.getCountry();
+    const state = this.props.addressValue.getState();
 
     if (country === "US" && state) {
       return `${country}-${state}`;
@@ -214,7 +196,7 @@ export class Address {
 
   // Address formatting for different purposes
   getShippingLabel(): AddressLabel {
-    const formatted = this.addressValue.getFormattedAddress();
+    const formatted = this.props.addressValue.getFormattedAddress();
 
     return {
       recipient: formatted.recipient,
@@ -226,7 +208,7 @@ export class Address {
   }
 
   getBillingLabel(): AddressLabel {
-    const formatted = this.addressValue.getFormattedAddress();
+    const formatted = this.props.addressValue.getFormattedAddress();
 
     return {
       recipient: formatted.recipient,
@@ -237,75 +219,32 @@ export class Address {
     };
   }
 
-  // Internal methods
-  private touch(): void {
-    this.updatedAt = new Date();
-  }
-
-  // Database-compatible persistence method
-  toDatabaseRow(): UserAddressRow {
-    const addressData = this.addressValue.toData();
-
+  // Static DTO conversion — called by service, NEVER by handler or controller
+  static toDTO(address: Address): AddressDTO {
+    const data = address.props.addressValue.toData();
     return {
-      address_id: this.id,
-      user_id: this.userId.getValue(),
-      type: this.type.toString(),
-      is_default: this.isDefault,
-      first_name: addressData.firstName || null,
-      last_name: addressData.lastName || null,
-      company: addressData.company || null,
-      address_line_1: addressData.addressLine1,
-      address_line_2: addressData.addressLine2 || null,
-      city: addressData.city,
-      state: addressData.state || null,
-      postal_code: addressData.postalCode || null,
-      country: addressData.country,
-      phone: addressData.phone || null,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
-  }
-
-  toData(): AddressEntityData {
-    return {
-      id: this.id,
-      userId: this.userId.getValue(),
-      addressData: this.addressValue.toData(),
-      type: this.type,
-      isDefault: this.isDefault,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      id: address.props.id.getValue(),
+      userId: address.props.userId.getValue(),
+      type: address.props.type.toString(),
+      isDefault: address.props.isDefault,
+      firstName: data.firstName || null,
+      lastName: data.lastName || null,
+      company: data.company || null,
+      addressLine1: data.addressLine1,
+      addressLine2: data.addressLine2 || null,
+      city: data.city,
+      state: data.state || null,
+      postalCode: data.postalCode || null,
+      country: data.country,
+      phone: data.phone || null,
+      createdAt: address.props.createdAt.toISOString(),
+      updatedAt: address.props.updatedAt.toISOString(),
     };
   }
 
   equals(other: Address): boolean {
-    return this.id === other.id;
+    return this.props.id.equals(other.props.id);
   }
-}
-
-// Supporting types and enums
-export enum ShippingZone {
-  DOMESTIC = "domestic",
-  NORTH_AMERICA = "north_america",
-  EUROPE = "europe",
-  INTERNATIONAL = "international",
-}
-
-export interface CreateAddressData {
-  userId: string;
-  addressData: AddressData;
-  type: AddressType;
-  isDefault?: boolean;
-}
-
-export interface AddressEntityData {
-  id: string;
-  userId: string;
-  addressData: AddressData;
-  type: AddressType;
-  isDefault: boolean;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface AddressLabel {
@@ -316,21 +255,22 @@ export interface AddressLabel {
   type: "SHIPPING" | "BILLING";
 }
 
-export interface UserAddressRow {
-  address_id: string;
-  user_id: string;
+// DTO Interface
+export interface AddressDTO {
+  id: string;
+  userId: string;
   type: string;
-  is_default: boolean;
-  first_name: string | null;
-  last_name: string | null;
+  isDefault: boolean;
+  firstName: string | null;
+  lastName: string | null;
   company: string | null;
-  address_line_1: string;
-  address_line_2: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
   city: string;
   state: string | null;
-  postal_code: string | null;
+  postalCode: string | null;
   country: string;
   phone: string | null;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: string;
+  updatedAt: string;
 }

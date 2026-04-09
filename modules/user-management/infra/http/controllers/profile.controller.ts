@@ -1,58 +1,145 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import {
-  UpdateProfileCommand,
-  UpdateProfileHandler,
-  GetUserProfileQuery,
-  GetUserProfileHandler,
-} from "../../../application";
-import { UserProfileService } from "../../../application/services/user-profile.service";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-// Request DTOs
-export interface UpdateProfileRequest {
-  defaultAddressId?: string;
-  defaultPaymentMethodId?: string;
-  preferences?: Record<string, any>;
-  locale?: string;
-  currency?: string;
-  stylePreferences?: Record<string, any>;
-  preferredSizes?: Record<string, any>;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  title?: string;
-  dateOfBirth?: string;
-  residentOf?: string;
-  nationality?: string;
-}
+import {
+  GetUserProfileInput,
+  GetUserProfileHandler,
+} from "../../../application/queries/get-user-profile.query";
+import {
+  UpdateProfileInput,
+  UpdateProfileHandler,
+} from "../../../application/commands/update-profile.command";
 
 export class ProfileController {
-  private getProfileHandler: GetUserProfileHandler;
-  private updateProfileHandler: UpdateProfileHandler;
+  constructor(
+    private readonly getProfileHandler: GetUserProfileHandler,
+    private readonly updateProfileHandler: UpdateProfileHandler,
+  ) {}
 
-  constructor(userProfileService: UserProfileService) {
-    this.getProfileHandler = new GetUserProfileHandler(userProfileService);
-    this.updateProfileHandler = new UpdateProfileHandler(userProfileService);
+  async getCurrentUserProfile(
+    request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const query: GetUserProfileInput = {
+        userId: request.user.userId,
+        timestamp: new Date(),
+      };
+      const result = await this.getProfileHandler.handle(query);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Profile retrieved",
+        "User profile not found",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async updateCurrentUserProfile(
+    request: AuthenticatedRequest<{
+      Body: {
+        defaultAddressId?: string;
+        defaultPaymentMethodId?: string;
+        preferences?: Record<string, any>;
+        locale?: string;
+        currency?: string;
+        stylePreferences?: Record<string, any>;
+        preferredSizes?: Record<string, any>;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        title?: string;
+        dateOfBirth?: string;
+        residentOf?: string;
+        nationality?: string;
+      };
+    }>,
+    reply: FastifyReply,
+  ): Promise<void> {
+    try {
+      const {
+        defaultAddressId,
+        defaultPaymentMethodId,
+        preferences,
+        locale,
+        currency,
+        stylePreferences,
+        preferredSizes,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
+      } = request.body;
+
+      const command: UpdateProfileInput = {
+        userId: request.user.userId,
+        defaultAddressId,
+        defaultPaymentMethodId,
+        prefs: preferences,
+        locale,
+        currency,
+        stylePreferences,
+        preferredSizes,
+        firstName,
+        lastName,
+        phone,
+        title,
+        dateOfBirth,
+        residentOf,
+        nationality,
+        timestamp: new Date(),
+      };
+
+      const result = await this.updateProfileHandler.handle(command);
+      return ResponseHelper.fromCommand(reply, result, "Profile updated");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
   async getProfile(
-    request: FastifyRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query: GetUserProfileQuery = { userId, timestamp: new Date() };
+      const query: GetUserProfileInput = { userId, timestamp: new Date() };
       const result = await this.getProfileHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "Profile retrieved", "User profile not found");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromQuery(
+        reply,
+        result,
+        "Profile retrieved",
+        "User profile not found",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateProfile(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string };
-      Body: UpdateProfileRequest;
+      Body: {
+        defaultAddressId?: string;
+        defaultPaymentMethodId?: string;
+        preferences?: Record<string, any>;
+        locale?: string;
+        currency?: string;
+        stylePreferences?: Record<string, any>;
+        preferredSizes?: Record<string, any>;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        title?: string;
+        dateOfBirth?: string;
+        residentOf?: string;
+        nationality?: string;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -75,7 +162,7 @@ export class ProfileController {
         nationality,
       } = request.body;
 
-      const command: UpdateProfileCommand = {
+      const command: UpdateProfileInput = {
         userId,
         defaultAddressId,
         defaultPaymentMethodId,
@@ -95,79 +182,9 @@ export class ProfileController {
       };
 
       const result = await this.updateProfileHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Profile updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCurrentUserProfile(
-    request: FastifyRequest,
-    reply: FastifyReply,
-  ): Promise<void> {
-    try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-      const query: GetUserProfileQuery = { userId, timestamp: new Date() };
-      const result = await this.getProfileHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "Profile retrieved", "User profile not found");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updateCurrentUserProfile(
-    request: FastifyRequest<{ Body: UpdateProfileRequest }>,
-    reply: FastifyReply,
-  ): Promise<void> {
-    try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
-      const {
-        defaultAddressId,
-        defaultPaymentMethodId,
-        preferences,
-        locale,
-        currency,
-        stylePreferences,
-        preferredSizes,
-        firstName,
-        lastName,
-        phone,
-        title,
-        dateOfBirth,
-        residentOf,
-        nationality,
-      } = request.body;
-
-      const command: UpdateProfileCommand = {
-        userId,
-        defaultAddressId,
-        defaultPaymentMethodId,
-        prefs: preferences,
-        locale,
-        currency,
-        stylePreferences,
-        preferredSizes,
-        firstName,
-        lastName,
-        phone,
-        title,
-        dateOfBirth,
-        residentOf,
-        nationality,
-        timestamp: new Date(),
-      };
-
-      const result = await this.updateProfileHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "Profile updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(reply, result, "Profile updated");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 }

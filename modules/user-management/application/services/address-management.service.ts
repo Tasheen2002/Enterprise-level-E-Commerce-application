@@ -1,5 +1,6 @@
 import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
-import { Address } from "../../domain/entities/address.entity";
+import { Address, AddressDTO } from "../../domain/entities/address.entity";
+import { AddressId } from "../../domain/value-objects/address-id";
 import {
   AddressType,
   AddressData,
@@ -25,35 +26,10 @@ export interface UpdateAddressDto {
   isDefault?: boolean;
 }
 
-export interface AddressResponseDto {
-  id: string;
-  userId: string;
-  type: string;
-  isDefault: boolean;
-  firstName?: string;
-  lastName?: string;
-  company?: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state?: string;
-  postalCode?: string;
-  country: string;
-  phone?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface AddressStatsDto {
-  total: number;
-  byType: Record<string, number>;
-  hasDefault: boolean;
-}
-
 export class AddressManagementService {
   constructor(private readonly addressRepository: IAddressRepository) {}
 
-  async addAddress(dto: AddAddressDto): Promise<AddressResponseDto> {
+  async addAddress(dto: AddAddressDto): Promise<AddressDTO> {
     const userId = UserId.fromString(dto.userId);
 
     const existingAddresses = await this.addressRepository.findByUserId(userId);
@@ -80,13 +56,14 @@ export class AddressManagementService {
     }
     await this.addressRepository.save(address);
 
-    const result = this.mapToResponseDto(address);
+    const result = Address.toDTO(address);
     return result;
   }
 
-  async updateAddress(dto: UpdateAddressDto): Promise<AddressResponseDto> {
+  async updateAddress(dto: UpdateAddressDto): Promise<AddressDTO> {
     const userId = UserId.fromString(dto.userId);
-    const address = await this.addressRepository.findById(dto.addressId);
+    const addressId = AddressId.fromString(dto.addressId);
+    const address = await this.addressRepository.findById(addressId);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -112,14 +89,15 @@ export class AddressManagementService {
       }
     }
 
-    await this.addressRepository.update(address);
+    await this.addressRepository.save(address);
 
-    return this.mapToResponseDto(address);
+    return Address.toDTO(address);
   }
 
   async deleteAddress(addressId: string, userId: string): Promise<void> {
     const userIdVo = UserId.fromString(userId);
-    const address = await this.addressRepository.findById(addressId);
+    const addressIdVo = AddressId.fromString(addressId);
+    const address = await this.addressRepository.findById(addressIdVo);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -133,7 +111,7 @@ export class AddressManagementService {
       throw new InvalidOperationError("Address cannot be deleted");
     }
 
-    await this.addressRepository.delete(addressId);
+    await this.addressRepository.delete(addressIdVo);
 
     // If this was the default address, we might want to set another as default
     if (address.getIsDefault()) {
@@ -148,27 +126,27 @@ export class AddressManagementService {
     }
   }
 
-  async getUserAddresses(userId: string): Promise<AddressResponseDto[]> {
+  async getUserAddresses(userId: string): Promise<AddressDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const addresses = await this.addressRepository.findByUserId(userIdVo);
 
-    return addresses.map((address) => this.mapToResponseDto(address));
+    return addresses.map((address) => Address.toDTO(address));
   }
 
   async getUserAddressesByType(
     userId: string,
     type: AddressType,
-  ): Promise<AddressResponseDto[]> {
+  ): Promise<AddressDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const addresses = await this.addressRepository.findByUserIdAndType(
       userIdVo,
       type,
     );
 
-    return addresses.map((address) => this.mapToResponseDto(address));
+    return addresses.map((address) => Address.toDTO(address));
   }
 
-  async getDefaultAddress(userId: string): Promise<AddressResponseDto> {
+  async getDefaultAddress(userId: string): Promise<AddressDTO> {
     const userIdVo = UserId.fromString(userId);
     const address = await this.addressRepository.findDefaultByUserId(userIdVo);
 
@@ -176,12 +154,13 @@ export class AddressManagementService {
       throw new AddressNotFoundError();
     }
 
-    return this.mapToResponseDto(address);
+    return Address.toDTO(address);
   }
 
   async setDefaultAddress(addressId: string, userId: string): Promise<void> {
     const userIdVo = UserId.fromString(userId);
-    const address = await this.addressRepository.findById(addressId);
+    const addressIdVo = AddressId.fromString(addressId);
+    const address = await this.addressRepository.findById(addressIdVo);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -191,7 +170,7 @@ export class AddressManagementService {
       throw new InvalidOperationError("Address does not belong to user");
     }
 
-    await this.addressRepository.setAsDefault(addressId, userIdVo);
+    await this.addressRepository.setAsDefault(addressIdVo, userIdVo);
   }
 
   async validateAddress(addressData: AddressData): Promise<{
@@ -244,37 +223,9 @@ export class AddressManagementService {
     };
   }
 
-  async findSimilarAddresses(
-    addressData: AddressData,
-    threshold: number = 0.8,
-  ): Promise<AddressResponseDto[]> {
-    const tempAddress = Address.create({
-      userId: "temp-user-id",
-      addressData,
-      type: AddressType.SHIPPING,
-    });
-
-    const similarAddresses = await this.addressRepository.findSimilarAddresses(
-      tempAddress,
-      threshold,
-    );
-
-    return similarAddresses.map((address) => this.mapToResponseDto(address));
-  }
-
-  async getUserAddressStats(userId: string): Promise<AddressStatsDto> {
-    const userIdVo = UserId.fromString(userId);
-    return await this.addressRepository.getUserAddressStats(userIdVo);
-  }
-
-  async getAddressStatsByCountry(): Promise<
-    Array<{ country: string; count: number }>
-  > {
-    return await this.addressRepository.getAddressStatsByCountry();
-  }
-
   async estimateDeliveryDays(addressId: string): Promise<number> {
-    const address = await this.addressRepository.findById(addressId);
+    const addressIdVo = AddressId.fromString(addressId);
+    const address = await this.addressRepository.findById(addressIdVo);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -284,7 +235,8 @@ export class AddressManagementService {
   }
 
   async getShippingZone(addressId: string): Promise<string> {
-    const address = await this.addressRepository.findById(addressId);
+    const addressIdVo = AddressId.fromString(addressId);
+    const address = await this.addressRepository.findById(addressIdVo);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -294,7 +246,8 @@ export class AddressManagementService {
   }
 
   async requiresCustomsDeclaration(addressId: string): Promise<boolean> {
-    const address = await this.addressRepository.findById(addressId);
+    const addressIdVo = AddressId.fromString(addressId);
+    const address = await this.addressRepository.findById(addressIdVo);
 
     if (!address) {
       throw new AddressNotFoundError();
@@ -308,27 +261,4 @@ export class AddressManagementService {
     return await this.addressRepository.deleteByUserId(userIdVo);
   }
 
-  private mapToResponseDto(address: Address): AddressResponseDto {
-    const addressValue = address.getAddressValue();
-    const addressData = addressValue.toData();
-
-    return {
-      id: address.getId(),
-      userId: address.getUserId().getValue(),
-      type: address.getType().toString(),
-      isDefault: address.getIsDefault(),
-      firstName: addressData.firstName,
-      lastName: addressData.lastName,
-      company: addressData.company,
-      addressLine1: addressData.addressLine1,
-      addressLine2: addressData.addressLine2,
-      city: addressData.city,
-      state: addressData.state,
-      postalCode: addressData.postalCode,
-      country: addressData.country,
-      phone: addressData.phone,
-      createdAt: address.getCreatedAt(),
-      updatedAt: address.getUpdatedAt(),
-    };
-  }
 }

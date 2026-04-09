@@ -1,17 +1,20 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IVerificationRateLimitRepository } from "../../../domain/repositories/iverification-rate-limit.repository";
-import {
-  VerificationRateLimit,
-  VerificationType,
-} from "../../../domain/entities/verification-rate-limit.entity";
+import { VerificationRateLimit } from "../../../domain/entities/verification-rate-limit.entity";
+import { VerificationType } from "../../../domain/enums/verification-type.enum";
 
 export class VerificationRateLimitRepository
+  extends PrismaRepository<VerificationRateLimit>
   implements IVerificationRateLimitRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(rateLimit: VerificationRateLimit): Promise<void> {
-    const data = rateLimit.toDatabaseRow();
+    const data = this.toPersistence(rateLimit);
 
     await this.prisma.$executeRaw`
       INSERT INTO user_management.verification_rate_limits
@@ -24,6 +27,8 @@ export class VerificationRateLimitRepository
         attempts = EXCLUDED.attempts,
         last_attempt_at = EXCLUDED.last_attempt_at
     `;
+
+    await this.dispatchEvents(rateLimit);
   }
 
   async findByUserIdAndType(
@@ -43,7 +48,7 @@ export class VerificationRateLimitRepository
       return null;
     }
 
-    return VerificationRateLimit.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async findByEmailAndType(
@@ -63,7 +68,7 @@ export class VerificationRateLimitRepository
       return null;
     }
 
-    return VerificationRateLimit.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async findByPhoneAndType(
@@ -83,7 +88,7 @@ export class VerificationRateLimitRepository
       return null;
     }
 
-    return VerificationRateLimit.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async deleteExpired(): Promise<number> {
@@ -93,5 +98,31 @@ export class VerificationRateLimitRepository
     `;
 
     return result as number;
+  }
+
+  private toPersistence(rateLimit: VerificationRateLimit): Record<string, any> {
+    return {
+      rate_limit_id: rateLimit.rateLimitId,
+      user_id: rateLimit.userId,
+      email: rateLimit.email,
+      phone: rateLimit.phone,
+      type: rateLimit.type,
+      attempts: rateLimit.attempts,
+      last_attempt_at: rateLimit.lastAttemptAt,
+      reset_at: rateLimit.resetAt,
+    };
+  }
+
+  private toDomain(row: any): VerificationRateLimit {
+    return VerificationRateLimit.reconstitute({
+      rateLimitId: row.rate_limit_id,
+      userId: row.user_id,
+      email: row.email,
+      phone: row.phone,
+      type: row.type as VerificationType,
+      attempts: row.attempts,
+      lastAttemptAt: row.last_attempt_at,
+      resetAt: row.reset_at,
+    });
   }
 }

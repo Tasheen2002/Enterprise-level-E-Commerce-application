@@ -1,49 +1,18 @@
 import { FastifyInstance } from "fastify";
-import {
-  UsersController,
-  ListUsersQuerystring,
-  UpdateUserStatusBody,
-  UpdateUserRoleBody,
-  ToggleEmailVerifiedBody,
-} from "../controllers/users.controller";
+import { UsersController } from "../controllers/users.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate, RolePermissions } from "@/api/src/shared/middleware";
-
-const userIdParam = {
-  type: "object",
-  required: ["userId"],
-  properties: {
-    userId: { type: "string", format: "uuid" },
-  },
-};
-
-const userProfileData = {
-  type: "object",
-  properties: {
-    userId: { type: "string", format: "uuid" },
-    firstName: { type: "string" },
-    lastName: { type: "string" },
-    displayName: { type: "string" },
-    bio: { type: "string" },
-    avatarUrl: { type: "string", format: "uri" },
-    locale: { type: "string" },
-    currency: { type: "string" },
-    createdAt: { type: "string" },
-    updatedAt: { type: "string" },
-  },
-};
-
-const userListItem = {
-  type: "object",
-  properties: {
-    id: { type: "string", format: "uuid" },
-    email: { type: "string", format: "email" },
-    role: { type: "string" },
-    status: { type: "string" },
-    emailVerified: { type: "boolean" },
-    createdAt: { type: "string" },
-    updatedAt: { type: "string" },
-  },
-};
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  userIdParamsSchema,
+  listUsersQuerySchema,
+  updateUserStatusSchema,
+  updateUserRoleSchema,
+  toggleEmailVerifiedSchema,
+  userDetailResponseSchema,
+  userListResponseSchema,
+} from "../validation/user.schema";
+import { profileResponseSchema } from "../validation/profile.schema";
 
 export async function registerUserRoutes(
   fastify: FastifyInstance,
@@ -64,70 +33,47 @@ export async function registerUserRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: userProfileData,
+              data: profileResponseSchema,
             },
           },
         },
       },
     },
-    controller.getCurrentUser.bind(controller),
+    (request, reply) =>
+      controller.getCurrentUser(request as AuthenticatedRequest, reply),
   );
 
   // GET /admin/users — Admin only
-  fastify.get<{ Querystring: ListUsersQuerystring }>(
+  fastify.get(
     "/admin/users",
     {
+      preValidation: [validateQuery(listUsersQuerySchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "List all users",
         description: "Admin only. Retrieve a paginated list of all users.",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            role: { type: "string" },
-            status: { type: "string" },
-            search: { type: "string" },
-            emailVerified: { type: "string", enum: ["true", "false"] },
-            sortBy: { type: "string", enum: ["createdAt", "email"] },
-            sortOrder: { type: "string", enum: ["asc", "desc"] },
-          },
-        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: {
-                type: "object",
-                properties: {
-                  users: { type: "array", items: userListItem },
-                  pagination: {
-                    type: "object",
-                    properties: {
-                      page: { type: "number" },
-                      limit: { type: "number" },
-                      total: { type: "number" },
-                      totalPages: { type: "number" },
-                    },
-                  },
-                },
-              },
+              data: userListResponseSchema,
             },
           },
         },
       },
     },
-    controller.listUsers.bind(controller),
+    (request, reply) =>
+      controller.listUsers(request as AuthenticatedRequest, reply),
   );
 
   // GET /users/:userId — Admin only
-  fastify.get<{ Params: { userId: string } }>(
+  fastify.get(
     "/users/:userId",
     {
+      preValidation: [validateParams(userIdParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
@@ -135,44 +81,33 @@ export async function registerUserRoutes(
         description:
           "Admin only. Retrieve any user's full details by their UUID.",
         security: [{ bearerAuth: [] }],
-        params: userIdParam,
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: userProfileData,
+              data: profileResponseSchema,
             },
           },
         },
       },
     },
-    controller.getUser.bind(controller),
+    (request, reply) =>
+      controller.getUser(request as AuthenticatedRequest, reply),
   );
 
   // PATCH /users/:userId/status — Admin only
-  fastify.patch<{
-    Params: { userId: string };
-    Body: UpdateUserStatusBody;
-  }>(
+  fastify.patch(
     "/users/:userId/status",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(updateUserStatusSchema)],
       schema: {
         tags: ["Users"],
         summary: "Update user status",
         description:
           "Admin only. Activate, deactivate, or block a user account.",
         security: [{ bearerAuth: [] }],
-        params: userIdParam,
-        body: {
-          type: "object",
-          required: ["status"],
-          properties: {
-            status: { type: "string", enum: ["active", "inactive", "blocked"] },
-            notes: { type: "string" },
-          },
-        },
         response: {
           200: {
             type: "object",
@@ -190,42 +125,21 @@ export async function registerUserRoutes(
         },
       },
     },
-    controller.updateStatus.bind(controller),
+    (request, reply) =>
+      controller.updateStatus(request as AuthenticatedRequest, reply),
   );
 
   // PATCH /users/:userId/role — Admin only
-  fastify.patch<{
-    Params: { userId: string };
-    Body: UpdateUserRoleBody;
-  }>(
+  fastify.patch(
     "/users/:userId/role",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(updateUserRoleSchema)],
       schema: {
         tags: ["Users"],
         summary: "Update user role",
         description: "Admin only. Change a user's role.",
         security: [{ bearerAuth: [] }],
-        params: userIdParam,
-        body: {
-          type: "object",
-          required: ["role"],
-          properties: {
-            role: {
-              type: "string",
-              enum: [
-                "GUEST",
-                "CUSTOMER",
-                "ADMIN",
-                "INVENTORY_STAFF",
-                "CUSTOMER_SERVICE",
-                "ANALYST",
-                "VENDOR",
-              ],
-            },
-            reason: { type: "string" },
-          },
-        },
         response: {
           200: {
             type: "object",
@@ -243,31 +157,21 @@ export async function registerUserRoutes(
         },
       },
     },
-    controller.updateRole.bind(controller),
+    (request, reply) =>
+      controller.updateRole(request as AuthenticatedRequest, reply),
   );
 
   // PATCH /users/:userId/email-verified — Admin only
-  fastify.patch<{
-    Params: { userId: string };
-    Body: ToggleEmailVerifiedBody;
-  }>(
+  fastify.patch(
     "/users/:userId/email-verified",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(toggleEmailVerifiedSchema)],
       schema: {
         tags: ["Users"],
         summary: "Toggle email verification",
         description: "Admin only. Manually verify or unverify a user's email.",
         security: [{ bearerAuth: [] }],
-        params: userIdParam,
-        body: {
-          type: "object",
-          required: ["isVerified"],
-          properties: {
-            isVerified: { type: "boolean" },
-            reason: { type: "string" },
-          },
-        },
         response: {
           200: {
             type: "object",
@@ -279,20 +183,21 @@ export async function registerUserRoutes(
         },
       },
     },
-    controller.toggleEmailVerification.bind(controller),
+    (request, reply) =>
+      controller.toggleEmailVerification(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /users/:userId — Admin only
-  fastify.delete<{ Params: { userId: string } }>(
+  fastify.delete(
     "/users/:userId",
     {
+      preValidation: [validateParams(userIdParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Delete a user",
         description: "Admin only. Permanently delete a user account.",
         security: [{ bearerAuth: [] }],
-        params: userIdParam,
         response: {
           200: {
             type: "object",
@@ -304,6 +209,7 @@ export async function registerUserRoutes(
         },
       },
     },
-    controller.deleteUser.bind(controller),
+    (request, reply) =>
+      controller.deleteUser(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,7 +1,5 @@
-import {
-  VerificationRateLimit,
-  VerificationType,
-} from "../entities/verification-rate-limit.entity";
+import { VerificationRateLimit } from "../entities/verification-rate-limit.entity";
+import { VerificationType } from "../enums/verification-type.enum";
 
 export interface IVerificationRateLimitRepository {
   save(rateLimit: VerificationRateLimit): Promise<void>;

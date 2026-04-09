@@ -1,4 +1,4 @@
-import { DomainError } from "@/api/src/shared/domain/domain-error";
+import { DomainError } from "../../../../packages/core/src/domain/domain-error";
 
 // ─── Validation Errors (400) ──────────────────────────────────────────────────
 

@@ -1,61 +1,22 @@
 import { FastifyInstance } from "fastify";
-import {
-  AddressesController,
-  AddAddressRequest,
-  UpdateAddressRequest,
-  ListAddressesQueryParams,
-} from "../controllers/addresses.controller";
+import { AddressesController } from "../controllers/addresses.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
-
-const addressObject = {
-  type: "object",
-  properties: {
-    addressId: { type: "string", format: "uuid" },
-    userId: { type: "string", format: "uuid" },
-    type: { type: "string", enum: ["shipping", "billing"] },
-    firstName: { type: "string" },
-    lastName: { type: "string" },
-    phone: { type: "string" },
-    addressLine1: { type: "string" },
-    addressLine2: { type: "string" },
-    city: { type: "string" },
-    state: { type: "string" },
-    postalCode: { type: "string" },
-    country: { type: "string" },
-    isDefault: { type: "boolean" },
-    createdAt: { type: "string" },
-    updatedAt: { type: "string" },
-  },
-};
-
-const addressBodyProperties = {
-  type: { type: "string", enum: ["shipping", "billing"] },
-  firstName: { type: "string", minLength: 1, maxLength: 100 },
-  lastName: { type: "string", minLength: 1, maxLength: 100 },
-  phone: { type: "string" },
-  addressLine1: { type: "string", minLength: 1, maxLength: 255 },
-  addressLine2: { type: "string", maxLength: 255 },
-  city: { type: "string", minLength: 1, maxLength: 100 },
-  state: { type: "string", maxLength: 100 },
-  postalCode: { type: "string", minLength: 1, maxLength: 20 },
-  country: { type: "string", minLength: 2, maxLength: 2 },
-  isDefault: { type: "boolean" },
-};
-
-const addressIdParam = {
-  type: "object",
-  required: ["addressId"],
-  properties: {
-    addressId: { type: "string", format: "uuid" },
-  },
-};
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  addAddressSchema,
+  updateAddressSchema,
+  addressIdParamsSchema,
+  addressResponseSchema,
+} from "../validation/address.schema";
+import { successResponseSchema } from "../validation/auth.schema";
 
 export async function registerAddressRoutes(
   fastify: FastifyInstance,
   controller: AddressesController,
 ) {
   // GET /users/me/addresses
-  fastify.get<{ Querystring: ListAddressesQueryParams }>(
+  fastify.get(
     "/users/me/addresses",
     {
       preHandler: [authenticate],
@@ -75,7 +36,7 @@ export async function registerAddressRoutes(
                 type: "object",
                 properties: {
                   userId: { type: "string" },
-                  addresses: { type: "array", items: addressObject },
+                  addresses: { type: "array", items: addressResponseSchema },
                   totalCount: { type: "number" },
                 },
               },
@@ -84,33 +45,21 @@ export async function registerAddressRoutes(
         },
       },
     },
-    controller.getCurrentUserAddresses.bind(controller),
+    (request, reply) =>
+      controller.getCurrentUserAddresses(request as AuthenticatedRequest, reply),
   );
 
   // POST /users/me/addresses
-  fastify.post<{ Body: AddAddressRequest }>(
+  fastify.post(
     "/users/me/addresses",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, validateBody(addAddressSchema)],
       schema: {
         tags: ["Addresses"],
         summary: "Add a new address",
         description:
           "Save a new shipping or billing address for the authenticated user.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: [
-            "type",
-            "firstName",
-            "lastName",
-            "addressLine1",
-            "city",
-            "postalCode",
-            "country",
-          ],
-          properties: addressBodyProperties,
-        },
         response: {
           201: {
             type: "object",
@@ -118,34 +67,28 @@ export async function registerAddressRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: addressObject,
+              data: addressResponseSchema,
             },
           },
         },
       },
     },
-    controller.addCurrentUserAddress.bind(controller),
+    (request, reply) =>
+      controller.addCurrentUserAddress(request as AuthenticatedRequest, reply),
   );
 
   // PATCH /users/me/addresses/:addressId
-  fastify.patch<{
-    Params: { addressId: string };
-    Body: UpdateAddressRequest;
-  }>(
+  fastify.patch(
     "/users/me/addresses/:addressId",
     {
-      preHandler: [authenticate],
+      preValidation: [validateParams(addressIdParamsSchema)],
+      preHandler: [authenticate, validateBody(updateAddressSchema)],
       schema: {
         tags: ["Addresses"],
         summary: "Update an address",
         description:
           "Partially update an existing address. All body fields are optional.",
         security: [{ bearerAuth: [] }],
-        params: addressIdParam,
-        body: {
-          type: "object",
-          properties: addressBodyProperties,
-        },
         response: {
           200: {
             type: "object",
@@ -153,19 +96,21 @@ export async function registerAddressRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: addressObject,
+              data: addressResponseSchema,
             },
           },
         },
       },
     },
-    controller.updateCurrentUserAddress.bind(controller),
+    (request, reply) =>
+      controller.updateCurrentUserAddress(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /users/me/addresses/:addressId
-  fastify.delete<{ Params: { addressId: string } }>(
+  fastify.delete(
     "/users/me/addresses/:addressId",
     {
+      preValidation: [validateParams(addressIdParamsSchema)],
       preHandler: [authenticate],
       schema: {
         tags: ["Addresses"],
@@ -173,45 +118,32 @@ export async function registerAddressRoutes(
         description:
           "Permanently remove an address belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
-        params: addressIdParam,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-            },
-          },
+          200: successResponseSchema,
         },
       },
     },
-    controller.deleteCurrentUserAddress.bind(controller),
+    (request, reply) =>
+      controller.deleteCurrentUserAddress(request as AuthenticatedRequest, reply),
   );
 
   // POST /users/me/addresses/:addressId/set-default
-  fastify.post<{ Params: { addressId: string } }>(
+  fastify.post(
     "/users/me/addresses/:addressId/set-default",
     {
+      preValidation: [validateParams(addressIdParamsSchema)],
       preHandler: [authenticate],
       schema: {
         tags: ["Addresses"],
         summary: "Set default address",
         description: "Mark an address as the user's default address.",
         security: [{ bearerAuth: [] }],
-        params: addressIdParam,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-            },
-          },
+          200: successResponseSchema,
         },
       },
     },
-    controller.setDefaultAddress.bind(controller),
+    (request, reply) =>
+      controller.setDefaultAddress(request as AuthenticatedRequest, reply),
   );
 }

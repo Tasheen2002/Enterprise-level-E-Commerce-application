@@ -1,49 +1,15 @@
 import { FastifyInstance } from "fastify";
-import { PaymentMethodsController, AddPaymentMethodRequest, UpdatePaymentMethodRequest } from "../controllers/payment-methods.controller";
+import { PaymentMethodsController } from "../controllers/payment-methods.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
-
-const paymentMethodObject = {
-  type: "object",
-  properties: {
-    id: { type: "string", format: "uuid" },
-    userId: { type: "string", format: "uuid" },
-    type: {
-      type: "string",
-      enum: ["credit_card", "debit_card", "paypal", "bank_transfer"],
-    },
-    provider: { type: "string" },
-    last4: { type: "string" },
-    brand: { type: "string" },
-    expiryMonth: { type: "integer" },
-    expiryYear: { type: "integer" },
-    billingName: { type: "string" },
-    isDefault: { type: "boolean" },
-    createdAt: { type: "string" },
-    updatedAt: { type: "string" },
-  },
-};
-
-const paymentMethodBodyProperties = {
-  type: {
-    type: "string",
-    enum: ["credit_card", "debit_card", "paypal", "bank_transfer"],
-  },
-  provider: { type: "string", minLength: 1, maxLength: 50 },
-  last4: { type: "string", minLength: 4, maxLength: 4 },
-  brand: { type: "string", maxLength: 50 },
-  expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
-  expiryYear: { type: "integer", minimum: new Date().getFullYear() },
-  billingName: { type: "string", minLength: 1, maxLength: 200 },
-  isDefault: { type: "boolean" },
-};
-
-const paymentMethodIdParam = {
-  type: "object",
-  required: ["paymentMethodId"],
-  properties: {
-    paymentMethodId: { type: "string", format: "uuid" },
-  },
-};
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  addPaymentMethodSchema,
+  updatePaymentMethodSchema,
+  paymentMethodIdParamsSchema,
+  paymentMethodResponseSchema,
+} from "../validation/payment-method.schema";
+import { successResponseSchema } from "../validation/auth.schema";
 
 export async function registerPaymentMethodRoutes(
   fastify: FastifyInstance,
@@ -67,30 +33,26 @@ export async function registerPaymentMethodRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "array", items: paymentMethodObject },
+              data: { type: "array", items: paymentMethodResponseSchema },
             },
           },
         },
       },
     },
-    controller.getCurrentUserPaymentMethods.bind(controller),
+    (request, reply) =>
+      controller.getCurrentUserPaymentMethods(request as AuthenticatedRequest, reply),
   );
 
   // POST /users/me/payment-methods
-  fastify.post<{ Body: AddPaymentMethodRequest }>(
+  fastify.post(
     "/users/me/payment-methods",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, validateBody(addPaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
         description: "Save a new payment method for the authenticated user.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["type", "provider", "billingName"],
-          properties: paymentMethodBodyProperties,
-        },
         response: {
           201: {
             type: "object",
@@ -98,34 +60,28 @@ export async function registerPaymentMethodRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: paymentMethodObject,
+              data: paymentMethodResponseSchema,
             },
           },
         },
       },
     },
-    controller.addCurrentUserPaymentMethod.bind(controller),
+    (request, reply) =>
+      controller.addCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 
   // PATCH /users/me/payment-methods/:paymentMethodId
-  fastify.patch<{
-    Params: { paymentMethodId: string };
-    Body: UpdatePaymentMethodRequest;
-  }>(
+  fastify.patch(
     "/users/me/payment-methods/:paymentMethodId",
     {
-      preHandler: [authenticate],
+      preValidation: [validateParams(paymentMethodIdParamsSchema)],
+      preHandler: [authenticate, validateBody(updatePaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",
         description:
           "Partially update an existing payment method. All body fields are optional.",
         security: [{ bearerAuth: [] }],
-        params: paymentMethodIdParam,
-        body: {
-          type: "object",
-          properties: paymentMethodBodyProperties,
-        },
         response: {
           200: {
             type: "object",
@@ -133,19 +89,21 @@ export async function registerPaymentMethodRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: paymentMethodObject,
+              data: paymentMethodResponseSchema,
             },
           },
         },
       },
     },
-    controller.updateCurrentUserPaymentMethod.bind(controller),
+    (request, reply) =>
+      controller.updateCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /users/me/payment-methods/:paymentMethodId
-  fastify.delete<{ Params: { paymentMethodId: string } }>(
+  fastify.delete(
     "/users/me/payment-methods/:paymentMethodId",
     {
+      preValidation: [validateParams(paymentMethodIdParamsSchema)],
       preHandler: [authenticate],
       schema: {
         tags: ["Payment Methods"],
@@ -153,26 +111,20 @@ export async function registerPaymentMethodRoutes(
         description:
           "Permanently delete a payment method belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
-        params: paymentMethodIdParam,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-            },
-          },
+          200: successResponseSchema,
         },
       },
     },
-    controller.deleteCurrentUserPaymentMethod.bind(controller),
+    (request, reply) =>
+      controller.deleteCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 
   // POST /users/me/payment-methods/:paymentMethodId/set-default
-  fastify.post<{ Params: { paymentMethodId: string } }>(
+  fastify.post(
     "/users/me/payment-methods/:paymentMethodId/set-default",
     {
+      preValidation: [validateParams(paymentMethodIdParamsSchema)],
       preHandler: [authenticate],
       schema: {
         tags: ["Payment Methods"],
@@ -180,19 +132,12 @@ export async function registerPaymentMethodRoutes(
         description:
           "Mark a payment method as the user's default for checkout.",
         security: [{ bearerAuth: [] }],
-        params: paymentMethodIdParam,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-            },
-          },
+          200: successResponseSchema,
         },
       },
     },
-    controller.setDefaultPaymentMethod.bind(controller),
+    (request, reply) =>
+      controller.setDefaultPaymentMethod(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,127 +1,86 @@
-import { VerificationType } from "./verification-token.entity";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { VerificationType } from '../enums/verification-type.enum';
+import { VerificationAction } from '../enums/verification-action.enum';
 
-export { VerificationType };
-
-export class VerificationAuditLog {
-  private constructor(
-    private readonly logId: string,
-    private readonly userId: string | null,
-    private readonly email: string | null,
-    private readonly phone: string | null,
-    private readonly type: VerificationType,
-    private readonly action: VerificationAction,
-    private readonly ipAddress: string | null,
-    private readonly userAgent: string | null,
-    private readonly createdAt: Date
-  ) {}
-
-  static create(data: CreateVerificationAuditLogData): VerificationAuditLog {
-    const logId = crypto.randomUUID();
-    const now = new Date();
-
-    return new VerificationAuditLog(
-      logId,
-      data.userId || null,
-      data.email || null,
-      data.phone || null,
-      data.type,
-      data.action,
-      data.ipAddress || null,
-      data.userAgent || null,
-      now
-    );
-  }
-
-  static fromDatabaseRow(row: VerificationAuditLogRow): VerificationAuditLog {
-    return new VerificationAuditLog(
-      row.log_id,
-      row.user_id,
-      row.email,
-      row.phone,
-      row.type,
-      row.action as VerificationAction,
-      row.ip_address,
-      row.user_agent,
-      row.created_at
-    );
-  }
-
-  getLogId(): string {
-    return this.logId;
-  }
-
-  getUserId(): string | null {
-    return this.userId;
-  }
-
-  getEmail(): string | null {
-    return this.email;
-  }
-
-  getPhone(): string | null {
-    return this.phone;
-  }
-
-  getType(): VerificationType {
-    return this.type;
-  }
-
-  getAction(): VerificationAction {
-    return this.action;
-  }
-
-  getIpAddress(): string | null {
-    return this.ipAddress;
-  }
-
-  getUserAgent(): string | null {
-    return this.userAgent;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  toDatabaseRow(): VerificationAuditLogRow {
-    return {
-      log_id: this.logId,
-      user_id: this.userId,
-      email: this.email,
-      phone: this.phone,
-      type: this.type,
-      action: this.action,
-      ip_address: this.ipAddress,
-      user_agent: this.userAgent,
-      created_at: this.createdAt,
-    };
-  }
-}
-
-export enum VerificationAction {
-  SENT = "sent",
-  VERIFIED = "verified",
-  FAILED = "failed",
-  EXPIRED = "expired",
-}
-
-export interface CreateVerificationAuditLogData {
-  userId?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  type: VerificationType;
-  action: VerificationAction;
-  ipAddress?: string | null;
-  userAgent?: string | null;
-}
-
-export interface VerificationAuditLogRow {
-  log_id: string;
-  user_id: string | null;
+export interface VerificationAuditLogProps {
+  logId: string;
+  userId: string | null;
   email: string | null;
   phone: string | null;
   type: VerificationType;
-  action: string;
-  ip_address: string | null;
-  user_agent: string | null;
-  created_at: Date;
+  action: VerificationAction;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+}
+
+export class VerificationAuditLog extends AggregateRoot {
+  private props: VerificationAuditLogProps;
+
+  private constructor(props: VerificationAuditLogProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    userId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    type: VerificationType;
+    action: VerificationAction;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  }): VerificationAuditLog {
+    return new VerificationAuditLog({
+      logId: crypto.randomUUID(),
+      userId: params.userId || null,
+      email: params.email || null,
+      phone: params.phone || null,
+      type: params.type,
+      action: params.action,
+      ipAddress: params.ipAddress || null,
+      userAgent: params.userAgent || null,
+      createdAt: new Date(),
+    });
+  }
+
+  static reconstitute(props: VerificationAuditLogProps): VerificationAuditLog {
+    return new VerificationAuditLog(props);
+  }
+
+  get logId(): string {
+    return this.props.logId;
+  }
+
+  get userId(): string | null {
+    return this.props.userId;
+  }
+
+  get email(): string | null {
+    return this.props.email;
+  }
+
+  get phone(): string | null {
+    return this.props.phone;
+  }
+
+  get type(): VerificationType {
+    return this.props.type;
+  }
+
+  get action(): VerificationAction {
+    return this.props.action;
+  }
+
+  get ipAddress(): string | null {
+    return this.props.ipAddress;
+  }
+
+  get userAgent(): string | null {
+    return this.props.userAgent;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
 }

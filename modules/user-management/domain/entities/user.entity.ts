@@ -1,419 +1,152 @@
-import { UserId } from "../value-objects/user-id.vo";
-import { Email } from "../value-objects/email.vo";
-import { Phone } from "../value-objects/phone.vo";
+import { UserId } from '../value-objects/user-id.vo';
+import { Email } from '../value-objects/email.vo';
+import { Phone } from '../value-objects/phone.vo';
 import {
   InvalidPasswordError,
   EmailAlreadyVerifiedError,
   InvalidOperationError,
-} from "../errors/user-management.errors";
-import { AggregateRoot } from "@/api/src/shared/domain/aggregate-root";
+} from '../errors/user-management.errors';
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { UserRole } from '../enums/user-role.enum';
+import { UserStatus } from '../enums/user-status.enum';
 
-export enum UserRole {
-  GUEST = "GUEST",
-  CUSTOMER = "CUSTOMER",
-  ADMIN = "ADMIN",
-  INVENTORY_STAFF = "INVENTORY_STAFF",
-  CUSTOMER_SERVICE = "CUSTOMER_SERVICE",
-  ANALYST = "ANALYST",
-  VENDOR = "VENDOR",
-}
+export { UserRole, UserStatus };
 
-export enum UserStatus {
-  ACTIVE = "active",
-  INACTIVE = "inactive",
-  BLOCKED = "blocked",
-}
+// ============================================================================
+// Domain Events
+// ============================================================================
 
-export class User extends AggregateRoot {
-  private constructor(
-    private readonly id: UserId,
-    private email: Email,
-    private passwordHash: string,
-    private phone: Phone | null,
-    private firstName: string | null,
-    private lastName: string | null,
-    private title: string | null,
-    private dateOfBirth: Date | null,
-    private residentOf: string | null,
-    private nationality: string | null,
-    private role: UserRole,
-    private status: UserStatus,
-    private emailVerified: boolean,
-    private phoneVerified: boolean,
-    private isGuest: boolean,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
+export class UserRegisteredEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly email: string,
+    public readonly role: string
   ) {
-    super();
+    super(userId, 'User');
   }
 
-  // Factory methods
-  static create(data: CreateUserData): User {
-    const userId = UserId.create();
-    const email = new Email(data.email);
-    const phone = data.phone ? new Phone(data.phone) : null;
-    const now = new Date();
-
-    return new User(
-      userId,
-      email,
-      data.passwordHash,
-      phone,
-      data.firstName || null,
-      data.lastName || null,
-      null,
-      null,
-      null,
-      null,
-      data.role || UserRole.CUSTOMER,
-      UserStatus.ACTIVE,
-      false,
-      false,
-      data.isGuest || false,
-      now,
-      now,
-    );
+  get eventType(): string {
+    return 'user.registered';
   }
 
-  static createGuest(): User {
-    const userId = UserId.create();
-    const guestEmail = new Email(`guest-${userId.getValue()}@temp.modett.com`);
-    const now = new Date();
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId, email: this.email, role: this.role };
+  }
+}
 
-    return new User(
-      userId,
-      guestEmail,
-      "",
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      UserRole.GUEST,
-      UserStatus.ACTIVE,
-      false,
-      false,
-      true,
-      now,
-      now,
-    );
+export class UserEmailChangedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly newEmail: string
+  ) {
+    super(userId, 'User');
   }
 
-  static reconstitute(data: UserData): User {
-    return new User(
-      UserId.fromString(data.id),
-      new Email(data.email),
-      data.passwordHash,
-      data.phone ? new Phone(data.phone) : null,
-      data.firstName || null,
-      data.lastName || null,
-      data.title || null,
-      data.dateOfBirth || null,
-      data.residentOf || null,
-      data.nationality || null,
-      data.role,
-      data.status,
-      data.emailVerified,
-      data.phoneVerified,
-      data.isGuest,
-      data.createdAt,
-      data.updatedAt,
-    );
+  get eventType(): string {
+    return 'user.email_changed';
   }
 
-  static fromDatabaseRow(row: UserRow): User {
-    return new User(
-      UserId.fromString(row.user_id),
-      new Email(row.email),
-      row.password_hash || "",
-      row.phone ? new Phone(row.phone) : null,
-      row.first_name || null,
-      row.last_name || null,
-      row.title || null,
-      row.date_of_birth || null,
-      row.resident_of || null,
-      row.nationality || null,
-      row.role,
-      row.status,
-      row.email_verified,
-      row.phone_verified,
-      row.is_guest,
-      row.created_at,
-      row.updated_at,
-    );
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId, newEmail: this.newEmail };
+  }
+}
+
+export class UserPasswordChangedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
   }
 
-  // Getters
-  getId(): UserId {
-    return this.id;
-  }
-  getEmail(): Email {
-    return this.email;
-  }
-  getPasswordHash(): string {
-    return this.passwordHash;
-  }
-  getPhone(): Phone | null {
-    return this.phone;
-  }
-  getFirstName(): string | null {
-    return this.firstName;
-  }
-  getLastName(): string | null {
-    return this.lastName;
-  }
-  getTitle(): string | null {
-    return this.title;
-  }
-  getDateOfBirth(): Date | null {
-    return this.dateOfBirth;
-  }
-  getResidentOf(): string | null {
-    return this.residentOf;
-  }
-  getNationality(): string | null {
-    return this.nationality;
-  }
-  getRole(): UserRole {
-    return this.role;
-  }
-  getStatus(): UserStatus {
-    return this.status;
-  }
-  isEmailVerified(): boolean {
-    return this.emailVerified;
-  }
-  isPhoneVerified(): boolean {
-    return this.phoneVerified;
-  }
-  getIsGuest(): boolean {
-    return this.isGuest;
-  }
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get eventType(): string {
+    return 'user.password_changed';
   }
 
-  // Business logic methods
-  updateEmail(newEmail: string): void {
-    const email = new Email(newEmail);
-    if (this.email.equals(email)) return;
-    this.email = email;
-    this.emailVerified = false;
-    this.touch();
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+export class UserEmailVerifiedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
   }
 
-  updatePhone(newPhone: string | null): void {
-    const phone = newPhone ? new Phone(newPhone) : null;
-    if (this.phone === null && phone === null) return;
-    if (this.phone !== null && phone !== null && this.phone.equals(phone))
-      return;
-    this.phone = phone;
-    this.phoneVerified = false;
-    this.touch();
+  get eventType(): string {
+    return 'user.email_verified';
   }
 
-  updateFirstName(firstName: string | null): void {
-    this.firstName = firstName;
-    this.touch();
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+export class UserStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly previousStatus: string,
+    public readonly newStatus: string
+  ) {
+    super(userId, 'User');
   }
 
-  updateLastName(lastName: string | null): void {
-    this.lastName = lastName;
-    this.touch();
+  get eventType(): string {
+    return 'user.status_changed';
   }
 
-  updateTitle(title: string | null): void {
-    this.title = title;
-    this.touch();
-  }
-
-  updateDateOfBirth(dateOfBirth: Date | null): void {
-    this.dateOfBirth = dateOfBirth;
-    this.touch();
-  }
-
-  updateResidentOf(residentOf: string | null): void {
-    this.residentOf = residentOf;
-    this.touch();
-  }
-
-  updateNationality(nationality: string | null): void {
-    this.nationality = nationality;
-    this.touch();
-  }
-
-  updatePassword(newPasswordHash: string): void {
-    if (!newPasswordHash) {
-      throw new InvalidPasswordError("Password hash is required");
-    }
-    this.passwordHash = newPasswordHash;
-    this.touch();
-  }
-
-  updateRole(newRole: UserRole): void {
-    this.role = newRole;
-    this.touch();
-  }
-
-  // Admin-only: directly set email verification status
-  setEmailVerified(verified: boolean): void {
-    this.emailVerified = verified;
-    this.touch();
-  }
-
-  verifyEmail(): void {
-    if (this.emailVerified) {
-      throw new EmailAlreadyVerifiedError();
-    }
-    this.emailVerified = true;
-    this.touch();
-  }
-
-  verifyPhone(): void {
-    if (!this.phone) {
-      throw new InvalidOperationError(
-        "Cannot verify phone: no phone number set",
-      );
-    }
-    if (this.phoneVerified) {
-      throw new InvalidOperationError("Phone is already verified");
-    }
-    this.phoneVerified = true;
-    this.touch();
-  }
-
-  activate(): void {
-    if (this.status === UserStatus.ACTIVE) return;
-    this.status = UserStatus.ACTIVE;
-    this.touch();
-  }
-
-  deactivate(): void {
-    if (this.status === UserStatus.INACTIVE) return;
-    this.status = UserStatus.INACTIVE;
-    this.touch();
-  }
-
-  block(): void {
-    if (this.status === UserStatus.BLOCKED) return;
-    this.status = UserStatus.BLOCKED;
-    this.touch();
-  }
-
-  unblock(): void {
-    if (this.status !== UserStatus.BLOCKED) {
-      throw new InvalidOperationError("User is not blocked");
-    }
-    this.status = UserStatus.ACTIVE;
-    this.touch();
-  }
-
-  convertFromGuest(email: string, passwordHash: string): void {
-    if (!this.isGuest) {
-      throw new InvalidOperationError("User is not a guest");
-    }
-    this.email = new Email(email);
-    this.passwordHash = passwordHash;
-    this.isGuest = false;
-    this.emailVerified = false;
-    this.touch();
-  }
-
-  // Validation methods
-  canLogin(): boolean {
-    return this.status === UserStatus.ACTIVE && !this.isGuest;
-  }
-
-  canPlaceOrder(): boolean {
-    return this.status === UserStatus.ACTIVE;
-  }
-
-  requiresEmailVerification(): boolean {
-    return !this.emailVerified && !this.isGuest;
-  }
-
-  hasCompleteProfile(): boolean {
-    return this.emailVerified && !!this.phone && this.phoneVerified;
-  }
-
-  recordLogout(): void {
-    this.touch();
-  }
-
-  equals(other: User): boolean {
-    return this.id.equals(other.id);
-  }
-
-  private touch(): void {
-    this.updatedAt = new Date();
-  }
-
-  // Persistence
-  toData(): UserData {
+  getPayload(): Record<string, unknown> {
     return {
-      id: this.id.getValue(),
-      email: this.email.getValue(),
-      passwordHash: this.passwordHash,
-      phone: this.phone?.getValue() || null,
-      firstName: this.firstName,
-      lastName: this.lastName,
-      title: this.title,
-      dateOfBirth: this.dateOfBirth,
-      residentOf: this.residentOf,
-      nationality: this.nationality,
-      role: this.role,
-      status: this.status,
-      emailVerified: this.emailVerified,
-      phoneVerified: this.phoneVerified,
-      isGuest: this.isGuest,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): UserRow {
-    return {
-      user_id: this.id.getValue(),
-      email: this.email.getValue(),
-      password_hash: this.passwordHash || null,
-      phone: this.phone?.getValue() || null,
-      first_name: this.firstName,
-      last_name: this.lastName,
-      title: this.title,
-      date_of_birth: this.dateOfBirth,
-      resident_of: this.residentOf,
-      nationality: this.nationality,
-      role: this.role,
-      status: this.status,
-      email_verified: this.emailVerified,
-      phone_verified: this.phoneVerified,
-      is_guest: this.isGuest,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
+      userId: this.userId,
+      previousStatus: this.previousStatus,
+      newStatus: this.newStatus,
     };
   }
 }
 
-export interface CreateUserData {
-  email: string;
-  passwordHash: string;
-  phone?: string;
-  firstName?: string;
-  lastName?: string;
-  role?: UserRole;
-  isGuest?: boolean;
+export class UserRoleChangedEvent extends DomainEvent {
+  constructor(
+    public readonly userId: string,
+    public readonly previousRole: string,
+    public readonly newRole: string
+  ) {
+    super(userId, 'User');
+  }
+
+  get eventType(): string {
+    return 'user.role_changed';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      userId: this.userId,
+      previousRole: this.previousRole,
+      newRole: this.newRole,
+    };
+  }
 }
 
-export interface UserData {
-  id: string;
-  email: string;
+export class UserDeletedEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
+  }
+
+  get eventType(): string {
+    return 'user.deleted';
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+// ============================================================================
+// Props
+// ============================================================================
+
+export interface UserProps {
+  id: UserId;
+  email: Email;
   passwordHash: string;
-  phone: string | null;
+  phone: Phone | null;
   firstName: string | null;
   lastName: string | null;
   title: string | null;
@@ -429,22 +162,327 @@ export interface UserData {
   updatedAt: Date;
 }
 
-export interface UserRow {
-  user_id: string;
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class User extends AggregateRoot {
+  private props: UserProps;
+
+  private constructor(props: UserProps) {
+    super();
+    this.props = props;
+  }
+
+  // Factory: create new
+  static create(params: {
+    email: string;
+    passwordHash: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    role?: UserRole;
+    isGuest?: boolean;
+  }): User {
+    const id = UserId.create();
+    const now = new Date();
+
+    const user = new User({
+      id,
+      email: new Email(params.email),
+      passwordHash: params.passwordHash,
+      phone: params.phone ? new Phone(params.phone) : null,
+      firstName: params.firstName || null,
+      lastName: params.lastName || null,
+      title: null,
+      dateOfBirth: null,
+      residentOf: null,
+      nationality: null,
+      role: params.role || UserRole.CUSTOMER,
+      status: UserStatus.ACTIVE,
+      emailVerified: false,
+      phoneVerified: false,
+      isGuest: params.isGuest || false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (!params.isGuest) {
+      user.addDomainEvent(
+        new UserRegisteredEvent(
+          id.getValue(),
+          params.email,
+          params.role || UserRole.CUSTOMER
+        )
+      );
+    }
+
+    return user;
+  }
+
+  // Factory: create guest
+  static createGuest(): User {
+    const id = UserId.create();
+    const now = new Date();
+
+    return new User({
+      id,
+      email: new Email(`guest-${id.getValue()}@temp.modett.com`),
+      passwordHash: '',
+      phone: null,
+      firstName: null,
+      lastName: null,
+      title: null,
+      dateOfBirth: null,
+      residentOf: null,
+      nationality: null,
+      role: UserRole.GUEST,
+      status: UserStatus.ACTIVE,
+      emailVerified: false,
+      phoneVerified: false,
+      isGuest: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  // Factory: reconstitute from persistence
+  static reconstitute(props: UserProps): User {
+    return new User(props);
+  }
+
+  // Getters
+  getId(): UserId { return this.props.id; }
+  getEmail(): Email { return this.props.email; }
+  getPasswordHash(): string { return this.props.passwordHash; }
+  getPhone(): Phone | null { return this.props.phone; }
+  getFirstName(): string | null { return this.props.firstName; }
+  getLastName(): string | null { return this.props.lastName; }
+  getTitle(): string | null { return this.props.title; }
+  getDateOfBirth(): Date | null { return this.props.dateOfBirth; }
+  getResidentOf(): string | null { return this.props.residentOf; }
+  getNationality(): string | null { return this.props.nationality; }
+  getRole(): UserRole { return this.props.role; }
+  getStatus(): UserStatus { return this.props.status; }
+  isEmailVerified(): boolean { return this.props.emailVerified; }
+  isPhoneVerified(): boolean { return this.props.phoneVerified; }
+  getIsGuest(): boolean { return this.props.isGuest; }
+  getCreatedAt(): Date { return this.props.createdAt; }
+  getUpdatedAt(): Date { return this.props.updatedAt; }
+
+  // Business logic methods
+  updateEmail(newEmail: string): void {
+    const email = new Email(newEmail);
+    if (this.props.email.equals(email)) return;
+    this.props.email = email;
+    this.props.emailVerified = false;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserEmailChangedEvent(this.props.id.getValue(), newEmail));
+  }
+
+  updatePhone(newPhone: string | null): void {
+    const phone = newPhone ? new Phone(newPhone) : null;
+    if (this.props.phone === null && phone === null) return;
+    if (this.props.phone !== null && phone !== null && this.props.phone.equals(phone)) return;
+    this.props.phone = phone;
+    this.props.phoneVerified = false;
+    this.props.updatedAt = new Date();
+  }
+
+  updateFirstName(firstName: string | null): void {
+    this.props.firstName = firstName;
+    this.props.updatedAt = new Date();
+  }
+
+  updateLastName(lastName: string | null): void {
+    this.props.lastName = lastName;
+    this.props.updatedAt = new Date();
+  }
+
+  updateTitle(title: string | null): void {
+    this.props.title = title;
+    this.props.updatedAt = new Date();
+  }
+
+  updateDateOfBirth(dateOfBirth: Date | null): void {
+    this.props.dateOfBirth = dateOfBirth;
+    this.props.updatedAt = new Date();
+  }
+
+  updateResidentOf(residentOf: string | null): void {
+    this.props.residentOf = residentOf;
+    this.props.updatedAt = new Date();
+  }
+
+  updateNationality(nationality: string | null): void {
+    this.props.nationality = nationality;
+    this.props.updatedAt = new Date();
+  }
+
+  updatePassword(newPasswordHash: string): void {
+    if (!newPasswordHash) {
+      throw new InvalidPasswordError('Password hash is required');
+    }
+    this.props.passwordHash = newPasswordHash;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserPasswordChangedEvent(this.props.id.getValue()));
+  }
+
+  updateRole(newRole: UserRole): void {
+    const previousRole = this.props.role;
+    this.props.role = newRole;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserRoleChangedEvent(this.props.id.getValue(), previousRole, newRole)
+    );
+  }
+
+  setEmailVerified(verified: boolean): void {
+    this.props.emailVerified = verified;
+    this.props.updatedAt = new Date();
+  }
+
+  verifyEmail(): void {
+    if (this.props.emailVerified) {
+      throw new EmailAlreadyVerifiedError();
+    }
+    this.props.emailVerified = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new UserEmailVerifiedEvent(this.props.id.getValue()));
+  }
+
+  verifyPhone(): void {
+    if (!this.props.phone) {
+      throw new InvalidOperationError('Cannot verify phone: no phone number set');
+    }
+    if (this.props.phoneVerified) {
+      throw new InvalidOperationError('Phone is already verified');
+    }
+    this.props.phoneVerified = true;
+    this.props.updatedAt = new Date();
+  }
+
+  activate(): void {
+    if (this.props.status === UserStatus.ACTIVE) return;
+    const prev = this.props.status;
+    this.props.status = UserStatus.ACTIVE;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserStatusChangedEvent(this.props.id.getValue(), prev, UserStatus.ACTIVE)
+    );
+  }
+
+  deactivate(): void {
+    if (this.props.status === UserStatus.INACTIVE) return;
+    const prev = this.props.status;
+    this.props.status = UserStatus.INACTIVE;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserStatusChangedEvent(this.props.id.getValue(), prev, UserStatus.INACTIVE)
+    );
+  }
+
+  block(): void {
+    if (this.props.status === UserStatus.BLOCKED) return;
+    const prev = this.props.status;
+    this.props.status = UserStatus.BLOCKED;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserStatusChangedEvent(this.props.id.getValue(), prev, UserStatus.BLOCKED)
+    );
+  }
+
+  unblock(): void {
+    if (this.props.status !== UserStatus.BLOCKED) {
+      throw new InvalidOperationError('User is not blocked');
+    }
+    this.props.status = UserStatus.ACTIVE;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserStatusChangedEvent(this.props.id.getValue(), UserStatus.BLOCKED, UserStatus.ACTIVE)
+    );
+  }
+
+  convertFromGuest(email: string, passwordHash: string): void {
+    if (!this.props.isGuest) {
+      throw new InvalidOperationError('User is not a guest');
+    }
+    this.props.email = new Email(email);
+    this.props.passwordHash = passwordHash;
+    this.props.isGuest = false;
+    this.props.emailVerified = false;
+    this.props.updatedAt = new Date();
+  }
+
+  canLogin(): boolean {
+    return this.props.status === UserStatus.ACTIVE && !this.props.isGuest;
+  }
+
+  canPlaceOrder(): boolean {
+    return this.props.status === UserStatus.ACTIVE;
+  }
+
+  requiresEmailVerification(): boolean {
+    return !this.props.emailVerified && !this.props.isGuest;
+  }
+
+  hasCompleteProfile(): boolean {
+    return this.props.emailVerified && !!this.props.phone && this.props.phoneVerified;
+  }
+
+  markAsDeleted(): void {
+    this.addDomainEvent(new UserDeletedEvent(this.props.id.getValue()));
+  }
+
+  recordLogout(): void {
+    this.props.updatedAt = new Date();
+  }
+
+  equals(other: User): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(user: User): UserDTO {
+    return {
+      id: user.getId().getValue(),
+      email: user.getEmail().getValue(),
+      phone: user.getPhone()?.getValue() || null,
+      firstName: user.getFirstName(),
+      lastName: user.getLastName(),
+      title: user.getTitle(),
+      dateOfBirth: user.getDateOfBirth()?.toISOString() || null,
+      residentOf: user.getResidentOf(),
+      nationality: user.getNationality(),
+      role: user.getRole(),
+      status: user.getStatus(),
+      emailVerified: user.isEmailVerified(),
+      phoneVerified: user.isPhoneVerified(),
+      isGuest: user.getIsGuest(),
+      createdAt: user.getCreatedAt().toISOString(),
+      updatedAt: user.getUpdatedAt().toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// DTO Interface
+// ============================================================================
+
+export interface UserDTO {
+  id: string;
   email: string;
-  password_hash: string | null;
   phone: string | null;
-  first_name: string | null;
-  last_name: string | null;
+  firstName: string | null;
+  lastName: string | null;
   title: string | null;
-  date_of_birth: Date | null;
-  resident_of: string | null;
+  dateOfBirth: string | null;
+  residentOf: string | null;
   nationality: string | null;
   role: UserRole;
   status: UserStatus;
-  email_verified: boolean;
-  phone_verified: boolean;
-  is_guest: boolean;
-  created_at: Date;
-  updated_at: Date;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  isGuest: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

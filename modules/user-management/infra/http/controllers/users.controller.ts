@@ -1,123 +1,97 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import {
-  GetUserDetailsQuery,
-  GetUserDetailsHandler,
-  ListUsersQuery,
-  ListUsersHandler,
-  UpdateUserStatusCommand,
-  UpdateUserStatusHandler,
-  UpdateUserRoleCommand,
-  UpdateUserRoleHandler,
-  DeleteUserCommand,
-  DeleteUserHandler,
-  ToggleUserEmailVerifiedHandler,
-  GetUserProfileQuery,
-  GetUserProfileHandler,
-} from "../../../application";
-import { UserProfileService } from "../../../application/services/user-profile.service";
-import { IUserRepository } from "../../../domain/repositories/iuser.repository";
-import { IAddressRepository } from "../../../domain/repositories/iaddress.repository";
-import { UserRole, UserStatus } from "../../../domain/entities/user.entity";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface ListUsersQuerystring {
-  search?: string;
-  role?: string;
-  status?: string;
-  emailVerified?: string;
-  page?: string;
-  limit?: string;
-  sortBy?: string;
-  sortOrder?: string;
-}
-
-export interface UpdateUserStatusBody {
-  status: string;
-  notes?: string;
-}
-
-export interface UpdateUserRoleBody {
-  role: UserRole;
-  reason?: string;
-}
-
-export interface ToggleEmailVerifiedBody {
-  isVerified: boolean;
-  reason?: string;
-}
+import {
+  GetUserProfileInput,
+  GetUserProfileHandler,
+} from "../../../application/queries/get-user-profile.query";
+import {
+  GetUserDetailsInput,
+  GetUserDetailsHandler,
+} from "../../../application/queries/get-user-details.query";
+import {
+  ListUsersInput,
+  ListUsersHandler,
+} from "../../../application/queries/list-user.query";
+import {
+  UpdateUserStatusInput,
+  UpdateUserStatusHandler,
+} from "../../../application/commands/update-user-status.command";
+import {
+  UpdateUserRoleInput,
+  UpdateUserRoleHandler,
+} from "../../../application/commands/update-user-role.command";
+import {
+  DeleteUserInput,
+  DeleteUserHandler,
+} from "../../../application/commands/delete-user.command";
+import { ToggleUserEmailVerifiedHandler } from "../../../application/commands/toggle-user-email-verified.command";
+import { UserRole, UserStatus } from "../../../domain/entities/user.entity";
 
 export class UsersController {
-  private getProfileHandler: GetUserProfileHandler;
-  private getUserDetailsHandler: GetUserDetailsHandler;
-  private listUsersHandler: ListUsersHandler;
-  private updateUserStatusHandler: UpdateUserStatusHandler;
-  private updateUserRoleHandler: UpdateUserRoleHandler;
-  private deleteUserHandler: DeleteUserHandler;
-  private toggleUserEmailVerifiedHandler: ToggleUserEmailVerifiedHandler;
-
   constructor(
-    userProfileService: UserProfileService,
-    userRepository: IUserRepository,
-    addressRepository: IAddressRepository,
-  ) {
-    this.getProfileHandler = new GetUserProfileHandler(userProfileService);
-    this.getUserDetailsHandler = new GetUserDetailsHandler(
-      userRepository,
-      addressRepository,
-    );
-    this.listUsersHandler = new ListUsersHandler(userRepository);
-    this.updateUserStatusHandler = new UpdateUserStatusHandler(userRepository);
-    this.updateUserRoleHandler = new UpdateUserRoleHandler(userRepository);
-    this.deleteUserHandler = new DeleteUserHandler(userRepository);
-    this.toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(
-      userRepository,
-    );
-  }
+    private readonly getProfileHandler: GetUserProfileHandler,
+    private readonly getUserDetailsHandler: GetUserDetailsHandler,
+    private readonly listUsersHandler: ListUsersHandler,
+    private readonly updateUserStatusHandler: UpdateUserStatusHandler,
+    private readonly updateUserRoleHandler: UpdateUserRoleHandler,
+    private readonly deleteUserHandler: DeleteUserHandler,
+    private readonly toggleUserEmailVerifiedHandler: ToggleUserEmailVerifiedHandler,
+  ) {}
 
   async getUser(
-    request: FastifyRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query: GetUserDetailsQuery = { userId, timestamp: new Date() };
+      const query: GetUserDetailsInput = { userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
-      ResponseHelper.fromQuery(
+      return ResponseHelper.fromQuery(
         reply,
         result,
         "User retrieved",
         "User not found",
       );
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async getCurrentUser(
-    request: FastifyRequest,
+    request: AuthenticatedRequest,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const userId = (request as any).user?.userId;
-      if (!userId) {
-        return ResponseHelper.unauthorized(reply);
-      }
-
-      const query: GetUserDetailsQuery = { userId, timestamp: new Date() };
+      const query: GetUserDetailsInput = {
+        userId: request.user.userId,
+        timestamp: new Date(),
+      };
       const result = await this.getUserDetailsHandler.handle(query);
-      ResponseHelper.fromQuery(
+      return ResponseHelper.fromQuery(
         reply,
         result,
         "User retrieved",
         "User not found",
       );
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async listUsers(
-    request: FastifyRequest<{ Querystring: ListUsersQuerystring }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        search?: string;
+        role?: string;
+        status?: string;
+        emailVerified?: string;
+        page?: string;
+        limit?: string;
+        sortBy?: string;
+        sortOrder?: string;
+      };
+    }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
@@ -135,54 +109,15 @@ export class UsersController {
       const parsedPage = page ? parseInt(page, 10) : 1;
       const parsedLimit = limit ? parseInt(limit, 10) : 20;
 
-      let parsedRole: UserRole | undefined;
-      if (role) {
-        if (!Object.values(UserRole).includes(role as UserRole)) {
-          return ResponseHelper.badRequest(
-            reply,
-            `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`,
-          );
-        }
-        parsedRole = role as UserRole;
-      }
-
-      let parsedStatus: UserStatus | undefined;
-      if (status) {
-        if (!Object.values(UserStatus).includes(status as UserStatus)) {
-          return ResponseHelper.badRequest(
-            reply,
-            `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`,
-          );
-        }
-        parsedStatus = status as UserStatus;
-      }
-
       let parsedEmailVerified: boolean | undefined;
       if (emailVerified !== undefined) {
         parsedEmailVerified = emailVerified === "true";
       }
 
-      const validSortBy = ["createdAt", "email"];
-      const validSortOrder = ["asc", "desc"];
-
-      if (sortBy && !validSortBy.includes(sortBy)) {
-        return ResponseHelper.badRequest(
-          reply,
-          `Invalid sortBy. Must be one of: ${validSortBy.join(", ")}`,
-        );
-      }
-
-      if (sortOrder && !validSortOrder.includes(sortOrder)) {
-        return ResponseHelper.badRequest(
-          reply,
-          `Invalid sortOrder. Must be one of: ${validSortOrder.join(", ")}`,
-        );
-      }
-
-      const query: ListUsersQuery = {
+      const query: ListUsersInput = {
         search,
-        role: parsedRole,
-        status: parsedStatus,
+        role: role as UserRole | undefined,
+        status: status as UserStatus | undefined,
         emailVerified: parsedEmailVerified,
         page: parsedPage,
         limit: parsedLimit,
@@ -192,16 +127,19 @@ export class UsersController {
       };
 
       const result = await this.listUsersHandler.handle(query);
-      ResponseHelper.fromQuery(reply, result, "Users retrieved");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromQuery(reply, result, "Users retrieved");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateStatus(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string };
-      Body: UpdateUserStatusBody;
+      Body: {
+        status: string;
+        notes?: string;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -209,14 +147,7 @@ export class UsersController {
       const { userId } = request.params;
       const { status, notes } = request.body;
 
-      if (!Object.values(UserStatus).includes(status as UserStatus)) {
-        return ResponseHelper.badRequest(
-          reply,
-          `Invalid status. Must be one of: ${Object.values(UserStatus).join(", ")}`,
-        );
-      }
-
-      const command: UpdateUserStatusCommand = {
+      const command: UpdateUserStatusInput = {
         userId,
         status: status as UserStatus,
         notes,
@@ -224,16 +155,19 @@ export class UsersController {
       };
 
       const result = await this.updateUserStatusHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "User status updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(reply, result, "User status updated");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async updateRole(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string };
-      Body: UpdateUserRoleBody;
+      Body: {
+        role: UserRole;
+        reason?: string;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -241,14 +175,7 @@ export class UsersController {
       const { userId } = request.params;
       const { role, reason } = request.body;
 
-      if (!Object.values(UserRole).includes(role as UserRole)) {
-        return ResponseHelper.badRequest(
-          reply,
-          `Invalid role. Must be one of: ${Object.values(UserRole).join(", ")}`,
-        );
-      }
-
-      const command: UpdateUserRoleCommand = {
+      const command: UpdateUserRoleInput = {
         userId,
         role: role as UserRole,
         reason,
@@ -256,16 +183,19 @@ export class UsersController {
       };
 
       const result = await this.updateUserRoleHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "User role updated");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(reply, result, "User role updated");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async toggleEmailVerification(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { userId: string };
-      Body: ToggleEmailVerifiedBody;
+      Body: {
+        isVerified: boolean;
+        reason?: string;
+      };
     }>,
     reply: FastifyReply,
   ): Promise<void> {
@@ -279,28 +209,28 @@ export class UsersController {
         reason,
       });
 
-      ResponseHelper.fromCommand(
+      return ResponseHelper.fromCommand(
         reply,
         result,
         "Email verification status updated",
       );
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteUser(
-    request: FastifyRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
       const { userId } = request.params;
 
-      const command: DeleteUserCommand = { userId, timestamp: new Date() };
+      const command: DeleteUserInput = { userId, timestamp: new Date() };
       const result = await this.deleteUserHandler.handle(command);
-      ResponseHelper.fromCommand(reply, result, "User deleted");
-    } catch (error) {
-      ResponseHelper.error(reply, error);
+      return ResponseHelper.fromCommand(reply, result, "User deleted");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 }

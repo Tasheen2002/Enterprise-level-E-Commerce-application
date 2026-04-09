@@ -1,17 +1,20 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IVerificationTokenRepository } from "../../../domain/repositories/iverification-token.repository";
-import {
-  VerificationToken,
-  VerificationType,
-} from "../../../domain/entities/verification-token.entity";
+import { VerificationToken } from "../../../domain/entities/verification-token.entity";
+import { VerificationType } from "../../../domain/enums/verification-type.enum";
 
 export class VerificationTokenRepository
+  extends PrismaRepository<VerificationToken>
   implements IVerificationTokenRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(token: VerificationToken): Promise<void> {
-    const data = token.toDatabaseRow();
+    const data = this.toPersistence(token);
 
     await this.prisma.$executeRaw`
       INSERT INTO user_management.verification_tokens
@@ -22,6 +25,8 @@ export class VerificationTokenRepository
       DO UPDATE SET
         used_at = EXCLUDED.used_at
     `;
+
+    await this.dispatchEvents(token);
   }
 
   async findByToken(
@@ -39,7 +44,7 @@ export class VerificationTokenRepository
       return null;
     }
 
-    return VerificationToken.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async findByUserIdAndType(
@@ -57,7 +62,7 @@ export class VerificationTokenRepository
       return null;
     }
 
-    return VerificationToken.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async findActiveByUserIdAndType(
@@ -78,7 +83,7 @@ export class VerificationTokenRepository
       return null;
     }
 
-    return VerificationToken.fromDatabaseRow(result[0]);
+    return this.toDomain(result[0]);
   }
 
   async deleteByUserIdAndType(
@@ -107,5 +112,33 @@ export class VerificationTokenRepository
     `;
 
     return result as number;
+  }
+
+  private toPersistence(token: VerificationToken): Record<string, any> {
+    return {
+      token_id: token.tokenId,
+      user_id: token.userId,
+      token: token.token,
+      type: token.type,
+      email: token.email,
+      phone: token.phone,
+      expires_at: token.expiresAt,
+      used_at: token.usedAt,
+      created_at: token.createdAt,
+    };
+  }
+
+  private toDomain(row: any): VerificationToken {
+    return VerificationToken.reconstitute({
+      tokenId: row.token_id,
+      userId: row.user_id,
+      token: row.token,
+      type: row.type as VerificationType,
+      email: row.email,
+      phone: row.phone,
+      expiresAt: row.expires_at,
+      usedAt: row.used_at,
+      createdAt: row.created_at,
+    });
   }
 }

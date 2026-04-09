@@ -2,16 +2,21 @@ export {
   User,
   UserRole,
   UserStatus,
-  type CreateUserData,
-  type UserData,
-  type UserRow,
+  UserRegisteredEvent,
+  UserEmailChangedEvent,
+  UserPasswordChangedEvent,
+  UserEmailVerifiedEvent,
+  UserStatusChangedEvent,
+  UserRoleChangedEvent,
+  UserDeletedEvent,
+  type UserProps,
+  type UserDTO,
 } from "./user.entity";
 
 export {
   UserProfile,
-  type CreateUserProfileData,
-  type UserProfileData,
-  type UserProfileRow,
+  type UserProfileProps,
+  type UserProfileDTO,
   type UserPreferences,
   type StylePreferences,
   type PreferredSizes,
@@ -20,46 +25,39 @@ export {
 
 export {
   Address,
+  AddressId,
   ShippingZone,
-  type CreateAddressData,
-  type AddressEntityData,
+  type AddressProps,
   type AddressLabel,
-  type UserAddressRow,
+  type AddressDTO,
 } from "./address.entity";
 
 export {
   PaymentMethod,
   PaymentMethodType,
-  type CreatePaymentMethodData,
-  type PaymentMethodEntityData,
-  type PaymentMethodRow,
+  PaymentMethodId,
+  type PaymentMethodProps,
+  type PaymentMethodDTO,
 } from "./payment-method.entity";
 
 export {
   VerificationToken,
-  VerificationType,
-  type CreateVerificationTokenData,
-  type VerificationTokenData,
-  type VerificationTokenRow,
+  type VerificationTokenProps,
 } from "./verification-token.entity";
 
 export {
   VerificationAuditLog,
-  VerificationAction,
-  type CreateVerificationAuditLogData,
-  type VerificationAuditLogRow,
+  type VerificationAuditLogProps,
 } from "./verification-audit-log.entity";
 
 export {
   VerificationRateLimit,
-  type CreateVerificationRateLimitData,
-  type VerificationRateLimitRow,
+  type VerificationRateLimitProps,
 } from "./verification-rate-limit.entity";
 
 export {
   SocialLogin,
   SocialProvider,
-  type CreateSocialLoginData,
-  type SocialLoginEntityData,
-  type SocialLoginRow,
+  type SocialLoginProps,
+  type SocialLoginDTO,
 } from "./social-login.entity";

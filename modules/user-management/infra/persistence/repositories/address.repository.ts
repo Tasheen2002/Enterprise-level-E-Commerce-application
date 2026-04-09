@@ -1,64 +1,102 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IAddressRepository } from "../../../domain/repositories/iaddress.repository";
-import { Address } from "../../../domain/entities/address.entity";
-import { AddressType } from "../../../domain/value-objects/address.vo";
+import { Address, AddressProps } from "../../../domain/entities/address.entity";
+import { AddressId } from "../../../domain/value-objects/address-id";
+import {
+  Address as AddressVO,
+  AddressType,
+} from "../../../domain/value-objects/address.vo";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
 
-export class AddressRepository implements IAddressRepository {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  async save(address: Address): Promise<void> {
-    const data = address.toDatabaseRow();
-
-    await this.prisma.userAddress.create({
-      data: {
-        id: data.address_id,
-        userId: data.user_id,
-        type: data.type,
-        isDefault: data.is_default,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        company: data.company,
-        addressLine1: data.address_line_1,
-        addressLine2: data.address_line_2,
-        city: data.city,
-        state: data.state,
-        postalCode: data.postal_code,
-        country: data.country,
-        phone: data.phone,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    });
+export class AddressRepository
+  extends PrismaRepository<Address>
+  implements IAddressRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
   }
 
-  async findById(id: string): Promise<Address | null> {
+  // Maps a Prisma record to an Address domain entity
+  private toDomain(data: any): Address {
+    const props: AddressProps = {
+      id: AddressId.fromString(data.id),
+      userId: UserId.fromString(data.userId),
+      addressValue: AddressVO.fromData({
+        firstName: data.firstName || undefined,
+        lastName: data.lastName || undefined,
+        company: data.company || undefined,
+        addressLine1: data.addressLine1,
+        addressLine2: data.addressLine2 || undefined,
+        city: data.city,
+        state: data.state || undefined,
+        postalCode: data.postalCode || undefined,
+        country: data.country,
+        phone: data.phone || undefined,
+      }),
+      type: AddressType.fromString(data.type),
+      isDefault: data.isDefault,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
+
+    return Address.reconstitute(props);
+  }
+
+  // Maps an Address domain entity to a Prisma-compatible persistence object
+  private toPersistence(address: Address): {
+    create: Prisma.UserAddressUncheckedCreateInput;
+    update: Prisma.UserAddressUncheckedUpdateInput;
+  } {
+    const addressData = address.getAddressValue().toData();
+
+    const create = {
+      id: address.getId().getValue(),
+      userId: address.getUserId().getValue(),
+      type: address.getType().toString(),
+      isDefault: address.getIsDefault(),
+      firstName: addressData.firstName || null,
+      lastName: addressData.lastName || null,
+      company: addressData.company || null,
+      addressLine1: addressData.addressLine1,
+      addressLine2: addressData.addressLine2 || null,
+      city: addressData.city,
+      state: addressData.state || null,
+      postalCode: addressData.postalCode || null,
+      country: addressData.country,
+      phone: addressData.phone || null,
+      createdAt: address.getCreatedAt(),
+      updatedAt: address.getUpdatedAt(),
+    };
+
+    const { id, userId, createdAt, ...update } = create;
+
+    return { create, update };
+  }
+
+  async save(address: Address): Promise<void> {
+    const data = this.toPersistence(address);
+
+    await this.prisma.userAddress.upsert({
+      where: { id: address.getId().getValue() },
+      create: data.create,
+      update: data.update,
+    });
+
+    await this.dispatchEvents(address);
+  }
+
+  async findById(id: AddressId): Promise<Address | null> {
     const addressData = await this.prisma.userAddress.findUnique({
-      where: { id },
+      where: { id: id.getValue() },
     });
 
     if (!addressData) {
       return null;
     }
 
-    return Address.fromDatabaseRow({
-      address_id: addressData.id,
-      user_id: addressData.userId,
-      type: addressData.type,
-      is_default: addressData.isDefault,
-      first_name: addressData.firstName,
-      last_name: addressData.lastName,
-      company: addressData.company,
-      address_line_1: addressData.addressLine1,
-      address_line_2: addressData.addressLine2,
-      city: addressData.city,
-      state: addressData.state,
-      postal_code: addressData.postalCode,
-      country: addressData.country,
-      phone: addressData.phone,
-      created_at: addressData.createdAt,
-      updated_at: addressData.updatedAt,
-    });
+    return this.toDomain(addressData);
   }
 
   async findByUserId(userId: UserId): Promise<Address[]> {
@@ -70,54 +108,12 @@ export class AddressRepository implements IAddressRepository {
       ],
     });
 
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
+    return addresses.map((data) => this.toDomain(data));
   }
 
-  async update(address: Address): Promise<void> {
-    const data = address.toDatabaseRow();
-
-    await this.prisma.userAddress.update({
-      where: { id: data.address_id },
-      data: {
-        type: data.type,
-        isDefault: data.is_default,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        company: data.company,
-        addressLine1: data.address_line_1,
-        addressLine2: data.address_line_2,
-        city: data.city,
-        state: data.state,
-        postalCode: data.postal_code,
-        country: data.country,
-        phone: data.phone,
-        updatedAt: data.updated_at,
-      },
-    });
-  }
-
-  async delete(id: string): Promise<void> {
+  async delete(id: AddressId): Promise<void> {
     await this.prisma.userAddress.delete({
-      where: { id },
+      where: { id: id.getValue() },
     });
   }
 
@@ -133,26 +129,7 @@ export class AddressRepository implements IAddressRepository {
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     });
 
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
+    return addresses.map((data) => this.toDomain(data));
   }
 
   async findDefaultByUserId(userId: UserId): Promise<Address | null> {
@@ -167,107 +144,10 @@ export class AddressRepository implements IAddressRepository {
       return null;
     }
 
-    return Address.fromDatabaseRow({
-      address_id: addressData.id,
-      user_id: addressData.userId,
-      type: addressData.type,
-      is_default: addressData.isDefault,
-      first_name: addressData.firstName,
-      last_name: addressData.lastName,
-      company: addressData.company,
-      address_line_1: addressData.addressLine1,
-      address_line_2: addressData.addressLine2,
-      city: addressData.city,
-      state: addressData.state,
-      postal_code: addressData.postalCode,
-      country: addressData.country,
-      phone: addressData.phone,
-      created_at: addressData.createdAt,
-      updated_at: addressData.updatedAt,
-    });
+    return this.toDomain(addressData);
   }
 
-  async findByCountry(
-    country: string,
-    limit?: number,
-    offset?: number,
-  ): Promise<Address[]> {
-    const addresses = await this.prisma.userAddress.findMany({
-      where: { country: country.toUpperCase() },
-      take: limit,
-      skip: offset,
-      orderBy: { createdAt: "desc" },
-    });
-
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
-  }
-
-  async findByCity(
-    city: string,
-    limit?: number,
-    offset?: number,
-  ): Promise<Address[]> {
-    const addresses = await this.prisma.userAddress.findMany({
-      where: {
-        city: {
-          contains: city,
-          mode: "insensitive",
-        },
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { createdAt: "desc" },
-    });
-
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
-  }
-
-  async existsById(id: string): Promise<boolean> {
-    const count = await this.prisma.userAddress.count({
-      where: { id },
-    });
-    return count > 0;
-  }
-
-  async setAsDefault(addressId: string, userId: UserId): Promise<void> {
+  async setAsDefault(addressId: AddressId, userId: UserId): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // First, remove default flag from all addresses for this user
       await tx.userAddress.updateMany({
@@ -277,7 +157,7 @@ export class AddressRepository implements IAddressRepository {
 
       // Then set the specified address as default
       await tx.userAddress.update({
-        where: { id: addressId },
+        where: { id: addressId.getValue() },
         data: { isDefault: true },
       });
     });
@@ -303,17 +183,17 @@ export class AddressRepository implements IAddressRepository {
     userId: UserId,
     address: Address,
   ): Promise<Address | null> {
-    const addressData = address.toDatabaseRow();
+    const data = this.toPersistence(address);
 
     const conflictingAddress = await this.prisma.userAddress.findFirst({
       where: {
         userId: userId.getValue(),
-        addressLine1: addressData.address_line_1,
-        city: addressData.city,
-        country: addressData.country,
-        postalCode: addressData.postal_code,
+        addressLine1: data.create.addressLine1,
+        city: data.create.city,
+        country: data.create.country,
+        postalCode: data.create.postalCode,
         NOT: {
-          id: addressData.address_id, // Exclude the current address if updating
+          id: data.create.id,
         },
       },
     });
@@ -322,158 +202,7 @@ export class AddressRepository implements IAddressRepository {
       return null;
     }
 
-    return Address.fromDatabaseRow({
-      address_id: conflictingAddress.id,
-      user_id: conflictingAddress.userId,
-      type: conflictingAddress.type,
-      is_default: conflictingAddress.isDefault,
-      first_name: conflictingAddress.firstName,
-      last_name: conflictingAddress.lastName,
-      company: conflictingAddress.company,
-      address_line_1: conflictingAddress.addressLine1,
-      address_line_2: conflictingAddress.addressLine2,
-      city: conflictingAddress.city,
-      state: conflictingAddress.state,
-      postal_code: conflictingAddress.postalCode,
-      country: conflictingAddress.country,
-      phone: conflictingAddress.phone,
-      created_at: conflictingAddress.createdAt,
-      updated_at: conflictingAddress.updatedAt,
-    });
-  }
-
-  async findSimilarAddresses(
-    address: Address,
-    threshold: number = 0.8,
-  ): Promise<Address[]> {
-    const addressData = address.toDatabaseRow();
-
-    const addresses = await this.prisma.userAddress.findMany({
-      where: {
-        OR: [
-          {
-            addressLine1: {
-              contains: addressData.address_line_1.split(" ")[0], // First word
-              mode: "insensitive",
-            },
-          },
-          {
-            AND: [{ city: addressData.city }, { country: addressData.country }],
-          },
-        ],
-        NOT: {
-          id: addressData.address_id,
-        },
-      },
-      take: 10, // Limit results
-    });
-
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
-  }
-
-  async getAddressStatsByCountry(): Promise<
-    Array<{ country: string; count: number }>
-  > {
-    const stats = await this.prisma.userAddress.groupBy({
-      by: ["country"],
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        _count: {
-          id: "desc",
-        },
-      },
-    });
-
-    return stats.map((stat) => ({
-      country: stat.country,
-      count: stat._count.id,
-    }));
-  }
-
-  async getUserAddressStats(userId: UserId): Promise<{
-    total: number;
-    byType: Record<string, number>;
-    hasDefault: boolean;
-  }> {
-    const [total, byType, defaultAddress] = await Promise.all([
-      this.prisma.userAddress.count({
-        where: { userId: userId.getValue() },
-      }),
-      this.prisma.userAddress.groupBy({
-        by: ["type"],
-        where: { userId: userId.getValue() },
-        _count: {
-          id: true,
-        },
-      }),
-      this.prisma.userAddress.findFirst({
-        where: {
-          userId: userId.getValue(),
-          isDefault: true,
-        },
-        select: { id: true },
-      }),
-    ]);
-
-    const typeStats: Record<string, number> = {};
-    byType.forEach((stat) => {
-      typeStats[stat.type] = stat._count.id;
-    });
-
-    return {
-      total,
-      byType: typeStats,
-      hasDefault: !!defaultAddress,
-    };
-  }
-
-  async findByIds(ids: string[]): Promise<Address[]> {
-    const addresses = await this.prisma.userAddress.findMany({
-      where: { id: { in: ids } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
+    return this.toDomain(conflictingAddress);
   }
 
   async deleteByUserId(userId: UserId): Promise<number> {
@@ -481,39 +210,5 @@ export class AddressRepository implements IAddressRepository {
       where: { userId: userId.getValue() },
     });
     return result.count;
-  }
-
-  async findByUserIds(userIds: UserId[]): Promise<Address[]> {
-    const userIdValues = userIds.map((id) => id.getValue());
-
-    const addresses = await this.prisma.userAddress.findMany({
-      where: { userId: { in: userIdValues } },
-      orderBy: [
-        { userId: "asc" },
-        { isDefault: "desc" },
-        { createdAt: "desc" },
-      ],
-    });
-
-    return addresses.map((addressData) =>
-      Address.fromDatabaseRow({
-        address_id: addressData.id,
-        user_id: addressData.userId,
-        type: addressData.type,
-        is_default: addressData.isDefault,
-        first_name: addressData.firstName,
-        last_name: addressData.lastName,
-        company: addressData.company,
-        address_line_1: addressData.addressLine1,
-        address_line_2: addressData.addressLine2,
-        city: addressData.city,
-        state: addressData.state,
-        postal_code: addressData.postalCode,
-        country: addressData.country,
-        phone: addressData.phone,
-        created_at: addressData.createdAt,
-        updated_at: addressData.updatedAt,
-      }),
-    );
   }
 }
