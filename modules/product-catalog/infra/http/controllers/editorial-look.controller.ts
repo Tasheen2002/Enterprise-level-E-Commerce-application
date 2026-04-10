@@ -3,6 +3,7 @@ import { EditorialLookManagementService } from "../../../application/services/ed
 import { CreateEditorialLookData } from "../../../domain/entities/editorial-look.entity";
 import { EditorialLookQueryOptions } from "../../../domain/repositories/editorial-look.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { EditorialLookDTO } from "../../../domain/entities/editorial-look.entity";
 
 export interface CreateEditorialLookRequest {
   title: string;
@@ -64,6 +65,17 @@ export interface DuplicateEditorialLookRequest {
   newTitle: string;
 }
 
+function toLookResponse(look: EditorialLookDTO) {
+  return {
+    id: look.id,
+    title: look.title,
+    storyHtml: look.storyHtml,
+    heroAssetId: look.heroAssetId,
+    publishedAt: look.publishedAt,
+    productIds: look.productIds,
+  };
+}
+
 export class EditorialLookController {
   constructor(
     private readonly editorialLookManagementService: EditorialLookManagementService,
@@ -100,57 +112,25 @@ export class EditorialLookController {
         sortOrder,
       };
 
-      let looks;
+      let looks: EditorialLookDTO[];
 
       if (published === true) {
-        looks =
-          await this.editorialLookManagementService.getPublishedLooks(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getPublishedLooks(serviceOptions);
       } else if (scheduled === true) {
-        looks =
-          await this.editorialLookManagementService.getScheduledLooks(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getScheduledLooks(serviceOptions);
       } else if (draft === true) {
-        looks =
-          await this.editorialLookManagementService.getDraftLooks(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getDraftLooks(serviceOptions);
       } else if (hasContent === true) {
-        looks =
-          await this.editorialLookManagementService.getLooksWithContent(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getLooksWithContent(serviceOptions);
       } else if (hasContent === false) {
-        looks =
-          await this.editorialLookManagementService.getLooksWithoutContent(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getLooksWithoutContent(serviceOptions);
       } else {
-        looks =
-          await this.editorialLookManagementService.getAllEditorialLooks(
-            serviceOptions,
-          );
+        looks = await this.editorialLookManagementService.getAllEditorialLooks(serviceOptions);
       }
 
       return ResponseHelper.ok(reply, "Editorial looks retrieved successfully", {
-        looks: Array.isArray(looks)
-          ? looks.map((look) => ({
-              id: look.getId().getValue(),
-              title: look.getTitle(),
-              storyHtml: look.getStoryHtml(),
-              heroAssetId: look.getHeroAssetId()?.getValue() || null,
-              publishedAt: look.getPublishedAt(),
-              productIds: look.getProductIds().map((id) => id.getValue()),
-            }))
-          : [],
-        meta: {
-          page: pageOptions.page,
-          limit: pageOptions.limit,
-          sortBy: pageOptions.sortBy,
-          sortOrder: pageOptions.sortOrder,
-        },
+        looks: looks.map(toLookResponse),
+        meta: pageOptions,
       });
     } catch (error) {
       request.log.error(error, "Failed to get editorial looks");
@@ -163,26 +143,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const look =
-        await this.editorialLookManagementService.getEditorialLookById(id);
-
-      return ResponseHelper.ok(reply, "Editorial look retrieved successfully", {
-        id: look.getId().getValue(),
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId: look.getHeroAssetId()?.getValue() || null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.getEditorialLookById(request.params.id);
+      return ResponseHelper.ok(reply, "Editorial look retrieved successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to get editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -193,113 +157,41 @@ export class EditorialLookController {
   ) {
     try {
       const lookData = request.body;
-
-      let publishedAt: Date | undefined;
-      if (lookData.publishedAt) {
-        publishedAt = new Date(lookData.publishedAt);
-      }
-
       const createData: CreateEditorialLookData = {
         title: lookData.title,
         storyHtml: lookData.storyHtml,
         heroAssetId: lookData.heroAssetId,
-        publishedAt,
+        publishedAt: lookData.publishedAt ? new Date(lookData.publishedAt) : undefined,
         productIds: lookData.productIds,
       };
-
-      const look =
-        await this.editorialLookManagementService.createEditorialLook(
-          createData,
-        );
-
-      return ResponseHelper.created(reply, "Editorial look created successfully", {
-        id: look.getId().getValue(),
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId: look.getHeroAssetId()?.getValue() || null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.createEditorialLook(createData);
+      return ResponseHelper.created(reply, "Editorial look created successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to create editorial look");
-
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Editorial look with this title already exists",
-        });
-      }
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateEditorialLook(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: UpdateEditorialLookRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: UpdateEditorialLookRequest }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = request.params;
       const updateData = request.body;
-
       let publishedAt: Date | null | undefined;
       if (updateData.publishedAt !== undefined) {
-        if (updateData.publishedAt === null) {
-          publishedAt = null;
-        } else {
-          publishedAt = new Date(updateData.publishedAt);
-        }
+        publishedAt = updateData.publishedAt === null ? null : new Date(updateData.publishedAt);
       }
-
-      const updates = {
+      const look = await this.editorialLookManagementService.updateEditorialLook(id, {
         title: updateData.title,
         storyHtml: updateData.storyHtml,
         heroAssetId: updateData.heroAssetId,
         publishedAt,
-      };
-
-      const look =
-        await this.editorialLookManagementService.updateEditorialLook(
-          id,
-          updates,
-        );
-
-      return ResponseHelper.ok(reply, "Editorial look updated successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
       });
+      return ResponseHelper.ok(reply, "Editorial look updated successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to update editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Editorial look with this title already exists",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -309,18 +201,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      await this.editorialLookManagementService.deleteEditorialLook(id);
-
+      await this.editorialLookManagementService.deleteEditorialLook(request.params.id);
       return ResponseHelper.ok(reply, "Editorial look deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -330,35 +214,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const look = await this.editorialLookManagementService.publishLook(id);
-
-      return ResponseHelper.ok(reply, "Editorial look published successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.publishLook(request.params.id);
+      return ResponseHelper.ok(reply, "Editorial look published successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to publish editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("cannot be published")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -368,121 +227,45 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const look = await this.editorialLookManagementService.unpublishLook(id);
-
-      return ResponseHelper.ok(reply, "Editorial look unpublished successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.unpublishLook(request.params.id);
+      return ResponseHelper.ok(reply, "Editorial look unpublished successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to unpublish editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async schedulePublication(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: SchedulePublicationRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: SchedulePublicationRequest }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { publishDate } = request.body;
-
-      const publishDateTime = new Date(publishDate);
-
-      // Allow any publication date (past, present, future)
-
-      const look =
-        await this.editorialLookManagementService.scheduleLookPublication(
-          id,
-          publishDateTime,
-        );
-
-      return ResponseHelper.ok(reply, "Editorial look scheduled for publication successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.scheduleLookPublication(
+        request.params.id,
+        new Date(request.body.publishDate),
+      );
+      return ResponseHelper.ok(reply, "Editorial look scheduled for publication successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to schedule editorial look publication");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("cannot be scheduled")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getReadyToPublishLooks(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const looks =
-        await this.editorialLookManagementService.getReadyToPublishLooks();
-
-      return ResponseHelper.ok(reply, "Ready to publish looks retrieved successfully", looks.map((look) => ({
-        id: look.getId().getValue(),
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId: look.getHeroAssetId()?.getValue() || null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      })));
+      const looks = await this.editorialLookManagementService.getReadyToPublishLooks();
+      return ResponseHelper.ok(reply, "Ready to publish looks retrieved successfully", looks.map(toLookResponse));
     } catch (error) {
       request.log.error(error, "Failed to get ready to publish looks");
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async processScheduledPublications(
-    request: FastifyRequest,
-    reply: FastifyReply,
-  ) {
+  async processScheduledPublications(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const result =
-        await this.editorialLookManagementService.processScheduledPublications();
-
+      const result = await this.editorialLookManagementService.processScheduledPublications();
       return ResponseHelper.ok(reply, `${result.published.length} editorial looks published successfully`, {
-        published: result.published.map((look) => ({
-          id: { value: look.getId().getValue() },
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId:
-            look.getHeroAssetId() != null
-              ? { value: look.getHeroAssetId()!.getValue() }
-              : null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        })),
+        published: result.published.map(toLookResponse),
         errors: result.errors,
       });
     } catch (error) {
@@ -492,46 +275,14 @@ export class EditorialLookController {
   }
 
   async setHeroImage(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: SetHeroImageRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: SetHeroImageRequest }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { assetId } = request.body;
-
-      const look = await this.editorialLookManagementService.setHeroImage(
-        id,
-        assetId,
-      );
-
-      return ResponseHelper.ok(reply, "Hero image set successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.setHeroImage(request.params.id, request.body.assetId);
+      return ResponseHelper.ok(reply, "Hero image set successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to set hero image");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("must be an image")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -541,29 +292,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const look =
-        await this.editorialLookManagementService.removeHeroImage(id);
-
-      return ResponseHelper.ok(reply, "Hero image removed successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.removeHeroImage(request.params.id);
+      return ResponseHelper.ok(reply, "Hero image removed successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to remove hero image");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -573,19 +305,8 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { assetId } = request.params;
-
-      const looks =
-        await this.editorialLookManagementService.getLooksByHeroAsset(assetId);
-
-      return ResponseHelper.ok(reply, "Looks by hero asset retrieved successfully", looks.map((look) => ({
-        id: look.getId().getValue(),
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId: look.getHeroAssetId()?.getValue() || null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      })));
+      const looks = await this.editorialLookManagementService.getLooksByHeroAsset(request.params.assetId);
+      return ResponseHelper.ok(reply, "Looks by hero asset retrieved successfully", looks.map(toLookResponse));
     } catch (error) {
       request.log.error(error, "Failed to get looks by hero asset");
       return ResponseHelper.error(reply, error);
@@ -597,30 +318,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id, productId } = request.params;
-
-      await this.editorialLookManagementService.addProductToLook(id, productId);
-
+      await this.editorialLookManagementService.addProductToLook(request.params.id, request.params.productId);
       return ResponseHelper.ok(reply, "Product added to editorial look successfully");
     } catch (error) {
       request.log.error(error, "Failed to add product to look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("already associated")
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: error.message,
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -630,59 +331,23 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id, productId } = request.params;
-
-      await this.editorialLookManagementService.removeProductFromLook(
-        id,
-        productId,
-      );
-
+      await this.editorialLookManagementService.removeProductFromLook(request.params.id, request.params.productId);
       return ResponseHelper.ok(reply, "Product removed from editorial look successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove product from look");
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setLookProducts(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: SetLookProductsRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: SetLookProductsRequest }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { productIds } = request.body;
-
-      const look = await this.editorialLookManagementService.setLookProducts(
-        id,
-        productIds,
-      );
-
-      return ResponseHelper.ok(reply, "Editorial look products updated successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.setLookProducts(request.params.id, request.body.productIds);
+      return ResponseHelper.ok(reply, "Editorial look products updated successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to set look products");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -692,19 +357,10 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const productIds =
-        await this.editorialLookManagementService.getLookProducts(id);
-
+      const productIds = await this.editorialLookManagementService.getLookProducts(request.params.id);
       return ResponseHelper.ok(reply, "Editorial look products retrieved successfully", productIds);
     } catch (error) {
       request.log.error(error, "Failed to get look products");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -714,68 +370,30 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      const lookIds =
-        await this.editorialLookManagementService.getProductLooks(productId);
-
+      const lookIds = await this.editorialLookManagementService.getProductLooks(request.params.productId);
       return ResponseHelper.ok(reply, "Product looks retrieved successfully", lookIds);
     } catch (error) {
       request.log.error(error, "Failed to get product looks");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getLooksByProduct(
-    request: FastifyRequest<{
-      Params: { productId: string };
-      Querystring: EditorialLookQueryParams;
-    }>,
+    request: FastifyRequest<{ Params: { productId: string }; Querystring: EditorialLookQueryParams }>,
     reply: FastifyReply,
   ) {
     try {
       const { productId } = request.params;
-      const {
-        page = 1,
-        limit = 20,
-        sortBy = "id",
-        sortOrder = "desc",
-        includeUnpublished = false,
-      } = request.query;
-
+      const { page = 1, limit = 20, sortBy = "id", sortOrder = "desc", includeUnpublished = false } = request.query;
       const serviceOptions: EditorialLookQueryOptions = {
         limit: Math.min(100, Math.max(1, limit)),
         offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-        includeUnpublished,
+        sortBy, sortOrder, includeUnpublished,
       };
-
-      const looks = await this.editorialLookManagementService.getLooksByProduct(
-        productId,
-        serviceOptions,
-      );
-
+      const looks = await this.editorialLookManagementService.getLooksByProduct(productId, serviceOptions);
       return ResponseHelper.ok(reply, "Looks by product retrieved successfully", {
-        looks: looks.map((look) => ({
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        })),
-        meta: {
-          productId,
-          page: Math.max(1, page),
-          limit: Math.min(100, Math.max(1, limit)),
-          includeUnpublished,
-        },
+        looks: looks.map(toLookResponse),
+        meta: { productId, page: Math.max(1, page), limit: Math.min(100, Math.max(1, limit)), includeUnpublished },
       });
     } catch (error) {
       request.log.error(error, "Failed to get looks by product");
@@ -784,39 +402,14 @@ export class EditorialLookController {
   }
 
   async updateStoryContent(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: UpdateStoryContentRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: UpdateStoryContentRequest }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { storyHtml } = request.body;
-
-      const look = await this.editorialLookManagementService.updateStoryContent(
-        id,
-        storyHtml,
-      );
-
-      return ResponseHelper.ok(reply, "Story content updated successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.updateStoryContent(request.params.id, request.body.storyHtml);
+      return ResponseHelper.ok(reply, "Story content updated successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to update story content");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -826,38 +419,17 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const look =
-        await this.editorialLookManagementService.clearStoryContent(id);
-
-      return ResponseHelper.ok(reply, "Story content cleared successfully", {
-        id: { value: look.getId().getValue() },
-        title: look.getTitle(),
-        storyHtml: look.getStoryHtml(),
-        heroAssetId:
-          look.getHeroAssetId() != null
-            ? { value: look.getHeroAssetId()!.getValue() }
-            : null,
-        publishedAt: look.getPublishedAt(),
-        productIds: look.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.clearStoryContent(request.params.id);
+      return ResponseHelper.ok(reply, "Story content cleared successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to clear story content");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getEditorialLookStats(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const stats =
-        await this.editorialLookManagementService.getEditorialLookStats();
-
+      const stats = await this.editorialLookManagementService.getEditorialLookStats();
       return ResponseHelper.ok(reply, "Editorial look statistics retrieved successfully", stats);
     } catch (error) {
       request.log.error(error, "Failed to get editorial look statistics");
@@ -870,13 +442,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { limit = 10 } = request.query;
-
-      const popularProducts =
-        await this.editorialLookManagementService.getPopularProducts(
-          Math.min(50, Math.max(1, limit)),
-        );
-
+      const popularProducts = await this.editorialLookManagementService.getPopularProducts(
+        Math.min(50, Math.max(1, request.query.limit ?? 10)),
+      );
       return ResponseHelper.ok(reply, "Popular products retrieved successfully", popularProducts);
     } catch (error) {
       request.log.error(error, "Failed to get popular products");
@@ -889,33 +457,15 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { looks } = request.body;
-
-      const createData: CreateEditorialLookData[] = looks.map((look) => ({
+      const createData: CreateEditorialLookData[] = request.body.looks.map((look) => ({
         title: look.title,
         storyHtml: look.storyHtml,
         heroAssetId: look.heroAssetId,
         publishedAt: look.publishedAt ? new Date(look.publishedAt) : undefined,
         productIds: look.productIds,
       }));
-
-      const createdLooks =
-        await this.editorialLookManagementService.createMultipleEditorialLooks(
-          createData,
-        );
-
-      return ResponseHelper.created(
-        reply,
-        `${createdLooks.length} editorial looks created successfully`,
-        createdLooks.map((look) => ({
-          id: look.getId().getValue(),
-          title: look.getTitle(),
-          storyHtml: look.getStoryHtml(),
-          heroAssetId: look.getHeroAssetId()?.getValue() || null,
-          publishedAt: look.getPublishedAt(),
-          productIds: look.getProductIds().map((id) => id.getValue()),
-        })),
-      );
+      const createdLooks = await this.editorialLookManagementService.createMultipleEditorialLooks(createData);
+      return ResponseHelper.created(reply, `${createdLooks.length} editorial looks created successfully`, createdLooks.map(toLookResponse));
     } catch (error) {
       request.log.error(error, "Failed to create bulk editorial looks");
       return ResponseHelper.error(reply, error);
@@ -927,18 +477,8 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { ids } = request.body;
-
-      const result =
-        await this.editorialLookManagementService.deleteMultipleEditorialLooks(
-          ids,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        `${result.deleted.length} editorial looks deleted successfully`,
-        result,
-      );
+      const result = await this.editorialLookManagementService.deleteMultipleEditorialLooks(request.body.ids);
+      return ResponseHelper.ok(reply, `${result.deleted.length} editorial looks deleted successfully`, result);
     } catch (error) {
       request.log.error(error, "Failed to delete bulk editorial looks");
       return ResponseHelper.error(reply, error);
@@ -950,16 +490,8 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { ids } = request.body;
-
-      const result =
-        await this.editorialLookManagementService.publishMultipleLooks(ids);
-
-      return ResponseHelper.ok(
-        reply,
-        `${result.published.length} editorial looks published successfully`,
-        result,
-      );
+      const result = await this.editorialLookManagementService.publishMultipleLooks(request.body.ids);
+      return ResponseHelper.ok(reply, `${result.published.length} editorial looks published successfully`, result);
     } catch (error) {
       request.log.error(error, "Failed to publish bulk editorial looks");
       return ResponseHelper.error(reply, error);
@@ -971,69 +503,23 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const validation =
-        await this.editorialLookManagementService.validateLookForPublication(
-          id,
-        );
-
+      const validation = await this.editorialLookManagementService.validateLookForPublication(request.params.id);
       return ResponseHelper.ok(reply, "Editorial look validated for publication", validation);
     } catch (error) {
-      request.log.error(
-        error,
-        "Failed to validate editorial look for publication",
-      );
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
+      request.log.error(error, "Failed to validate editorial look for publication");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async duplicateEditorialLook(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: DuplicateEditorialLookRequest;
-    }>,
+    request: FastifyRequest<{ Params: { id: string }; Body: DuplicateEditorialLookRequest }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { newTitle } = request.body;
-
-      const duplicatedLook =
-        await this.editorialLookManagementService.duplicateEditorialLook(
-          id,
-          newTitle,
-        );
-
-      return ResponseHelper.created(reply, "Editorial look duplicated successfully", {
-        id: duplicatedLook.getId().getValue(),
-        title: duplicatedLook.getTitle(),
-        storyHtml: duplicatedLook.getStoryHtml(),
-        heroAssetId: duplicatedLook.getHeroAssetId()?.getValue() || null,
-        publishedAt: duplicatedLook.getPublishedAt(),
-        productIds: duplicatedLook.getProductIds().map((id) => id.getValue()),
-      });
+      const look = await this.editorialLookManagementService.duplicateEditorialLook(request.params.id, request.body.newTitle);
+      return ResponseHelper.created(reply, "Editorial look duplicated successfully", toLookResponse(look));
     } catch (error) {
       request.log.error(error, "Failed to duplicate editorial look");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Editorial look not found");
-      }
-
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Editorial look with this title already exists",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }

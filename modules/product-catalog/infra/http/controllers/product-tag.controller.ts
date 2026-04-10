@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from "fastify";
 import { ProductTagManagementService } from "../../../application/services/product-tag-management.service";
 import { ProductTagQueryOptions } from "../../../domain/repositories/product-tag.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { ProductTag } from "../../../domain/entities/product-tag.entity";
 
 export interface CreateTagRequest {
   tag: string;
@@ -97,10 +98,6 @@ export class ProductTagController {
     } catch (error) {
       request.log.error(error, "Failed to get tag");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Tag not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -119,10 +116,6 @@ export class ProductTagController {
       return ResponseHelper.ok(reply, "Tag retrieved successfully", tag);
     } catch (error) {
       request.log.error(error, "Failed to get tag by name");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Tag not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -171,10 +164,6 @@ export class ProductTagController {
     } catch (error) {
       request.log.error(error, "Failed to update tag");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Tag not found");
-      }
-
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
           success: false,
@@ -200,10 +189,6 @@ export class ProductTagController {
       return ResponseHelper.ok(reply, "Tag deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete tag");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Tag not found");
-      }
 
       if (
         error instanceof Error &&
@@ -283,7 +268,7 @@ export class ProductTagController {
       return ResponseHelper.created(
         reply,
         `${createdTags.length} tags created successfully`,
-        createdTags.map((tag) => tag.toData()),
+        createdTags.map((tag) => ProductTag.toDTO(tag)),
       );
     } catch (error) {
       request.log.error(error, "Failed to create bulk tags");
@@ -349,10 +334,6 @@ export class ProductTagController {
     } catch (error) {
       request.log.error(error, "Failed to get product tags");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -377,10 +358,6 @@ export class ProductTagController {
     } catch (error) {
       request.log.error(error, "Failed to associate product tags");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -399,10 +376,6 @@ export class ProductTagController {
       return ResponseHelper.ok(reply, "Tag removed successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove product tag");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -442,10 +415,6 @@ export class ProductTagController {
       });
     } catch (error) {
       request.log.error(error, "Failed to get tag products");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Tag not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }

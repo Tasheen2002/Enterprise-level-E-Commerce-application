@@ -58,20 +58,20 @@ export class ProductTag extends AggregateRoot {
     return productTag;
   }
 
-  static reconstitute(props: ProductTagProps): ProductTag {
+  static fromPersistence(props: ProductTagProps): ProductTag {
     return new ProductTag(props);
   }
 
   // Getters
-  getId(): ProductTagId {
+  get id(): ProductTagId {
     return this.props.id;
   }
 
-  getTag(): string {
+  get tag(): string {
     return this.props.tag;
   }
 
-  getKind(): string | null {
+  get kind(): string | null {
     return this.props.kind;
   }
 

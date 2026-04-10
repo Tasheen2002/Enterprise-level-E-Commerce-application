@@ -118,17 +118,9 @@ export class ProductController {
           sortOrder,
         };
 
-        const searchResult =
-          await this.searchProductsHandler.handle(searchQuery);
-        if (searchResult.success && searchResult.data) {
-          products = searchResult.data.products;
-          totalCount = searchResult.data.totalCount;
-        } else {
-          return ResponseHelper.error(
-            reply,
-            new Error(searchResult.error ?? "Search failed"),
-          );
-        }
+        const searchResult = await this.searchProductsHandler.handle(searchQuery);
+        products = searchResult.products;
+        totalCount = searchResult.totalCount;
       } else {
         const query: ListProductsQuery = {
           page: currentPage,
@@ -142,32 +134,18 @@ export class ProductController {
         };
 
         const result = await this.listProductsHandler.handle(query);
-        if (result.success && result.data) {
-          products = result.data.products;
-          totalCount = result.data.totalCount;
-        } else {
-          return ResponseHelper.error(
-            reply,
-            new Error(result.error ?? "Failed to list products"),
-          );
-        }
+        products = result.products;
+        totalCount = result.totalCount;
       }
 
-      const normalizedProducts = products.map((p) => {
-        if (typeof p.getId === "function") {
-          return p.toData();
-        }
-        return p;
-      });
-
-      const productIds = normalizedProducts.map(
+      const productIds = products.map(
         (p) => p.id || p.productId || p.product_id,
       );
 
       const enrichmentMap =
         await this.productManagementService.getProductEnrichment(productIds);
 
-      const productsWithDetails = normalizedProducts.map((product) => {
+      const productsWithDetails = products.map((product) => {
         const pId = product.id || product.productId || product.product_id;
         const enriched = enrichmentMap.get(pId);
 
@@ -215,32 +193,25 @@ export class ProductController {
       const { productId } = request.params;
 
       const query: GetProductQuery = { productId };
-      const result = await this.getProductHandler.handle(query);
+      const productData = await this.getProductHandler.handle(query);
 
-      if (result.success && result.data) {
-        const mediaEnrichment =
-          await this.productManagementService.getProductMediaEnrichment(
-            productId,
-          );
-
-        const productWithDetails = {
-          ...result.data,
-          slug: result.data?.slug || "",
-          images: mediaEnrichment.images,
-          media: mediaEnrichment.media,
-        };
-
-        return ResponseHelper.ok(
-          reply,
-          "Product retrieved successfully",
-          productWithDetails,
+      const mediaEnrichment =
+        await this.productManagementService.getProductMediaEnrichment(
+          productId,
         );
-      } else {
-        return ResponseHelper.notFound(
-          reply,
-          result.error ?? "Product not found",
-        );
-      }
+
+      const productWithDetails = {
+        ...productData,
+        slug: productData?.slug || "",
+        images: mediaEnrichment.images,
+        media: mediaEnrichment.media,
+      };
+
+      return ResponseHelper.ok(
+        reply,
+        "Product retrieved successfully",
+        productWithDetails,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get product");
       return ResponseHelper.error(reply, error);
@@ -255,32 +226,25 @@ export class ProductController {
       const { slug } = request.params;
 
       const query: GetProductQuery = { slug };
-      const result = await this.getProductHandler.handle(query);
+      const productData = await this.getProductHandler.handle(query);
 
-      if (result.success && result.data) {
-        const enrichment =
-          await this.productManagementService.getSingleProductEnrichment(
-            result.data.productId,
-          );
-
-        const productWithDetails = {
-          ...result.data,
-          variants: enrichment.variants,
-          images: enrichment.images,
-          categories: enrichment.categories,
-        };
-
-        return ResponseHelper.ok(
-          reply,
-          "Product retrieved successfully",
-          productWithDetails,
+      const enrichment =
+        await this.productManagementService.getSingleProductEnrichment(
+          productData.productId,
         );
-      } else {
-        return ResponseHelper.notFound(
-          reply,
-          result.error ?? "Product not found",
-        );
-      }
+
+      const productWithDetails = {
+        ...productData,
+        variants: enrichment.variants,
+        images: enrichment.images,
+        categories: enrichment.categories,
+      };
+
+      return ResponseHelper.ok(
+        reply,
+        "Product retrieved successfully",
+        productWithDetails,
+      );
     } catch (error) {
       request.log.error(error, "Failed to get product by slug");
       return ResponseHelper.error(reply, error);
@@ -315,17 +279,6 @@ export class ProductController {
       };
 
       const result = await this.createProductHandler.handle(command);
-
-      if (result.success && result.data) {
-        const data = result.data.toData();
-        return ResponseHelper.created(reply, "Product created successfully", {
-          productId: data.id,
-          title: data.title,
-          slug: data.slug,
-          status: data.status,
-          createdAt: new Date().toISOString(),
-        });
-      }
 
       return ResponseHelper.fromCommand(
         reply,
@@ -373,13 +326,6 @@ export class ProductController {
 
       const result = await this.updateProductHandler.handle(command);
 
-      if (result.success) {
-        return ResponseHelper.ok(reply, "Product updated successfully", {
-          productId: id,
-          updatedAt: new Date().toISOString(),
-        });
-      }
-
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -387,24 +333,6 @@ export class ProductController {
       );
     } catch (error) {
       request.log.error(error, "Failed to update product");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("duplicate") ||
-          error.message.includes("unique"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Product with this title or slug already exists",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -419,10 +347,6 @@ export class ProductController {
       const command: DeleteProductCommand = { productId: id };
       const result = await this.deleteProductHandler.handle(command);
 
-      if (result.success) {
-        return ResponseHelper.ok(reply, "Product deleted successfully");
-      }
-
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -430,25 +354,6 @@ export class ProductController {
       );
     } catch (error) {
       request.log.error(error, "Failed to delete product");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
-      if (
-        error instanceof Error &&
-        (error.message.includes("constraint") ||
-          error.message.includes("foreign key"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message:
-            "Cannot delete product with existing variants or associations",
-        });
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }

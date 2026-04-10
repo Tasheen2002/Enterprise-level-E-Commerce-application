@@ -14,7 +14,7 @@ import { Price } from "../../../domain/value-objects/price.vo";
 
 function mapRow(row: any): Product {
   const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
-  return Product.reconstitute({
+  return Product.fromPersistence({
     id: ProductId.fromString(row.id),
     title: row.title,
     slug,

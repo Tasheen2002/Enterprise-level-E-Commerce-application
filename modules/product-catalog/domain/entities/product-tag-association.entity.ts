@@ -29,7 +29,7 @@ export class ProductTagAssociation {
     });
   }
 
-  static reconstitute(props: ProductTagAssociationProps): ProductTagAssociation {
+  static fromPersistence(props: ProductTagAssociationProps): ProductTagAssociation {
     return new ProductTagAssociation(props);
   }
 

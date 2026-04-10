@@ -3,6 +3,7 @@ import { SizeGuideManagementService } from "../../../application/services/size-g
 import {
   Region,
   CreateSizeGuideData,
+  SizeGuide,
 } from "../../../domain/entities/size-guide.entity";
 import { SizeGuideQueryOptions } from "../../../domain/repositories/size-guide.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
@@ -126,7 +127,7 @@ export class SizeGuideController {
       // Serialize entities to plain objects
       const serializedGuides = Array.isArray(guides)
         ? guides
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
+            .map((guide) => (SizeGuide.toDTO(guide)))
             .filter(Boolean)
         : guides;
 
@@ -161,10 +162,6 @@ export class SizeGuideController {
       );
     } catch (error) {
       request.log.error(error, "Failed to get size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -220,7 +217,7 @@ export class SizeGuideController {
       );
 
       // Serialize entity to plain object
-      const serializedGuide = guide.toData ? guide.toData() : guide;
+      const serializedGuide = SizeGuide.toDTO(guide);
 
       return ResponseHelper.ok(
         reply,
@@ -229,10 +226,6 @@ export class SizeGuideController {
       );
     } catch (error) {
       request.log.error(error, "Failed to update size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
 
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
@@ -260,10 +253,6 @@ export class SizeGuideController {
       return ResponseHelper.ok(reply, "Size guide deleted successfully");
     } catch (error) {
       request.log.error(error, "Failed to delete size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -318,7 +307,7 @@ export class SizeGuideController {
       // Serialize entities to plain objects
       const serializedGuides = Array.isArray(guides)
         ? guides
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
+            .map((guide) => (SizeGuide.toDTO(guide)))
             .filter(Boolean)
         : [];
 
@@ -478,10 +467,6 @@ export class SizeGuideController {
     } catch (error) {
       request.log.error(error, "Failed to update size guide content");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -503,10 +488,6 @@ export class SizeGuideController {
       );
     } catch (error) {
       request.log.error(error, "Failed to clear size guide content");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -585,7 +566,7 @@ export class SizeGuideController {
       // Serialize entities to plain objects
       const serializedGuides = Array.isArray(result.created)
         ? result.created
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
+            .map((guide) => (SizeGuide.toDTO(guide)))
             .filter(Boolean)
         : [];
 

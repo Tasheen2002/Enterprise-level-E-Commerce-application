@@ -136,26 +136,26 @@ export class ProductVariant extends AggregateRoot {
     return variant;
   }
 
-  static reconstitute(props: ProductVariantProps): ProductVariant {
+  static fromPersistence(props: ProductVariantProps): ProductVariant {
     return new ProductVariant(props);
   }
 
   // ── Getters ────────────────────────────────────────────────────────
 
-  getId(): VariantId { return this.props.id; }
-  getProductId(): ProductId { return this.props.productId; }
-  getSku(): SKU { return this.props.sku; }
-  getSize(): string | null { return this.props.size; }
-  getColor(): string | null { return this.props.color; }
-  getBarcode(): string | null { return this.props.barcode; }
-  getWeightG(): number | null { return this.props.weightG; }
-  getDims(): Record<string, any> | null { return this.props.dims; }
-  getTaxClass(): string | null { return this.props.taxClass; }
-  getAllowBackorder(): boolean { return this.props.allowBackorder; }
-  getAllowPreorder(): boolean { return this.props.allowPreorder; }
-  getRestockEta(): Date | null { return this.props.restockEta; }
-  getCreatedAt(): Date { return this.props.createdAt; }
-  getUpdatedAt(): Date { return this.props.updatedAt; }
+  get id(): VariantId { return this.props.id; }
+  get productId(): ProductId { return this.props.productId; }
+  get sku(): SKU { return this.props.sku; }
+  get size(): string | null { return this.props.size; }
+  get color(): string | null { return this.props.color; }
+  get barcode(): string | null { return this.props.barcode; }
+  get weightG(): number | null { return this.props.weightG; }
+  get dims(): Record<string, any> | null { return this.props.dims; }
+  get taxClass(): string | null { return this.props.taxClass; }
+  get allowBackorder(): boolean { return this.props.allowBackorder; }
+  get allowPreorder(): boolean { return this.props.allowPreorder; }
+  get restockEta(): Date | null { return this.props.restockEta; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 

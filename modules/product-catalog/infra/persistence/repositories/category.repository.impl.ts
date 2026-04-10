@@ -162,7 +162,7 @@ export class CategoryRepository implements ICategoryRepository {
     let currentCategory = await this.findById(categoryId);
 
     while (currentCategory && currentCategory.hasParent()) {
-      const parentId = currentCategory.getParentId();
+      const parentId = currentCategory.parentId;
       if (parentId) {
         const parent = await this.findById(parentId);
         if (parent) {
@@ -189,7 +189,7 @@ export class CategoryRepository implements ICategoryRepository {
 
       for (const child of children) {
         descendants.push(child);
-        toProcess.push(child.getId());
+        toProcess.push(child.id);
       }
     }
 
@@ -202,16 +202,16 @@ export class CategoryRepository implements ICategoryRepository {
       return [];
     }
 
-    const parentId = category.getParentId();
+    const parentId = category.parentId;
 
     if (parentId) {
       const siblings = await this.findByParentId(parentId);
-      return siblings.filter((sibling) => !sibling.getId().equals(categoryId));
+      return siblings.filter((sibling) => !sibling.id.equals(categoryId));
     } else {
       // Root category - find other root categories
       const rootCategories = await this.findRootCategories();
       return rootCategories.filter(
-        (sibling) => !sibling.getId().equals(categoryId),
+        (sibling) => !sibling.id.equals(categoryId),
       );
     }
   }

@@ -24,7 +24,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
   }
 
   private mapRow(row: any): MediaAsset {
-    return MediaAsset.reconstitute({
+    return MediaAsset.fromPersistence({
       id: MediaAssetId.fromString(row.id),
       storageKey: row.storageKey,
       mime: row.mime,

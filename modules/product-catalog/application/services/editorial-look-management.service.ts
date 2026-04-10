@@ -7,6 +7,7 @@ import { IMediaAssetRepository } from "../../domain/repositories/media-asset.rep
 import { IProductRepository } from "../../domain/repositories/product.repository";
 import {
   EditorialLook,
+  EditorialLookDTO,
   CreateEditorialLookData,
 } from "../../domain/entities/editorial-look.entity";
 import { EditorialLookId as EntityEditorialLookId } from "../../domain/entities/editorial-look.entity";
@@ -27,10 +28,19 @@ export class EditorialLookManagementService {
     private readonly productRepository: IProductRepository,
   ) {}
 
+  private async _getLook(id: string): Promise<EditorialLook> {
+    const lookId = EntityEditorialLookId.fromString(id);
+    const look = await this.editorialLookRepository.findById(lookId);
+    if (!look) {
+      throw new EditorialLookNotFoundError(id);
+    }
+    return look;
+  }
+
   // Core CRUD operations
   async createEditorialLook(
     data: CreateEditorialLookData,
-  ): Promise<EditorialLook> {
+  ): Promise<EditorialLookDTO> {
     this.validateTitle(data.title);
 
     if (data.storyHtml) {
@@ -82,42 +92,39 @@ export class EditorialLookManagementService {
       throw error;
     }
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
-  async getEditorialLookById(id: string): Promise<EditorialLook> {
-    const lookId = EntityEditorialLookId.fromString(id);
-    const look = await this.editorialLookRepository.findById(lookId);
-
-    if (!look) {
-      throw new EditorialLookNotFoundError(id);
-    }
-
-    return look;
+  async getEditorialLookById(id: string): Promise<EditorialLookDTO> {
+    return EditorialLook.toDTO(await this._getLook(id));
   }
 
   async getAllEditorialLooks(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findAll(options);
+  ): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findAll(options);
+    return looks.map(EditorialLook.toDTO);
   }
 
   async getPublishedLooks(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findPublished(options);
+  ): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findPublished(options);
+    return looks.map(EditorialLook.toDTO);
   }
 
   async getScheduledLooks(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findScheduled(options);
+  ): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findScheduled(options);
+    return looks.map(EditorialLook.toDTO);
   }
 
   async getDraftLooks(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findDrafts(options);
+  ): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findDrafts(options);
+    return looks.map(EditorialLook.toDTO);
   }
 
   async updateEditorialLook(
@@ -128,8 +135,8 @@ export class EditorialLookManagementService {
       heroAssetId?: string | null;
       publishedAt?: Date | null;
     },
-  ): Promise<EditorialLook> {
-    const look = await this.getEditorialLookById(id);
+  ): Promise<EditorialLookDTO> {
+    const look = await this._getLook(id);
 
     if (updates.title !== undefined) {
       this.validateTitle(updates.title);
@@ -178,7 +185,7 @@ export class EditorialLookManagementService {
     }
 
     await this.editorialLookRepository.update(look);
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
   async deleteEditorialLook(id: string): Promise<void> {
@@ -192,8 +199,8 @@ export class EditorialLookManagementService {
   }
 
   // Publishing workflow
-  async publishLook(id: string): Promise<EditorialLook> {
-    const look = await this.getEditorialLookById(id);
+  async publishLook(id: string): Promise<EditorialLookDTO> {
+    const look = await this._getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -204,26 +211,26 @@ export class EditorialLookManagementService {
     look.publish();
     await this.editorialLookRepository.update(look);
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
-  async unpublishLook(id: string): Promise<EditorialLook> {
-    const look = await this.getEditorialLookById(id);
+  async unpublishLook(id: string): Promise<EditorialLookDTO> {
+    const look = await this._getLook(id);
     look.unpublish();
     await this.editorialLookRepository.update(look);
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
   async scheduleLookPublication(
     id: string,
     publishDate: Date,
-  ): Promise<EditorialLook> {
+  ): Promise<EditorialLookDTO> {
     if (publishDate <= new Date()) {
       throw new DomainValidationError("Publication date must be in the future");
     }
 
-    const look = await this.getEditorialLookById(id);
+    const look = await this._getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -234,32 +241,32 @@ export class EditorialLookManagementService {
     look.schedulePublication(publishDate);
     await this.editorialLookRepository.update(look);
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
-  async getReadyToPublishLooks(): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findReadyToPublish();
+  async getReadyToPublishLooks(): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findReadyToPublish();
+    return looks.map(EditorialLook.toDTO);
   }
 
   async processScheduledPublications(): Promise<{
-    published: EditorialLook[];
+    published: EditorialLookDTO[];
     errors: string[];
   }> {
-    const readyLooks = await this.getReadyToPublishLooks();
-    const published: EditorialLook[] = [];
+    const readyLooks = await this.editorialLookRepository.findReadyToPublish();
+    const published: EditorialLookDTO[] = [];
     const errors: string[] = [];
 
     for (const look of readyLooks) {
       try {
         if (look.canBePublished()) {
-          // Publish the look (this will set publishedAt to now if it's not already published)
           look.publish();
           await this.editorialLookRepository.update(look);
-          published.push(look);
+          published.push(EditorialLook.toDTO(look));
         }
       } catch (error) {
         errors.push(
-          `Failed to publish look ${look.getId().getValue()}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to publish look ${look.id.getValue()}: ${error instanceof Error ? error.message : "Unknown error"}`,
         );
       }
     }
@@ -268,8 +275,8 @@ export class EditorialLookManagementService {
   }
 
   // Hero image management
-  async setHeroImage(id: string, assetId: string): Promise<EditorialLook> {
-    const look = await this.getEditorialLookById(id);
+  async setHeroImage(id: string, assetId: string): Promise<EditorialLookDTO> {
+    const look = await this._getLook(id);
 
     // Validate hero asset exists
     const heroAssetIdEntity = EntityMediaAssetId.fromString(assetId);
@@ -287,20 +294,21 @@ export class EditorialLookManagementService {
     look.setHeroAsset(assetId);
     await this.editorialLookRepository.update(look);
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
-  async removeHeroImage(id: string): Promise<EditorialLook> {
-    const look = await this.getEditorialLookById(id);
+  async removeHeroImage(id: string): Promise<EditorialLookDTO> {
+    const look = await this._getLook(id);
     look.setHeroAsset(null);
     await this.editorialLookRepository.update(look);
 
-    return look;
+    return EditorialLook.toDTO(look);
   }
 
-  async getLooksByHeroAsset(assetId: string): Promise<EditorialLook[]> {
+  async getLooksByHeroAsset(assetId: string): Promise<EditorialLookDTO[]> {
     const mediaAssetId = EntityMediaAssetId.fromString(assetId);
-    return await this.editorialLookRepository.findByHeroAsset(mediaAssetId);
+    const looks = await this.editorialLookRepository.findByHeroAsset(mediaAssetId);
+    return looks.map(EditorialLook.toDTO);
   }
 
   // Product association management
@@ -308,8 +316,7 @@ export class EditorialLookManagementService {
     const lookIdEntity = EntityEditorialLookId.fromString(lookId);
 
     // Validate look exists
-    const look = await this.editorialLookRepository.findById(lookIdEntity);
-    if (!look) {
+    if (!(await this.editorialLookRepository.exists(lookIdEntity))) {
       throw new EditorialLookNotFoundError(lookId);
     }
 
@@ -361,9 +368,9 @@ export class EditorialLookManagementService {
   async setLookProducts(
     id: string,
     productIds: string[],
-  ): Promise<EditorialLook> {
-    // Validate look exists (this also serves as validation)
-    await this.getEditorialLookById(id);
+  ): Promise<EditorialLookDTO> {
+    // Validate look exists
+    await this._getLook(id);
 
     // Validate all products exist
     for (const productId of productIds) {
@@ -376,13 +383,10 @@ export class EditorialLookManagementService {
 
     // Use repository for consistency instead of entity method
     const lookIdEntity = EntityEditorialLookId.fromString(id);
-    await this.editorialLookRepository.setLookProducts(
-      lookIdEntity,
-      productIds,
-    );
+    await this.editorialLookRepository.setLookProducts(lookIdEntity, productIds);
 
     // Return updated look
-    return await this.getEditorialLookById(id);
+    return this.getEditorialLookById(id);
   }
 
   async getLookProducts(id: string): Promise<string[]> {
@@ -416,40 +420,36 @@ export class EditorialLookManagementService {
   async getLooksByProduct(
     productId: string,
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    return await this.editorialLookRepository.findByProductId(
-      productId,
-      options,
-    );
+  ): Promise<EditorialLookDTO[]> {
+    const looks = await this.editorialLookRepository.findByProductId(productId, options);
+    return looks.map(EditorialLook.toDTO);
   }
 
   // Content management
   async updateStoryContent(
     id: string,
     storyHtml: string,
-  ): Promise<EditorialLook> {
+  ): Promise<EditorialLookDTO> {
     this.validateHtmlContent(storyHtml);
     return this.updateEditorialLook(id, { storyHtml });
   }
 
-  async clearStoryContent(id: string): Promise<EditorialLook> {
+  async clearStoryContent(id: string): Promise<EditorialLookDTO> {
     return this.updateEditorialLook(id, { storyHtml: null });
   }
 
   async getLooksWithContent(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    // Get all looks and filter in memory since hasContent is not available in query options
+  ): Promise<EditorialLookDTO[]> {
     const allLooks = await this.editorialLookRepository.findAll(options);
-    return allLooks.filter((look) => look.hasStory());
+    return allLooks.filter((look) => look.hasStory()).map(EditorialLook.toDTO);
   }
 
   async getLooksWithoutContent(
     options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLook[]> {
-    // Get all looks and filter in memory since hasContent is not available in query options
+  ): Promise<EditorialLookDTO[]> {
     const allLooks = await this.editorialLookRepository.findAll(options);
-    return allLooks.filter((look) => !look.hasStory());
+    return allLooks.filter((look) => !look.hasStory()).map(EditorialLook.toDTO);
   }
 
   // Analytics and statistics
@@ -501,10 +501,8 @@ export class EditorialLookManagementService {
     const productCounts = new Map<string, number>();
 
     for (const look of allLooks) {
-      const productIds = look.getProductIds();
-      for (const productId of productIds) {
-        const id = productId.getValue();
-        productCounts.set(id, (productCounts.get(id) || 0) + 1);
+      for (const productId of look.productIds) {
+        productCounts.set(productId, (productCounts.get(productId) || 0) + 1);
       }
     }
 
@@ -517,8 +515,8 @@ export class EditorialLookManagementService {
   // Bulk operations
   async createMultipleEditorialLooks(
     looksData: CreateEditorialLookData[],
-  ): Promise<EditorialLook[]> {
-    const createdLooks: EditorialLook[] = [];
+  ): Promise<EditorialLookDTO[]> {
+    const createdLooks: EditorialLookDTO[] = [];
     const errors: string[] = [];
 
     for (const data of looksData) {
@@ -589,10 +587,10 @@ export class EditorialLookManagementService {
   async validateLookForPublication(
     id: string,
   ): Promise<{ isValid: boolean; errors: string[] }> {
-    const look = await this.getEditorialLookById(id);
+    const look = await this._getLook(id);
     const errors: string[] = [];
 
-    if (!look.getTitle().trim()) {
+    if (!look.title.trim()) {
       errors.push("Title is required");
     }
 
@@ -616,14 +614,14 @@ export class EditorialLookManagementService {
   async duplicateEditorialLook(
     id: string,
     newTitle: string,
-  ): Promise<EditorialLook> {
+  ): Promise<EditorialLookDTO> {
     const originalLook = await this.getEditorialLookById(id);
 
     const duplicateData: CreateEditorialLookData = {
       title: newTitle,
-      storyHtml: originalLook.getStoryHtml() || undefined,
-      heroAssetId: originalLook.getHeroAssetId()?.getValue(),
-      productIds: originalLook.getProductIds().map((id) => id.getValue()),
+      storyHtml: originalLook.storyHtml || undefined,
+      heroAssetId: originalLook.heroAssetId ?? undefined,
+      productIds: originalLook.productIds,
     };
 
     return this.createEditorialLook(duplicateData);

@@ -127,14 +127,14 @@ export class SizeGuideManagementService {
       const targetCategory =
         updates.category !== undefined
           ? updates.category
-          : sizeGuide.getCategory();
+          : sizeGuide.category;
       if (targetCategory) {
         const existingGuide =
           await this.sizeGuideRepository.findByRegionAndCategory(
             updates.region,
             targetCategory,
           );
-        if (existingGuide && !existingGuide.getId().equals(sizeGuide.getId())) {
+        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
           throw new DomainValidationError(
             `Size guide already exists for region "${updates.region}" and category "${targetCategory}"`,
           );
@@ -146,14 +146,14 @@ export class SizeGuideManagementService {
     // Update category if provided
     if (updates.category !== undefined) {
       const targetRegion =
-        updates.region !== undefined ? updates.region : sizeGuide.getRegion();
+        updates.region !== undefined ? updates.region : sizeGuide.region;
       if (updates.category) {
         const existingGuide =
           await this.sizeGuideRepository.findByRegionAndCategory(
             targetRegion,
             updates.category,
           );
-        if (existingGuide && !existingGuide.getId().equals(sizeGuide.getId())) {
+        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
           throw new DomainValidationError(
             `Size guide already exists for region "${targetRegion}" and category "${updates.category}"`,
           );
@@ -219,7 +219,7 @@ export class SizeGuideManagementService {
     const categories = new Set<string>();
 
     for (const guide of guides) {
-      const category = guide.getCategory();
+      const category = guide.category;
       if (category) {
         categories.add(category);
       }
@@ -283,7 +283,7 @@ export class SizeGuideManagementService {
     const categoryGroups = new Map<string | null, number>();
 
     for (const guide of allGuides) {
-      const category = guide.getCategory();
+      const category = guide.category;
       categoryGroups.set(category, (categoryGroups.get(category) || 0) + 1);
     }
 

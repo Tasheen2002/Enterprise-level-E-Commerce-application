@@ -44,44 +44,44 @@ export class ProductMedia {
     });
   }
 
-  static reconstitute(props: ProductMediaProps): ProductMedia {
+  static fromPersistence(props: ProductMediaProps): ProductMedia {
     return new ProductMedia(props);
   }
 
   // Getters
-  getId(): string {
+  get id(): string {
     return this.props.id;
   }
 
-  getProductId(): ProductId {
+  get productId(): ProductId {
     return this.props.productId;
   }
 
-  getMediaAssetId(): MediaAssetId {
+  get mediaAssetId(): MediaAssetId {
     return this.props.mediaAssetId;
   }
 
-  getDisplayOrder(): number {
+  get displayOrder(): number {
     return this.props.displayOrder;
   }
 
-  getIsPrimary(): boolean {
+  get isPrimary(): boolean {
     return this.props.isPrimary;
   }
 
-  getAlt(): string | null {
+  get alt(): string | null {
     return this.props.alt;
   }
 
-  getCaption(): string | null {
+  get caption(): string | null {
     return this.props.caption;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
+  get updatedAt(): Date {
     return this.props.updatedAt;
   }
 

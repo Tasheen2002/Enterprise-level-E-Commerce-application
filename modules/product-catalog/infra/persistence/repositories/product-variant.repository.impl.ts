@@ -10,7 +10,7 @@ import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { SKU } from "../../../domain/value-objects/sku.vo";
 
 function mapRow(row: any): ProductVariant {
-  return ProductVariant.reconstitute({
+  return ProductVariant.fromPersistence({
     id: VariantId.fromString(row.id),
     productId: ProductId.fromString(row.productId),
     sku: SKU.fromString(row.sku),

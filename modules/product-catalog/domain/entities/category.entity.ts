@@ -66,28 +66,28 @@ export class Category extends AggregateRoot {
     return category;
   }
 
-  static reconstitute(props: CategoryProps): Category {
+  static fromPersistence(props: CategoryProps): Category {
     return new Category(props);
   }
 
   // Getters
-  getId(): CategoryId {
+  get id(): CategoryId {
     return this.props.id;
   }
 
-  getName(): string {
+  get name(): string {
     return this.props.name;
   }
 
-  getSlug(): Slug {
+  get slug(): Slug {
     return this.props.slug;
   }
 
-  getParentId(): CategoryId | null {
+  get parentId(): CategoryId | null {
     return this.props.parentId;
   }
 
-  getPosition(): number | null {
+  get position(): number | null {
     return this.props.position;
   }
 

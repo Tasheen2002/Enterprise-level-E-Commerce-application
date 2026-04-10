@@ -171,29 +171,29 @@ export class Product extends AggregateRoot {
     return product;
   }
 
-  static reconstitute(props: ProductProps): Product {
+  static fromPersistence(props: ProductProps): Product {
     return new Product(props);
   }
 
   // ── Getters ────────────────────────────────────────────────────────
 
-  getId(): ProductId { return this.props.id; }
-  getTitle(): string { return this.props.title; }
-  getSlug(): Slug { return this.props.slug; }
-  getBrand(): string | null { return this.props.brand; }
-  getShortDesc(): string | null { return this.props.shortDesc; }
-  getLongDescHtml(): string | null { return this.props.longDescHtml; }
-  getStatus(): ProductStatus { return this.props.status; }
-  getPublishAt(): Date | null { return this.props.publishAt; }
-  getCountryOfOrigin(): string | null { return this.props.countryOfOrigin; }
-  getSeoTitle(): string | null { return this.props.seoTitle; }
-  getSeoDescription(): string | null { return this.props.seoDescription; }
-  getPrice(): Price { return this.props.price; }
-  getPriceSgd(): Price | null { return this.props.priceSgd; }
-  getPriceUsd(): Price | null { return this.props.priceUsd; }
-  getCompareAtPrice(): Price | null { return this.props.compareAtPrice; }
-  getCreatedAt(): Date { return this.props.createdAt; }
-  getUpdatedAt(): Date { return this.props.updatedAt; }
+  get id(): ProductId { return this.props.id; }
+  get title(): string { return this.props.title; }
+  get slug(): Slug { return this.props.slug; }
+  get brand(): string | null { return this.props.brand; }
+  get shortDesc(): string | null { return this.props.shortDesc; }
+  get longDescHtml(): string | null { return this.props.longDescHtml; }
+  get status(): ProductStatus { return this.props.status; }
+  get publishAt(): Date | null { return this.props.publishAt; }
+  get countryOfOrigin(): string | null { return this.props.countryOfOrigin; }
+  get seoTitle(): string | null { return this.props.seoTitle; }
+  get seoDescription(): string | null { return this.props.seoDescription; }
+  get price(): Price { return this.props.price; }
+  get priceSgd(): Price | null { return this.props.priceSgd; }
+  get priceUsd(): Price | null { return this.props.priceUsd; }
+  get compareAtPrice(): Price | null { return this.props.compareAtPrice; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 

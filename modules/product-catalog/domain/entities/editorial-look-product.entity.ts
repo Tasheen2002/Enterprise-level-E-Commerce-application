@@ -32,28 +32,28 @@ export class EditorialLookProduct {
     });
   }
 
-  static reconstitute(props: EditorialLookProductProps): EditorialLookProduct {
+  static fromPersistence(props: EditorialLookProductProps): EditorialLookProduct {
     return new EditorialLookProduct(props);
   }
 
   // Getters
-  getId(): string {
+  get id(): string {
     return this.props.id;
   }
 
-  getEditorialLookId(): EditorialLookId {
+  get editorialLookId(): EditorialLookId {
     return this.props.editorialLookId;
   }
 
-  getProductId(): ProductId {
+  get productId(): ProductId {
     return this.props.productId;
   }
 
-  getDisplayOrder(): number {
+  get displayOrder(): number {
     return this.props.displayOrder;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 

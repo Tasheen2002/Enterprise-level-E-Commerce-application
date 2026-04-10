@@ -1,13 +1,19 @@
 import { FastifyInstance } from "fastify";
-import {
-  VariantMediaController,
-  AddMediaToVariantRequest,
-  SetVariantMediaRequest,
-  AddMediaToMultipleVariantsRequest,
-  AddMultipleMediaToVariantRequest,
-  CopyProductVariantMediaRequest,
-} from "../controllers/variant-media.controller";
+import { VariantMediaController } from "../controllers/variant-media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  variantMediaParamsSchema,
+  variantMediaAssetParamsSchema,
+  variantDuplicateParamsSchema,
+  assetParamsSchema,
+  productVariantMediaParamsSchema,
+  unusedAssetsQuerySchema,
+  addMediaToVariantSchema,
+  setVariantMediaSchema,
+  addMultipleMediaToVariantSchema,
+  addMediaToMultipleVariantsSchema,
+  copyVariantMediaSchema,
+} from "../schemas/variant-media.schema";
 
 export async function registerVariantMediaRoutes(
   fastify: FastifyInstance,
@@ -21,14 +27,13 @@ export async function registerVariantMediaRoutes(
         description: "Get all media assets associated with a product variant",
         tags: ["Variant Media"],
         summary: "Get Variant Media",
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.getVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // GET /products/:productId/variants/media — Get media for all variants of a product (public)
@@ -39,18 +44,17 @@ export async function registerVariantMediaRoutes(
         description: "Get all variant media for a product",
         tags: ["Variant Media"],
         summary: "Get Product Variant Media",
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["productId"], properties: { productId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getProductVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = productVariantMediaParamsSchema.parse(request.params);
+      return controller.getProductVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // GET /media/:assetId/variants — Get variants using a specific asset (Staff+)
-  fastify.get<{ Params: { assetId: string } }>(
+  fastify.get(
     "/media/:assetId/variants",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -59,18 +63,17 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Get Variants Using Asset",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["assetId"],
-          properties: { assetId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["assetId"], properties: { assetId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getVariantsUsingAsset.bind(controller),
+    async (request, reply) => {
+      const params = assetParamsSchema.parse(request.params);
+      return controller.getVariantsUsingAsset({ ...request, params } as any, reply);
+    },
   );
 
   // GET /media/:assetId/usage-count — Get usage count for an asset (Staff+)
-  fastify.get<{ Params: { assetId: string } }>(
+  fastify.get(
     "/media/:assetId/usage-count",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -79,18 +82,17 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Get Asset Usage Count",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["assetId"],
-          properties: { assetId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["assetId"], properties: { assetId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getAssetUsageCount.bind(controller),
+    async (request, reply) => {
+      const params = assetParamsSchema.parse(request.params);
+      return controller.getAssetUsageCount({ ...request, params } as any, reply);
+    },
   );
 
   // GET /variants/media/unused-assets — Get unused media assets (Staff+)
-  fastify.get<{ Querystring: { productId?: string } }>(
+  fastify.get(
     "/variants/media/unused-assets",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -101,11 +103,14 @@ export async function registerVariantMediaRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.getUnusedAssets.bind(controller),
+    async (request, reply) => {
+      const query = unusedAssetsQuerySchema.parse(request.query);
+      return controller.getUnusedAssets({ ...request, query } as any, reply);
+    },
   );
 
   // GET /variants/:variantId/media/statistics — Get variant media statistics (Staff+)
-  fastify.get<{ Params: { variantId: string } }>(
+  fastify.get(
     "/variants/:variantId/media/statistics",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
@@ -114,14 +119,13 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Get Variant Media Statistics",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getVariantMediaStatistics.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.getVariantMediaStatistics({ ...request, params } as any, reply);
+    },
   );
 
   // GET /variants/:variantId/media/color — Get color-specific variant media (public)
@@ -129,18 +133,16 @@ export async function registerVariantMediaRoutes(
     "/variants/:variantId/media/color",
     {
       schema: {
-        description:
-          "Get media assets filtered by color attribute for a variant",
+        description: "Get media assets filtered by color attribute for a variant",
         tags: ["Variant Media"],
         summary: "Get Color Variant Media",
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getColorVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.getColorVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // GET /variants/:variantId/media/size — Get size-specific variant media (public)
@@ -148,22 +150,20 @@ export async function registerVariantMediaRoutes(
     "/variants/:variantId/media/size",
     {
       schema: {
-        description:
-          "Get media assets filtered by size attribute for a variant",
+        description: "Get media assets filtered by size attribute for a variant",
         tags: ["Variant Media"],
         summary: "Get Size Variant Media",
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.getSizeVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.getSizeVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // POST /variants/media/copy — Copy variant media between products (Admin only)
-  fastify.post<{ Body: CopyProductVariantMediaRequest }>(
+  fastify.post(
     "/variants/media/copy",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -172,27 +172,17 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Copy Product Variant Media",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["sourceProductId", "targetProductId", "variantMapping"],
-          properties: {
-            sourceProductId: { type: "string", format: "uuid" },
-            targetProductId: { type: "string", format: "uuid" },
-            variantMapping: {
-              type: "object",
-              description:
-                "Mapping of source variant IDs to target variant IDs",
-              additionalProperties: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.copyProductVariantMedia.bind(controller),
+    async (request, reply) => {
+      const body = copyVariantMediaSchema.parse(request.body);
+      return controller.copyProductVariantMedia({ ...request, body } as any, reply);
+    },
   );
 
   // POST /variants/media/bulk-assign — Add media to multiple variants (Admin only)
-  fastify.post<{ Body: AddMediaToMultipleVariantsRequest }>(
+  fastify.post(
     "/variants/media/bulk-assign",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -201,25 +191,17 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Add Media to Multiple Variants",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantIds", "assetId"],
-          properties: {
-            variantIds: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", format: "uuid" },
-            },
-            assetId: { type: "string", format: "uuid" },
-          },
-        },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.addMediaToMultipleVariants.bind(controller),
+    async (request, reply) => {
+      const body = addMediaToMultipleVariantsSchema.parse(request.body);
+      return controller.addMediaToMultipleVariants({ ...request, body } as any, reply);
+    },
   );
 
   // POST /variants/:variantId/media/set — Set (replace) all media for a variant (Admin only)
-  fastify.post<{ Params: { variantId: string }; Body: SetVariantMediaRequest }>(
+  fastify.post(
     "/variants/:variantId/media/set",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -228,29 +210,19 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Set Variant Media",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["assetIds"],
-          properties: {
-            assetIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-              description: "Ordered list of asset IDs to set for the variant",
-            },
-          },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.setVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      const body = setVariantMediaSchema.parse(request.body);
+      return controller.setVariantMedia({ ...request, params, body } as any, reply);
+    },
   );
 
   // POST /variants/:variantId/media/bulk — Add multiple media assets to a variant (Admin only)
-  fastify.post<{ Params: { variantId: string }; Body: { assetIds: string[] } }>(
+  fastify.post(
     "/variants/:variantId/media/bulk",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -259,31 +231,19 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Add Multiple Media to Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["assetIds"],
-          properties: {
-            assetIds: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.addMultipleMediaToVariant.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      const body = addMultipleMediaToVariantSchema.parse(request.body);
+      return controller.addMultipleMediaToVariant({ ...request, params, body } as any, reply);
+    },
   );
 
   // POST /variants/:sourceVariantId/media/duplicate-to/:targetVariantId — Duplicate variant media (Admin only)
-  fastify.post<{
-    Params: { sourceVariantId: string; targetVariantId: string };
-  }>(
+  fastify.post(
     "/variants/:sourceVariantId/media/duplicate-to/:targetVariantId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -295,21 +255,19 @@ export async function registerVariantMediaRoutes(
         params: {
           type: "object",
           required: ["sourceVariantId", "targetVariantId"],
-          properties: {
-            sourceVariantId: { type: "string", format: "uuid" },
-            targetVariantId: { type: "string", format: "uuid" },
-          },
+          properties: { sourceVariantId: { type: "string", format: "uuid" }, targetVariantId: { type: "string", format: "uuid" } },
         },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.duplicateVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantDuplicateParamsSchema.parse(request.params);
+      return controller.duplicateVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // POST /variants/:variantId/media — Add media to a variant (Admin only)
-  fastify.post<{
-    Params: { variantId: string };
-    Body: AddMediaToVariantRequest;
-  }>(
+  fastify.post(
     "/variants/:variantId/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -318,76 +276,38 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Add Media to Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["assetId"],
-          properties: {
-            assetId: {
-              type: "string",
-              format: "uuid",
-              description: "Media asset ID to attach",
-            },
-          },
-        },
-        response: {
-          201: {
-            description: "Media added to variant successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: { type: "string" },
-            },
-          },
-          404: {
-            description: "Variant or asset not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-          409: {
-            description: "Media already associated with variant",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
+        response: { 201: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.addMediaToVariant.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      const body = addMediaToVariantSchema.parse(request.body);
+      return controller.addMediaToVariant({ ...request, params, body } as any, reply);
+    },
   );
 
   // POST /variants/:variantId/media/validate — Validate variant media (Staff+)
-  fastify.post<{ Params: { variantId: string } }>(
+  fastify.post(
     "/variants/:variantId/media/validate",
     {
       preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Validate that a variant's media associations are consistent",
+        description: "Validate that a variant's media associations are consistent",
         tags: ["Variant Media"],
         summary: "Validate Variant Media",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
       },
     },
-    controller.validateVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.validateVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // DELETE /variants/:variantId/media — Remove all media from a variant (Admin only)
-  fastify.delete<{ Params: { variantId: string } }>(
+  fastify.delete(
     "/variants/:variantId/media",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -396,18 +316,18 @@ export async function registerVariantMediaRoutes(
         tags: ["Variant Media"],
         summary: "Remove All Variant Media",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["variantId"], properties: { variantId: { type: "string", format: "uuid" } } },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.removeAllVariantMedia.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaParamsSchema.parse(request.params);
+      return controller.removeAllVariantMedia({ ...request, params } as any, reply);
+    },
   );
 
   // DELETE /variants/:variantId/media/:assetId — Remove specific media from a variant (Admin only)
-  fastify.delete<{ Params: { variantId: string; assetId: string } }>(
+  fastify.delete(
     "/variants/:variantId/media/:assetId",
     {
       preHandler: [RolePermissions.ADMIN_ONLY],
@@ -419,31 +339,14 @@ export async function registerVariantMediaRoutes(
         params: {
           type: "object",
           required: ["variantId", "assetId"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            assetId: { type: "string", format: "uuid" },
-          },
+          properties: { variantId: { type: "string", format: "uuid" }, assetId: { type: "string", format: "uuid" } },
         },
-        response: {
-          200: {
-            description: "Media removed from variant successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: { type: "string" },
-            },
-          },
-          404: {
-            description: "Association not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-        },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, message: { type: "string" } } } },
       },
     },
-    controller.removeMediaFromVariant.bind(controller),
+    async (request, reply) => {
+      const params = variantMediaAssetParamsSchema.parse(request.params);
+      return controller.removeMediaFromVariant({ ...request, params } as any, reply);
+    },
   );
 }

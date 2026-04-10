@@ -80,36 +80,36 @@ export class EditorialLook extends AggregateRoot {
     return look;
   }
 
-  static reconstitute(props: EditorialLookProps): EditorialLook {
+  static fromPersistence(props: EditorialLookProps): EditorialLook {
     return new EditorialLook(props);
   }
 
   // Getters
-  getId(): EditorialLookId {
+  get id(): EditorialLookId {
     return this.props.id;
   }
 
-  getTitle(): string {
+  get title(): string {
     return this.props.title;
   }
 
-  getStoryHtml(): string | null {
+  get storyHtml(): string | null {
     return this.props.storyHtml;
   }
 
-  getHeroAssetId(): MediaAssetId | null {
+  get heroAssetId(): MediaAssetId | null {
     return this.props.heroAssetId;
   }
 
-  getPublishedAt(): Date | null {
+  get publishedAt(): Date | null {
     return this.props.publishedAt;
   }
 
-  getProductIds(): ProductId[] {
+  get productIds(): ProductId[] {
     return Array.from(this.props.productIds);
   }
 
-  getProductCount(): number {
+  get productCount(): number {
     return this.props.productIds.size;
   }
 

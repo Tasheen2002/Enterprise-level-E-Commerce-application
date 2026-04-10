@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { MediaManagementService } from "../../../application/services/media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { MediaAssetNotFoundError } from "../../../domain/errors/product-catalog.errors";
 
 export interface CreateMediaAssetRequest {
   storageKey: string;
@@ -139,7 +140,7 @@ export class MediaController {
       const asset = await this.mediaManagementService.getAssetById(id);
 
       if (!asset) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
+        throw new MediaAssetNotFoundError(id);
       }
 
       return ResponseHelper.ok(reply, "Media asset retrieved successfully", asset);
@@ -196,7 +197,7 @@ export class MediaController {
       );
 
       if (!asset) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
+        throw new MediaAssetNotFoundError(id);
       }
 
       return ResponseHelper.ok(reply, "Media asset updated successfully", asset);
@@ -216,7 +217,7 @@ export class MediaController {
       const deleted = await this.mediaManagementService.deleteAsset(id);
 
       if (!deleted) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
+        throw new MediaAssetNotFoundError(id);
       }
 
       return ResponseHelper.ok(reply, "Media asset deleted successfully");

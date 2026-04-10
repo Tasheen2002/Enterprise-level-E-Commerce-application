@@ -35,32 +35,32 @@ export class ProductCategory {
     });
   }
 
-  static reconstitute(props: ProductCategoryProps): ProductCategory {
+  static fromPersistence(props: ProductCategoryProps): ProductCategory {
     return new ProductCategory(props);
   }
 
   // Getters
-  getId(): string {
+  get id(): string {
     return this.props.id;
   }
 
-  getProductId(): ProductId {
+  get productId(): ProductId {
     return this.props.productId;
   }
 
-  getCategoryId(): CategoryId {
+  get categoryId(): CategoryId {
     return this.props.categoryId;
   }
 
-  getDisplayOrder(): number {
+  get displayOrder(): number {
     return this.props.displayOrder;
   }
 
-  getIsPrimary(): boolean {
+  get isPrimary(): boolean {
     return this.props.isPrimary;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 

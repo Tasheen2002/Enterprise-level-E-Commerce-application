@@ -138,8 +138,8 @@ export class ProductSearchService {
 
     // Extract potential suggestions from product titles and brands
     products.forEach((product) => {
-      const title = product.getTitle().toLowerCase();
-      const brand = product.getBrand()?.toLowerCase();
+      const title = product.title.toLowerCase();
+      const brand = product.brand?.toLowerCase();
 
       // Add brand suggestions
       if (brand && !queryWords.includes(brand)) {
@@ -178,8 +178,8 @@ export class ProductSearchService {
         });
         const productSuggestions: SearchSuggestion[] = products.map((p) => ({
           type: "product" as const,
-          value: p.getId().getValue(),
-          label: p.getTitle(),
+          value: p.id.getValue(),
+          label: p.title,
         }));
         suggestions.push(...productSuggestions);
       }
@@ -189,12 +189,12 @@ export class ProductSearchService {
         const categories = await this.categoryRepository.findAll({ limit: 5 });
         const categorySuggestions: SearchSuggestion[] = categories
           .filter((cat) =>
-            cat.getName().toLowerCase().includes(query.toLowerCase()),
+            cat.name.toLowerCase().includes(query.toLowerCase()),
           )
           .map((cat) => ({
             type: "category" as const,
-            value: cat.getSlug().getValue(),
-            label: cat.getName(),
+            value: cat.slug.getValue(),
+            label: cat.name,
           }));
         suggestions.push(
           ...categorySuggestions.slice(0, Math.floor(limit / 3)),
@@ -208,7 +208,7 @@ export class ProductSearchService {
         });
         const brands = new Set<string>();
         products.forEach((p) => {
-          const brand = p.getBrand();
+          const brand = p.brand;
           if (brand && brand.toLowerCase().includes(query.toLowerCase())) {
             brands.add(brand);
           }
@@ -249,8 +249,8 @@ export class ProductSearchService {
           name: "category",
           type: "select",
           options: categories.map((cat) => ({
-            value: cat.getId().getValue(),
-            label: cat.getName(),
+            value: cat.id.getValue(),
+            label: cat.name,
             count: 0,
           })),
         });
@@ -260,7 +260,7 @@ export class ProductSearchService {
       const allProducts = await this.productRepository.findAll({ limit: 200 });
       const brandCounts = new Map<string, number>();
       allProducts.forEach((p) => {
-        const brand = p.getBrand();
+        const brand = p.brand;
         if (brand) {
           brandCounts.set(brand, (brandCounts.get(brand) || 0) + 1);
         }

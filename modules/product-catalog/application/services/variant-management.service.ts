@@ -5,6 +5,7 @@ import {
 import { IProductRepository } from "../../domain/repositories/product.repository";
 import {
   ProductVariant,
+  ProductVariantDTO,
 } from "../../domain/entities/product-variant.entity";
 
 /** Input shape for creating/updating a variant — mirrors ProductVariant.create() params */
@@ -59,8 +60,7 @@ export class VariantManagementService {
   async createVariant(
     productId: string,
     data: Omit<CreateVariantInput, "productId">,
-  ): Promise<ProductVariant> {
-    // Verify product exists
+  ): Promise<ProductVariantDTO> {
     const product = await this.productRepository.findById(
       ProductId.fromString(productId),
     );
@@ -68,7 +68,6 @@ export class VariantManagementService {
       throw new ProductNotFoundError(productId);
     }
 
-    // Check if SKU already exists
     if (data.sku) {
       const existingVariant = await this.productVariantRepository.findBySku(
         SKU.fromString(data.sku),
@@ -78,12 +77,10 @@ export class VariantManagementService {
       }
     }
 
-    // Validate weight if provided
     if (data.weightG !== undefined && data.weightG < 0) {
       throw new DomainValidationError("Weight cannot be negative");
     }
 
-    // Validate restock ETA if provided
     if (data.restockEta) {
       const restockDate = new Date(data.restockEta);
       if (isNaN(restockDate.getTime())) {
@@ -91,38 +88,29 @@ export class VariantManagementService {
       }
     }
 
-    const variantData: CreateVariantInput = {
-      ...data,
-      productId,
-    };
-
+    const variantData: CreateVariantInput = { ...data, productId };
     const variant = ProductVariant.create(variantData);
     await this.productVariantRepository.save(variant);
-    return variant;
+    return ProductVariant.toDTO(variant);
   }
 
-  async getVariantById(id: string): Promise<ProductVariant> {
-    const variantId = VariantId.fromString(id);
-    const variant = await this.productVariantRepository.findById(variantId);
-    if (!variant) {
-      throw new ProductVariantNotFoundError(id);
-    }
-    return variant;
+  async getVariantById(id: string): Promise<ProductVariantDTO> {
+    return ProductVariant.toDTO(await this._getVariant(id));
   }
 
-  async getVariantBySku(sku: string): Promise<ProductVariant> {
+  async getVariantBySku(sku: string): Promise<ProductVariantDTO> {
     const skuVo = SKU.fromString(sku);
     const variant = await this.productVariantRepository.findBySku(skuVo);
     if (!variant) {
       throw new ProductVariantNotFoundError(sku);
     }
-    return variant;
+    return ProductVariant.toDTO(variant);
   }
 
   async getVariantsByProduct(
     productId: string,
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariant[]> {
+  ): Promise<ProductVariantDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -133,45 +121,31 @@ export class VariantManagementService {
     } = options;
 
     const productIdVo = ProductId.fromString(productId);
+    let variants = await this.productVariantRepository.findByProductId(productIdVo);
 
-    // Get base variants for the product
-    let variants =
-      await this.productVariantRepository.findByProductId(productIdVo);
-
-    // Apply filters
     if (size) {
-      variants = variants.filter((v) => v.getSize() === size);
+      variants = variants.filter((v) => v.size === size);
     }
 
     if (color) {
-      variants = variants.filter((v) => v.getColor() === color);
+      variants = variants.filter((v) => v.color === color);
     }
 
-    // TODO: Implement inStock filtering when inventory is added
-
-    // Apply sorting
     variants.sort((a, b) => {
       let comparison = 0;
 
       switch (sortBy) {
         case "sku":
-          comparison = a
-            .getSku()
-            .getValue()
-            .localeCompare(b.getSku().getValue());
+          comparison = a.sku.getValue().localeCompare(b.sku.getValue());
           break;
         case "size":
-          const sizeA = a.getSize() || "";
-          const sizeB = b.getSize() || "";
-          comparison = sizeA.localeCompare(sizeB);
+          comparison = (a.size || "").localeCompare(b.size || "");
           break;
         case "color":
-          const colorA = a.getColor() || "";
-          const colorB = b.getColor() || "";
-          comparison = colorA.localeCompare(colorB);
+          comparison = (a.color || "").localeCompare(b.color || "");
           break;
         case "createdAt":
-          comparison = a.getCreatedAt().getTime() - b.getCreatedAt().getTime();
+          comparison = a.createdAt.getTime() - b.createdAt.getTime();
           break;
         default:
           comparison = 0;
@@ -180,14 +154,15 @@ export class VariantManagementService {
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
-    // Apply pagination
     const startIndex = (page - 1) * limit;
-    return variants.slice(startIndex, startIndex + limit);
+    return variants
+      .slice(startIndex, startIndex + limit)
+      .map((v) => ProductVariant.toDTO(v));
   }
 
   async getAllVariants(
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariant[]> {
+  ): Promise<ProductVariantDTO[]> {
     const {
       page = 1,
       limit = 50,
@@ -202,13 +177,14 @@ export class VariantManagementService {
       sortOrder,
     };
 
-    return await this.productVariantRepository.findAll(repositoryOptions);
+    const variants = await this.productVariantRepository.findAll(repositoryOptions);
+    return variants.map((v) => ProductVariant.toDTO(v));
   }
 
   async getVariantsBySize(
     size: string,
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariant[]> {
+  ): Promise<ProductVariantDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -223,16 +199,14 @@ export class VariantManagementService {
       sortOrder,
     };
 
-    return await this.productVariantRepository.findBySize(
-      size,
-      repositoryOptions,
-    );
+    const variants = await this.productVariantRepository.findBySize(size, repositoryOptions);
+    return variants.map((v) => ProductVariant.toDTO(v));
   }
 
   async getVariantsByColor(
     color: string,
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariant[]> {
+  ): Promise<ProductVariantDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -247,16 +221,14 @@ export class VariantManagementService {
       sortOrder,
     };
 
-    return await this.productVariantRepository.findByColor(
-      color,
-      repositoryOptions,
-    );
+    const variants = await this.productVariantRepository.findByColor(color, repositoryOptions);
+    return variants.map((v) => ProductVariant.toDTO(v));
   }
 
   async updateVariant(
     id: string,
     updateData: Partial<CreateVariantInput>,
-  ): Promise<ProductVariant> {
+  ): Promise<ProductVariantDTO> {
     const variantId = VariantId.fromString(id);
     const variant = await this.productVariantRepository.findById(variantId);
 
@@ -264,34 +236,27 @@ export class VariantManagementService {
       throw new ProductVariantNotFoundError(id);
     }
 
-    // Update SKU if provided
     if (updateData.sku !== undefined) {
       const newSku = SKU.create(updateData.sku);
-      // Check if new SKU already exists (excluding current variant)
-      const existingVariant =
-        await this.productVariantRepository.findBySku(newSku);
-      if (existingVariant && !existingVariant.getId().equals(variantId)) {
+      const existingVariant = await this.productVariantRepository.findBySku(newSku);
+      if (existingVariant && !existingVariant.id.equals(variantId)) {
         throw new SkuAlreadyExistsError(updateData.sku);
       }
       variant.updateSku(updateData.sku);
     }
 
-    // Update size if provided
     if (updateData.size !== undefined) {
       variant.updateSize(updateData.size);
     }
 
-    // Update color if provided
     if (updateData.color !== undefined) {
       variant.updateColor(updateData.color);
     }
 
-    // Update barcode if provided
     if (updateData.barcode !== undefined) {
       variant.updateBarcode(updateData.barcode);
     }
 
-    // Update weight if provided
     if (updateData.weightG !== undefined) {
       if (updateData.weightG < 0) {
         throw new DomainValidationError("Weight cannot be negative");
@@ -299,27 +264,22 @@ export class VariantManagementService {
       variant.updateWeight(updateData.weightG);
     }
 
-    // Update dimensions if provided
     if (updateData.dims !== undefined) {
       variant.updateDimensions(updateData.dims);
     }
 
-    // Update tax class if provided
     if (updateData.taxClass !== undefined) {
       variant.updateTaxClass(updateData.taxClass);
     }
 
-    // Update backorder settings if provided
     if (updateData.allowBackorder !== undefined) {
       variant.setBackorderPolicy(updateData.allowBackorder);
     }
 
-    // Update preorder settings if provided
     if (updateData.allowPreorder !== undefined) {
       variant.setPreorderPolicy(updateData.allowPreorder);
     }
 
-    // Update restock ETA if provided
     if (updateData.restockEta !== undefined) {
       if (updateData.restockEta) {
         const restockDate = new Date(updateData.restockEta);
@@ -331,7 +291,7 @@ export class VariantManagementService {
     }
 
     await this.productVariantRepository.update(variant);
-    return variant;
+    return ProductVariant.toDTO(variant);
   }
 
   async deleteVariant(id: string): Promise<boolean> {
@@ -356,8 +316,7 @@ export class VariantManagementService {
 
     if (productId) {
       const productIdVo = ProductId.fromString(productId);
-      variants =
-        await this.productVariantRepository.findByProductId(productIdVo);
+      variants = await this.productVariantRepository.findByProductId(productIdVo);
     } else {
       variants = await this.productVariantRepository.findAll();
     }
@@ -369,10 +328,10 @@ export class VariantManagementService {
     const outOfStockCount = 0;
 
     for (const variant of variants) {
-      if (variant.getSize()) sizes.add(variant.getSize()!);
-      if (variant.getColor()) colors.add(variant.getColor()!);
-      if (variant.getAllowBackorder()) backorderCount++;
-      if (variant.getAllowPreorder()) preorderCount++;
+      if (variant.size) sizes.add(variant.size);
+      if (variant.color) colors.add(variant.color);
+      if (variant.allowBackorder) backorderCount++;
+      if (variant.allowPreorder) preorderCount++;
     }
 
     return {
@@ -385,24 +344,19 @@ export class VariantManagementService {
     };
   }
 
-  async getBackorderVariants(): Promise<ProductVariant[]> {
-    return await this.productVariantRepository.findAvailableForBackorder();
+  async getBackorderVariants(): Promise<ProductVariantDTO[]> {
+    const variants = await this.productVariantRepository.findAvailableForBackorder();
+    return variants.map((v) => ProductVariant.toDTO(v));
   }
 
-  async getPreorderVariants(): Promise<ProductVariant[]> {
-    return await this.productVariantRepository.findAvailableForPreorder();
+  async getPreorderVariants(): Promise<ProductVariantDTO[]> {
+    const variants = await this.productVariantRepository.findAvailableForPreorder();
+    return variants.map((v) => ProductVariant.toDTO(v));
   }
 
-  async duplicateVariant(id: string, newSku: string): Promise<ProductVariant> {
-    const variantId = VariantId.fromString(id);
-    const originalVariant =
-      await this.productVariantRepository.findById(variantId);
+  async duplicateVariant(id: string, newSku: string): Promise<ProductVariantDTO> {
+    const originalVariant = await this._getVariant(id);
 
-    if (!originalVariant) {
-      throw new ProductVariantNotFoundError(id);
-    }
-
-    // Check if new SKU already exists
     const existingVariant = await this.productVariantRepository.findBySku(
       SKU.fromString(newSku),
     );
@@ -411,22 +365,22 @@ export class VariantManagementService {
     }
 
     const duplicateData: CreateVariantInput = {
-      productId: originalVariant.getProductId().getValue(),
+      productId: originalVariant.productId.getValue(),
       sku: newSku,
-      size: originalVariant.getSize() || undefined,
-      color: originalVariant.getColor() || undefined,
-      barcode: originalVariant.getBarcode() || undefined,
-      weightG: originalVariant.getWeightG() || undefined,
-      dims: originalVariant.getDims() || undefined,
-      taxClass: originalVariant.getTaxClass() || undefined,
-      allowBackorder: originalVariant.getAllowBackorder(),
-      allowPreorder: originalVariant.getAllowPreorder(),
-      restockEta: originalVariant.getRestockEta() || undefined,
+      size: originalVariant.size || undefined,
+      color: originalVariant.color || undefined,
+      barcode: originalVariant.barcode || undefined,
+      weightG: originalVariant.weightG || undefined,
+      dims: originalVariant.dims || undefined,
+      taxClass: originalVariant.taxClass || undefined,
+      allowBackorder: originalVariant.allowBackorder,
+      allowPreorder: originalVariant.allowPreorder,
+      restockEta: originalVariant.restockEta || undefined,
     };
 
     const newVariant = ProductVariant.create(duplicateData);
     await this.productVariantRepository.save(newVariant);
-    return newVariant;
+    return ProductVariant.toDTO(newVariant);
   }
 
   async validateVariant(id: string): Promise<{
@@ -437,36 +391,33 @@ export class VariantManagementService {
     const variant = await this.productVariantRepository.findById(variantId);
 
     if (!variant) {
-      return {
-        isValid: false,
-        issues: ["Variant not found"],
-      };
+      return { isValid: false, issues: ["Variant not found"] };
     }
 
     const issues: string[] = [];
 
-    // Check if SKU exists
-    if (!variant.getSku().getValue()) {
+    if (!variant.sku.getValue()) {
       issues.push("Missing SKU");
     }
 
-    // Check weight
-    const weight = variant.getWeightG();
-    if (weight !== null && weight < 0) {
+    if (variant.weightG !== null && variant.weightG < 0) {
       issues.push("Weight cannot be negative");
     }
 
-    // Check product exists
-    const productExists = await this.productRepository.exists(
-      variant.getProductId(),
-    );
+    const productExists = await this.productRepository.exists(variant.productId);
     if (!productExists) {
       issues.push("Associated product not found");
     }
 
-    return {
-      isValid: issues.length === 0,
-      issues,
-    };
+    return { isValid: issues.length === 0, issues };
+  }
+
+  private async _getVariant(id: string): Promise<ProductVariant> {
+    const variantId = VariantId.fromString(id);
+    const variant = await this.productVariantRepository.findById(variantId);
+    if (!variant) {
+      throw new ProductVariantNotFoundError(id);
+    }
+    return variant;
   }
 }

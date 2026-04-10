@@ -32,28 +32,28 @@ export class VariantMedia {
     });
   }
 
-  static reconstitute(props: VariantMediaProps): VariantMedia {
+  static fromPersistence(props: VariantMediaProps): VariantMedia {
     return new VariantMedia(props);
   }
 
   // Getters
-  getId(): string {
+  get id(): string {
     return this.props.id;
   }
 
-  getVariantId(): VariantId {
+  get variantId(): VariantId {
     return this.props.variantId;
   }
 
-  getMediaAssetId(): MediaAssetId {
+  get mediaAssetId(): MediaAssetId {
     return this.props.mediaAssetId;
   }
 
-  getDisplayOrder(): number {
+  get displayOrder(): number {
     return this.props.displayOrder;
   }
 
-  getCreatedAt(): Date {
+  get createdAt(): Date {
     return this.props.createdAt;
   }
 

@@ -74,7 +74,7 @@ export class VariantController {
       };
 
       const result = await this.listVariantsHandler.handle(query);
-      return ResponseHelper.fromQuery(reply, result, "Variants retrieved successfully");
+      return ResponseHelper.ok(reply, "Variants retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get variants");
       return ResponseHelper.error(reply, error);
@@ -88,12 +88,7 @@ export class VariantController {
     try {
       const query: GetVariantQuery = { variantId: request.params.id };
       const result = await this.getVariantHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Variant retrieved successfully",
-        "Variant not found",
-      );
+      return ResponseHelper.ok(reply, "Variant retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get variant");
       return ResponseHelper.error(reply, error);
@@ -127,14 +122,7 @@ export class VariantController {
 
       const result = await this.createVariantHandler.handle(command);
 
-      if (result.success && result.data) {
-        return ResponseHelper.created(
-          reply,
-          "Variant created successfully",
-          result.data.toData(),
-        );
-      }
-      return ResponseHelper.fromCommand(reply, result, "Variant created successfully");
+      return ResponseHelper.fromCommand(reply, result, "Variant created successfully", 201);
     } catch (error) {
       request.log.error(error, "Failed to create variant");
       return ResponseHelper.error(reply, error);
@@ -167,13 +155,6 @@ export class VariantController {
 
       const result = await this.updateVariantHandler.handle(command);
 
-      if (result.success && result.data) {
-        return ResponseHelper.ok(
-          reply,
-          "Variant updated successfully",
-          result.data.toData(),
-        );
-      }
       return ResponseHelper.fromCommand(reply, result, "Variant updated successfully");
     } catch (error) {
       request.log.error(error, "Failed to update variant");

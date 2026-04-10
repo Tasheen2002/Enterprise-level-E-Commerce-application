@@ -121,24 +121,24 @@ export class MediaAsset extends AggregateRoot {
     return asset;
   }
 
-  static reconstitute(props: MediaAssetProps): MediaAsset {
+  static fromPersistence(props: MediaAssetProps): MediaAsset {
     return new MediaAsset(props);
   }
 
   // ── Getters ────────────────────────────────────────────────────────
 
-  getId(): MediaAssetId { return this.props.id; }
-  getStorageKey(): string { return this.props.storageKey; }
-  getMime(): string { return this.props.mime; }
-  getWidth(): number | null { return this.props.width; }
-  getHeight(): number | null { return this.props.height; }
-  getBytes(): number | null { return this.props.bytes; }
-  getAltText(): string | null { return this.props.altText; }
-  getFocalX(): number | null { return this.props.focalX; }
-  getFocalY(): number | null { return this.props.focalY; }
-  getRenditions(): Record<string, any> { return this.props.renditions; }
-  getVersion(): number { return this.props.version; }
-  getCreatedAt(): Date { return this.props.createdAt; }
+  get id(): MediaAssetId { return this.props.id; }
+  get storageKey(): string { return this.props.storageKey; }
+  get mime(): string { return this.props.mime; }
+  get width(): number | null { return this.props.width; }
+  get height(): number | null { return this.props.height; }
+  get bytes(): number | null { return this.props.bytes; }
+  get altText(): string | null { return this.props.altText; }
+  get focalX(): number | null { return this.props.focalX; }
+  get focalY(): number | null { return this.props.focalY; }
+  get renditions(): Record<string, any> { return this.props.renditions; }
+  get version(): number { return this.props.version; }
+  get createdAt(): Date { return this.props.createdAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 

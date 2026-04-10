@@ -9,29 +9,30 @@ import {
   EditorialLookId,
 } from "../../../domain/entities/editorial-look.entity";
 import { MediaAssetId } from "../../../domain/entities/media-asset.entity";
+import { ProductId } from "../../../domain/value-objects/product-id.vo";
 
 export class EditorialLookRepository implements IEditorialLookRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(look: EditorialLook): Promise<void> {
-    const data = look.toDatabaseRow();
-    const productIds = look.getProductIds().map((id) => id.getValue());
+    const lookId = look.id.getValue();
+    const productIds = look.productIds.map((id) => id.getValue());
 
     await this.prisma.$transaction(async (tx) => {
       await tx.editorialLook.create({
         data: {
-          id: data.look_id,
-          title: data.title,
-          storyHtml: data.story_html,
-          heroAssetId: data.hero_asset_id,
-          publishedAt: data.published_at,
+          id: lookId,
+          title: look.title,
+          storyHtml: look.storyHtml,
+          heroAssetId: look.heroAssetId?.getValue() ?? null,
+          publishedAt: look.publishedAt,
         },
       });
 
       if (productIds.length > 0) {
         await tx.editorialLookProduct.createMany({
           data: productIds.map((productId) => ({
-            lookId: data.look_id,
+            lookId,
             productId: productId,
           })),
         });
@@ -55,16 +56,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     const productIds = lookData.products.map((ep) => ep.productId);
 
-    return EditorialLook.fromDatabaseRow(
-      {
-        look_id: lookData.id,
-        title: lookData.title,
-        story_html: lookData.storyHtml,
-        hero_asset_id: lookData.heroAssetId,
-        published_at: lookData.publishedAt,
-      },
-      productIds,
-    );
+    return EditorialLook.fromPersistence({
+      id: EditorialLookId.fromString(lookData.id),
+      title: lookData.title,
+      storyHtml: lookData.storyHtml,
+      heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+      publishedAt: lookData.publishedAt,
+      productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+    });
   }
 
   async findAll(
@@ -107,16 +106,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -166,16 +163,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -225,16 +220,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -284,16 +277,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -335,16 +326,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -365,16 +354,14 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
@@ -395,44 +382,42 @@ export class EditorialLookRepository implements IEditorialLookRepository {
 
     return looks.map((lookData) => {
       const productIds = lookData.products.map((ep) => ep.productId);
-      return EditorialLook.fromDatabaseRow(
-        {
-          look_id: lookData.id,
-          title: lookData.title,
-          story_html: lookData.storyHtml,
-          hero_asset_id: lookData.heroAssetId,
-          published_at: lookData.publishedAt,
-        },
-        productIds,
-      );
+      return EditorialLook.fromPersistence({
+        id: EditorialLookId.fromString(lookData.id),
+        title: lookData.title,
+        storyHtml: lookData.storyHtml,
+        heroAssetId: lookData.heroAssetId ? MediaAssetId.fromString(lookData.heroAssetId) : null,
+        publishedAt: lookData.publishedAt,
+        productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
+      });
     });
   }
 
   async update(look: EditorialLook): Promise<void> {
-    const data = look.toDatabaseRow();
-    const productIds = look.getProductIds().map((id) => id.getValue());
+    const lookId = look.id.getValue();
+    const productIds = look.productIds.map((id) => id.getValue());
 
     await this.prisma.$transaction(async (tx) => {
       await tx.editorialLook.update({
-        where: { id: data.look_id },
+        where: { id: lookId },
         data: {
-          title: data.title,
-          storyHtml: data.story_html,
-          heroAssetId: data.hero_asset_id,
-          publishedAt: data.published_at,
+          title: look.title,
+          storyHtml: look.storyHtml,
+          heroAssetId: look.heroAssetId?.getValue() ?? null,
+          publishedAt: look.publishedAt,
         },
       });
 
       // Remove all existing product associations
       await tx.editorialLookProduct.deleteMany({
-        where: { lookId: data.look_id },
+        where: { lookId },
       });
 
       // Add new product associations
       if (productIds.length > 0) {
         await tx.editorialLookProduct.createMany({
           data: productIds.map((productId) => ({
-            lookId: data.look_id,
+            lookId,
             productId: productId,
           })),
         });

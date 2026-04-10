@@ -68,28 +68,28 @@ export class SizeGuide extends AggregateRoot {
     return sizeGuide;
   }
 
-  static reconstitute(props: SizeGuideProps): SizeGuide {
+  static fromPersistence(props: SizeGuideProps): SizeGuide {
     return new SizeGuide(props);
   }
 
   // Getters
-  getId(): SizeGuideId {
+  get id(): SizeGuideId {
     return this.props.id;
   }
 
-  getTitle(): string {
+  get title(): string {
     return this.props.title;
   }
 
-  getBodyHtml(): string | null {
+  get bodyHtml(): string | null {
     return this.props.bodyHtml;
   }
 
-  getRegion(): Region {
+  get region(): Region {
     return this.props.region;
   }
 
-  getCategory(): string | null {
+  get category(): string | null {
     return this.props.category;
   }
 

@@ -109,7 +109,7 @@ export class ProductTagManagementService {
     const tag = await this.getTagById(id);
 
     // Check if new tag name already exists (if changing tag name)
-    if (updates.tag && updates.tag !== tag.getTag()) {
+    if (updates.tag && updates.tag !== tag.tag) {
       if (await this.productTagRepository.existsByTag(updates.tag)) {
         throw new ProductTagAlreadyExistsError(updates.tag);
       }

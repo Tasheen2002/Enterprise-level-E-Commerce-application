@@ -58,10 +58,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to get product media");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -88,10 +84,6 @@ export class ProductMediaController {
       return ResponseHelper.created(reply, "Media added to product successfully", { productMediaId });
     } catch (error) {
       request.log.error(error, "Failed to add media to product");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       if (
         error instanceof Error &&
@@ -125,10 +117,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to remove media from product");
 
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -145,10 +133,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "All media removed from product successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove all product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -174,10 +158,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to set product cover image");
 
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -194,10 +174,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "Product cover image removed successfully");
     } catch (error) {
       request.log.error(error, "Failed to remove product cover image");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -222,14 +198,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "Product media reordered successfully");
     } catch (error) {
       request.log.error(error, "Failed to reorder product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -256,17 +224,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to move media position");
 
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("Position must be greater than 0")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -291,17 +248,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to set product media");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("Only one media asset can be set as cover image")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -324,10 +270,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to duplicate product media");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -345,10 +287,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "Products using asset retrieved successfully", productIds);
     } catch (error) {
       request.log.error(error, "Failed to get products using asset");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -368,10 +306,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to get asset usage count");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -390,10 +324,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "Product media positions compacted successfully");
     } catch (error) {
       request.log.error(error, "Failed to compact product media positions");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
@@ -415,10 +345,6 @@ export class ProductMediaController {
     } catch (error) {
       request.log.error(error, "Failed to validate product media");
 
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
@@ -438,10 +364,6 @@ export class ProductMediaController {
       return ResponseHelper.ok(reply, "Product media statistics retrieved successfully", statistics);
     } catch (error) {
       request.log.error(error, "Failed to get product media statistics");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }

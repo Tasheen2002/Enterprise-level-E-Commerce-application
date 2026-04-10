@@ -81,11 +81,7 @@ export class CategoryController {
       };
 
       const result = await this.listCategoriesHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Categories retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Categories retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get categories");
       return ResponseHelper.error(reply, error);
@@ -99,12 +95,7 @@ export class CategoryController {
     try {
       const query: GetCategoryQuery = { categoryId: request.params.id };
       const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Category retrieved successfully",
-        "Category not found",
-      );
+      return ResponseHelper.ok(reply, "Category retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get category");
       return ResponseHelper.error(reply, error);
@@ -118,12 +109,7 @@ export class CategoryController {
     try {
       const query: GetCategoryQuery = { slug: request.params.slug };
       const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Category retrieved successfully",
-        "Category not found",
-      );
+      return ResponseHelper.ok(reply, "Category retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get category by slug");
       return ResponseHelper.error(reply, error);
@@ -144,16 +130,11 @@ export class CategoryController {
 
       const result = await this.createCategoryHandler.handle(command);
 
-      if (result.success && result.data) {
-        return ResponseHelper.created(
-          reply,
-          "Category created successfully",
-          result.data.toData(),
-        );
-      }
-      return ResponseHelper.badRequest(
+      return ResponseHelper.fromCommand(
         reply,
-        result.error || "Category creation failed",
+        result,
+        "Category created successfully",
+        201,
       );
     } catch (error) {
       request.log.error(error, "Failed to create category");
@@ -180,13 +161,6 @@ export class CategoryController {
 
       const result = await this.updateCategoryHandler.handle(command);
 
-      if (result.success && result.data) {
-        return ResponseHelper.ok(
-          reply,
-          "Category updated successfully",
-          result.data.toData(),
-        );
-      }
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -220,11 +194,7 @@ export class CategoryController {
     try {
       const query: GetCategoryHierarchyQuery = {};
       const result = await this.getCategoryHierarchyHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Category hierarchy retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Category hierarchy retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get category hierarchy");
       return ResponseHelper.error(reply, error);

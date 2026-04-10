@@ -98,11 +98,7 @@ export class SearchController {
       };
 
       const result = await this.searchProductsHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Search completed successfully",
-      );
+      return ResponseHelper.ok(reply, "Search completed successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to search products");
       return ResponseHelper.error(reply, error);
@@ -122,11 +118,7 @@ export class SearchController {
       };
 
       const result = await this.getSearchSuggestionsHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Suggestions retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Suggestions retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get search suggestions");
       return ResponseHelper.error(reply, error);
@@ -137,11 +129,7 @@ export class SearchController {
     try {
       const query: GetPopularSearchesQuery = {};
       const result = await this.getPopularSearchesHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Popular searches retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Popular searches retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get popular searches");
       return ResponseHelper.error(reply, error);
@@ -160,11 +148,7 @@ export class SearchController {
       };
 
       const result = await this.getSearchFiltersHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Search filters retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Search filters retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get search filters");
       return ResponseHelper.error(reply, error);
@@ -175,11 +159,7 @@ export class SearchController {
     try {
       const query: GetSearchStatsQuery = {};
       const result = await this.getSearchStatsHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Search statistics retrieved successfully",
-      );
+      return ResponseHelper.ok(reply, "Search statistics retrieved successfully", result);
     } catch (error) {
       request.log.error(error, "Failed to get search statistics");
       return ResponseHelper.error(reply, error);

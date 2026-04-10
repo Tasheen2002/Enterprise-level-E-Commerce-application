@@ -389,9 +389,9 @@ export class ProductMediaRepository implements IProductMediaRepository {
           data: {
             id: ProductMediaId.create().getValue(),
             productId: targetProductId.getValue(),
-            assetId: media.getAssetId().getValue(),
-            position: media.getPosition(),
-            isCover: media.getIsCover(),
+            assetId: media.mediaAssetId.getValue(),
+            position: media.displayOrder,
+            isCover: media.isPrimary,
           },
         }),
       ),
