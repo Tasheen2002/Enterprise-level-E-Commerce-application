@@ -1,4 +1,5 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
 import { StockController } from "../controllers/stock.controller";
@@ -48,7 +49,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.listStocks.bind(controller),
+    (request, reply) => controller.listStocks(request as AuthenticatedRequest, reply),
   );
 
   // Get stock stats
@@ -72,7 +73,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStats.bind(controller),
+    (request, reply) => controller.getStats(request as AuthenticatedRequest, reply),
   );
 
   // Get low stock items
@@ -96,7 +97,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getLowStockItems.bind(controller),
+    (request, reply) => controller.getLowStockItems(request as AuthenticatedRequest, reply),
   );
 
   // Get out of stock items
@@ -120,7 +121,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getOutOfStockItems.bind(controller),
+    (request, reply) => controller.getOutOfStockItems(request as AuthenticatedRequest, reply),
   );
 
   // Get stock by variant and location
@@ -153,7 +154,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStock.bind(controller),
+    (request, reply) => controller.getStock(request as AuthenticatedRequest, reply),
   );
 
   // Get stock by variant (all locations)
@@ -183,7 +184,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getStockByVariant.bind(controller),
+    (request, reply) => controller.getStockByVariant(request as AuthenticatedRequest, reply),
   );
 
   // Get total available stock
@@ -213,7 +214,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.getTotalAvailableStock.bind(controller),
+    (request, reply) => controller.getTotalAvailableStock(request as AuthenticatedRequest, reply),
   );
 
   // Add stock
@@ -237,7 +238,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.addStock.bind(controller),
+    (request, reply) => controller.addStock(request as AuthenticatedRequest, reply),
   );
 
   // Adjust stock
@@ -261,7 +262,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.adjustStock.bind(controller),
+    (request, reply) => controller.adjustStock(request as AuthenticatedRequest, reply),
   );
 
   // Transfer stock
@@ -282,7 +283,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.transferStock.bind(controller),
+    (request, reply) => controller.transferStock(request as AuthenticatedRequest, reply),
   );
 
   // Reserve stock
@@ -303,7 +304,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.reserveStock.bind(controller),
+    (request, reply) => controller.reserveStock(request as AuthenticatedRequest, reply),
   );
 
   // Fulfill reservation
@@ -324,7 +325,7 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.fulfillReservation.bind(controller),
+    (request, reply) => controller.fulfillReservation(request as AuthenticatedRequest, reply),
   );
 
   // Set stock thresholds
@@ -357,6 +358,6 @@ export async function registerStockRoutes(
         },
       },
     },
-    controller.setStockThresholds.bind(controller),
+    (request, reply) => controller.setStockThresholds(request as AuthenticatedRequest, reply),
   );
 }

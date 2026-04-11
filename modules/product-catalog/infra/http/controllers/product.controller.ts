@@ -1,53 +1,16 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  CreateProductInput,
   CreateProductHandler,
-  UpdateProductInput,
   UpdateProductHandler,
-  DeleteProductInput,
   DeleteProductHandler,
-  GetProductInput,
   GetProductHandler,
-  ListProductsInput,
   ListProductsHandler,
-  SearchProductsInput,
   SearchProductsHandler,
 } from "../../../application";
 import { ProductManagementService } from "../../../application/services/product-management.service";
+import { ProductStatus } from "../../../domain/enums";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateProductRequest {
-  title: string;
-  brand?: string;
-  shortDesc?: string;
-  longDescHtml?: string;
-  status?: "draft" | "published" | "scheduled";
-  publishAt?: string;
-  countryOfOrigin?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  price?: number;
-  priceSgd?: number;
-  priceUsd?: number;
-  compareAtPrice?: number;
-  categoryIds?: string[];
-  tags?: string[];
-}
-
-export interface UpdateProductRequest extends Partial<CreateProductRequest> {}
-
-export interface ProductQueryParams {
-  page?: number;
-  limit?: number;
-  status?: "draft" | "published" | "scheduled" | "archived";
-  brand?: string;
-  categoryId?: string;
-  search?: string;
-  includeDrafts?: boolean;
-  sortBy?: "createdAt" | "title" | "publishAt";
-  sortOrder?: "asc" | "desc";
-}
 
 export class ProductController {
   constructor(
@@ -60,9 +23,20 @@ export class ProductController {
     private readonly productManagementService: ProductManagementService,
   ) {}
 
-
   async listProducts(
-    request: AuthenticatedRequest<{ Querystring: ProductQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        status?: ProductStatus;
+        brand?: string;
+        categoryId?: string;
+        search?: string;
+        includeDrafts?: boolean;
+        sortBy?: "createdAt" | "title" | "publishAt";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
@@ -84,7 +58,7 @@ export class ProductController {
       const currentLimit = Math.min(100, Math.max(1, limit));
 
       if (search) {
-        const searchQuery: SearchProductsInput = {
+        const searchResult = await this.searchProductsHandler.handle({
           searchTerm: search,
           page: currentPage,
           limit: currentLimit,
@@ -92,19 +66,15 @@ export class ProductController {
           brand,
           status,
           sortBy:
-            sortBy === "createdAt" ||
-            sortBy === "title" ||
-            sortBy === "publishAt"
+            sortBy === "createdAt" || sortBy === "title" || sortBy === "publishAt"
               ? sortBy
               : "relevance",
           sortOrder,
-        };
-
-        const searchResult = await this.searchProductsHandler.handle(searchQuery);
+        });
         products = searchResult.items;
         totalCount = searchResult.totalCount;
       } else {
-        const query: ListProductsInput = {
+        const result = await this.listProductsHandler.handle({
           page: currentPage,
           limit: currentLimit,
           status,
@@ -113,24 +83,17 @@ export class ProductController {
           includeDrafts,
           sortBy,
           sortOrder,
-        };
-
-        const result = await this.listProductsHandler.handle(query);
+        });
         products = result.items;
         totalCount = result.totalCount;
       }
 
-      const productIds = products.map(
-        (p) => p.id || p.productId || p.product_id,
-      );
-
-      const enrichmentMap =
-        await this.productManagementService.getProductEnrichment(productIds);
+      const productIds = products.map((p) => p.id || p.productId || p.product_id);
+      const enrichmentMap = await this.productManagementService.getProductEnrichment(productIds);
 
       const productsWithDetails = products.map((product) => {
         const pId = product.id || product.productId || product.product_id;
         const enriched = enrichmentMap.get(pId);
-
         return {
           productId: pId,
           title: product.title,
@@ -172,27 +135,15 @@ export class ProductController {
   ) {
     try {
       const { productId } = request.params;
+      const productData = await this.getProductHandler.handle({ productId });
+      const mediaEnrichment = await this.productManagementService.getProductMediaEnrichment(productId);
 
-      const query: GetProductInput = { productId };
-      const productData = await this.getProductHandler.handle(query);
-
-      const mediaEnrichment =
-        await this.productManagementService.getProductMediaEnrichment(
-          productId,
-        );
-
-      const productWithDetails = {
+      return ResponseHelper.ok(reply, "Product retrieved successfully", {
         ...productData,
         slug: productData?.slug || "",
         images: mediaEnrichment.images,
         media: mediaEnrichment.media,
-      };
-
-      return ResponseHelper.ok(
-        reply,
-        "Product retrieved successfully",
-        productWithDetails,
-      );
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -204,67 +155,49 @@ export class ProductController {
   ) {
     try {
       const { slug } = request.params;
+      const productData = await this.getProductHandler.handle({ slug });
+      const enrichment = await this.productManagementService.getSingleProductEnrichment(productData.id);
 
-      const query: GetProductInput = { slug };
-      const productData = await this.getProductHandler.handle(query);
-
-      const enrichment =
-        await this.productManagementService.getSingleProductEnrichment(
-          productData.id,
-        );
-
-      const productWithDetails = {
+      return ResponseHelper.ok(reply, "Product retrieved successfully", {
         ...productData,
         variants: enrichment.variants,
         images: enrichment.images,
         categories: enrichment.categories,
-      };
-
-      return ResponseHelper.ok(
-        reply,
-        "Product retrieved successfully",
-        productWithDetails,
-      );
+      });
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createProduct(
-    request: AuthenticatedRequest<{ Body: CreateProductRequest }>,
+    request: AuthenticatedRequest<{
+      Body: {
+        title: string;
+        brand?: string;
+        shortDesc?: string;
+        longDescHtml?: string;
+        status?: ProductStatus;
+        publishAt?: string;
+        countryOfOrigin?: string;
+        seoTitle?: string;
+        seoDescription?: string;
+        price?: number;
+        priceSgd?: number;
+        priceUsd?: number;
+        compareAtPrice?: number;
+        categoryIds?: string[];
+        tags?: string[];
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const productData = request.body;
-
-      const command: CreateProductInput = {
-        title: productData.title,
-        brand: productData.brand,
-        shortDesc: productData.shortDesc,
-        longDescHtml: productData.longDescHtml,
-        status: productData.status as any,
-        publishAt: productData.publishAt
-          ? new Date(productData.publishAt)
-          : undefined,
-        countryOfOrigin: productData.countryOfOrigin,
-        seoTitle: productData.seoTitle,
-        seoDescription: productData.seoDescription,
-        price: productData.price,
-        priceSgd: productData.priceSgd,
-        priceUsd: productData.priceUsd,
-        compareAtPrice: productData.compareAtPrice,
-        categoryIds: productData.categoryIds,
-        tags: productData.tags,
-      };
-
-      const result = await this.createProductHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Product created successfully",
-        201,
-      );
+      const { publishAt, ...rest } = request.body;
+      const result = await this.createProductHandler.handle({
+        ...rest,
+        publishAt: publishAt ? new Date(publishAt) : undefined,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Product created successfully", 201);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -273,42 +206,35 @@ export class ProductController {
   async updateProduct(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: UpdateProductRequest;
+      Body: {
+        title?: string;
+        brand?: string;
+        shortDesc?: string;
+        longDescHtml?: string;
+        status?: ProductStatus;
+        publishAt?: string;
+        countryOfOrigin?: string;
+        seoTitle?: string;
+        seoDescription?: string;
+        price?: number;
+        priceSgd?: number;
+        priceUsd?: number;
+        compareAtPrice?: number;
+        categoryIds?: string[];
+        tags?: string[];
+      };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId: id } = request.params;
-      const updateData = request.body;
-
-      const command: UpdateProductInput = {
-        productId: id,
-        title: updateData.title,
-        brand: updateData.brand,
-        shortDesc: updateData.shortDesc,
-        longDescHtml: updateData.longDescHtml,
-        status: updateData.status as any,
-        publishAt: updateData.publishAt
-          ? new Date(updateData.publishAt)
-          : undefined,
-        countryOfOrigin: updateData.countryOfOrigin,
-        seoTitle: updateData.seoTitle,
-        seoDescription: updateData.seoDescription,
-        price: updateData.price,
-        priceSgd: updateData.priceSgd,
-        priceUsd: updateData.priceUsd,
-        compareAtPrice: updateData.compareAtPrice,
-        categoryIds: updateData.categoryIds,
-        tags: updateData.tags,
-      };
-
-      const result = await this.updateProductHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Product updated successfully",
-      );
+      const { productId } = request.params;
+      const { publishAt, ...rest } = request.body;
+      const result = await this.updateProductHandler.handle({
+        productId,
+        ...rest,
+        publishAt: publishAt ? new Date(publishAt) : undefined,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Product updated successfully");
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -319,18 +245,9 @@ export class ProductController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId: id } = request.params;
-
-      const command: DeleteProductInput = { productId: id };
-      const result = await this.deleteProductHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Product deleted successfully",
-        undefined,
-        204,
-      );
+      const { productId } = request.params;
+      const result = await this.deleteProductHandler.handle({ productId });
+      return ResponseHelper.fromCommand(reply, result, "Product deleted successfully", undefined, 204);
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }

@@ -1,26 +1,11 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import {
-  AddPaymentMethodInput,
-  AddPaymentMethodHandler,
-} from "../../../application/commands/add-payment-method.command";
-import {
-  UpdatePaymentMethodInput,
-  UpdatePaymentMethodHandler,
-} from "../../../application/commands/update-payment-method.command";
-import {
-  DeletePaymentMethodInput,
-  DeletePaymentMethodHandler,
-} from "../../../application/commands/delete-payment-method.command";
-import {
-  SetDefaultPaymentMethodInput,
-  SetDefaultPaymentMethodHandler,
-} from "../../../application/commands/set-default-payment-method.command";
-import {
-  ListPaymentMethodsInput,
-  ListPaymentMethodsHandler,
-} from "../../../application/queries/list-payment-methods.query";
+import { AddPaymentMethodHandler } from "../../../application/commands/add-payment-method.command";
+import { UpdatePaymentMethodHandler } from "../../../application/commands/update-payment-method.command";
+import { DeletePaymentMethodHandler } from "../../../application/commands/delete-payment-method.command";
+import { SetDefaultPaymentMethodHandler } from "../../../application/commands/set-default-payment-method.command";
+import { ListPaymentMethodsHandler } from "../../../application/queries/list-payment-methods.query";
 
 export class PaymentMethodsController {
   constructor(
@@ -60,7 +45,7 @@ export class PaymentMethodsController {
         isDefault,
       } = request.body;
 
-      const command: AddPaymentMethodInput = {
+      const command = {
         userId,
         type,
         brand,
@@ -91,7 +76,7 @@ export class PaymentMethodsController {
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query: ListPaymentMethodsInput = { userId, timestamp: new Date() };
+      const query = { userId, timestamp: new Date() };
       const result = await this.listPaymentMethodsHandler.handle(query);
       return ResponseHelper.ok(reply, "Payment methods retrieved", result);
     } catch (error: unknown) {
@@ -113,7 +98,7 @@ export class PaymentMethodsController {
       const { userId, paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
 
-      const command: UpdatePaymentMethodInput = {
+      const command = {
         paymentMethodId,
         userId,
         billingAddressId,
@@ -141,7 +126,7 @@ export class PaymentMethodsController {
     try {
       const { userId, paymentMethodId } = request.params;
 
-      const command: DeletePaymentMethodInput = {
+      const command = {
         paymentMethodId,
         userId,
         timestamp: new Date(),
@@ -174,7 +159,7 @@ export class PaymentMethodsController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const command: AddPaymentMethodInput = {
+      const command = {
         userId: request.user.userId,
         type: request.body.type,
         brand: request.body.brand,
@@ -204,7 +189,7 @@ export class PaymentMethodsController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const query: ListPaymentMethodsInput = {
+      const query = {
         userId: request.user.userId,
         timestamp: new Date(),
       };
@@ -229,7 +214,7 @@ export class PaymentMethodsController {
       const { paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
 
-      const command: UpdatePaymentMethodInput = {
+      const command = {
         paymentMethodId,
         userId: request.user.userId,
         billingAddressId,
@@ -255,7 +240,7 @@ export class PaymentMethodsController {
     try {
       const { paymentMethodId } = request.params;
 
-      const command: DeletePaymentMethodInput = {
+      const command = {
         paymentMethodId,
         userId: request.user.userId,
         timestamp: new Date(),
@@ -279,7 +264,7 @@ export class PaymentMethodsController {
     try {
       const { paymentMethodId } = request.params;
 
-      const command: SetDefaultPaymentMethodInput = {
+      const command = {
         paymentMethodId,
         userId: request.user.userId,
         timestamp: new Date(),

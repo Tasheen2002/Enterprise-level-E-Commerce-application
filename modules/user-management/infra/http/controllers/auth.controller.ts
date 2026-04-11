@@ -1,50 +1,17 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import {
-  RegisterUserInput,
-  RegisterUserHandler,
-} from "../../../application/commands/register-user.command";
-import {
-  LoginUserInput,
-  LoginUserHandler,
-} from "../../../application/commands/login-user.command";
-import {
-  LogoutInput,
-  LogoutHandler,
-} from "../../../application/commands/logout.command";
-import {
-  RefreshTokenInput,
-  RefreshTokenHandler,
-} from "../../../application/commands/refresh-token.command";
-import {
-  ChangePasswordInput,
-  ChangePasswordHandler,
-} from "../../../application/commands/change-password.command";
-import {
-  ChangeEmailInput,
-  ChangeEmailHandler,
-} from "../../../application/commands/change-email.command";
-import {
-  InitiatePasswordResetInput,
-  InitiatePasswordResetHandler,
-} from "../../../application/commands/initiate-password-reset.command";
-import {
-  ResetPasswordInput,
-  ResetPasswordHandler,
-} from "../../../application/commands/reset-password.command";
-import {
-  VerifyEmailInput,
-  VerifyEmailHandler,
-} from "../../../application/commands/verify-email.command";
-import {
-  GetUserByEmailInput,
-  GetUserByEmailHandler,
-} from "../../../application/queries/get-user-by-email.query";
-import {
-  DeleteAccountInput,
-  DeleteAccountHandler,
-} from "../../../application/commands/delete-account.command";
+import { RegisterUserHandler } from "../../../application/commands/register-user.command";
+import { LoginUserHandler } from "../../../application/commands/login-user.command";
+import { LogoutHandler } from "../../../application/commands/logout.command";
+import { RefreshTokenHandler } from "../../../application/commands/refresh-token.command";
+import { ChangePasswordHandler } from "../../../application/commands/change-password.command";
+import { ChangeEmailHandler } from "../../../application/commands/change-email.command";
+import { InitiatePasswordResetHandler } from "../../../application/commands/initiate-password-reset.command";
+import { ResetPasswordHandler } from "../../../application/commands/reset-password.command";
+import { VerifyEmailHandler } from "../../../application/commands/verify-email.command";
+import { GetUserByEmailHandler } from "../../../application/queries/get-user-by-email.query";
+import { DeleteAccountHandler } from "../../../application/commands/delete-account.command";
 import { ITokenBlacklistService } from "../../../application/services/itoken-blacklist.service";
 import { UserRole } from "../../../domain/entities/user.entity";
 import { DomainValidationError } from "../../../domain/errors/user-management.errors";
@@ -116,7 +83,7 @@ export class AuthController {
       const lastName = rawData.lastName?.trim();
       const phone = rawData.phone?.trim();
 
-      const command: RegisterUserInput = {
+      const command = {
         email,
         password: rawData.password,
         phone,
@@ -192,7 +159,7 @@ export class AuthController {
         });
       }
 
-      const command: LoginUserInput = {
+      const command = {
         email,
         password,
         rememberMe,
@@ -201,7 +168,7 @@ export class AuthController {
       const result = await this.loginHandler.handle(command);
 
       if (result.success && result.data) {
-        const authResult = result.data as any;
+        const authResult = result.data;
         this.tokenBlacklistService.clearFailedAttempts(email);
         this.logSecurityEvent(
           "USER_LOGIN_SUCCESS",
@@ -254,7 +221,7 @@ export class AuthController {
         }
       }
 
-      const command: LogoutInput = {
+      const command = {
         token,
         userId: request.user.userId,
         timestamp: new Date(),
@@ -306,7 +273,7 @@ export class AuthController {
         }
       }
 
-      const command: RefreshTokenInput = {
+      const command = {
         refreshToken,
         currentAccessToken,
         timestamp: new Date(),
@@ -347,7 +314,7 @@ export class AuthController {
       const deviceInfo = this.extractDeviceInfo(request);
 
       const email = (rawEmail || "").trim().toLowerCase();
-      const command: InitiatePasswordResetInput = {
+      const command = {
         email,
         timestamp: new Date(),
       };
@@ -413,7 +380,7 @@ export class AuthController {
         throw new DomainValidationError("Invalid or expired reset token");
       }
 
-      const command: ResetPasswordInput = {
+      const command = {
         email: tokenData.email,
         newPassword,
         timestamp: new Date(),
@@ -459,7 +426,7 @@ export class AuthController {
         throw new DomainValidationError("Invalid or expired verification token");
       }
 
-      const command: VerifyEmailInput = {
+      const command = {
         userId: tokenData.userId,
         timestamp: new Date(),
       };
@@ -499,7 +466,7 @@ export class AuthController {
       const deviceInfo = this.extractDeviceInfo(request);
 
       const email = (rawEmail || "").trim().toLowerCase();
-      const query: GetUserByEmailInput = { email, timestamp: new Date() };
+      const query = { email, timestamp: new Date() };
 
       let userInfo: { userId: string; emailVerified: boolean } | null = null;
       try {
@@ -559,7 +526,7 @@ export class AuthController {
       const { currentPassword, newPassword } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
 
-      const command: ChangePasswordInput = {
+      const command = {
         userId: request.user.userId,
         currentPassword,
         newPassword,
@@ -602,7 +569,7 @@ export class AuthController {
       const { newEmail, password } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
 
-      const command: ChangeEmailInput = {
+      const command = {
         userId: request.user.userId,
         newEmail,
         password,
@@ -653,7 +620,7 @@ export class AuthController {
         }
       }
 
-      const command: DeleteAccountInput = {
+      const command = {
         userId: request.user.userId,
         password,
         currentAccessToken,

@@ -1,39 +1,15 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  CreateCategoryInput,
   CreateCategoryHandler,
-  UpdateCategoryInput,
   UpdateCategoryHandler,
-  DeleteCategoryInput,
   DeleteCategoryHandler,
-  ReorderCategoriesInput,
   ReorderCategoriesHandler,
-  GetCategoryInput,
   GetCategoryHandler,
-  ListCategoriesInput,
   ListCategoriesHandler,
-  GetCategoryHierarchyInput,
   GetCategoryHierarchyHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateCategoryRequest {
-  name: string;
-  parentId?: string;
-  position?: number;
-}
-
-export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
-
-export interface CategoryQueryParams {
-  page?: number;
-  limit?: number;
-  parentId?: string;
-  includeChildren?: boolean;
-  sortBy?: "name" | "position";
-  sortOrder?: "asc" | "desc";
-}
 
 export class CategoryController {
   constructor(
@@ -46,23 +22,26 @@ export class CategoryController {
     private readonly getCategoryHierarchyHandler: GetCategoryHierarchyHandler,
   ) {}
 
-
   async getCategories(
-    request: AuthenticatedRequest<{ Querystring: CategoryQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        parentId?: string;
+        includeChildren?: boolean;
+        sortBy?: "name" | "position";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const query: ListCategoriesInput = {
-        page: request.query.page,
-        limit: request.query.limit,
-        parentId: request.query.parentId,
-        includeChildren: request.query.includeChildren,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
-      };
-
-      const result = await this.listCategoriesHandler.handle(query);
-      return ResponseHelper.ok(reply, "Categories retrieved successfully", result);
+      const result = await this.listCategoriesHandler.handle(request.query);
+      return ResponseHelper.ok(
+        reply,
+        "Categories retrieved successfully",
+        result,
+      );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -73,9 +52,14 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const query: GetCategoryInput = { categoryId: request.params.id };
-      const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.ok(reply, "Category retrieved successfully", result);
+      const result = await this.getCategoryHandler.handle({
+        categoryId: request.params.id,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Category retrieved successfully",
+        result,
+      );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -86,28 +70,27 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const query: GetCategoryInput = { slug: request.params.slug };
-      const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.ok(reply, "Category retrieved successfully", result);
+      const result = await this.getCategoryHandler.handle({
+        slug: request.params.slug,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Category retrieved successfully",
+        result,
+      );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createCategory(
-    request: AuthenticatedRequest<{ Body: CreateCategoryRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { name: string; parentId?: string; position?: number };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const body = request.body;
-      const command: CreateCategoryInput = {
-        name: body.name,
-        parentId: body.parentId,
-        position: body.position,
-      };
-
-      const result = await this.createCategoryHandler.handle(command);
-
+      const result = await this.createCategoryHandler.handle(request.body);
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -122,22 +105,16 @@ export class CategoryController {
   async updateCategory(
     request: AuthenticatedRequest<{
       Params: { id: string };
-      Body: UpdateCategoryRequest;
+      Body: { name?: string; parentId?: string; position?: number };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = request.params;
-      const body = request.body;
-      const command: UpdateCategoryInput = {
+      const result = await this.updateCategoryHandler.handle({
         categoryId: id,
-        name: body.name,
-        parentId: body.parentId,
-        position: body.position,
-      };
-
-      const result = await this.updateCategoryHandler.handle(command);
-
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -153,8 +130,9 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const command: DeleteCategoryInput = { categoryId: request.params.id };
-      const result = await this.deleteCategoryHandler.handle(command);
+      const result = await this.deleteCategoryHandler.handle({
+        categoryId: request.params.id,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -167,11 +145,17 @@ export class CategoryController {
     }
   }
 
-  async getCategoryHierarchy(_request: AuthenticatedRequest, reply: FastifyReply) {
+  async getCategoryHierarchy(
+    _request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
     try {
-      const query: GetCategoryHierarchyInput = {};
-      const result = await this.getCategoryHierarchyHandler.handle(query);
-      return ResponseHelper.ok(reply, "Category hierarchy retrieved successfully", result);
+      const result = await this.getCategoryHierarchyHandler.handle({});
+      return ResponseHelper.ok(
+        reply,
+        "Category hierarchy retrieved successfully",
+        result,
+      );
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
@@ -184,10 +168,7 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
-      const command: ReorderCategoriesInput = {
-        categoryOrders: request.body.categoryOrders,
-      };
-      const result = await this.reorderCategoriesHandler.handle(command);
+      const result = await this.reorderCategoriesHandler.handle(request.body);
       return ResponseHelper.fromCommand(
         reply,
         result,

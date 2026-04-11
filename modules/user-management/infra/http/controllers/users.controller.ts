@@ -1,26 +1,11 @@
 import { FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@/api/src/shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@/api/src/shared/response.helper';
-import {
-  GetUserDetailsInput,
-  GetUserDetailsHandler,
-} from '../../../application/queries/get-user-details.query';
-import {
-  ListUsersInput,
-  ListUsersHandler,
-} from '../../../application/queries/list-user.query';
-import {
-  UpdateUserStatusInput,
-  UpdateUserStatusHandler,
-} from '../../../application/commands/update-user-status.command';
-import {
-  UpdateUserRoleInput,
-  UpdateUserRoleHandler,
-} from '../../../application/commands/update-user-role.command';
-import {
-  DeleteUserInput,
-  DeleteUserHandler,
-} from '../../../application/commands/delete-user.command';
+import { GetUserDetailsHandler } from '../../../application/queries/get-user-details.query';
+import { ListUsersHandler } from '../../../application/queries/list-user.query';
+import { UpdateUserStatusHandler } from '../../../application/commands/update-user-status.command';
+import { UpdateUserRoleHandler } from '../../../application/commands/update-user-role.command';
+import { DeleteUserHandler } from '../../../application/commands/delete-user.command';
 import { ToggleUserEmailVerifiedHandler } from '../../../application/commands/toggle-user-email-verified.command';
 import { UserRole, UserStatus } from '../../../domain/entities/user.entity';
 
@@ -39,7 +24,7 @@ export class UsersController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const query: GetUserDetailsInput = { userId: request.params.userId, timestamp: new Date() };
+      const query = { userId: request.params.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
       return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
@@ -52,7 +37,7 @@ export class UsersController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const query: GetUserDetailsInput = { userId: request.user.userId, timestamp: new Date() };
+      const query = { userId: request.user.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
       return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
@@ -78,7 +63,7 @@ export class UsersController {
     try {
       const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = request.query;
 
-      const query: ListUsersInput = {
+      const query = {
         search,
         role: role as UserRole | undefined,
         status: status as UserStatus | undefined,
@@ -105,7 +90,7 @@ export class UsersController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const command: UpdateUserStatusInput = {
+      const command = {
         userId: request.params.userId,
         status: request.body.status as UserStatus,
         notes: request.body.notes,
@@ -126,7 +111,7 @@ export class UsersController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const command: UpdateUserRoleInput = {
+      const command = {
         userId: request.params.userId,
         role: request.body.role,
         reason: request.body.reason,
@@ -163,7 +148,7 @@ export class UsersController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const command: DeleteUserInput = { userId: request.params.userId, timestamp: new Date() };
+      const command = { userId: request.params.userId, timestamp: new Date() };
       const result = await this.deleteUserHandler.handle(command);
       if (result.success) {
         return reply.status(204).send();
