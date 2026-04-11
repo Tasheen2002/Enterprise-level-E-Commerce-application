@@ -1,5 +1,58 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { ReservationId } from "../value-objects/reservation-id.vo";
+import { ReservationStatusVO } from "../value-objects/reservation-status.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class PickupReservationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly reservationId: string,
+    public readonly orderId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly qty: number,
+  ) {
+    super(reservationId, "PickupReservation");
+  }
+  get eventType(): string { return "pickup_reservation.created"; }
+  getPayload(): Record<string, unknown> {
+    return { reservationId: this.reservationId, orderId: this.orderId, variantId: this.variantId, locationId: this.locationId, qty: this.qty };
+  }
+}
+
+export class PickupReservationCancelledEvent extends DomainEvent {
+  constructor(public readonly reservationId: string) {
+    super(reservationId, "PickupReservation");
+  }
+  get eventType(): string { return "pickup_reservation.cancelled"; }
+  getPayload(): Record<string, unknown> {
+    return { reservationId: this.reservationId };
+  }
+}
+
+export class PickupReservationExpiredEvent extends DomainEvent {
+  constructor(public readonly reservationId: string) {
+    super(reservationId, "PickupReservation");
+  }
+  get eventType(): string { return "pickup_reservation.expired"; }
+  getPayload(): Record<string, unknown> {
+    return { reservationId: this.reservationId };
+  }
+}
+
+export class PickupReservationFulfilledEvent extends DomainEvent {
+  constructor(public readonly reservationId: string) {
+    super(reservationId, "PickupReservation");
+  }
+  get eventType(): string { return "pickup_reservation.fulfilled"; }
+  getPayload(): Record<string, unknown> {
+    return { reservationId: this.reservationId };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface PickupReservationProps {
   reservationId: ReservationId;
@@ -8,31 +61,63 @@ export interface PickupReservationProps {
   locationId: string;
   qty: number;
   expiresAt: Date;
-  isCancelled?: boolean;
-  isManuallyExpired?: boolean;
-  isFulfilled?: boolean;
+  status: ReservationStatusVO;
 }
 
-export class PickupReservation {
-  private constructor(private readonly props: PickupReservationProps) {
+export interface PickupReservationDTO {
+  reservationId: string;
+  orderId: string;
+  variantId: string;
+  locationId: string;
+  qty: number;
+  expiresAt: Date;
+  status: string;
+  isActive: boolean;
+  isExpired: boolean;
+  isCancelled: boolean;
+  isFulfilled: boolean;
+}
+
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class PickupReservation extends AggregateRoot {
+  private props: PickupReservationProps;
+
+  private constructor(props: PickupReservationProps) {
+    super();
+    this.props = props;
     this.validate();
   }
 
-  static create(
-    props: Omit<
-      PickupReservationProps,
-      "isCancelled" | "isManuallyExpired" | "isFulfilled"
-    >,
-  ): PickupReservation {
-    return new PickupReservation({
-      ...props,
-      isCancelled: false,
-      isManuallyExpired: false,
-      isFulfilled: false,
+  static create(params: {
+    orderId: string;
+    variantId: string;
+    locationId: string;
+    qty: number;
+    expiresAt: Date;
+  }): PickupReservation {
+    const reservation = new PickupReservation({
+      reservationId: ReservationId.create(),
+      orderId: params.orderId,
+      variantId: params.variantId,
+      locationId: params.locationId,
+      qty: params.qty,
+      expiresAt: params.expiresAt,
+      status: ReservationStatusVO.active(),
     });
+    reservation.addDomainEvent(
+      new PickupReservationCreatedEvent(
+        reservation.props.reservationId.getValue(),
+        params.orderId,
+        params.variantId,
+        params.locationId,
+        params.qty,
+      ),
+    );
+    return reservation;
   }
 
-  static reconstitute(props: PickupReservationProps): PickupReservation {
+  static fromPersistence(props: PickupReservationProps): PickupReservation {
     return new PickupReservation(props);
   }
 
@@ -42,112 +127,100 @@ export class PickupReservation {
     }
   }
 
-  getReservationId(): ReservationId {
-    return this.props.reservationId;
-  }
+  // ── Getters ────────────────────────────────────────────────────────
 
-  getOrderId(): string {
-    return this.props.orderId;
-  }
+  get reservationId(): ReservationId { return this.props.reservationId; }
+  get orderId(): string { return this.props.orderId; }
+  get variantId(): string { return this.props.variantId; }
+  get locationId(): string { return this.props.locationId; }
+  get qty(): number { return this.props.qty; }
+  get expiresAt(): Date { return this.props.expiresAt; }
+  get status(): ReservationStatusVO { return this.props.status; }
 
-  getVariantId(): string {
-    return this.props.variantId;
-  }
+  // ── Business Logic ─────────────────────────────────────────────────
 
-  getLocationId(): string {
-    return this.props.locationId;
-  }
-
-  getQty(): number {
-    return this.props.qty;
-  }
-
-  getExpiresAt(): Date {
-    return this.props.expiresAt;
-  }
-
-  isActive(): boolean {
-    return (
-      !this.props.isCancelled && !this.props.isFulfilled && !this.isExpired()
-    );
+  isActive(currentTime?: Date): boolean {
+    if (!this.props.status.isActive()) return false;
+    const now = currentTime ?? new Date();
+    return now <= this.props.expiresAt;
   }
 
   isCancelled(): boolean {
-    return !!this.props.isCancelled;
+    return this.props.status.isCancelled();
   }
 
   isExpired(currentTime?: Date): boolean {
-    if (this.props.isManuallyExpired) {
-      return true;
-    }
-
-    if (!this.props.isCancelled && !this.props.isFulfilled) {
-      const now = currentTime || new Date();
+    if (this.props.status.isExpired()) return true;
+    if (this.props.status.isActive()) {
+      const now = currentTime ?? new Date();
       return now > this.props.expiresAt;
     }
-
     return false;
   }
 
   isFulfilled(): boolean {
-    return !!this.props.isFulfilled;
+    return this.props.status.isFulfilled();
   }
 
-  extendExpiration(newExpiresAt: Date): PickupReservation {
+  extendExpiration(newExpiresAt: Date): void {
     if (newExpiresAt <= this.props.expiresAt) {
       throw new InvalidOperationError("New expiration must be later than current expiration");
     }
     if (!this.isActive()) {
       throw new InvalidOperationError("Cannot extend expiration of non-active reservation");
     }
-    return new PickupReservation({
-      ...this.props,
-      expiresAt: newExpiresAt,
-    });
+    this.props.expiresAt = newExpiresAt;
   }
 
-  cancel(): PickupReservation {
+  cancel(): void {
     if (!this.isActive()) {
       throw new InvalidOperationError("Can only cancel active reservations");
     }
-    return new PickupReservation({
-      ...this.props,
-      isCancelled: true,
-    });
+    this.props.status = ReservationStatusVO.cancelled();
+    this.addDomainEvent(
+      new PickupReservationCancelledEvent(this.props.reservationId.getValue()),
+    );
   }
 
-  markAsExpired(): PickupReservation {
+  markAsExpired(): void {
     if (!this.isActive()) {
       throw new InvalidOperationError("Can only mark active reservations as expired");
     }
-    return new PickupReservation({
-      ...this.props,
-      isManuallyExpired: true,
-    });
+    this.props.status = ReservationStatusVO.expired();
+    this.addDomainEvent(
+      new PickupReservationExpiredEvent(this.props.reservationId.getValue()),
+    );
   }
 
-  fulfill(): PickupReservation {
+  fulfill(): void {
     if (!this.isActive()) {
       throw new InvalidOperationError("Can only fulfill active reservations");
     }
-    return new PickupReservation({
-      ...this.props,
-      isFulfilled: true,
-    });
+    this.props.status = ReservationStatusVO.fulfilled();
+    this.addDomainEvent(
+      new PickupReservationFulfilledEvent(this.props.reservationId.getValue()),
+    );
   }
 
-  toJSON() {
+  equals(other: PickupReservation): boolean {
+    return this.props.reservationId.equals(other.props.reservationId);
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
+
+  static toDTO(entity: PickupReservation): PickupReservationDTO {
     return {
-      reservationId: this.props.reservationId.getValue(),
-      orderId: this.props.orderId,
-      variantId: this.props.variantId,
-      locationId: this.props.locationId,
-      qty: this.props.qty,
-      expiresAt: this.props.expiresAt,
-      isExpired: this.isExpired(),
-      isActive: this.isActive(),
-      isCancelled: this.isCancelled(),
-      isFulfilled: this.isFulfilled(),
+      reservationId: entity.props.reservationId.getValue(),
+      orderId: entity.props.orderId,
+      variantId: entity.props.variantId,
+      locationId: entity.props.locationId,
+      qty: entity.props.qty,
+      expiresAt: entity.props.expiresAt,
+      status: entity.props.status.getValue(),
+      isActive: entity.isActive(),
+      isExpired: entity.isExpired(),
+      isCancelled: entity.isCancelled(),
+      isFulfilled: entity.isFulfilled(),
     };
   }
 }

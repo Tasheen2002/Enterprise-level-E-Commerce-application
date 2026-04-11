@@ -1,101 +1,186 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { StockId } from "../value-objects/stock-id.vo";
 import { StockLevel } from "../value-objects/stock-level.vo";
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class StockAddedEvent extends DomainEvent {
+  constructor(
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly quantity: number,
+  ) {
+    super(`${variantId}:${locationId}`, "Stock");
+  }
+  get eventType(): string { return "stock.added"; }
+  getPayload(): Record<string, unknown> {
+    return { variantId: this.variantId, locationId: this.locationId, quantity: this.quantity };
+  }
+}
+
+export class StockRemovedEvent extends DomainEvent {
+  constructor(
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly quantity: number,
+  ) {
+    super(`${variantId}:${locationId}`, "Stock");
+  }
+  get eventType(): string { return "stock.removed"; }
+  getPayload(): Record<string, unknown> {
+    return { variantId: this.variantId, locationId: this.locationId, quantity: this.quantity };
+  }
+}
+
+export class StockReservedEvent extends DomainEvent {
+  constructor(
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly quantity: number,
+  ) {
+    super(`${variantId}:${locationId}`, "Stock");
+  }
+  get eventType(): string { return "stock.reserved"; }
+  getPayload(): Record<string, unknown> {
+    return { variantId: this.variantId, locationId: this.locationId, quantity: this.quantity };
+  }
+}
+
+export class StockThresholdsUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly variantId: string,
+    public readonly locationId: string,
+  ) {
+    super(`${variantId}:${locationId}`, "Stock");
+  }
+  get eventType(): string { return "stock.thresholds_updated"; }
+  getPayload(): Record<string, unknown> {
+    return { variantId: this.variantId, locationId: this.locationId };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface StockProps {
   variantId: string;
   locationId: string;
   stockLevel: StockLevel;
-  variant?: any;
-  location?: any;
 }
 
-export class Stock {
-  private constructor(private readonly props: StockProps) {}
+export interface StockDTO {
+  variantId: string;
+  locationId: string;
+  onHand: number;
+  reserved: number;
+  available: number;
+  lowStockThreshold: number | null;
+  safetyStock: number | null;
+  isLowStock: boolean;
+  isOutOfStock: boolean;
+}
 
-  static create(props: StockProps): Stock {
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class Stock extends AggregateRoot {
+  private props: StockProps;
+
+  private constructor(props: StockProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    variantId: string;
+    locationId: string;
+    onHand: number;
+    reserved?: number;
+    lowStockThreshold?: number | null;
+    safetyStock?: number | null;
+  }): Stock {
+    return new Stock({
+      variantId: params.variantId,
+      locationId: params.locationId,
+      stockLevel: StockLevel.create(
+        params.onHand,
+        params.reserved ?? 0,
+        params.lowStockThreshold,
+        params.safetyStock,
+      ),
+    });
+  }
+
+  static fromPersistence(props: StockProps): Stock {
     return new Stock(props);
   }
 
-  static reconstitute(props: StockProps): Stock {
-    return new Stock(props);
-  }
+  // ── Getters ────────────────────────────────────────────────────────
+
+  get variantId(): string { return this.props.variantId; }
+  get locationId(): string { return this.props.locationId; }
+  get stockLevel(): StockLevel { return this.props.stockLevel; }
 
   getStockId(): StockId {
     return StockId.create(this.props.variantId, this.props.locationId);
   }
 
-  getVariantId(): string {
-    return this.props.variantId;
+  // ── Business Logic ─────────────────────────────────────────────────
+
+  addStock(quantity: number): void {
+    this.props.stockLevel = this.props.stockLevel.addStock(quantity);
+    this.addDomainEvent(
+      new StockAddedEvent(this.props.variantId, this.props.locationId, quantity),
+    );
   }
 
-  getLocationId(): string {
-    return this.props.locationId;
+  removeStock(quantity: number): void {
+    this.props.stockLevel = this.props.stockLevel.removeStock(quantity);
+    this.addDomainEvent(
+      new StockRemovedEvent(this.props.variantId, this.props.locationId, quantity),
+    );
   }
 
-  getStockLevel(): StockLevel {
-    return this.props.stockLevel;
+  reserveStock(quantity: number): void {
+    this.props.stockLevel = this.props.stockLevel.reserveStock(quantity);
+    this.addDomainEvent(
+      new StockReservedEvent(this.props.variantId, this.props.locationId, quantity),
+    );
   }
 
-  getVariant(): any | undefined {
-    return this.props.variant;
-  }
-
-  getLocation(): any | undefined {
-    return this.props.location;
-  }
-
-  addStock(quantity: number): Stock {
-    return new Stock({
-      ...this.props,
-      stockLevel: this.props.stockLevel.addStock(quantity),
-    });
-  }
-
-  removeStock(quantity: number): Stock {
-    return new Stock({
-      ...this.props,
-      stockLevel: this.props.stockLevel.removeStock(quantity),
-    });
-  }
-
-  reserveStock(quantity: number): Stock {
-    return new Stock({
-      ...this.props,
-      stockLevel: this.props.stockLevel.reserveStock(quantity),
-    });
-  }
-
-  fulfillReservation(quantity: number): Stock {
-    return new Stock({
-      ...this.props,
-      stockLevel: this.props.stockLevel.fulfillReservation(quantity),
-    });
+  fulfillReservation(quantity: number): void {
+    this.props.stockLevel = this.props.stockLevel.fulfillReservation(quantity);
   }
 
   updateThresholds(
     lowStockThreshold?: number | null,
     safetyStock?: number | null,
-  ): Stock {
-    return new Stock({
-      ...this.props,
-      stockLevel: this.props.stockLevel.updateThresholds(
-        lowStockThreshold,
-        safetyStock,
-      ),
-    });
+  ): void {
+    this.props.stockLevel = this.props.stockLevel.updateThresholds(lowStockThreshold, safetyStock);
+    this.addDomainEvent(
+      new StockThresholdsUpdatedEvent(this.props.variantId, this.props.locationId),
+    );
   }
 
-  toJSON() {
+  equals(other: Stock): boolean {
+    return (
+      this.props.variantId === other.props.variantId &&
+      this.props.locationId === other.props.locationId
+    );
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
+
+  static toDTO(entity: Stock): StockDTO {
     return {
-      variantId: this.props.variantId,
-      locationId: this.props.locationId,
-      onHand: this.props.stockLevel.getOnHand(),
-      reserved: this.props.stockLevel.getReserved(),
-      available: this.props.stockLevel.getAvailable(),
-      lowStockThreshold: this.props.stockLevel.getLowStockThreshold(),
-      safetyStock: this.props.stockLevel.getSafetyStock(),
-      isLowStock: this.props.stockLevel.isLowStock(),
-      isOutOfStock: this.props.stockLevel.isOutOfStock(),
+      variantId: entity.props.variantId,
+      locationId: entity.props.locationId,
+      onHand: entity.props.stockLevel.getOnHand(),
+      reserved: entity.props.stockLevel.getReserved(),
+      available: entity.props.stockLevel.getAvailable(),
+      lowStockThreshold: entity.props.stockLevel.getLowStockThreshold(),
+      safetyStock: entity.props.stockLevel.getSafetyStock(),
+      isLowStock: entity.props.stockLevel.isLowStock(),
+      isOutOfStock: entity.props.stockLevel.isOutOfStock(),
     };
   }
 }

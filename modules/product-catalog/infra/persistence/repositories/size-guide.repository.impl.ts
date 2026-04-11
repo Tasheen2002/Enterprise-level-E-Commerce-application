@@ -13,36 +13,40 @@ import {
 export class SizeGuideRepository implements ISizeGuideRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async save(sizeGuide: SizeGuide): Promise<void> {
-    const data = sizeGuide.toDatabaseRow();
+  private hydrate(row: {
+    id: string;
+    title: string;
+    bodyHtml: string | null;
+    region: string;
+    category: string | null;
+  }): SizeGuide {
+    return SizeGuide.fromPersistence({
+      id: SizeGuideId.fromString(row.id),
+      title: row.title,
+      bodyHtml: row.bodyHtml,
+      region: row.region as Region,
+      category: row.category,
+    });
+  }
 
+  async save(sizeGuide: SizeGuide): Promise<void> {
     await this.prisma.sizeGuide.create({
       data: {
-        id: data.size_guide_id,
-        title: data.title,
-        bodyHtml: data.body_html,
-        region: data.region,
-        category: data.category,
+        id: sizeGuide.id.getValue(),
+        title: sizeGuide.title,
+        bodyHtml: sizeGuide.bodyHtml,
+        region: sizeGuide.region,
+        category: sizeGuide.category,
       },
     });
   }
 
   async findById(id: SizeGuideId): Promise<SizeGuide | null> {
-    const sizeGuideData = await this.prisma.sizeGuide.findUnique({
+    const row = await this.prisma.sizeGuide.findUnique({
       where: { id: id.getValue() },
     });
 
-    if (!sizeGuideData) {
-      return null;
-    }
-
-    return SizeGuide.fromDatabaseRow({
-      size_guide_id: sizeGuideData.id,
-      title: sizeGuideData.title,
-      body_html: sizeGuideData.bodyHtml,
-      region: sizeGuideData.region as Region,
-      category: sizeGuideData.category,
-    });
+    return row ? this.hydrate(row) : null;
   }
 
   async findAll(options?: SizeGuideQueryOptions): Promise<SizeGuide[]> {
@@ -57,29 +61,17 @@ export class SizeGuideRepository implements ISizeGuideRepository {
     const whereClause: any = {};
 
     if (hasContent !== undefined) {
-      if (hasContent) {
-        whereClause.bodyHtml = { not: null };
-      } else {
-        whereClause.bodyHtml = null;
-      }
+      whereClause.bodyHtml = hasContent ? { not: null } : null;
     }
 
-    const sizeGuides = await this.prisma.sizeGuide.findMany({
+    const rows = await this.prisma.sizeGuide.findMany({
       where: whereClause,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return sizeGuides.map((sizeGuideData) =>
-      SizeGuide.fromDatabaseRow({
-        size_guide_id: sizeGuideData.id,
-        title: sizeGuideData.title,
-        body_html: sizeGuideData.bodyHtml,
-        region: sizeGuideData.region as Region,
-        category: sizeGuideData.category,
-      }),
-    );
+    return rows.map((row) => this.hydrate(row));
   }
 
   async findByRegion(
@@ -94,32 +86,20 @@ export class SizeGuideRepository implements ISizeGuideRepository {
       hasContent,
     } = options || {};
 
-    const whereClause: any = { region: region };
+    const whereClause: any = { region };
 
     if (hasContent !== undefined) {
-      if (hasContent) {
-        whereClause.bodyHtml = { not: null };
-      } else {
-        whereClause.bodyHtml = null;
-      }
+      whereClause.bodyHtml = hasContent ? { not: null } : null;
     }
 
-    const sizeGuides = await this.prisma.sizeGuide.findMany({
+    const rows = await this.prisma.sizeGuide.findMany({
       where: whereClause,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return sizeGuides.map((sizeGuideData) =>
-      SizeGuide.fromDatabaseRow({
-        size_guide_id: sizeGuideData.id,
-        title: sizeGuideData.title,
-        body_html: sizeGuideData.bodyHtml,
-        region: sizeGuideData.region as Region,
-        category: sizeGuideData.category,
-      }),
-    );
+    return rows.map((row) => this.hydrate(row));
   }
 
   async findByCategory(
@@ -137,85 +117,47 @@ export class SizeGuideRepository implements ISizeGuideRepository {
     const whereClause: any = { category };
 
     if (hasContent !== undefined) {
-      if (hasContent) {
-        whereClause.bodyHtml = { not: null };
-      } else {
-        whereClause.bodyHtml = null;
-      }
+      whereClause.bodyHtml = hasContent ? { not: null } : null;
     }
 
-    const sizeGuides = await this.prisma.sizeGuide.findMany({
+    const rows = await this.prisma.sizeGuide.findMany({
       where: whereClause,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return sizeGuides.map((sizeGuideData) =>
-      SizeGuide.fromDatabaseRow({
-        size_guide_id: sizeGuideData.id,
-        title: sizeGuideData.title,
-        body_html: sizeGuideData.bodyHtml,
-        region: sizeGuideData.region as Region,
-        category: sizeGuideData.category,
-      }),
-    );
+    return rows.map((row) => this.hydrate(row));
   }
 
   async findByRegionAndCategory(
     region: Region,
     category: string,
   ): Promise<SizeGuide | null> {
-    const sizeGuideData = await this.prisma.sizeGuide.findFirst({
-      where: {
-        region: region,
-        category: category,
-      },
+    const row = await this.prisma.sizeGuide.findFirst({
+      where: { region, category },
     });
 
-    if (!sizeGuideData) {
-      return null;
-    }
-
-    return SizeGuide.fromDatabaseRow({
-      size_guide_id: sizeGuideData.id,
-      title: sizeGuideData.title,
-      body_html: sizeGuideData.bodyHtml,
-      region: sizeGuideData.region as Region,
-      category: sizeGuideData.category,
-    });
+    return row ? this.hydrate(row) : null;
   }
 
   async findGeneral(region: Region): Promise<SizeGuide[]> {
-    const sizeGuides = await this.prisma.sizeGuide.findMany({
-      where: {
-        region: region,
-        category: null,
-      },
+    const rows = await this.prisma.sizeGuide.findMany({
+      where: { region, category: null },
       orderBy: { title: "asc" },
     });
 
-    return sizeGuides.map((sizeGuideData) =>
-      SizeGuide.fromDatabaseRow({
-        size_guide_id: sizeGuideData.id,
-        title: sizeGuideData.title,
-        body_html: sizeGuideData.bodyHtml,
-        region: sizeGuideData.region as Region,
-        category: sizeGuideData.category,
-      }),
-    );
+    return rows.map((row) => this.hydrate(row));
   }
 
   async update(sizeGuide: SizeGuide): Promise<void> {
-    const data = sizeGuide.toDatabaseRow();
-
     await this.prisma.sizeGuide.update({
-      where: { id: data.size_guide_id },
+      where: { id: sizeGuide.id.getValue() },
       data: {
-        title: data.title,
-        bodyHtml: data.body_html,
-        region: data.region,
-        category: data.category,
+        title: sizeGuide.title,
+        bodyHtml: sizeGuide.bodyHtml,
+        region: sizeGuide.region,
+        category: sizeGuide.category,
       },
     });
   }
@@ -245,15 +187,9 @@ export class SizeGuideRepository implements ISizeGuideRepository {
     }
 
     if (options?.hasContent !== undefined) {
-      if (options.hasContent) {
-        whereClause.bodyHtml = { not: null };
-      } else {
-        whereClause.bodyHtml = null;
-      }
+      whereClause.bodyHtml = options.hasContent ? { not: null } : null;
     }
 
-    return await this.prisma.sizeGuide.count({
-      where: whereClause,
-    });
+    return await this.prisma.sizeGuide.count({ where: whereClause });
   }
 }

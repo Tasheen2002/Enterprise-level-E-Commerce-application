@@ -1,14 +1,21 @@
-import { IQuery } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { StockAlertDTO } from "../../../domain/entities/stock-alert.entity";
+import { StockAlertService } from "../../services/stock-alert.service";
 
 export interface GetStockAlertQuery extends IQuery {
   alertId: string;
 }
 
-export interface StockAlertResult {
-  alertId: string;
-  variantId: string;
-  type: string;
-  triggeredAt: Date;
-  resolvedAt?: Date;
-  isResolved: boolean;
+export type StockAlertResult = StockAlertDTO;
+
+export class GetStockAlertHandler implements IQueryHandler<
+  GetStockAlertQuery,
+  QueryResult<StockAlertResult>
+> {
+  constructor(private readonly stockAlertService: StockAlertService) {}
+
+  async handle(query: GetStockAlertQuery): Promise<QueryResult<StockAlertResult>> {
+    const alert = await this.stockAlertService.getStockAlert(query.alertId);
+    return QueryResult.success(alert);
+  }
 }

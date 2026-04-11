@@ -1,67 +1,45 @@
 import { FastifyInstance } from "fastify";
-import { CategoryController, CategoryQueryParams, CreateCategoryRequest, UpdateCategoryRequest } from "../controllers/category.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { CategoryController } from "../controllers/category.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
+import {
+  listCategoriesSchema,
+  createCategorySchema,
+  updateCategorySchema,
+  reorderCategoriesSchema,
+  categoryParamsSchema,
+  categorySlugParamsSchema,
+  categoryResponseSchema,
+} from "../validation/category.schema";
 
 export async function registerCategoryRoutes(
   fastify: FastifyInstance,
   controller: CategoryController,
 ): Promise<void> {
   // GET /categories — List categories (public)
-  fastify.get<{ Querystring: CategoryQueryParams }>(
+  fastify.get(
     "/categories",
     {
+      preHandler: [validateQuery(listCategoriesSchema)],
       schema: {
-        description: "Get paginated list of categories with filtering options",
+        description: "Get paginated list of categories",
         tags: ["Categories"],
         summary: "List Categories",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
-            parentId: { type: "string", format: "uuid" },
-            includeChildren: { type: "boolean", default: false },
-            sortBy: {
-              type: "string",
-              enum: ["name", "position", "createdAt"],
-              default: "position",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "asc",
-            },
-          },
-        },
         response: {
           200: {
-            description: "List of categories",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
               data: {
-                type: "array",
-                items: {
-                  type: "object",
-                  required: ["id", "name", "slug"],
-                  properties: {
-                    id: { type: "string" },
-                    name: { type: "string" },
-                    slug: { type: "string" },
-                    parentId: { type: "string", nullable: true },
-                    position: { type: "number", nullable: true },
-                  },
-                },
-              },
-              meta: {
                 type: "object",
                 properties: {
-                  page: { type: "number" },
-                  limit: { type: "number" },
-                  parentId: { type: "string", nullable: true },
-                  includeChildren: { type: "boolean" },
-                  sortBy: { type: "string" },
-                  sortOrder: { type: "string" },
+                  categories: { type: "array", items: categoryResponseSchema },
+                  meta: { type: "object" },
                 },
               },
             },
@@ -69,10 +47,11 @@ export async function registerCategoryRoutes(
         },
       },
     },
-    controller.getCategories.bind(controller),
+    (request, reply) =>
+      controller.getCategories(request as AuthenticatedRequest, reply),
   );
 
-  // GET /categories/hierarchy — Get category tree (public, registered before /:id)
+  // GET /categories/hierarchy — Get category tree (registered before /:id)
   fastify.get(
     "/categories/hierarchy",
     {
@@ -80,15 +59,26 @@ export async function registerCategoryRoutes(
         description: "Get category hierarchy tree",
         tags: ["Categories"],
         summary: "Get Category Hierarchy",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: categoryResponseSchema },
+            },
+          },
+        },
       },
     },
-    controller.getCategoryHierarchy.bind(controller),
+    (request, reply) =>
+      controller.getCategoryHierarchy(request as AuthenticatedRequest, reply),
   );
 
-  // GET /categories/slug/:slug — Get by slug (public, registered before /:id)
+  // GET /categories/slug/:slug — Get by slug (registered before /:id)
   fastify.get(
     "/categories/slug/:slug",
     {
+      preValidation: [validateParams(categorySlugParamsSchema)],
       schema: {
         description: "Get category by slug",
         tags: ["Categories"],
@@ -98,15 +88,26 @@ export async function registerCategoryRoutes(
           required: ["slug"],
           properties: { slug: { type: "string" } },
         },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: categoryResponseSchema,
+            },
+          },
+        },
       },
     },
-    controller.getCategoryBySlug.bind(controller),
+    (request, reply) =>
+      controller.getCategoryBySlug(request as AuthenticatedRequest, reply),
   );
 
   // GET /categories/:id — Get by ID (public)
   fastify.get(
     "/categories/:id",
     {
+      preValidation: [validateParams(categoryParamsSchema)],
       schema: {
         description: "Get category by ID",
         tags: ["Categories"],
@@ -116,16 +117,29 @@ export async function registerCategoryRoutes(
           required: ["id"],
           properties: { id: { type: "string", format: "uuid" } },
         },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: categoryResponseSchema,
+            },
+          },
+        },
       },
     },
-    controller.getCategory.bind(controller),
+    (request, reply) =>
+      controller.getCategory(request as AuthenticatedRequest, reply),
   );
 
-  // POST /categories/reorder — Reorder categories (Admin only, registered before POST /categories to keep specificity)
-  fastify.post<{ Body: { categoryOrders: Array<{ id: string; position: number }> } }>(
+  // POST /categories/reorder — Reorder categories (Admin only, before POST /categories)
+  fastify.post(
     "/categories/reorder",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [
+        validateBody(reorderCategoriesSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Reorder categories by updating positions",
         tags: ["Categories"],
@@ -148,16 +162,26 @@ export async function registerCategoryRoutes(
             },
           },
         },
+        response: {
+          204: {
+            description: "Categories reordered successfully",
+            type: "null",
+          },
+        },
       },
     },
-    controller.reorderCategories.bind(controller),
+    (request, reply) =>
+      controller.reorderCategories(request as AuthenticatedRequest, reply),
   );
 
   // POST /categories — Create category (Admin only)
-  fastify.post<{ Body: CreateCategoryRequest }>(
+  fastify.post(
     "/categories",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [
+        validateBody(createCategorySchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Create a new category",
         tags: ["Categories"],
@@ -167,49 +191,38 @@ export async function registerCategoryRoutes(
           type: "object",
           required: ["name"],
           properties: {
-            name: { type: "string", description: "Category name" },
-            parentId: {
-              type: "string",
-              format: "uuid",
-              description: "Parent category ID",
-            },
-            position: {
-              type: "integer",
-              minimum: 0,
-              description: "Display position",
-            },
+            name: { type: "string" },
+            slug: { type: "string" },
+            description: { type: "string" },
+            parentId: { type: "string", format: "uuid" },
+            position: { type: "integer", minimum: 0 },
+            imageUrl: { type: "string" },
           },
         },
         response: {
           201: {
-            description: "Category created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  id: { type: "string", format: "uuid" },
-                  name: { type: "string" },
-                },
-              },
-              message: {
-                type: "string",
-                example: "Category created successfully",
-              },
+              success: { type: "boolean" },
+              data: categoryResponseSchema,
             },
           },
         },
       },
     },
-    controller.createCategory.bind(controller),
+    (request, reply) =>
+      controller.createCategory(request as AuthenticatedRequest, reply),
   );
 
   // PUT /categories/:id — Update category (Admin only)
-  fastify.put<{ Params: { id: string }; Body: UpdateCategoryRequest }>(
+  fastify.put(
     "/categories/:id",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(categoryParamsSchema)],
+      preHandler: [
+        validateBody(updateCategorySchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Update an existing category",
         tags: ["Categories"],
@@ -224,19 +237,33 @@ export async function registerCategoryRoutes(
           type: "object",
           properties: {
             name: { type: "string" },
+            slug: { type: "string" },
+            description: { type: "string" },
             parentId: { type: "string", format: "uuid" },
             position: { type: "integer", minimum: 0 },
+            imageUrl: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: categoryResponseSchema,
+            },
           },
         },
       },
     },
-    controller.updateCategory.bind(controller),
+    (request, reply) =>
+      controller.updateCategory(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /categories/:id — Delete category (Admin only)
-  fastify.delete<{ Params: { id: string } }>(
+  fastify.delete(
     "/categories/:id",
     {
+      preValidation: [validateParams(categoryParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a category",
@@ -248,8 +275,15 @@ export async function registerCategoryRoutes(
           required: ["id"],
           properties: { id: { type: "string", format: "uuid" } },
         },
+        response: {
+          204: {
+            description: "Category deleted successfully",
+            type: "null",
+          },
+        },
       },
     },
-    controller.deleteCategory.bind(controller),
+    (request, reply) =>
+      controller.deleteCategory(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,13 +1,7 @@
-import { v4 as uuidv4 } from "uuid";
-import {
-  Location,
-  LocationAddress,
-} from "../../domain/entities/location.entity";
+import { Location, LocationDTO } from "../../domain/entities/location.entity";
 import { LocationId } from "../../domain/value-objects/location-id.vo";
-import {
-  LocationType,
-  LocationTypeVO,
-} from "../../domain/value-objects/location-type.vo";
+import { LocationType } from "../../domain/value-objects/location-type.vo";
+import { LocationAddress, LocationAddressProps } from "../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../domain/repositories/location.repository";
 import {
   LocationAlreadyExistsError,
@@ -20,111 +14,94 @@ export class LocationManagementService {
   async createLocation(
     type: string,
     name: string,
-    address?: LocationAddress,
-  ): Promise<Location> {
-    // Check if location with same name already exists
+    address?: LocationAddressProps,
+  ): Promise<LocationDTO> {
     const existingLocation = await this.locationRepository.findByName(name);
     if (existingLocation) {
       throw new LocationAlreadyExistsError(name);
     }
 
-    const location = Location.create({
-      locationId: LocationId.create(uuidv4()),
-      type: LocationTypeVO.create(type),
-      name,
-      address,
-    });
+    const location = Location.create({ type, name, address });
 
     await this.locationRepository.save(location);
-    return location;
+    return Location.toDTO(location);
   }
 
   async updateLocation(
     locationId: string,
     data: {
       name?: string;
-      address?: LocationAddress;
+      address?: LocationAddressProps;
     },
-  ): Promise<Location> {
+  ): Promise<LocationDTO> {
     const location = await this.locationRepository.findById(
-      LocationId.create(locationId),
+      LocationId.fromString(locationId),
     );
 
     if (!location) {
       throw new LocationNotFoundError(locationId);
     }
 
-    let updatedLocation = location;
-
     if (data.name) {
-      // Check if new name is already taken by another location
-      const existingLocation = await this.locationRepository.findByName(
-        data.name,
-      );
-      if (
-        existingLocation &&
-        existingLocation.getLocationId().getValue() !== locationId
-      ) {
+      const existingLocation = await this.locationRepository.findByName(data.name);
+      if (existingLocation && existingLocation.locationId.getValue() !== locationId) {
         throw new LocationAlreadyExistsError(data.name);
       }
-      updatedLocation = updatedLocation.updateName(data.name);
+      location.updateName(data.name);
     }
 
     if (data.address) {
-      updatedLocation = updatedLocation.updateAddress(data.address);
+      location.updateAddress(LocationAddress.create(data.address));
     }
 
-    await this.locationRepository.save(updatedLocation);
-    return updatedLocation;
+    await this.locationRepository.save(location);
+    return Location.toDTO(location);
   }
 
   async deleteLocation(locationId: string): Promise<void> {
-    const location = await this.locationRepository.findById(
-      LocationId.create(locationId),
-    );
+    const id = LocationId.fromString(locationId);
+    const location = await this.locationRepository.findById(id);
 
     if (!location) {
       throw new LocationNotFoundError(locationId);
     }
 
-    await this.locationRepository.delete(LocationId.create(locationId));
+    await this.locationRepository.delete(id);
   }
 
-  async getLocation(locationId: string): Promise<Location> {
+  async getLocation(locationId: string): Promise<LocationDTO> {
     const location = await this.locationRepository.findById(
-      LocationId.create(locationId),
+      LocationId.fromString(locationId),
     );
     if (!location) {
       throw new LocationNotFoundError(locationId);
     }
-    return location;
+    return Location.toDTO(location);
   }
 
-  async getLocationByName(name: string): Promise<Location> {
+  async getLocationByName(name: string): Promise<LocationDTO> {
     const location = await this.locationRepository.findByName(name);
     if (!location) {
       throw new LocationNotFoundError(name);
     }
-    return location;
+    return Location.toDTO(location);
   }
 
   async listLocations(options?: {
     limit?: number;
     offset?: number;
     type?: string;
-  }): Promise<{ locations: Location[]; total: number }> {
+  }): Promise<{ locations: LocationDTO[]; total: number }> {
     if (options?.type) {
       const locationType = options.type.toLowerCase() as LocationType;
       const locations = await this.locationRepository.findByType(locationType);
-      return {
-        locations,
-        total: locations.length,
-      };
+      return { locations: locations.map(Location.toDTO), total: locations.length };
     }
 
-    return this.locationRepository.findAll({
+    const result = await this.locationRepository.findAll({
       limit: options?.limit,
       offset: options?.offset,
     });
+    return { locations: result.locations.map(Location.toDTO), total: result.total };
   }
 }

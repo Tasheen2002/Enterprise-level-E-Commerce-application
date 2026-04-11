@@ -1,13 +1,25 @@
 import {
   IMediaAssetRepository,
   MediaAssetQueryOptions,
-  MediaAssetCountOptions,
 } from "../../domain/repositories/media-asset.repository";
 import {
   MediaAsset,
+  MediaAssetDTO,
   MediaAssetId,
-  CreateMediaAssetData,
 } from "../../domain/entities/media-asset.entity";
+
+/** Input shape for creating/updating a media asset — mirrors MediaAsset.create() params */
+type CreateMediaAssetInput = {
+  storageKey: string;
+  mime: string;
+  width?: number;
+  height?: number;
+  bytes?: number;
+  altText?: string;
+  focalX?: number;
+  focalY?: number;
+  renditions?: Record<string, any>;
+};
 import {
   MediaAssetNotFoundError,
   DomainValidationError,
@@ -50,8 +62,7 @@ export interface MediaAssetFilters {
 export class MediaManagementService {
   constructor(private readonly mediaAssetRepository: IMediaAssetRepository) {}
 
-  async createAsset(data: CreateMediaAssetData): Promise<MediaAsset> {
-    // Check if storage key already exists
+  async createAsset(data: CreateMediaAssetInput): Promise<MediaAssetDTO> {
     const existingAsset = await this.mediaAssetRepository.findByStorageKey(
       data.storageKey,
     );
@@ -61,12 +72,10 @@ export class MediaManagementService {
       );
     }
 
-    // Validate MIME type
     if (!this.isValidMimeType(data.mime)) {
       throw new DomainValidationError("Invalid MIME type");
     }
 
-    // Validate dimensions for images
     if (data.mime.startsWith("image/")) {
       if (data.width && data.width <= 0) {
         throw new DomainValidationError("Image width must be positive");
@@ -76,12 +85,10 @@ export class MediaManagementService {
       }
     }
 
-    // Validate file size
     if (data.bytes && data.bytes < 0) {
       throw new DomainValidationError("File size cannot be negative");
     }
 
-    // Validate focal point
     if (data.focalX !== undefined && (data.focalX < 0 || data.focalX > 100)) {
       throw new DomainValidationError("Focal X must be between 0 and 100");
     }
@@ -91,29 +98,24 @@ export class MediaManagementService {
 
     const asset = MediaAsset.create(data);
     await this.mediaAssetRepository.save(asset);
-    return asset;
+    return MediaAsset.toDTO(asset);
   }
 
-  async getAssetById(id: string): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-    return asset;
+  async getAssetById(id: string): Promise<MediaAssetDTO> {
+    return MediaAsset.toDTO(await this._getAsset(id));
   }
 
-  async getAssetByStorageKey(storageKey: string): Promise<MediaAsset> {
+  async getAssetByStorageKey(storageKey: string): Promise<MediaAssetDTO> {
     const asset = await this.mediaAssetRepository.findByStorageKey(storageKey);
     if (!asset) {
       throw new MediaAssetNotFoundError(storageKey);
     }
-    return asset;
+    return MediaAsset.toDTO(asset);
   }
 
   async getAllAssets(
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -130,13 +132,14 @@ export class MediaManagementService {
       hasRenditions,
     };
 
-    return await this.mediaAssetRepository.findAll(repositoryOptions);
+    const assets = await this.mediaAssetRepository.findAll(repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async getAssetsByMimeType(
     mimeType: string,
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -151,15 +154,13 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    return await this.mediaAssetRepository.findByMimeType(
-      mimeType,
-      repositoryOptions,
-    );
+    const assets = await this.mediaAssetRepository.findByMimeType(mimeType, repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async getImageAssets(
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -174,12 +175,13 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    return await this.mediaAssetRepository.findImages(repositoryOptions);
+    const assets = await this.mediaAssetRepository.findImages(repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async getVideoAssets(
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -194,14 +196,15 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    return await this.mediaAssetRepository.findVideos(repositoryOptions);
+    const assets = await this.mediaAssetRepository.findVideos(repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async getAssetsByDimensions(
     width: number,
     height: number,
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -216,18 +219,15 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    return await this.mediaAssetRepository.findByDimensions(
-      width,
-      height,
-      repositoryOptions,
-    );
+    const assets = await this.mediaAssetRepository.findByDimensions(width, height, repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async getAssetsBySizeRange(
     minBytes: number,
     maxBytes: number,
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -242,57 +242,36 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    return await this.mediaAssetRepository.findBySizeRange(
-      minBytes,
-      maxBytes,
-      repositoryOptions,
-    );
+    const assets = await this.mediaAssetRepository.findBySizeRange(minBytes, maxBytes, repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
-  async getOrphanedAssets(): Promise<MediaAsset[]> {
-    return await this.mediaAssetRepository.findOrphaned();
+  async getOrphanedAssets(): Promise<MediaAssetDTO[]> {
+    const assets = await this.mediaAssetRepository.findOrphaned();
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async updateAsset(
     id: string,
-    updateData: Partial<CreateMediaAssetData>,
-  ): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-
-    // Update all provided fields at once
+    updateData: Partial<CreateMediaAssetInput>,
+  ): Promise<MediaAssetDTO> {
+    const asset = await this._getAsset(id);
     asset.updateFields(updateData);
-
     await this.mediaAssetRepository.update(asset);
-    return asset;
+    return MediaAsset.toDTO(asset);
   }
 
   async deleteAsset(id: string): Promise<void> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-
-    await this.mediaAssetRepository.delete(assetId);
+    const asset = await this._getAsset(id);
+    await this.mediaAssetRepository.delete(asset.id);
   }
 
   async addRendition(
     id: string,
     name: string,
     renditionData: any,
-  ): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
+  ): Promise<MediaAssetDTO> {
+    const asset = await this._getAsset(id);
 
     if (!name || name.trim().length === 0) {
       throw new DomainValidationError("Rendition name cannot be empty");
@@ -300,23 +279,17 @@ export class MediaManagementService {
 
     asset.addRendition(name, renditionData);
     await this.mediaAssetRepository.update(asset);
-    return asset;
+    return MediaAsset.toDTO(asset);
   }
 
   async removeRendition(
     id: string,
     renditionName: string,
-  ): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-
+  ): Promise<MediaAssetDTO> {
+    const asset = await this._getAsset(id);
     asset.removeRendition(renditionName);
     await this.mediaAssetRepository.update(asset);
-    return asset;
+    return MediaAsset.toDTO(asset);
   }
 
   async getAssetStatistics(): Promise<MediaAssetStatistics> {
@@ -359,7 +332,7 @@ export class MediaManagementService {
   async searchAssets(
     filters: MediaAssetFilters,
     options: MediaAssetServiceQueryOptions = {},
-  ): Promise<MediaAsset[]> {
+  ): Promise<MediaAssetDTO[]> {
     const {
       page = 1,
       limit = 20,
@@ -374,11 +347,8 @@ export class MediaManagementService {
       sortOrder,
     };
 
-    // Use the repository's findWithFilters method for combined filtering
-    return await this.mediaAssetRepository.findWithFilters(
-      filters,
-      repositoryOptions,
-    );
+    const assets = await this.mediaAssetRepository.findWithFilters(filters, repositoryOptions);
+    return assets.map((a) => MediaAsset.toDTO(a));
   }
 
   async cleanupOrphanedAssets(): Promise<{
@@ -389,15 +359,11 @@ export class MediaManagementService {
 
     let totalSize = 0;
     for (const asset of orphanedAssets) {
-      const assetSize = asset.getBytes() || 0;
-      totalSize += assetSize;
-      await this.mediaAssetRepository.delete(asset.getId());
+      totalSize += asset.bytes || 0;
+      await this.mediaAssetRepository.delete(asset.id);
     }
 
-    return {
-      deletedCount: orphanedAssets.length,
-      totalSize,
-    };
+    return { deletedCount: orphanedAssets.length, totalSize };
   }
 
   async validateAsset(id: string): Promise<{
@@ -408,50 +374,90 @@ export class MediaManagementService {
     const asset = await this.mediaAssetRepository.findById(assetId);
 
     if (!asset) {
-      return {
-        isValid: false,
-        issues: ["Asset not found"],
-      };
+      return { isValid: false, issues: ["Asset not found"] };
     }
 
     const issues: string[] = [];
 
-    // Check if storage key exists
-    if (!asset.getStorageKey()) {
+    if (!asset.storageKey) {
       issues.push("Missing storage key");
     }
 
-    // Check if MIME type is valid
-    if (!this.isValidMimeType(asset.getMime())) {
+    if (!this.isValidMimeType(asset.mime)) {
       issues.push("Invalid MIME type");
     }
 
-    // Check dimensions for images
     if (asset.isImage()) {
-      if (!asset.getWidth() || !asset.getHeight()) {
+      if (!asset.width || !asset.height) {
         issues.push("Missing dimensions for image");
       }
     }
 
-    // Check focal point values
-    const focalX = asset.getFocalX();
-    const focalY = asset.getFocalY();
-    if (focalX !== null && (focalX < 0 || focalX > 100)) {
+    if (asset.focalX !== null && (asset.focalX < 0 || asset.focalX > 100)) {
       issues.push("Invalid focal X coordinate");
     }
-    if (focalY !== null && (focalY < 0 || focalY > 100)) {
+    if (asset.focalY !== null && (asset.focalY < 0 || asset.focalY > 100)) {
       issues.push("Invalid focal Y coordinate");
     }
 
-    return {
-      isValid: issues.length === 0,
-      issues,
+    return { isValid: issues.length === 0, issues };
+  }
+
+  async duplicateAsset(id: string, newStorageKey: string): Promise<MediaAssetDTO> {
+    const originalAsset = await this._getAsset(id);
+
+    const existingAsset = await this.mediaAssetRepository.findByStorageKey(newStorageKey);
+    if (existingAsset) {
+      throw new InvalidOperationError(
+        "Asset with this storage key already exists",
+      );
+    }
+
+    const duplicateData: CreateMediaAssetInput = {
+      storageKey: newStorageKey,
+      mime: originalAsset.mime,
+      width: originalAsset.width || undefined,
+      height: originalAsset.height || undefined,
+      bytes: originalAsset.bytes || undefined,
+      altText: originalAsset.altText || undefined,
+      focalX: originalAsset.focalX || undefined,
+      focalY: originalAsset.focalY || undefined,
+      renditions: originalAsset.renditions,
     };
+
+    return await this.createAsset(duplicateData);
+  }
+
+  async updateStorageKey(
+    id: string,
+    newStorageKey: string,
+  ): Promise<MediaAssetDTO> {
+    const asset = await this._getAsset(id);
+    const assetId = MediaAssetId.fromString(id);
+
+    const existingAsset = await this.mediaAssetRepository.findByStorageKey(newStorageKey);
+    if (existingAsset && !existingAsset.id.equals(assetId)) {
+      throw new InvalidOperationError(
+        "Asset with this storage key already exists",
+      );
+    }
+
+    asset.updateStorageKey(newStorageKey);
+    await this.mediaAssetRepository.update(asset);
+    return MediaAsset.toDTO(asset);
+  }
+
+  private async _getAsset(id: string): Promise<MediaAsset> {
+    const assetId = MediaAssetId.fromString(id);
+    const asset = await this.mediaAssetRepository.findById(assetId);
+    if (!asset) {
+      throw new MediaAssetNotFoundError(id);
+    }
+    return asset;
   }
 
   private isValidMimeType(mimeType: string): boolean {
     const validMimeTypes = [
-      // Images
       "image/jpeg",
       "image/jpg",
       "image/png",
@@ -460,7 +466,6 @@ export class MediaManagementService {
       "image/svg+xml",
       "image/bmp",
       "image/tiff",
-      // Videos
       "video/mp4",
       "video/webm",
       "video/ogg",
@@ -468,12 +473,10 @@ export class MediaManagementService {
       "video/mov",
       "video/wmv",
       "video/flv",
-      // Documents
       "application/pdf",
       "text/plain",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      // Audio
       "audio/mp3",
       "audio/wav",
       "audio/ogg",
@@ -490,68 +493,9 @@ export class MediaManagementService {
 
   private formatFileSize(bytes: number): string {
     if (bytes === 0) return "0 B";
-
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB", "TB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  }
-
-  async duplicateAsset(id: string, newStorageKey: string): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const originalAsset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!originalAsset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-
-    // Check if new storage key already exists
-    const existingAsset =
-      await this.mediaAssetRepository.findByStorageKey(newStorageKey);
-    if (existingAsset) {
-      throw new InvalidOperationError(
-        "Asset with this storage key already exists",
-      );
-    }
-
-    const duplicateData: CreateMediaAssetData = {
-      storageKey: newStorageKey,
-      mime: originalAsset.getMime(),
-      width: originalAsset.getWidth() || undefined,
-      height: originalAsset.getHeight() || undefined,
-      bytes: originalAsset.getBytes() || undefined,
-      altText: originalAsset.getAltText() || undefined,
-      focalX: originalAsset.getFocalX() || undefined,
-      focalY: originalAsset.getFocalY() || undefined,
-      renditions: originalAsset.getRenditions(),
-    };
-
-    return await this.createAsset(duplicateData);
-  }
-
-  async updateStorageKey(
-    id: string,
-    newStorageKey: string,
-  ): Promise<MediaAsset> {
-    const assetId = MediaAssetId.fromString(id);
-    const asset = await this.mediaAssetRepository.findById(assetId);
-
-    if (!asset) {
-      throw new MediaAssetNotFoundError(id);
-    }
-
-    // Check if new storage key already exists
-    const existingAsset =
-      await this.mediaAssetRepository.findByStorageKey(newStorageKey);
-    if (existingAsset && !existingAsset.getId().equals(assetId)) {
-      throw new InvalidOperationError(
-        "Asset with this storage key already exists",
-      );
-    }
-
-    asset.updateStorageKey(newStorageKey);
-    await this.mediaAssetRepository.update(asset);
-    return asset;
   }
 }

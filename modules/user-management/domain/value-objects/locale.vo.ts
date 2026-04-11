@@ -3,7 +3,7 @@ import { DomainValidationError } from "../errors/user-management.errors";
 export class Locale {
   private readonly value: string;
 
-  constructor(locale: string) {
+  private constructor(locale: string) {
     if (!locale) {
       throw new DomainValidationError("Locale is required");
     }
@@ -357,6 +357,10 @@ export class Locale {
     return this.value;
   }
 
+  static create(locale: string): Locale {
+    return new Locale(locale);
+  }
+
   static fromString(locale: string): Locale {
     return new Locale(locale);
   }
@@ -424,7 +428,7 @@ export class Locale {
 
   static isValidLocaleCode(locale: string): boolean {
     try {
-      new Locale(locale);
+      Locale.create(locale);
       return true;
     } catch {
       return false;

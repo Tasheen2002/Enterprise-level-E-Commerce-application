@@ -1,13 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import {
-  Location,
-  LocationAddress,
-} from "../../../domain/entities/location.entity";
+import { Location } from "../../../domain/entities/location.entity";
 import { LocationId } from "../../../domain/value-objects/location-id.vo";
 import {
   LocationType,
   LocationTypeVO,
 } from "../../../domain/value-objects/location-type.vo";
+import { LocationAddress } from "../../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../../domain/repositories/location.repository";
 
 interface LocationDatabaseRow {
@@ -21,27 +19,27 @@ export class LocationRepositoryImpl implements ILocationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private toEntity(row: LocationDatabaseRow): Location {
-    return Location.reconstitute({
-      locationId: LocationId.create(row.id),
+    return Location.fromPersistence({
+      locationId: LocationId.fromString(row.id),
       type: LocationTypeVO.create(row.type),
       name: row.name,
-      address: row.address as LocationAddress | undefined,
+      address: row.address ? LocationAddress.create(row.address) : undefined,
     });
   }
 
   async save(location: Location): Promise<void> {
     await this.prisma.location.upsert({
-      where: { id: location.getLocationId().getValue() },
+      where: { id: location.locationId.getValue() },
       create: {
-        id: location.getLocationId().getValue(),
-        type: location.getType().getValue() as any,
-        name: location.getName(),
-        address: location.getAddress() as any,
+        id: location.locationId.getValue(),
+        type: location.type.getValue() as any,
+        name: location.name,
+        address: location.address?.toJSON() as any,
       },
       update: {
-        type: location.getType().getValue() as any,
-        name: location.getName(),
-        address: location.getAddress() as any,
+        type: location.type.getValue() as any,
+        name: location.name,
+        address: location.address?.toJSON() as any,
       },
     });
   }

@@ -1,64 +1,26 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { InventoryTransactionController } from "../controllers/inventory-transaction.controller";
+import { validateParams, validateQuery } from "../validation/validator";
 import {
-  InventoryTransactionController,
-  TransactionsByVariantQuerystring,
-  ListTransactionsQuerystring,
-} from "../controllers/inventory-transaction.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  transactionParamsSchema,
+  transactionVariantParamsSchema,
+  transactionsByVariantSchema,
+  listTransactionsSchema,
+  inventoryTransactionResponseSchema,
+} from "../validation/inventory-transaction.schema";
 
 export async function registerInventoryTransactionRoutes(
   fastify: FastifyInstance,
   controller: InventoryTransactionController,
 ): Promise<void> {
   // Get transaction by ID
-  fastify.get<{ Params: { transactionId: string } }>(
+  fastify.get(
     "/transactions/:transactionId",
     {
+      preValidation: [validateParams(transactionParamsSchema)],
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get a single inventory transaction by ID",
@@ -73,22 +35,25 @@ export async function registerInventoryTransactionRoutes(
           required: ["transactionId"],
         },
         response: {
-          200: { description: "Transaction details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: inventoryTransactionResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getTransaction.bind(controller),
+    (request, reply) => controller.getTransaction(request as AuthenticatedRequest, reply),
   );
 
   // Get transactions by variant
-  fastify.get<{
-    Params: { variantId: string };
-    Querystring: TransactionsByVariantQuerystring;
-  }>(
+  fastify.get(
     "/transactions/variant/:variantId",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(transactionVariantParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateQuery(transactionsByVariantSchema)],
       schema: {
         description: "Get inventory transactions for a variant",
         tags: ["Inventory Transactions"],
@@ -110,19 +75,24 @@ export async function registerInventoryTransactionRoutes(
           },
         },
         response: {
-          200: { description: "Transaction history" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: inventoryTransactionResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getTransactionsByVariant.bind(controller),
+    (request, reply) => controller.getTransactionsByVariant(request as AuthenticatedRequest, reply),
   );
 
   // List transactions
-  fastify.get<{ Querystring: ListTransactionsQuerystring }>(
+  fastify.get(
     "/transactions",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateQuery(listTransactionsSchema)],
       schema: {
         description: "List all inventory transactions",
         tags: ["Inventory Transactions"],
@@ -139,11 +109,16 @@ export async function registerInventoryTransactionRoutes(
           },
         },
         response: {
-          200: { description: "Transaction list" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: inventoryTransactionResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.listTransactions.bind(controller),
+    (request, reply) => controller.listTransactions(request as AuthenticatedRequest, reply),
   );
 }

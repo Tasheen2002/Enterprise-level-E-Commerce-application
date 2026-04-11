@@ -12,52 +12,46 @@ export class CategoryRepository implements ICategoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(category: Category): Promise<void> {
-    const data = category.toDatabaseRow();
-
     await this.prisma.category.create({
       data: {
-        id: data.category_id,
-        name: data.name,
-        slug: data.slug,
-        parentId: data.parent_id,
-        position: data.position,
+        id: category.id.getValue(),
+        name: category.name,
+        slug: category.slug.getValue(),
+        parentId: category.parentId?.getValue() ?? null,
+        position: category.position,
       },
     });
   }
 
   async findById(id: CategoryId): Promise<Category | null> {
-    const categoryData = await this.prisma.category.findUnique({
+    const row = await this.prisma.category.findUnique({
       where: { id: id.getValue() },
     });
 
-    if (!categoryData) {
-      return null;
-    }
+    if (!row) return null;
 
-    return Category.fromDatabaseRow({
-      category_id: categoryData.id,
-      name: categoryData.name,
-      slug: categoryData.slug,
-      parent_id: categoryData.parentId,
-      position: categoryData.position,
+    return Category.fromPersistence({
+      id: CategoryId.fromString(row.id),
+      name: row.name,
+      slug: Slug.fromString(row.slug),
+      parentId: row.parentId ? CategoryId.fromString(row.parentId) : null,
+      position: row.position,
     });
   }
 
   async findBySlug(slug: Slug): Promise<Category | null> {
-    const categoryData = await this.prisma.category.findUnique({
+    const row = await this.prisma.category.findUnique({
       where: { slug: slug.getValue() },
     });
 
-    if (!categoryData) {
-      return null;
-    }
+    if (!row) return null;
 
-    return Category.fromDatabaseRow({
-      category_id: categoryData.id,
-      name: categoryData.name,
-      slug: categoryData.slug,
-      parent_id: categoryData.parentId,
-      position: categoryData.position,
+    return Category.fromPersistence({
+      id: CategoryId.fromString(row.id),
+      name: row.name,
+      slug: Slug.fromString(row.slug),
+      parentId: row.parentId ? CategoryId.fromString(row.parentId) : null,
+      position: row.position,
     });
   }
 
@@ -65,60 +59,55 @@ export class CategoryRepository implements ICategoryRepository {
     const {
       limit = 100,
       offset = 0,
-      sortBy = "position",
       sortOrder = "asc",
-      includeEmpty = true,
     } = options || {};
 
-    const categories = await this.prisma.category.findMany({
+    const rows = await this.prisma.category.findMany({
       take: limit,
       skip: offset,
       orderBy: [
         { position: { sort: sortOrder, nulls: "last" } },
-        { name: "asc" }, // Secondary sort by name for consistency
+        { name: "asc" },
       ],
     });
 
-    return categories.map((categoryData) => {
-      return Category.fromDatabaseRow({
-        category_id: categoryData.id,
-        name: categoryData.name,
-        slug: categoryData.slug,
-        parent_id: categoryData.parentId,
-        position: categoryData.position,
-      });
-    });
+    return rows.map((row) =>
+      Category.fromPersistence({
+        id: CategoryId.fromString(row.id),
+        name: row.name,
+        slug: Slug.fromString(row.slug),
+        parentId: row.parentId ? CategoryId.fromString(row.parentId) : null,
+        position: row.position,
+      }),
+    );
   }
 
-  async findRootCategories(
-    options?: CategoryQueryOptions,
-  ): Promise<Category[]> {
+  async findRootCategories(options?: CategoryQueryOptions): Promise<Category[]> {
     const {
       limit = 100,
       offset = 0,
-      sortBy = "position",
       sortOrder = "asc",
     } = options || {};
 
-    const categories = await this.prisma.category.findMany({
+    const rows = await this.prisma.category.findMany({
       where: { parentId: null },
       take: limit,
       skip: offset,
       orderBy: [
         { position: { sort: sortOrder, nulls: "last" } },
-        { name: "asc" }, // Secondary sort by name for consistency
+        { name: "asc" },
       ],
     });
 
-    return categories.map((categoryData) => {
-      return Category.fromDatabaseRow({
-        category_id: categoryData.id,
-        name: categoryData.name,
-        slug: categoryData.slug,
-        parent_id: categoryData.parentId,
-        position: categoryData.position,
-      });
-    });
+    return rows.map((row) =>
+      Category.fromPersistence({
+        id: CategoryId.fromString(row.id),
+        name: row.name,
+        slug: Slug.fromString(row.slug),
+        parentId: null,
+        position: row.position,
+      }),
+    );
   }
 
   async findByParentId(
@@ -128,29 +117,28 @@ export class CategoryRepository implements ICategoryRepository {
     const {
       limit = 100,
       offset = 0,
-      sortBy = "position",
       sortOrder = "asc",
     } = options || {};
 
-    const categories = await this.prisma.category.findMany({
+    const rows = await this.prisma.category.findMany({
       where: { parentId: parentId.getValue() },
       take: limit,
       skip: offset,
       orderBy: [
         { position: { sort: sortOrder, nulls: "last" } },
-        { name: "asc" }, // Secondary sort by name for consistency
+        { name: "asc" },
       ],
     });
 
-    return categories.map((categoryData) => {
-      return Category.fromDatabaseRow({
-        category_id: categoryData.id,
-        name: categoryData.name,
-        slug: categoryData.slug,
-        parent_id: categoryData.parentId,
-        position: categoryData.position,
-      });
-    });
+    return rows.map((row) =>
+      Category.fromPersistence({
+        id: CategoryId.fromString(row.id),
+        name: row.name,
+        slug: Slug.fromString(row.slug),
+        parentId: CategoryId.fromString(row.parentId!),
+        position: row.position,
+      }),
+    );
   }
 
   async findChildren(categoryId: CategoryId): Promise<Category[]> {
@@ -162,11 +150,11 @@ export class CategoryRepository implements ICategoryRepository {
     let currentCategory = await this.findById(categoryId);
 
     while (currentCategory && currentCategory.hasParent()) {
-      const parentId = currentCategory.getParentId();
+      const parentId = currentCategory.parentId;
       if (parentId) {
         const parent = await this.findById(parentId);
         if (parent) {
-          ancestors.unshift(parent); // Add to beginning for correct order
+          ancestors.unshift(parent);
           currentCategory = parent;
         } else {
           break;
@@ -189,7 +177,7 @@ export class CategoryRepository implements ICategoryRepository {
 
       for (const child of children) {
         descendants.push(child);
-        toProcess.push(child.getId());
+        toProcess.push(child.id);
       }
     }
 
@@ -198,34 +186,27 @@ export class CategoryRepository implements ICategoryRepository {
 
   async findSiblings(categoryId: CategoryId): Promise<Category[]> {
     const category = await this.findById(categoryId);
-    if (!category) {
-      return [];
-    }
+    if (!category) return [];
 
-    const parentId = category.getParentId();
+    const parentId = category.parentId;
 
     if (parentId) {
       const siblings = await this.findByParentId(parentId);
-      return siblings.filter((sibling) => !sibling.getId().equals(categoryId));
+      return siblings.filter((sibling) => !sibling.id.equals(categoryId));
     } else {
-      // Root category - find other root categories
       const rootCategories = await this.findRootCategories();
-      return rootCategories.filter(
-        (sibling) => !sibling.getId().equals(categoryId),
-      );
+      return rootCategories.filter((sibling) => !sibling.id.equals(categoryId));
     }
   }
 
   async update(category: Category): Promise<void> {
-    const data = category.toDatabaseRow();
-
     await this.prisma.category.update({
-      where: { id: data.category_id },
+      where: { id: category.id.getValue() },
       data: {
-        name: data.name,
-        slug: data.slug,
-        parentId: data.parent_id,
-        position: data.position,
+        name: category.name,
+        slug: category.slug.getValue(),
+        parentId: category.parentId?.getValue() ?? null,
+        position: category.position,
       },
     });
   }
@@ -261,15 +242,13 @@ export class CategoryRepository implements ICategoryRepository {
       whereClause.parentId = null;
     }
 
-    return await this.prisma.category.count({
-      where: whereClause,
-    });
+    return await this.prisma.category.count({ where: whereClause });
   }
 
   async getMaxPosition(parentId?: CategoryId): Promise<number> {
     const result = await this.prisma.category.aggregate({
       where: {
-        parentId: parentId?.getValue() || null,
+        parentId: parentId?.getValue() ?? null,
       },
       _max: {
         position: true,

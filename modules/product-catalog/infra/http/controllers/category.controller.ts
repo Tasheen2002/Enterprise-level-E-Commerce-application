@@ -1,254 +1,182 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  CreateCategoryCommand,
   CreateCategoryHandler,
-  UpdateCategoryCommand,
   UpdateCategoryHandler,
-  DeleteCategoryCommand,
   DeleteCategoryHandler,
-  ReorderCategoriesCommand,
   ReorderCategoriesHandler,
-  GetCategoryQuery,
   GetCategoryHandler,
-  ListCategoriesQuery,
   ListCategoriesHandler,
-  GetCategoryHierarchyQuery,
   GetCategoryHierarchyHandler,
 } from "../../../application";
-import { CategoryManagementService } from "../../../application/services/category-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-export interface CreateCategoryRequest {
-  name: string;
-  parentId?: string;
-  position?: number;
-}
-
-export interface UpdateCategoryRequest extends Partial<CreateCategoryRequest> {}
-
-export interface CategoryQueryParams {
-  page?: number;
-  limit?: number;
-  parentId?: string;
-  includeChildren?: boolean;
-  sortBy?: "name" | "position" | "createdAt";
-  sortOrder?: "asc" | "desc";
-}
-
 export class CategoryController {
-  private createCategoryHandler: CreateCategoryHandler;
-  private updateCategoryHandler: UpdateCategoryHandler;
-  private deleteCategoryHandler: DeleteCategoryHandler;
-  private reorderCategoriesHandler: ReorderCategoriesHandler;
-  private getCategoryHandler: GetCategoryHandler;
-  private listCategoriesHandler: ListCategoriesHandler;
-  private getCategoryHierarchyHandler: GetCategoryHierarchyHandler;
-
-  constructor(categoryManagementService: CategoryManagementService) {
-    this.createCategoryHandler = new CreateCategoryHandler(
-      categoryManagementService,
-    );
-    this.updateCategoryHandler = new UpdateCategoryHandler(
-      categoryManagementService,
-    );
-    this.deleteCategoryHandler = new DeleteCategoryHandler(
-      categoryManagementService,
-    );
-    this.reorderCategoriesHandler = new ReorderCategoriesHandler(
-      categoryManagementService,
-    );
-    this.getCategoryHandler = new GetCategoryHandler(categoryManagementService);
-    this.listCategoriesHandler = new ListCategoriesHandler(
-      categoryManagementService,
-    );
-    this.getCategoryHierarchyHandler = new GetCategoryHierarchyHandler(
-      categoryManagementService,
-    );
-  }
+  constructor(
+    private readonly createCategoryHandler: CreateCategoryHandler,
+    private readonly updateCategoryHandler: UpdateCategoryHandler,
+    private readonly deleteCategoryHandler: DeleteCategoryHandler,
+    private readonly reorderCategoriesHandler: ReorderCategoriesHandler,
+    private readonly getCategoryHandler: GetCategoryHandler,
+    private readonly listCategoriesHandler: ListCategoriesHandler,
+    private readonly getCategoryHierarchyHandler: GetCategoryHierarchyHandler,
+  ) {}
 
   async getCategories(
-    request: FastifyRequest<{ Querystring: CategoryQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        parentId?: string;
+        includeChildren?: boolean;
+        sortBy?: "name" | "position";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const query: ListCategoriesQuery = {
-        page: request.query.page,
-        limit: request.query.limit,
-        parentId: request.query.parentId,
-        includeChildren: request.query.includeChildren,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
-      };
-
-      const result = await this.listCategoriesHandler.handle(query);
-      return ResponseHelper.fromQuery(
+      const result = await this.listCategoriesHandler.handle(request.query);
+      return ResponseHelper.ok(
         reply,
-        result,
         "Categories retrieved successfully",
+        result,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get categories");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getCategory(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const query: GetCategoryQuery = { categoryId: request.params.id };
-      const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.fromQuery(
+      const result = await this.getCategoryHandler.handle({
+        categoryId: request.params.id,
+      });
+      return ResponseHelper.ok(
         reply,
-        result,
         "Category retrieved successfully",
-        "Category not found",
+        result,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get category");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getCategoryBySlug(
-    request: FastifyRequest<{ Params: { slug: string } }>,
+    request: AuthenticatedRequest<{ Params: { slug: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const query: GetCategoryQuery = { slug: request.params.slug };
-      const result = await this.getCategoryHandler.handle(query);
-      return ResponseHelper.fromQuery(
+      const result = await this.getCategoryHandler.handle({
+        slug: request.params.slug,
+      });
+      return ResponseHelper.ok(
         reply,
-        result,
         "Category retrieved successfully",
-        "Category not found",
+        result,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get category by slug");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createCategory(
-    request: FastifyRequest<{ Body: CreateCategoryRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { name: string; parentId?: string; position?: number };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const body = request.body;
-      const command: CreateCategoryCommand = {
-        name: body.name,
-        parentId: body.parentId,
-        position: body.position,
-      };
-
-      const result = await this.createCategoryHandler.handle(command);
-
-      if (result.success && result.data) {
-        return ResponseHelper.created(
-          reply,
-          "Category created successfully",
-          result.data.toData(),
-        );
-      }
-      return ResponseHelper.badRequest(
+      const result = await this.createCategoryHandler.handle(request.body);
+      return ResponseHelper.fromCommand(
         reply,
-        result.error || "Category creation failed",
+        result,
+        "Category created successfully",
+        201,
       );
     } catch (error) {
-      request.log.error(error, "Failed to create category");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateCategory(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { id: string };
-      Body: UpdateCategoryRequest;
+      Body: { name?: string; parentId?: string; position?: number };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = request.params;
-      const body = request.body;
-      const command: UpdateCategoryCommand = {
+      const result = await this.updateCategoryHandler.handle({
         categoryId: id,
-        name: body.name,
-        parentId: body.parentId,
-        position: body.position,
-      };
-
-      const result = await this.updateCategoryHandler.handle(command);
-
-      if (result.success && result.data) {
-        return ResponseHelper.ok(
-          reply,
-          "Category updated successfully",
-          result.data.toData(),
-        );
-      }
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
         "Category updated successfully",
       );
     } catch (error) {
-      request.log.error(error, "Failed to update category");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteCategory(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const command: DeleteCategoryCommand = { categoryId: request.params.id };
-      const result = await this.deleteCategoryHandler.handle(command);
+      const result = await this.deleteCategoryHandler.handle({
+        categoryId: request.params.id,
+      });
       return ResponseHelper.fromCommand(
         reply,
         result,
         "Category deleted successfully",
+        undefined,
+        204,
       );
     } catch (error) {
-      request.log.error(error, "Failed to delete category");
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getCategoryHierarchy(request: FastifyRequest, reply: FastifyReply) {
+  async getCategoryHierarchy(
+    _request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
     try {
-      const query: GetCategoryHierarchyQuery = {};
-      const result = await this.getCategoryHierarchyHandler.handle(query);
-      return ResponseHelper.fromQuery(
+      const result = await this.getCategoryHierarchyHandler.handle({});
+      return ResponseHelper.ok(
         reply,
-        result,
         "Category hierarchy retrieved successfully",
+        result,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get category hierarchy");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async reorderCategories(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Body: { categoryOrders: Array<{ id: string; position: number }> };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const command: ReorderCategoriesCommand = {
-        categoryOrders: request.body.categoryOrders,
-      };
-      const result = await this.reorderCategoriesHandler.handle(command);
+      const result = await this.reorderCategoriesHandler.handle(request.body);
       return ResponseHelper.fromCommand(
         reply,
         result,
         "Categories reordered successfully",
+        undefined,
+        204,
       );
     } catch (error) {
-      request.log.error(error, "Failed to reorder categories");
       return ResponseHelper.error(reply, error);
     }
   }

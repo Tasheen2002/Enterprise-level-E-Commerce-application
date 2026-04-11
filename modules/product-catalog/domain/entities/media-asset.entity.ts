@@ -1,133 +1,152 @@
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { DomainValidationError } from "../errors";
 import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
 export { MediaAssetId };
 
-export class MediaAsset {
-  private constructor(
-    private readonly id: MediaAssetId,
-    private storageKey: string,
-    private mime: string,
-    private width: number | null,
-    private height: number | null,
-    private bytes: number | null,
-    private altText: string | null,
-    private focalX: number | null,
-    private focalY: number | null,
-    private renditions: Record<string, any>,
-    private version: number,
-    private readonly createdAt: Date,
-  ) {}
+// ── Domain Events ──────────────────────────────────────────────────────
 
-  static create(data: CreateMediaAssetData): MediaAsset {
+export class MediaAssetCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly assetId: string,
+    public readonly storageKey: string,
+  ) {
+    super(assetId, 'MediaAsset');
+  }
+  get eventType(): string { return 'media-asset.created'; }
+  getPayload(): Record<string, unknown> {
+    return { assetId: this.assetId, storageKey: this.storageKey };
+  }
+}
+
+export class MediaAssetUpdatedEvent extends DomainEvent {
+  constructor(public readonly assetId: string) {
+    super(assetId, 'MediaAsset');
+  }
+  get eventType(): string { return 'media-asset.updated'; }
+  getPayload(): Record<string, unknown> {
+    return { assetId: this.assetId };
+  }
+}
+
+export class MediaAssetDeletedEvent extends DomainEvent {
+  constructor(
+    public readonly assetId: string,
+    public readonly storageKey: string,
+  ) {
+    super(assetId, 'MediaAsset');
+  }
+  get eventType(): string { return 'media-asset.deleted'; }
+  getPayload(): Record<string, unknown> {
+    return { assetId: this.assetId, storageKey: this.storageKey };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
+
+export interface MediaAssetProps {
+  id: MediaAssetId;
+  storageKey: string;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  altText: string | null;
+  focalX: number | null;
+  focalY: number | null;
+  renditions: Record<string, any>;
+  version: number;
+  createdAt: Date;
+}
+
+export interface MediaAssetDTO {
+  id: string;
+  storageKey: string;
+  mime: string;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  altText: string | null;
+  focalX: number | null;
+  focalY: number | null;
+  renditions: Record<string, any>;
+  version: number;
+  createdAt: Date;
+}
+
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class MediaAsset extends AggregateRoot {
+  private props: MediaAssetProps;
+
+  private constructor(props: MediaAssetProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    storageKey: string;
+    mime: string;
+    width?: number;
+    height?: number;
+    bytes?: number;
+    altText?: string;
+    focalX?: number;
+    focalY?: number;
+    renditions?: Record<string, any>;
+  }): MediaAsset {
     const assetId = MediaAssetId.create();
     const now = new Date();
 
-    return new MediaAsset(
-      assetId,
-      data.storageKey,
-      data.mime,
-      data.width || null,
-      data.height || null,
-      data.bytes || null,
-      data.altText || null,
-      data.focalX || null,
-      data.focalY || null,
-      data.renditions || {},
-      1,
-      now,
+    const asset = new MediaAsset({
+      id: assetId,
+      storageKey: params.storageKey,
+      mime: params.mime,
+      width: params.width || null,
+      height: params.height || null,
+      bytes: params.bytes || null,
+      altText: params.altText || null,
+      focalX: params.focalX || null,
+      focalY: params.focalY || null,
+      renditions: params.renditions || {},
+      version: 1,
+      createdAt: now,
+    });
+
+    asset.addDomainEvent(
+      new MediaAssetCreatedEvent(assetId.getValue(), params.storageKey),
     );
+
+    return asset;
   }
 
-  static reconstitute(data: MediaAssetData): MediaAsset {
-    return new MediaAsset(
-      MediaAssetId.fromString(data.id),
-      data.storageKey,
-      data.mime,
-      data.width,
-      data.height,
-      data.bytes,
-      data.altText,
-      data.focalX,
-      data.focalY,
-      data.renditions,
-      data.version,
-      data.createdAt,
-    );
+  static fromPersistence(props: MediaAssetProps): MediaAsset {
+    return new MediaAsset(props);
   }
 
-  static fromDatabaseRow(row: MediaAssetRow): MediaAsset {
-    return new MediaAsset(
-      MediaAssetId.fromString(row.asset_id),
-      row.storage_key,
-      row.mime,
-      row.width,
-      row.height,
-      row.bytes,
-      row.alt_text,
-      row.focal_x,
-      row.focal_y,
-      row.renditions,
-      row.version,
-      row.created_at,
-    );
-  }
+  // ── Getters ────────────────────────────────────────────────────────
 
-  // Getters
-  getId(): MediaAssetId {
-    return this.id;
-  }
+  get id(): MediaAssetId { return this.props.id; }
+  get storageKey(): string { return this.props.storageKey; }
+  get mime(): string { return this.props.mime; }
+  get width(): number | null { return this.props.width; }
+  get height(): number | null { return this.props.height; }
+  get bytes(): number | null { return this.props.bytes; }
+  get altText(): string | null { return this.props.altText; }
+  get focalX(): number | null { return this.props.focalX; }
+  get focalY(): number | null { return this.props.focalY; }
+  get renditions(): Record<string, any> { return this.props.renditions; }
+  get version(): number { return this.props.version; }
+  get createdAt(): Date { return this.props.createdAt; }
 
-  getStorageKey(): string {
-    return this.storageKey;
-  }
+  // ── Business Logic ─────────────────────────────────────────────────
 
-  getMime(): string {
-    return this.mime;
-  }
-
-  getWidth(): number | null {
-    return this.width;
-  }
-
-  getHeight(): number | null {
-    return this.height;
-  }
-
-  getBytes(): number | null {
-    return this.bytes;
-  }
-
-  getAltText(): string | null {
-    return this.altText;
-  }
-
-  getFocalX(): number | null {
-    return this.focalX;
-  }
-
-  getFocalY(): number | null {
-    return this.focalY;
-  }
-
-  getRenditions(): Record<string, any> {
-    return this.renditions;
-  }
-
-  getVersion(): number {
-    return this.version;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  // Business logic methods
   updateStorageKey(newStorageKey: string): void {
     if (!newStorageKey || newStorageKey.trim().length === 0) {
       throw new DomainValidationError("Storage key cannot be empty");
     }
-    this.storageKey = newStorageKey.trim();
+    this.props.storageKey = newStorageKey.trim();
     this.incrementVersion();
   }
 
@@ -138,19 +157,19 @@ export class MediaAsset {
     if (height !== null && height <= 0) {
       throw new DomainValidationError("Height must be positive");
     }
-    this.width = width;
-    this.height = height;
+    this.props.width = width;
+    this.props.height = height;
   }
 
   updateSize(bytes: number | null): void {
     if (bytes !== null && bytes < 0) {
       throw new DomainValidationError("Size cannot be negative");
     }
-    this.bytes = bytes;
+    this.props.bytes = bytes;
   }
 
   updateAltText(newAltText: string | null): void {
-    this.altText = newAltText?.trim() || null;
+    this.props.altText = newAltText?.trim() || null;
   }
 
   updateFocalPoint(focalX: number | null, focalY: number | null): void {
@@ -160,70 +179,80 @@ export class MediaAsset {
     if (focalY !== null && (focalY < 0 || focalY > 100)) {
       throw new DomainValidationError("Focal Y must be between 0 and 100");
     }
-    this.focalX = focalX;
-    this.focalY = focalY;
+    this.props.focalX = focalX;
+    this.props.focalY = focalY;
   }
 
   addRendition(name: string, renditionData: any): void {
     if (!name || name.trim().length === 0) {
       throw new DomainValidationError("Rendition name cannot be empty");
     }
-    this.renditions[name] = renditionData;
+    this.props.renditions[name] = renditionData;
     this.incrementVersion();
   }
 
   removeRendition(name: string): void {
-    if (this.renditions[name]) {
-      delete this.renditions[name];
+    if (this.props.renditions[name]) {
+      delete this.props.renditions[name];
       this.incrementVersion();
     }
   }
 
   updateRenditions(renditions: Record<string, any>): void {
-    this.renditions = renditions || {};
+    this.props.renditions = renditions || {};
     this.incrementVersion();
   }
 
-  updateFields(fields: Partial<CreateMediaAssetData>): void {
+  updateFields(fields: Partial<{
+    storageKey: string;
+    mime: string;
+    width?: number;
+    height?: number;
+    bytes?: number;
+    altText?: string;
+    focalX?: number;
+    focalY?: number;
+    renditions?: Record<string, any>;
+  }>): void {
     let changed = false;
 
-    if (fields.mime !== undefined && fields.mime !== this.mime) {
-      this.mime = fields.mime;
+    if (fields.mime !== undefined && fields.mime !== this.props.mime) {
+      this.props.mime = fields.mime;
       changed = true;
     }
 
-    if (fields.width !== undefined && fields.width !== this.width) {
-      this.width = fields.width || null;
+    if (fields.width !== undefined && fields.width !== this.props.width) {
+      this.props.width = fields.width || null;
       changed = true;
     }
 
-    if (fields.height !== undefined && fields.height !== this.height) {
-      this.height = fields.height || null;
+    if (fields.height !== undefined && fields.height !== this.props.height) {
+      this.props.height = fields.height || null;
       changed = true;
     }
 
-    if (fields.bytes !== undefined && fields.bytes !== this.bytes) {
-      this.bytes = fields.bytes || null;
+    if (fields.bytes !== undefined && fields.bytes !== this.props.bytes) {
+      this.props.bytes = fields.bytes || null;
       changed = true;
     }
 
-    if (fields.altText !== undefined && fields.altText !== this.altText) {
-      this.altText = fields.altText || null;
+    if (fields.altText !== undefined && fields.altText !== this.props.altText) {
+      this.props.altText = fields.altText || null;
       changed = true;
     }
 
-    if (fields.focalX !== undefined && fields.focalX !== this.focalX) {
-      this.focalX = fields.focalX || null;
+    if (fields.focalX !== undefined && fields.focalX !== this.props.focalX) {
+      this.props.focalX = fields.focalX || null;
       changed = true;
     }
 
-    if (fields.focalY !== undefined && fields.focalY !== this.focalY) {
-      this.focalY = fields.focalY || null;
+    if (fields.focalY !== undefined && fields.focalY !== this.props.focalY) {
+      this.props.focalY = fields.focalY || null;
       changed = true;
     }
 
     if (fields.renditions !== undefined) {
-      this.renditions = fields.renditions || {};
+      this.props.renditions = fields.renditions || {};
       changed = true;
     }
 
@@ -232,22 +261,23 @@ export class MediaAsset {
     }
   }
 
-  // Validation methods
+  // ── Validation / Query Methods ─────────────────────────────────────
+
   isImage(): boolean {
-    return this.mime.startsWith("image/");
+    return this.props.mime.startsWith("image/");
   }
 
   isVideo(): boolean {
-    return this.mime.startsWith("video/");
+    return this.props.mime.startsWith("video/");
   }
 
   hasRendition(name: string): boolean {
-    return name in this.renditions;
+    return name in this.props.renditions;
   }
 
   getAspectRatio(): number | null {
-    if (this.width && this.height) {
-      return this.width / this.height;
+    if (this.props.width && this.props.height) {
+      return this.props.width / this.props.height;
     }
     return null;
   }
@@ -267,90 +297,42 @@ export class MediaAsset {
     return aspectRatio !== null && Math.abs(aspectRatio - 1) < 0.01;
   }
 
-  // Internal methods
+  markDeleted(): void {
+    this.addDomainEvent(
+      new MediaAssetDeletedEvent(
+        this.props.id.getValue(),
+        this.props.storageKey,
+      ),
+    );
+  }
+
+  // ── Internal ───────────────────────────────────────────────────────
+
   private incrementVersion(): void {
-    this.version += 1;
+    this.props.version += 1;
+    this.addDomainEvent(new MediaAssetUpdatedEvent(this.props.id.getValue()));
   }
 
-  // Convert to data for persistence
-  toData(): MediaAssetData {
-    return {
-      id: this.id.getValue(),
-      storageKey: this.storageKey,
-      mime: this.mime,
-      width: this.width,
-      height: this.height,
-      bytes: this.bytes,
-      altText: this.altText,
-      focalX: this.focalX,
-      focalY: this.focalY,
-      renditions: this.renditions,
-      version: this.version,
-      createdAt: this.createdAt,
-    };
-  }
+  // ── Serialisation ──────────────────────────────────────────────────
 
-  toDatabaseRow(): MediaAssetRow {
+  static toDTO(entity: MediaAsset): MediaAssetDTO {
     return {
-      asset_id: this.id.getValue(),
-      storage_key: this.storageKey,
-      mime: this.mime,
-      width: this.width,
-      height: this.height,
-      bytes: this.bytes,
-      alt_text: this.altText,
-      focal_x: this.focalX,
-      focal_y: this.focalY,
-      renditions: this.renditions,
-      version: this.version,
-      created_at: this.createdAt,
+      id: entity.props.id.getValue(),
+      storageKey: entity.props.storageKey,
+      mime: entity.props.mime,
+      width: entity.props.width,
+      height: entity.props.height,
+      bytes: entity.props.bytes,
+      altText: entity.props.altText,
+      focalX: entity.props.focalX,
+      focalY: entity.props.focalY,
+      renditions: entity.props.renditions,
+      version: entity.props.version,
+      createdAt: entity.props.createdAt,
     };
   }
 
   equals(other: MediaAsset): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
   }
-}
-
-// Supporting types and interfaces
-export interface CreateMediaAssetData {
-  storageKey: string;
-  mime: string;
-  width?: number;
-  height?: number;
-  bytes?: number;
-  altText?: string;
-  focalX?: number;
-  focalY?: number;
-  renditions?: Record<string, any>;
-}
-
-export interface MediaAssetData {
-  id: string;
-  storageKey: string;
-  mime: string;
-  width: number | null;
-  height: number | null;
-  bytes: number | null;
-  altText: string | null;
-  focalX: number | null;
-  focalY: number | null;
-  renditions: Record<string, any>;
-  version: number;
-  createdAt: Date;
-}
-
-export interface MediaAssetRow {
-  asset_id: string;
-  storage_key: string;
-  mime: string;
-  width: number | null;
-  height: number | null;
-  bytes: number | null;
-  alt_text: string | null;
-  focal_x: number | null;
-  focal_y: number | null;
-  renditions: Record<string, any>;
-  version: number;
-  created_at: Date;
 }

@@ -27,7 +27,7 @@ export interface ICategoryRepository {
 export interface CategoryQueryOptions {
   limit?: number;
   offset?: number;
-  sortBy?: "name" | "position" | "createdAt";
+  sortBy?: "name" | "position";
   sortOrder?: "asc" | "desc";
   includeEmpty?: boolean; // Include categories with no products
 }

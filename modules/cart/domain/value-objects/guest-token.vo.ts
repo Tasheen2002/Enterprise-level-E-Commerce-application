@@ -3,27 +3,26 @@ import { GUEST_TOKEN_BYTE_LENGTH, GUEST_TOKEN_HEX_LENGTH } from "../constants";
 import { DomainValidationError } from "../errors/cart.errors";
 
 export class GuestToken {
-  private readonly value: string;
+  private constructor(private readonly value: string) {}
 
-  constructor(value?: string) {
-    if (value) {
-      if (!this.isValidGuestToken(value)) {
-        throw new DomainValidationError("Invalid guest token format");
-      }
-      this.value = value;
-    } else {
-      this.value = this.generateGuestToken();
+  private static generate(): string {
+    return randomBytes(GUEST_TOKEN_BYTE_LENGTH).toString("hex");
+  }
+
+  private static validate(token: string): void {
+    const tokenRegex = new RegExp(`^[a-f0-9]{${GUEST_TOKEN_HEX_LENGTH}}$`, "i");
+    if (!tokenRegex.test(token)) {
+      throw new DomainValidationError("Invalid guest token format");
     }
   }
 
-  private isValidGuestToken(token: string): boolean {
-    // Guest token should be a 64-character hex string (32 bytes)
-    const tokenRegex = new RegExp(`^[a-f0-9]{${GUEST_TOKEN_HEX_LENGTH}}$`, "i");
-    return tokenRegex.test(token);
+  static create(): GuestToken {
+    return new GuestToken(GuestToken.generate());
   }
 
-  private generateGuestToken(): string {
-    return randomBytes(GUEST_TOKEN_BYTE_LENGTH).toString("hex");
+  static fromString(value: string): GuestToken {
+    GuestToken.validate(value);
+    return new GuestToken(value);
   }
 
   getValue(): string {
@@ -38,21 +37,6 @@ export class GuestToken {
     return this.value;
   }
 
-  isExpired(expirationHours: number = 24): boolean {
-    // This is a simple implementation - in a real system, you might
-    // encode timestamp information in the token or store it separately
-    return false; // For now, guest tokens don't expire based on the token itself
-  }
-
-  static generate(): GuestToken {
-    return new GuestToken();
-  }
-
-  static fromString(value: string): GuestToken {
-    return new GuestToken(value);
-  }
-
-  // Utility methods for guest token management
   getPrefix(length: number = 8): string {
     return this.value.substring(0, length);
   }
@@ -62,8 +46,6 @@ export class GuestToken {
   }
 
   getMasked(): string {
-    const prefix = this.getPrefix(4);
-    const suffix = this.getSuffix(4);
-    return `${prefix}****${suffix}`;
+    return `${this.getPrefix(4)}****${this.getSuffix(4)}`;
   }
 }

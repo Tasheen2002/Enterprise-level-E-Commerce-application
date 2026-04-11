@@ -1,64 +1,26 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { PurchaseOrderItemController } from "../controllers/purchase-order-item.controller";
+import { validateBody, validateParams } from "../validation/validator";
 import {
-  PurchaseOrderItemController,
-  AddPOItemBody,
-  UpdatePOItemBody,
-} from "../controllers/purchase-order-item.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  poParamsSchema,
+  poItemParamsSchema,
+  addPOItemSchema,
+  updatePOItemSchema,
+  purchaseOrderItemResponseSchema,
+} from "../validation/purchase-order.schema";
 
 export async function registerPurchaseOrderItemRoutes(
   fastify: FastifyInstance,
   controller: PurchaseOrderItemController,
 ): Promise<void> {
   // Get PO items
-  fastify.get<{ Params: { poId: string } }>(
+  fastify.get(
     "/purchase-orders/:poId/items",
     {
+      preValidation: [validateParams(poParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all items for a purchase order (Staff/Admin only)",
@@ -73,19 +35,25 @@ export async function registerPurchaseOrderItemRoutes(
           required: ["poId"],
         },
         response: {
-          200: { description: "Purchase order items" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: purchaseOrderItemResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getPOItems.bind(controller),
+    (request, reply) => controller.getPOItems(request as AuthenticatedRequest, reply),
   );
 
   // Add item to PO
-  fastify.post<{ Params: { poId: string }; Body: AddPOItemBody }>(
+  fastify.post(
     "/purchase-orders/:poId/items",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(addPOItemSchema)],
       schema: {
         description: "Add item to purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -107,22 +75,25 @@ export async function registerPurchaseOrderItemRoutes(
           },
         },
         response: {
-          201: { description: "Item added successfully" },
-          ...errorResponses,
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: purchaseOrderItemResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.addItem.bind(controller),
+    (request, reply) => controller.addItem(request as AuthenticatedRequest, reply),
   );
 
   // Update PO item
-  fastify.put<{
-    Params: { poId: string; variantId: string };
-    Body: UpdatePOItemBody;
-  }>(
+  fastify.put(
     "/purchase-orders/:poId/items/:variantId",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poItemParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOItemSchema)],
       schema: {
         description: "Update purchase order item (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -144,18 +115,24 @@ export async function registerPurchaseOrderItemRoutes(
           },
         },
         response: {
-          200: { description: "Item updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: purchaseOrderItemResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.updateItem.bind(controller),
+    (request, reply) => controller.updateItem(request as AuthenticatedRequest, reply),
   );
 
   // Remove PO item
-  fastify.delete<{ Params: { poId: string; variantId: string } }>(
+  fastify.delete(
     "/purchase-orders/:poId/items/:variantId",
     {
+      preValidation: [validateParams(poItemParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Remove item from purchase order (Staff/Admin only)",
@@ -171,11 +148,10 @@ export async function registerPurchaseOrderItemRoutes(
           required: ["poId", "variantId"],
         },
         response: {
-          200: { description: "Item removed successfully" },
-          ...errorResponses,
+          204: { description: "Item removed successfully", type: "null" },
         },
       },
     },
-    controller.removeItem.bind(controller),
+    (request, reply) => controller.removeItem(request as AuthenticatedRequest, reply),
   );
 }

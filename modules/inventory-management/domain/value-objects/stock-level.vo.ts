@@ -158,4 +158,13 @@ export class StockLevel {
       safetyStock ?? this.safetyStock,
     );
   }
+
+  equals(other: StockLevel): boolean {
+    return (
+      this.onHand === other.onHand &&
+      this.reserved === other.reserved &&
+      this.lowStockThreshold === other.lowStockThreshold &&
+      this.safetyStock === other.safetyStock
+    );
+  }
 }

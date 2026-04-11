@@ -1,10 +1,10 @@
-import { DomainError } from "../../../../packages/core/src/domain/domain-error";
+import { DomainError } from '../../../../packages/core/src/domain/domain-error';
 
 // ─── Validation Errors (400) ─────────────────────────────────────────────────
 
 export class DomainValidationError extends DomainError {
   constructor(message: string) {
-    super(message, 400);
+    super(message, 'VALIDATION_ERROR', 400);
   }
 }
 
@@ -13,7 +13,8 @@ export class DomainValidationError extends DomainError {
 export class ProductNotFoundError extends DomainError {
   constructor(identifier?: string) {
     super(
-      identifier ? `Product '${identifier}' not found` : "Product not found",
+      identifier ? `Product '${identifier}' not found` : 'Product not found',
+      'PRODUCT_NOT_FOUND',
       404,
     );
   }
@@ -22,7 +23,8 @@ export class ProductNotFoundError extends DomainError {
 export class CategoryNotFoundError extends DomainError {
   constructor(identifier?: string) {
     super(
-      identifier ? `Category '${identifier}' not found` : "Category not found",
+      identifier ? `Category '${identifier}' not found` : 'Category not found',
+      'CATEGORY_NOT_FOUND',
       404,
     );
   }
@@ -33,7 +35,8 @@ export class ProductVariantNotFoundError extends DomainError {
     super(
       identifier
         ? `Product variant '${identifier}' not found`
-        : "Product variant not found",
+        : 'Product variant not found',
+      'PRODUCT_VARIANT_NOT_FOUND',
       404,
     );
   }
@@ -44,7 +47,8 @@ export class MediaAssetNotFoundError extends DomainError {
     super(
       identifier
         ? `Media asset '${identifier}' not found`
-        : "Media asset not found",
+        : 'Media asset not found',
+      'MEDIA_ASSET_NOT_FOUND',
       404,
     );
   }
@@ -55,7 +59,8 @@ export class ProductTagNotFoundError extends DomainError {
     super(
       identifier
         ? `Product tag '${identifier}' not found`
-        : "Product tag not found",
+        : 'Product tag not found',
+      'PRODUCT_TAG_NOT_FOUND',
       404,
     );
   }
@@ -66,7 +71,8 @@ export class SizeGuideNotFoundError extends DomainError {
     super(
       identifier
         ? `Size guide '${identifier}' not found`
-        : "Size guide not found",
+        : 'Size guide not found',
+      'SIZE_GUIDE_NOT_FOUND',
       404,
     );
   }
@@ -77,7 +83,8 @@ export class EditorialLookNotFoundError extends DomainError {
     super(
       identifier
         ? `Editorial look '${identifier}' not found`
-        : "Editorial look not found",
+        : 'Editorial look not found',
+      'EDITORIAL_LOOK_NOT_FOUND',
       404,
     );
   }
@@ -87,25 +94,25 @@ export class EditorialLookNotFoundError extends DomainError {
 
 export class ProductAlreadyExistsError extends DomainError {
   constructor(identifier: string) {
-    super(`Product with slug '${identifier}' already exists`, 409);
+    super(`Product with slug '${identifier}' already exists`, 'PRODUCT_ALREADY_EXISTS', 409);
   }
 }
 
 export class CategoryAlreadyExistsError extends DomainError {
   constructor(identifier: string) {
-    super(`Category with slug '${identifier}' already exists`, 409);
+    super(`Category with slug '${identifier}' already exists`, 'CATEGORY_ALREADY_EXISTS', 409);
   }
 }
 
 export class SkuAlreadyExistsError extends DomainError {
   constructor(sku: string) {
-    super(`SKU '${sku}' is already in use`, 409);
+    super(`SKU '${sku}' is already in use`, 'SKU_ALREADY_EXISTS', 409);
   }
 }
 
 export class ProductTagAlreadyExistsError extends DomainError {
   constructor(name: string) {
-    super(`Product tag '${name}' already exists`, 409);
+    super(`Product tag '${name}' already exists`, 'PRODUCT_TAG_ALREADY_EXISTS', 409);
   }
 }
 
@@ -113,36 +120,36 @@ export class ProductTagAlreadyExistsError extends DomainError {
 
 export class InvalidOperationError extends DomainError {
   constructor(message: string) {
-    super(message, 422);
+    super(message, 'INVALID_OPERATION', 422);
   }
 }
 
 export class ProductPublishError extends DomainError {
   constructor(reason: string) {
-    super(`Cannot publish product: ${reason}`, 422);
+    super(`Cannot publish product: ${reason}`, 'PRODUCT_PUBLISH_ERROR', 422);
   }
 }
 
 export class CategoryDeletionError extends DomainError {
   constructor(reason: string) {
-    super(`Cannot delete category: ${reason}`, 422);
+    super(`Cannot delete category: ${reason}`, 'CATEGORY_DELETION_ERROR', 422);
   }
 }
 
 export class InvalidPriceError extends DomainError {
-  constructor(message = "Price must be a positive number") {
-    super(message, 422);
+  constructor(message = 'Price must be a positive number') {
+    super(message, 'INVALID_PRICE', 422);
   }
 }
 
 export class InvalidSkuError extends DomainError {
-  constructor(message = "SKU is invalid") {
-    super(message, 422);
+  constructor(message = 'SKU is invalid') {
+    super(message, 'INVALID_SKU', 422);
   }
 }
 
 export class InvalidSlugError extends DomainError {
-  constructor(message = "Slug is invalid") {
-    super(message, 422);
+  constructor(message = 'Slug is invalid') {
+    super(message, 'INVALID_SLUG', 422);
   }
 }

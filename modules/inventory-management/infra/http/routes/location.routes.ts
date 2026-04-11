@@ -1,134 +1,56 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { LocationController } from "../controllers/location.controller";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
-  LocationController,
-  CreateLocationBody,
-  UpdateLocationBody,
-  ListLocationsQuerystring,
-} from "../controllers/location.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  locationParamsSchema,
+  listLocationsSchema,
+  createLocationSchema,
+  updateLocationSchema,
+  locationResponseSchema,
+} from "../validation/location.schema";
 
 export async function registerLocationRoutes(
   fastify: FastifyInstance,
   controller: LocationController,
 ): Promise<void> {
   // List locations
-  fastify.get<{ Querystring: ListLocationsQuerystring }>(
+  fastify.get(
     "/locations",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listLocationsSchema)],
       schema: {
         description: "List all locations (Staff/Admin only)",
         tags: ["Locations"],
         summary: "List Locations",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
-          },
-        },
         response: {
           200: {
-            description: "List of locations",
             type: "object",
             properties: {
               success: { type: "boolean" },
               data: {
                 type: "object",
                 properties: {
-                  locations: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        locationId: { type: "string" },
-                        type: { type: "string" },
-                        name: { type: "string" },
-                        address: {
-                          anyOf: [
-                            { type: "null" },
-                            {
-                              type: "object",
-                              properties: {
-                                street: { type: "string" },
-                                city: { type: "string" },
-                                state: { type: "string" },
-                                postalCode: { type: "string" },
-                                country: { type: "string" },
-                              },
-                              required: [],
-                            },
-                          ],
-                        },
-                      },
-                      required: ["locationId", "type", "name"],
-                    },
-                  },
+                  locations: { type: "array", items: locationResponseSchema },
                   total: { type: "integer" },
                 },
-                required: ["locations", "total"],
               },
             },
-            required: ["success", "data"],
           },
-          ...errorResponses,
         },
       },
     },
-    controller.listLocations.bind(controller),
+    (request, reply) => controller.listLocations(request as AuthenticatedRequest, reply),
   );
 
   // Get location
-  fastify.get<{ Params: { locationId: string } }>(
+  fastify.get(
     "/locations/:locationId",
     {
+      preValidation: [validateParams(locationParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get location by ID (Staff/Admin only)",
@@ -137,62 +59,53 @@ export async function registerLocationRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-          },
+          properties: { locationId: { type: "string", format: "uuid" } },
           required: ["locationId"],
         },
         response: {
-          200: { description: "Location details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: locationResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getLocation.bind(controller),
+    (request, reply) => controller.getLocation(request as AuthenticatedRequest, reply),
   );
 
   // Create location
-  fastify.post<{ Body: CreateLocationBody }>(
+  fastify.post(
     "/locations",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createLocationSchema)],
       schema: {
         description: "Create a new location",
         tags: ["Locations"],
         summary: "Create Location",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["type", "name"],
-          properties: {
-            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            address: {
-              type: "object",
-              properties: {
-                street: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                postalCode: { type: "string" },
-                country: { type: "string" },
-              },
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: locationResponseSchema,
             },
           },
         },
-        response: {
-          201: { description: "Location created successfully" },
-          ...errorResponses,
-        },
       },
     },
-    controller.createLocation.bind(controller),
+    (request, reply) => controller.createLocation(request as AuthenticatedRequest, reply),
   );
 
   // Update location
-  fastify.put<{ Params: { locationId: string }; Body: UpdateLocationBody }>(
+  fastify.put(
     "/locations/:locationId",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(locationParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateLocationSchema)],
       schema: {
         description: "Update location",
         tags: ["Locations"],
@@ -200,31 +113,28 @@ export async function registerLocationRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-          },
+          properties: { locationId: { type: "string", format: "uuid" } },
           required: ["locationId"],
         },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            address: { type: "object" },
-          },
-        },
         response: {
-          200: { description: "Location updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: locationResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.updateLocation.bind(controller),
+    (request, reply) => controller.updateLocation(request as AuthenticatedRequest, reply),
   );
 
   // Delete location
-  fastify.delete<{ Params: { locationId: string } }>(
+  fastify.delete(
     "/locations/:locationId",
     {
+      preValidation: [validateParams(locationParamsSchema)],
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete location",
@@ -233,17 +143,14 @@ export async function registerLocationRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-          },
+          properties: { locationId: { type: "string", format: "uuid" } },
           required: ["locationId"],
         },
         response: {
-          200: { description: "Location deleted successfully" },
-          ...errorResponses,
+          204: { description: "Location deleted successfully", type: "null" },
         },
       },
     },
-    controller.deleteLocation.bind(controller),
+    (request, reply) => controller.deleteLocation(request as AuthenticatedRequest, reply),
   );
 }

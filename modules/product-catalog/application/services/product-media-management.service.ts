@@ -4,10 +4,6 @@ import {
 } from "../../domain/repositories/product-media.repository";
 import { IMediaAssetRepository } from "../../domain/repositories/media-asset.repository";
 import { IProductRepository } from "../../domain/repositories/product.repository";
-import {
-  ProductMedia,
-  ProductMediaId,
-} from "../../domain/entities/product-media.entity";
 import { MediaAssetId as EntityMediaAssetId } from "../../domain/entities/media-asset.entity";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
@@ -184,16 +180,16 @@ export class ProductMediaManagementService {
     const mediaAssets = await Promise.all(
       productMediaList.map(async (productMedia) => {
         const assetIdEntity = EntityMediaAssetId.fromString(
-          productMedia.getAssetId().toString(),
+          productMedia.mediaAssetId.getValue(),
         );
         const asset = await this.mediaAssetRepository.findById(assetIdEntity);
         return {
-          assetId: productMedia.getAssetId().toString(),
-          position: productMedia.getPosition() ?? undefined,
-          isCover: productMedia.getIsCover(),
-          storageKey: asset?.getStorageKey() || "",
-          mimeType: asset?.getMime() || "",
-          altText: asset?.getAltText() ?? undefined,
+          assetId: productMedia.mediaAssetId.getValue(),
+          position: productMedia.displayOrder ?? undefined,
+          isCover: productMedia.isPrimary,
+          storageKey: asset?.storageKey || "",
+          mimeType: asset?.mime || "",
+          altText: asset?.altText ?? undefined,
         };
       }),
     );
@@ -202,7 +198,7 @@ export class ProductMediaManagementService {
       productId,
       totalMedia: totalCount,
       hasCoverImage: !!coverImage,
-      coverImageAssetId: coverImage?.getAssetId().toString(),
+      coverImageAssetId: coverImage?.mediaAssetId.getValue(),
       mediaAssets,
     };
   }
@@ -437,7 +433,7 @@ export class ProductMediaManagementService {
 
     // Check for duplicate positions
     const positions = productMedia
-      .map((pm) => pm.getPosition())
+      .map((pm) => pm.displayOrder)
       .filter((pos) => pos !== null);
     const uniquePositions = new Set(positions);
     if (positions.length !== uniquePositions.size) {
@@ -445,7 +441,7 @@ export class ProductMediaManagementService {
     }
 
     // Check for multiple cover images
-    const coverImages = productMedia.filter((pm) => pm.getIsCover());
+    const coverImages = productMedia.filter((pm) => pm.isPrimary);
     if (coverImages.length > 1) {
       issues.push("Multiple cover images found");
     }
@@ -453,12 +449,12 @@ export class ProductMediaManagementService {
     // Check if all referenced assets exist
     for (const pm of productMedia) {
       const assetIdEntity = EntityMediaAssetId.fromString(
-        pm.getAssetId().toString(),
+        pm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (!asset) {
         issues.push(
-          `Referenced media asset ${pm.getAssetId().toString()} not found`,
+          `Referenced media asset ${pm.mediaAssetId.getValue()} not found`,
         );
       }
     }
@@ -498,12 +494,12 @@ export class ProductMediaManagementService {
 
     for (const pm of productMedia) {
       const assetIdEntity = EntityMediaAssetId.fromString(
-        pm.getAssetId().toString(),
+        pm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (asset) {
-        const mime = asset.getMime();
-        const bytes = asset.getBytes() || 0;
+        const mime = asset.mime;
+        const bytes = asset.bytes || 0;
         totalSize += bytes;
 
         if (mime.startsWith("image/")) {

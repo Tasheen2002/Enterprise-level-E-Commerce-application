@@ -11,51 +11,30 @@ export interface PromoData {
 }
 
 export class AppliedPromos {
-  private readonly value: PromoData[];
+  private constructor(private readonly value: PromoData[]) {}
 
-  constructor(promos: PromoData[] = []) {
-    // Validate each promo
-    promos.forEach((promo, index) => {
-      this.validatePromo(promo, index);
-    });
-
-    // Remove duplicates based on promo ID
-    const uniquePromos = this.removeDuplicates(promos);
-
-    this.value = [...uniquePromos];
-  }
-
-  private validatePromo(promo: PromoData, index: number): void {
+  private static validatePromo(promo: PromoData, index: number): void {
     if (!promo.id) {
-      throw new DomainValidationError(
-        `Promo at index ${index} must have an ID`,
-      );
+      throw new DomainValidationError(`Promo at index ${index} must have an ID`);
     }
-
     if (!promo.code) {
-      throw new DomainValidationError(
-        `Promo at index ${index} must have a code`,
-      );
+      throw new DomainValidationError(`Promo at index ${index} must have a code`);
     }
-
     if (!(VALID_PROMO_TYPES as readonly string[]).includes(promo.type)) {
       throw new DomainValidationError(
         `Promo at index ${index} has invalid type: ${promo.type}`,
       );
     }
-
     if (typeof promo.value !== "number" || promo.value < 0) {
       throw new DomainValidationError(
         `Promo at index ${index} must have a non-negative numeric value`,
       );
     }
-
     if (promo.type === "percentage" && promo.value > PROMO_MAX_PERCENTAGE) {
       throw new DomainValidationError(
         `Percentage promo at index ${index} cannot exceed ${PROMO_MAX_PERCENTAGE}%`,
       );
     }
-
     if (!(promo.appliedAt instanceof Date)) {
       throw new DomainValidationError(
         `Promo at index ${index} must have a valid appliedAt date`,
@@ -63,15 +42,41 @@ export class AppliedPromos {
     }
   }
 
-  private removeDuplicates(promos: PromoData[]): PromoData[] {
+  private static removeDuplicates(promos: PromoData[]): PromoData[] {
     const seen = new Set<string>();
     return promos.filter((promo) => {
-      if (seen.has(promo.id)) {
-        return false;
-      }
+      if (seen.has(promo.id)) return false;
       seen.add(promo.id);
       return true;
     });
+  }
+
+  static empty(): AppliedPromos {
+    return new AppliedPromos([]);
+  }
+
+  static fromArray(promos: PromoData[]): AppliedPromos {
+    promos.forEach((promo, index) => AppliedPromos.validatePromo(promo, index));
+    return new AppliedPromos(AppliedPromos.removeDuplicates(promos));
+  }
+
+  static fromJSON(json: string): AppliedPromos {
+    try {
+      const parsed = JSON.parse(json);
+      if (!Array.isArray(parsed)) {
+        throw new DomainValidationError("JSON must represent an array of promos");
+      }
+      const promos: PromoData[] = parsed.map((promo) => ({
+        ...promo,
+        appliedAt: new Date(promo.appliedAt),
+      }));
+      return AppliedPromos.fromArray(promos);
+    } catch (error) {
+      if (error instanceof DomainValidationError) throw error;
+      throw new DomainValidationError(
+        `Invalid promo JSON: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
   }
 
   getValue(): PromoData[] {
@@ -79,10 +84,7 @@ export class AppliedPromos {
   }
 
   equals(other: AppliedPromos): boolean {
-    if (this.value.length !== other.value.length) {
-      return false;
-    }
-
+    if (this.value.length !== other.value.length) return false;
     return this.value.every((promo, index) => {
       const otherPromo = other.value[index];
       return (
@@ -98,7 +100,6 @@ export class AppliedPromos {
     return JSON.stringify(this.value);
   }
 
-  // Business methods
   isEmpty(): boolean {
     return this.value.length === 0;
   }
@@ -137,56 +138,21 @@ export class AppliedPromos {
 
   addPromo(promo: PromoData): AppliedPromos {
     if (this.hasPromo(promo.id)) {
-      throw new DomainValidationError(
-        `Promo with ID ${promo.id} is already applied`,
-      );
+      throw new DomainValidationError(`Promo with ID ${promo.id} is already applied`);
     }
-
+    AppliedPromos.validatePromo(promo, this.value.length);
     return new AppliedPromos([...this.value, promo]);
   }
 
   removePromo(promoId: string): AppliedPromos {
-    const filteredPromos = this.value.filter((promo) => promo.id !== promoId);
-
-    if (filteredPromos.length === this.value.length) {
+    const filtered = this.value.filter((promo) => promo.id !== promoId);
+    if (filtered.length === this.value.length) {
       throw new DomainValidationError(`Promo with ID ${promoId} not found`);
     }
-
-    return new AppliedPromos(filteredPromos);
+    return new AppliedPromos(filtered);
   }
 
   clear(): AppliedPromos {
     return new AppliedPromos([]);
-  }
-
-  static empty(): AppliedPromos {
-    return new AppliedPromos([]);
-  }
-
-  static fromArray(promos: PromoData[]): AppliedPromos {
-    return new AppliedPromos(promos);
-  }
-
-  static fromJSON(json: string): AppliedPromos {
-    try {
-      const parsed = JSON.parse(json);
-      if (!Array.isArray(parsed)) {
-        throw new DomainValidationError(
-          "JSON must represent an array of promos",
-        );
-      }
-
-      // Convert appliedAt strings back to Date objects
-      const promos = parsed.map((promo) => ({
-        ...promo,
-        appliedAt: new Date(promo.appliedAt),
-      }));
-
-      return new AppliedPromos(promos);
-    } catch (error) {
-      throw new DomainValidationError(
-        `Invalid promo JSON: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
   }
 }

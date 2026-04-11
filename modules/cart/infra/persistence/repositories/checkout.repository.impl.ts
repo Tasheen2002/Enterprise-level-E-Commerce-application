@@ -13,7 +13,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(checkout: Checkout): Promise<void> {
-    const data = checkout.toData();
+    const data = checkout.toSnapshot();
 
     try {
       // Check if checkout already exists for this cart
@@ -96,7 +96,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
   }
 
   async update(checkout: Checkout): Promise<void> {
-    const data = checkout.toData();
+    const data = checkout.toSnapshot();
     await this.prisma.checkout.update({
       where: { id: data.checkoutId },
       data: {
@@ -220,6 +220,6 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
       updatedAt: prismaData.updatedAt,
     };
 
-    return Checkout.fromData(entityData);
+    return Checkout.reconstitute(entityData);
   }
 }

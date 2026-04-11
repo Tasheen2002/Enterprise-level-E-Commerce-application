@@ -1,64 +1,24 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
+import { PickupReservationController } from "../controllers/pickup-reservation.controller";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
-  PickupReservationController,
-  ListReservationsQuerystring,
-  CreateReservationBody,
-} from "../controllers/pickup-reservation.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  reservationParamsSchema,
+  listPickupReservationsSchema,
+  createPickupReservationSchema,
+  pickupReservationResponseSchema,
+} from "../validation/pickup-reservation.schema";
 
 export async function registerPickupReservationRoutes(
   fastify: FastifyInstance,
   controller: PickupReservationController,
 ): Promise<void> {
   // List reservations
-  fastify.get<{ Querystring: ListReservationsQuerystring }>(
+  fastify.get(
     "/pickup-reservations",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, validateQuery(listPickupReservationsSchema)],
       schema: {
         description: "List pickup reservations",
         tags: ["Pickup Reservations"],
@@ -73,18 +33,24 @@ export async function registerPickupReservationRoutes(
           },
         },
         response: {
-          200: { description: "List of reservations" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: pickupReservationResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.listReservations.bind(controller),
+    (request, reply) => controller.listReservations(request as AuthenticatedRequest, reply),
   );
 
   // Get reservation
-  fastify.get<{ Params: { reservationId: string } }>(
+  fastify.get(
     "/pickup-reservations/:reservationId",
     {
+      preValidation: [validateParams(reservationParamsSchema)],
       preHandler: [authenticate],
       schema: {
         description: "Get reservation by ID",
@@ -99,19 +65,24 @@ export async function registerPickupReservationRoutes(
           required: ["reservationId"],
         },
         response: {
-          200: { description: "Reservation details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: pickupReservationResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getReservation.bind(controller),
+    (request, reply) => controller.getReservation(request as AuthenticatedRequest, reply),
   );
 
   // Create reservation
-  fastify.post<{ Body: CreateReservationBody }>(
+  fastify.post(
     "/pickup-reservations",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, validateBody(createPickupReservationSchema)],
       schema: {
         description: "Create pickup reservation",
         tags: ["Pickup Reservations"],
@@ -129,18 +100,24 @@ export async function registerPickupReservationRoutes(
           },
         },
         response: {
-          201: { description: "Reservation created successfully" },
-          ...errorResponses,
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: pickupReservationResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.createReservation.bind(controller),
+    (request, reply) => controller.createReservation(request as AuthenticatedRequest, reply),
   );
 
   // Cancel reservation
-  fastify.delete<{ Params: { reservationId: string } }>(
+  fastify.delete(
     "/pickup-reservations/:reservationId",
     {
+      preValidation: [validateParams(reservationParamsSchema)],
       preHandler: [authenticate],
       schema: {
         description: "Cancel pickup reservation",
@@ -155,11 +132,10 @@ export async function registerPickupReservationRoutes(
           required: ["reservationId"],
         },
         response: {
-          200: { description: "Reservation cancelled successfully" },
-          ...errorResponses,
+          204: { description: "Reservation cancelled successfully", type: "null" },
         },
       },
     },
-    controller.cancelReservation.bind(controller),
+    (request, reply) => controller.cancelReservation(request as AuthenticatedRequest, reply),
   );
 }

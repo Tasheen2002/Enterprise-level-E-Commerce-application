@@ -1,5 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
-import { PickupReservation } from "../../domain/entities/pickup-reservation.entity";
+import { PickupReservation, PickupReservationDTO } from "../../domain/entities/pickup-reservation.entity";
 import { ReservationId } from "../../domain/value-objects/reservation-id.vo";
 import { IPickupReservationRepository } from "../../domain/repositories/pickup-reservation.repository";
 import { StockManagementService } from "./stock-management.service";
@@ -21,39 +20,25 @@ export class PickupReservationService {
     locationId: string,
     qty: number,
     expirationMinutes: number = 30,
-  ): Promise<PickupReservation> {
+  ): Promise<PickupReservationDTO> {
     if (qty <= 0) {
-      throw new DomainValidationError(
-        "Reservation quantity must be greater than zero",
-      );
+      throw new DomainValidationError("Reservation quantity must be greater than zero");
     }
 
-    // Calculate expiration time
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + expirationMinutes);
 
-    // Reserve stock in inventory
     await this.stockManagementService.reserveStock(variantId, locationId, qty);
 
-    // Create reservation
-    const reservation = PickupReservation.create({
-      reservationId: ReservationId.create(uuidv4()),
-      orderId,
-      variantId,
-      locationId,
-      qty,
-      expiresAt,
-    });
+    const reservation = PickupReservation.create({ orderId, variantId, locationId, qty, expiresAt });
 
     await this.pickupReservationRepository.save(reservation);
-    return reservation;
+    return PickupReservation.toDTO(reservation);
   }
 
-  async cancelPickupReservation(
-    reservationId: string,
-  ): Promise<PickupReservation> {
+  async cancelPickupReservation(reservationId: string): Promise<PickupReservationDTO> {
     const reservation = await this.pickupReservationRepository.findById(
-      ReservationId.create(reservationId),
+      ReservationId.fromString(reservationId),
     );
 
     if (!reservation) {
@@ -64,20 +49,18 @@ export class PickupReservationService {
       throw new InvalidOperationError("Can only cancel active reservations");
     }
 
-    // Mark reservation as cancelled (keep record for history)
-    // Note: Stock is not automatically released - manual intervention required
-    const cancelledReservation = reservation.cancel();
-    await this.pickupReservationRepository.save(cancelledReservation);
+    reservation.cancel();
+    await this.pickupReservationRepository.save(reservation);
 
-    return cancelledReservation;
+    return PickupReservation.toDTO(reservation);
   }
 
   async extendReservation(
     reservationId: string,
     additionalMinutes: number,
-  ): Promise<PickupReservation> {
+  ): Promise<PickupReservationDTO> {
     const reservation = await this.pickupReservationRepository.findById(
-      ReservationId.create(reservationId),
+      ReservationId.fromString(reservationId),
     );
 
     if (!reservation) {
@@ -88,50 +71,48 @@ export class PickupReservationService {
       throw new InvalidOperationError("Cannot extend an expired reservation");
     }
 
-    const newExpiresAt = new Date(reservation.getExpiresAt());
+    const newExpiresAt = new Date(reservation.expiresAt);
     newExpiresAt.setMinutes(newExpiresAt.getMinutes() + additionalMinutes);
 
-    const extendedReservation = reservation.extendExpiration(newExpiresAt);
-    await this.pickupReservationRepository.save(extendedReservation);
+    reservation.extendExpiration(newExpiresAt);
+    await this.pickupReservationRepository.save(reservation);
 
-    return extendedReservation;
+    return PickupReservation.toDTO(reservation);
   }
 
-  async getPickupReservation(
-    reservationId: string,
-  ): Promise<PickupReservation> {
+  async getPickupReservation(reservationId: string): Promise<PickupReservationDTO> {
     const reservation = await this.pickupReservationRepository.findById(
-      ReservationId.create(reservationId),
+      ReservationId.fromString(reservationId),
     );
     if (!reservation) {
       throw new PickupReservationNotFoundError(reservationId);
     }
-    return reservation;
+    return PickupReservation.toDTO(reservation);
   }
 
-  async getReservationsByOrder(orderId: string): Promise<PickupReservation[]> {
-    return this.pickupReservationRepository.findByOrder(orderId);
+  async getReservationsByOrder(orderId: string): Promise<PickupReservationDTO[]> {
+    const reservations = await this.pickupReservationRepository.findByOrder(orderId);
+    return reservations.map(PickupReservation.toDTO);
   }
 
-  async getReservationsByLocation(
-    locationId: string,
-  ): Promise<PickupReservation[]> {
-    return this.pickupReservationRepository.findByLocation(locationId);
+  async getReservationsByLocation(locationId: string): Promise<PickupReservationDTO[]> {
+    const reservations = await this.pickupReservationRepository.findByLocation(locationId);
+    return reservations.map(PickupReservation.toDTO);
   }
 
-  async getActiveReservations(): Promise<PickupReservation[]> {
-    return this.pickupReservationRepository.findActiveReservations();
+  async getActiveReservations(): Promise<PickupReservationDTO[]> {
+    const reservations = await this.pickupReservationRepository.findActiveReservations();
+    return reservations.map(PickupReservation.toDTO);
   }
 
-  async getAllReservations(): Promise<PickupReservation[]> {
-    return this.pickupReservationRepository.findAllReservations();
+  async getAllReservations(): Promise<PickupReservationDTO[]> {
+    const reservations = await this.pickupReservationRepository.findAllReservations();
+    return reservations.map(PickupReservation.toDTO);
   }
 
-  async fulfillPickupReservation(
-    reservationId: string,
-  ): Promise<PickupReservation> {
+  async fulfillPickupReservation(reservationId: string): Promise<PickupReservationDTO> {
     const reservation = await this.pickupReservationRepository.findById(
-      ReservationId.create(reservationId),
+      ReservationId.fromString(reservationId),
     );
 
     if (!reservation) {
@@ -142,27 +123,19 @@ export class PickupReservationService {
       throw new InvalidOperationError("Can only fulfill active reservations");
     }
 
-    // Fulfill stock reservation (removes from inventory)
     await this.stockManagementService.fulfillReservation(
-      reservation.getVariantId(),
-      reservation.getLocationId(),
-      reservation.getQty(),
+      reservation.variantId,
+      reservation.locationId,
+      reservation.qty,
     );
 
-    // Mark reservation as fulfilled
-    const fulfilledReservation = reservation.fulfill();
-    await this.pickupReservationRepository.save(fulfilledReservation);
+    reservation.fulfill();
+    await this.pickupReservationRepository.save(reservation);
 
-    return fulfilledReservation;
+    return PickupReservation.toDTO(reservation);
   }
 
-  async getTotalReservedQty(
-    variantId: string,
-    locationId: string,
-  ): Promise<number> {
-    return this.pickupReservationRepository.getTotalReservedQty(
-      variantId,
-      locationId,
-    );
+  async getTotalReservedQty(variantId: string, locationId: string): Promise<number> {
+    return this.pickupReservationRepository.getTotalReservedQty(variantId, locationId);
   }
 }

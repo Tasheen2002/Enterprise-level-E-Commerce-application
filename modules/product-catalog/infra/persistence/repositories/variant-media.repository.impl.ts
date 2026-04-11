@@ -17,9 +17,12 @@ export class VariantMediaRepository implements IVariantMediaRepository {
   }
 
   private hydrate(row: any): VariantMedia {
-    return VariantMedia.fromDatabaseRow({
-      variant_id: row.variantId,
-      asset_id: row.assetId,
+    return VariantMedia.fromPersistence({
+      id: row.id ?? `${row.variantId}_${row.assetId}`,
+      variantId: VariantId.fromString(row.variantId),
+      mediaAssetId: MediaAssetId.fromString(row.assetId),
+      displayOrder: row.displayOrder ?? 0,
+      createdAt: row.createdAt ?? new Date(),
     });
   }
 
@@ -174,7 +177,7 @@ export class VariantMediaRepository implements IVariantMediaRepository {
       await this.prisma.$transaction(
         sourceMedia.map((m) =>
           this.model.create({
-            data: { variantId: tid, assetId: m.getAssetId().getValue() },
+            data: { variantId: tid, assetId: m.mediaAssetId.getValue() },
           }),
         ),
       );
@@ -212,13 +215,13 @@ export class VariantMediaRepository implements IVariantMediaRepository {
     const sourceMedia = await this.findByProductVariants(sourceProductId);
     const creates: any[] = [];
     for (const m of sourceMedia) {
-      const targetVid = variantMapping.get(m.getVariantId());
+      const targetVid = variantMapping.get(m.variantId);
       if (targetVid) {
         creates.push(
           this.model.create({
             data: {
               variantId: targetVid.getValue(),
-              assetId: m.getAssetId().getValue(),
+              assetId: m.mediaAssetId.getValue(),
             },
           }),
         );

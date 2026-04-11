@@ -14,7 +14,6 @@ export class MediaAssetRepository implements IMediaAssetRepository {
 
   private convertBigIntToNumber(value: bigint | null): number | null {
     if (value === null) return null;
-    // Convert BigInt to number, handling potential overflow
     const numberValue = Number(value);
     if (numberValue > Number.MAX_SAFE_INTEGER) {
       console.warn(
@@ -24,23 +23,38 @@ export class MediaAssetRepository implements IMediaAssetRepository {
     return numberValue;
   }
 
-  async save(asset: MediaAsset): Promise<void> {
-    const data = asset.toDatabaseRow();
+  private mapRow(row: any): MediaAsset {
+    return MediaAsset.fromPersistence({
+      id: MediaAssetId.fromString(row.id),
+      storageKey: row.storageKey,
+      mime: row.mime,
+      width: row.width,
+      height: row.height,
+      bytes: this.convertBigIntToNumber(row.bytes),
+      altText: row.altText,
+      focalX: row.focalX,
+      focalY: row.focalY,
+      renditions: row.renditions as any,
+      version: row.version,
+      createdAt: row.createdAt,
+    });
+  }
 
+  async save(asset: MediaAsset): Promise<void> {
     await this.prisma.mediaAsset.create({
       data: {
-        id: data.asset_id,
-        storageKey: data.storage_key,
-        mime: data.mime,
-        width: data.width,
-        height: data.height,
-        bytes: data.bytes,
-        altText: data.alt_text,
-        focalX: data.focal_x,
-        focalY: data.focal_y,
-        renditions: data.renditions as any,
-        version: data.version,
-        createdAt: data.created_at,
+        id: asset.id.getValue(),
+        storageKey: asset.storageKey,
+        mime: asset.mime,
+        width: asset.width,
+        height: asset.height,
+        bytes: asset.bytes,
+        altText: asset.altText,
+        focalX: asset.focalX,
+        focalY: asset.focalY,
+        renditions: asset.renditions as any,
+        version: asset.version,
+        createdAt: asset.createdAt,
       },
     });
   }
@@ -54,20 +68,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       return null;
     }
 
-    return MediaAsset.fromDatabaseRow({
-      asset_id: assetData.id,
-      storage_key: assetData.storageKey,
-      mime: assetData.mime,
-      width: assetData.width,
-      height: assetData.height,
-      bytes: this.convertBigIntToNumber(assetData.bytes),
-      alt_text: assetData.altText,
-      focal_x: assetData.focalX,
-      focal_y: assetData.focalY,
-      renditions: assetData.renditions as any,
-      version: assetData.version,
-      created_at: assetData.createdAt,
-    });
+    return this.mapRow(assetData);
   }
 
   async findByStorageKey(storageKey: string): Promise<MediaAsset | null> {
@@ -79,20 +80,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       return null;
     }
 
-    return MediaAsset.fromDatabaseRow({
-      asset_id: assetData.id,
-      storage_key: assetData.storageKey,
-      mime: assetData.mime,
-      width: assetData.width,
-      height: assetData.height,
-      bytes: this.convertBigIntToNumber(assetData.bytes),
-      alt_text: assetData.altText,
-      focal_x: assetData.focalX,
-      focal_y: assetData.focalY,
-      renditions: assetData.renditions as any,
-      version: assetData.version,
-      created_at: assetData.createdAt,
-    });
+    return this.mapRow(assetData);
   }
 
   async findAll(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -127,22 +115,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findByMimeType(
@@ -163,22 +136,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findImages(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -200,22 +158,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findVideos(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -237,22 +180,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findByDimensions(
@@ -277,22 +205,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findBySizeRange(
@@ -319,22 +232,7 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async findOrphaned(): Promise<MediaAsset[]> {
@@ -362,40 +260,23 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { createdAt: "desc" },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 
   async update(asset: MediaAsset): Promise<void> {
-    const data = asset.toDatabaseRow();
-
     await this.prisma.mediaAsset.update({
-      where: { id: data.asset_id },
+      where: { id: asset.id.getValue() },
       data: {
-        storageKey: data.storage_key,
-        mime: data.mime,
-        width: data.width,
-        height: data.height,
-        bytes: data.bytes,
-        altText: data.alt_text,
-        focalX: data.focal_x,
-        focalY: data.focal_y,
-        renditions: data.renditions as any,
-        version: data.version,
+        storageKey: asset.storageKey,
+        mime: asset.mime,
+        width: asset.width,
+        height: asset.height,
+        bytes: asset.bytes,
+        altText: asset.altText,
+        focalX: asset.focalX,
+        focalY: asset.focalY,
+        renditions: asset.renditions as any,
+        version: asset.version,
       },
     });
   }
@@ -539,21 +420,6 @@ export class MediaAssetRepository implements IMediaAssetRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((assetData) =>
-      MediaAsset.fromDatabaseRow({
-        asset_id: assetData.id,
-        storage_key: assetData.storageKey,
-        mime: assetData.mime,
-        width: assetData.width,
-        height: assetData.height,
-        bytes: this.convertBigIntToNumber(assetData.bytes),
-        alt_text: assetData.altText,
-        focal_x: assetData.focalX,
-        focal_y: assetData.focalY,
-        renditions: assetData.renditions as any,
-        version: assetData.version,
-        created_at: assetData.createdAt,
-      }),
-    );
+    return assets.map((row) => this.mapRow(row));
   }
 }

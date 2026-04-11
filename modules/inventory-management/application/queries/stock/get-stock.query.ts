@@ -1,21 +1,22 @@
-import { IQuery } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { StockDTO } from "../../../domain/entities/stock.entity";
+import { StockManagementService } from "../../services/stock-management.service";
 
 export interface GetStockQuery extends IQuery {
   variantId: string;
   locationId: string;
 }
 
-export interface StockResult {
-  stockId?: string;
-  variantId: string;
-  locationId: string;
-  onHand: number;
-  reserved: number;
-  available: number;
-  lowStockThreshold?: number;
-  safetyStock?: number;
-  isLowStock: boolean;
-  isOutOfStock: boolean;
-  variant?: any;
-  location?: any;
+export type StockResult = StockDTO;
+
+export class GetStockHandler implements IQueryHandler<
+  GetStockQuery,
+  QueryResult<StockResult>
+> {
+  constructor(private readonly stockService: StockManagementService) {}
+
+  async handle(query: GetStockQuery): Promise<QueryResult<StockResult>> {
+    const stock = await this.stockService.getStock(query.variantId, query.locationId);
+    return QueryResult.success(stock);
+  }
 }

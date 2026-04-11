@@ -1,9 +1,7 @@
-import { v4 as uuidv4 } from "uuid";
-import {
-  Supplier,
-  SupplierContact,
-} from "../../domain/entities/supplier.entity";
+import { Supplier, SupplierDTO } from "../../domain/entities/supplier.entity";
 import { SupplierId } from "../../domain/value-objects/supplier-id.vo";
+import { SupplierName } from "../../domain/value-objects/supplier-name.vo";
+import { SupplierContact, SupplierContactProps } from "../../domain/value-objects/supplier-contact.vo";
 import { ISupplierRepository } from "../../domain/repositories/supplier.repository";
 import {
   SupplierAlreadyExistsError,
@@ -16,23 +14,17 @@ export class SupplierManagementService {
   async createSupplier(
     name: string,
     leadTimeDays?: number,
-    contacts?: SupplierContact[],
-  ): Promise<Supplier> {
-    // Check if supplier with same name already exists
+    contacts?: SupplierContactProps[],
+  ): Promise<SupplierDTO> {
     const existingSupplier = await this.supplierRepository.findByName(name);
     if (existingSupplier) {
       throw new SupplierAlreadyExistsError(name);
     }
 
-    const supplier = Supplier.create({
-      supplierId: SupplierId.create(uuidv4()),
-      name,
-      leadTimeDays,
-      contacts: contacts || [],
-    });
+    const supplier = Supplier.create({ name, leadTimeDays, contacts });
 
     await this.supplierRepository.save(supplier);
-    return supplier;
+    return Supplier.toDTO(supplier);
   }
 
   async updateSupplier(
@@ -40,79 +32,71 @@ export class SupplierManagementService {
     data: {
       name?: string;
       leadTimeDays?: number;
-      contacts?: SupplierContact[];
+      contacts?: SupplierContactProps[];
     },
-  ): Promise<Supplier> {
+  ): Promise<SupplierDTO> {
     const supplier = await this.supplierRepository.findById(
-      SupplierId.create(supplierId),
+      SupplierId.fromString(supplierId),
     );
 
     if (!supplier) {
       throw new SupplierNotFoundError(supplierId);
     }
 
-    let updatedSupplier = supplier;
-
     if (data.name) {
-      // Check if new name is already taken by another supplier
-      const existingSupplier = await this.supplierRepository.findByName(
-        data.name,
-      );
-      if (
-        existingSupplier &&
-        existingSupplier.getSupplierId().getValue() !== supplierId
-      ) {
+      const existingSupplier = await this.supplierRepository.findByName(data.name);
+      if (existingSupplier && existingSupplier.supplierId.getValue() !== supplierId) {
         throw new SupplierAlreadyExistsError(data.name);
       }
-      updatedSupplier = updatedSupplier.updateName(data.name);
+      supplier.updateName(SupplierName.create(data.name));
     }
 
     if (data.leadTimeDays !== undefined) {
-      updatedSupplier = updatedSupplier.updateLeadTimeDays(data.leadTimeDays);
+      supplier.updateLeadTimeDays(data.leadTimeDays);
     }
 
     if (data.contacts) {
-      updatedSupplier = updatedSupplier.updateContacts(data.contacts);
+      supplier.updateContacts(data.contacts.map((c) => SupplierContact.create(c)));
     }
 
-    await this.supplierRepository.save(updatedSupplier);
-    return updatedSupplier;
+    await this.supplierRepository.save(supplier);
+    return Supplier.toDTO(supplier);
   }
 
   async deleteSupplier(supplierId: string): Promise<void> {
-    const supplier = await this.supplierRepository.findById(
-      SupplierId.create(supplierId),
-    );
+    const id = SupplierId.fromString(supplierId);
+    const supplier = await this.supplierRepository.findById(id);
 
     if (!supplier) {
       throw new SupplierNotFoundError(supplierId);
     }
 
-    await this.supplierRepository.delete(SupplierId.create(supplierId));
+    await this.supplierRepository.delete(id);
   }
 
-  async getSupplier(supplierId: string): Promise<Supplier> {
+  async getSupplier(supplierId: string): Promise<SupplierDTO> {
     const supplier = await this.supplierRepository.findById(
-      SupplierId.create(supplierId),
+      SupplierId.fromString(supplierId),
     );
     if (!supplier) {
       throw new SupplierNotFoundError(supplierId);
     }
-    return supplier;
+    return Supplier.toDTO(supplier);
   }
 
-  async getSupplierByName(name: string): Promise<Supplier> {
+  async getSupplierByName(name: string): Promise<SupplierDTO> {
     const supplier = await this.supplierRepository.findByName(name);
     if (!supplier) {
       throw new SupplierNotFoundError(name);
     }
-    return supplier;
+    return Supplier.toDTO(supplier);
   }
 
   async listSuppliers(options?: {
     limit?: number;
     offset?: number;
-  }): Promise<{ suppliers: Supplier[]; total: number }> {
-    return this.supplierRepository.findAll(options);
+  }): Promise<{ suppliers: SupplierDTO[]; total: number }> {
+    const result = await this.supplierRepository.findAll(options);
+    return { suppliers: result.suppliers.map(Supplier.toDTO), total: result.total };
   }
 }

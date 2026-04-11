@@ -75,21 +75,21 @@ export class CheckoutOrderService {
       throw new CheckoutNotFoundError(dto.checkoutId);
     }
 
-    if (checkout.isExpired()) {
+    if (checkout.isExpired) {
       throw new InvalidCheckoutStateError("Checkout has expired");
     }
 
-    if (!checkout.isPending()) {
+    if (!checkout.isPending) {
       throw new InvalidCheckoutStateError("Checkout is not in pending state");
     }
 
-    const cart = await this.cartRepository.findById(checkout.getCartId());
+    const cart = await this.cartRepository.findById(checkout.cartId);
 
     if (!cart) {
-      throw new CartNotFoundError(checkout.getCartId().getValue());
+      throw new CartNotFoundError(checkout.cartId.getValue());
     }
 
-    if (cart.isEmpty()) {
+    if (cart.isEmpty) {
       throw new InvalidCartStateError("Cannot create order from empty cart");
     }
 
@@ -111,13 +111,13 @@ export class CheckoutOrderService {
       );
     }
 
-    if (dto.userId && checkout.getCartOwnerId()?.toString() !== dto.userId) {
+    if (dto.userId && checkout.cartOwnerId?.toString() !== dto.userId) {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
     if (
       dto.guestToken &&
-      checkout.getGuestToken()?.toString() !== dto.guestToken &&
+      checkout.guestToken?.toString() !== dto.guestToken &&
       !validStatuses.includes(paymentIntent.status)
     ) {
       throw new CartOwnershipError("Checkout does not belong to guest");
@@ -137,9 +137,9 @@ export class CheckoutOrderService {
     const orderNo = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
     const cartSnapshot = cart.toSnapshot();
-    const subtotal = cart.getSubtotal();
-    const total = checkout.getTotalAmount();
-    const cartItemTotal = cart.getTotal();
+    const subtotal = cart.subtotal;
+    const total = checkout.totalAmount;
+    const cartItemTotal = cart.total;
     const shipping = total - cartItemTotal;
 
     const totals = {
@@ -212,18 +212,18 @@ export class CheckoutOrderService {
 
     // Get cart email for address records
     const cartEmail = await this.completionPort.getCartEmail(
-      checkout.getCartId().toString(),
+      checkout.cartId.toString(),
     );
 
     // ---- Phase 5: Atomic persistence via port ----
 
     const result = await this.completionPort.persistCheckoutOrder({
       orderNo,
-      userId: checkout.getCartOwnerId()?.toString(),
-      guestToken: checkout.getGuestToken()?.toString(),
+      userId: checkout.cartOwnerId?.toString(),
+      guestToken: checkout.guestToken?.toString(),
       checkoutId: dto.checkoutId,
       paymentIntentId: dto.paymentIntentId,
-      currency: checkout.getCurrency().toString(),
+      currency: checkout.currency.getValue(),
       totals,
       items: orderItems,
       shippingAddress: { ...dto.shippingAddress, email: cartEmail },
@@ -232,7 +232,7 @@ export class CheckoutOrderService {
         email: cartEmail,
       },
       email: cartEmail ?? undefined,
-      cartId: checkout.getCartId().toString(),
+      cartId: checkout.cartId.toString(),
       stockAdjustments: (cartSnapshot.items || []).map((item) => ({
         variantId: item.variantId,
         warehouseId,
@@ -254,7 +254,7 @@ export class CheckoutOrderService {
     }
 
     // Clean up reservations
-    await this.reservationRepository.deleteByCartId(checkout.getCartId());
+    await this.reservationRepository.deleteByCartId(checkout.cartId);
 
     return result;
   }

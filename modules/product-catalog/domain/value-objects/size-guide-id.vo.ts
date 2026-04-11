@@ -1,20 +1,16 @@
-import { randomUUID } from "crypto";
-import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
+import { randomUUID } from 'crypto';
+import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
 
 export class SizeGuideId extends UuidId {
   private constructor(value: string) {
-    super(value, "Size Guide ID");
+    super(value, 'SizeGuideId');
   }
 
   static create(): SizeGuideId {
     return new SizeGuideId(randomUUID());
   }
 
-  static fromString(value: string): SizeGuideId {
-    return new SizeGuideId(value);
-  }
-
-  equals(other: SizeGuideId | null | undefined): boolean {
-    return super.equals(other);
+  static fromString(id: string): SizeGuideId {
+    return new SizeGuideId(id);
   }
 }

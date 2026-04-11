@@ -1,10 +1,6 @@
-import { v4 as uuidv4 } from "uuid";
-import { StockAlert } from "../../domain/entities/stock-alert.entity";
+import { StockAlert, StockAlertDTO } from "../../domain/entities/stock-alert.entity";
 import { AlertId } from "../../domain/value-objects/alert-id.vo";
-import {
-  AlertType,
-  AlertTypeVO,
-} from "../../domain/value-objects/alert-type.vo";
+import { AlertType } from "../../domain/value-objects/alert-type.vo";
 import { IStockAlertRepository } from "../../domain/repositories/stock-alert.repository";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import {
@@ -19,33 +15,27 @@ export class StockAlertService {
     private readonly stockRepository: IStockRepository,
   ) {}
 
-  async createStockAlert(variantId: string, type: string): Promise<StockAlert> {
+  async createStockAlert(variantId: string, type: string): Promise<StockAlertDTO> {
     const alertType = type.toLowerCase() as AlertType;
 
-    // Check if there's already an active alert of this type for this variant
     const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
       variantId,
       alertType,
     );
 
     if (hasActiveAlert) {
-      throw new StockAlertAlreadyExistsError(type, variantId);
+      throw new StockAlertAlreadyExistsError(variantId, type);
     }
 
-    const alert = StockAlert.create({
-      alertId: AlertId.create(uuidv4()),
-      variantId,
-      type: AlertTypeVO.create(type),
-      triggeredAt: new Date(),
-    });
+    const alert = StockAlert.create({ variantId, type });
 
     await this.stockAlertRepository.save(alert);
-    return alert;
+    return StockAlert.toDTO(alert);
   }
 
-  async resolveStockAlert(alertId: string): Promise<StockAlert> {
+  async resolveStockAlert(alertId: string): Promise<StockAlertDTO> {
     const alert = await this.stockAlertRepository.findById(
-      AlertId.create(alertId),
+      AlertId.fromString(alertId),
     );
 
     if (!alert) {
@@ -56,40 +46,37 @@ export class StockAlertService {
       throw new InvalidOperationError(`Alert ${alertId} is already resolved`);
     }
 
-    const resolvedAlert = alert.resolve(new Date());
-    await this.stockAlertRepository.save(resolvedAlert);
-    return resolvedAlert;
+    alert.resolve(new Date());
+    await this.stockAlertRepository.save(alert);
+    return StockAlert.toDTO(alert);
   }
 
   async deleteStockAlert(alertId: string): Promise<void> {
     const alert = await this.stockAlertRepository.findById(
-      AlertId.create(alertId),
+      AlertId.fromString(alertId),
     );
 
     if (!alert) {
       throw new StockAlertNotFoundError(alertId);
     }
 
-    await this.stockAlertRepository.delete(AlertId.create(alertId));
+    await this.stockAlertRepository.delete(AlertId.fromString(alertId));
   }
 
-  async checkAndCreateAlerts(variantId: string): Promise<StockAlert[]> {
-    const createdAlerts: StockAlert[] = [];
+  async checkAndCreateAlerts(variantId: string): Promise<StockAlertDTO[]> {
+    const createdAlerts: StockAlertDTO[] = [];
 
-    // Get all stock records for this variant
     const stocks = await this.stockRepository.findByVariant(variantId);
 
     if (stocks.length === 0) {
       return createdAlerts;
     }
 
-    // Calculate total available stock
     const totalAvailable = stocks.reduce(
-      (sum, stock) => sum + stock.getStockLevel().getAvailable(),
+      (sum, stock) => sum + stock.stockLevel.getAvailable(),
       0,
     );
 
-    // Check for out of stock
     if (totalAvailable === 0) {
       const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
         variantId,
@@ -102,10 +89,7 @@ export class StockAlertService {
       }
     }
 
-    // Check for low stock across all locations
-    const hasLowStock = stocks.some((stock) =>
-      stock.getStockLevel().isLowStock(),
-    );
+    const hasLowStock = stocks.some((stock) => stock.stockLevel.isLowStock());
 
     if (hasLowStock && totalAvailable > 0) {
       const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
@@ -122,70 +106,66 @@ export class StockAlertService {
     return createdAlerts;
   }
 
-  async autoResolveAlerts(variantId: string): Promise<StockAlert[]> {
-    const resolvedAlerts: StockAlert[] = [];
+  async autoResolveAlerts(variantId: string): Promise<StockAlertDTO[]> {
+    const resolvedAlerts: StockAlertDTO[] = [];
 
-    // Get active alerts for this variant
-    const activeAlerts =
-      await this.stockAlertRepository.findActiveAlertsByVariant(variantId);
+    const activeAlerts = await this.stockAlertRepository.findActiveAlertsByVariant(variantId);
 
     if (activeAlerts.length === 0) {
       return resolvedAlerts;
     }
 
-    // Get current stock status
-    const totalAvailable =
-      await this.stockRepository.getTotalAvailableStock(variantId);
+    const totalAvailable = await this.stockRepository.getTotalAvailableStock(variantId);
     const stocks = await this.stockRepository.findByVariant(variantId);
-    const hasLowStock = stocks.some((stock) =>
-      stock.getStockLevel().isLowStock(),
-    );
+    const hasLowStock = stocks.some((stock) => stock.stockLevel.isLowStock());
 
-    // Resolve alerts that are no longer applicable
     for (const alert of activeAlerts) {
       let shouldResolve = false;
 
-      if (alert.getType().getValue() === AlertType.OOS && totalAvailable > 0) {
+      if (alert.type.getValue() === AlertType.OOS && totalAvailable > 0) {
         shouldResolve = true;
       }
 
-      if (alert.getType().getValue() === AlertType.LOW_STOCK && !hasLowStock) {
+      if (alert.type.getValue() === AlertType.LOW_STOCK && !hasLowStock) {
         shouldResolve = true;
       }
 
       if (shouldResolve) {
-        const resolvedAlert = alert.resolve(new Date());
-        await this.stockAlertRepository.save(resolvedAlert);
-        resolvedAlerts.push(resolvedAlert);
+        alert.resolve(new Date());
+        await this.stockAlertRepository.save(alert);
+        resolvedAlerts.push(StockAlert.toDTO(alert));
       }
     }
 
     return resolvedAlerts;
   }
 
-  async getStockAlert(alertId: string): Promise<StockAlert> {
+  async getStockAlert(alertId: string): Promise<StockAlertDTO> {
     const alert = await this.stockAlertRepository.findById(
-      AlertId.create(alertId),
+      AlertId.fromString(alertId),
     );
     if (!alert) {
       throw new StockAlertNotFoundError(alertId);
     }
-    return alert;
+    return StockAlert.toDTO(alert);
   }
 
-  async getActiveAlerts(): Promise<StockAlert[]> {
-    return this.stockAlertRepository.findActiveAlerts();
+  async getActiveAlerts(): Promise<StockAlertDTO[]> {
+    const alerts = await this.stockAlertRepository.findActiveAlerts();
+    return alerts.map(StockAlert.toDTO);
   }
 
-  async getAlertsByVariant(variantId: string): Promise<StockAlert[]> {
-    return this.stockAlertRepository.findByVariant(variantId);
+  async getAlertsByVariant(variantId: string): Promise<StockAlertDTO[]> {
+    const alerts = await this.stockAlertRepository.findByVariant(variantId);
+    return alerts.map(StockAlert.toDTO);
   }
 
   async listStockAlerts(options?: {
     limit?: number;
     offset?: number;
     includeResolved?: boolean;
-  }): Promise<{ alerts: StockAlert[]; total: number }> {
-    return this.stockAlertRepository.findAll(options);
+  }): Promise<{ alerts: StockAlertDTO[]; total: number }> {
+    const result = await this.stockAlertRepository.findAll(options);
+    return { alerts: result.alerts.map(StockAlert.toDTO), total: result.total };
   }
 }

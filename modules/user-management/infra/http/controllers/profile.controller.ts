@@ -1,14 +1,8 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import {
-  GetUserProfileInput,
-  GetUserProfileHandler,
-} from "../../../application/queries/get-user-profile.query";
-import {
-  UpdateProfileInput,
-  UpdateProfileHandler,
-} from "../../../application/commands/update-profile.command";
+import { GetUserProfileHandler } from "../../../application/queries/get-user-profile.query";
+import { UpdateProfileHandler } from "../../../application/commands/update-profile.command";
 
 export class ProfileController {
   constructor(
@@ -21,17 +15,12 @@ export class ProfileController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const query: GetUserProfileInput = {
+      const query = {
         userId: request.user.userId,
         timestamp: new Date(),
       };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Profile retrieved",
-        "User profile not found",
-      );
+      return ResponseHelper.ok(reply, "Profile retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -76,7 +65,7 @@ export class ProfileController {
         nationality,
       } = request.body;
 
-      const command: UpdateProfileInput = {
+      const command = {
         userId: request.user.userId,
         defaultAddressId,
         defaultPaymentMethodId,
@@ -108,14 +97,9 @@ export class ProfileController {
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query: GetUserProfileInput = { userId, timestamp: new Date() };
+      const query = { userId, timestamp: new Date() };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Profile retrieved",
-        "User profile not found",
-      );
+      return ResponseHelper.ok(reply, "Profile retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -162,7 +146,7 @@ export class ProfileController {
         nationality,
       } = request.body;
 
-      const command: UpdateProfileInput = {
+      const command = {
         userId,
         defaultAddressId,
         defaultPaymentMethodId,

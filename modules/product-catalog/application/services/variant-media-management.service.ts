@@ -151,23 +151,23 @@ export class VariantMediaManagementService {
     const mediaAssets = await Promise.all(
       variantMediaList.map(async (variantMedia) => {
         const assetIdEntity = EntityMediaAssetId.fromString(
-          variantMedia.getAssetId().toString(),
+          variantMedia.mediaAssetId.getValue(),
         );
         const asset = await this.mediaAssetRepository.findById(assetIdEntity);
         return {
-          assetId: variantMedia.getAssetId().toString(),
-          storageKey: asset?.getStorageKey() || "",
-          mimeType: asset?.getMime() || "",
-          altText: asset?.getAltText() ?? undefined,
+          assetId: variantMedia.mediaAssetId.getValue(),
+          storageKey: asset?.storageKey || "",
+          mimeType: asset?.mime || "",
+          altText: asset?.altText ?? undefined,
         };
       }),
     );
 
     return {
       variantId,
-      sku: variant.getSku().toString(),
-      color: variant.getColor() ?? undefined,
-      size: variant.getSize() ?? undefined,
+      sku: variant.sku.getValue(),
+      color: variant.color ?? undefined,
+      size: variant.size ?? undefined,
       totalMedia: variantMediaList.length,
       mediaAssets,
     };
@@ -308,23 +308,23 @@ export class VariantMediaManagementService {
         const mediaAssets = await Promise.all(
           item.media.map(async (vm) => {
             const assetIdEntity = EntityMediaAssetId.fromString(
-              vm.getAssetId().toString(),
+              vm.mediaAssetId.getValue(),
             );
             const asset =
               await this.mediaAssetRepository.findById(assetIdEntity);
             return {
-              assetId: vm.getAssetId().toString(),
-              storageKey: asset?.getStorageKey() || "",
-              mimeType: asset?.getMime() || "",
+              assetId: vm.mediaAssetId.getValue(),
+              storageKey: asset?.storageKey || "",
+              mimeType: asset?.mime || "",
             };
           }),
         );
 
         return {
           variantId: item.variantId.toString(),
-          sku: variant?.getSku().toString() || "",
-          color: variant?.getColor() ?? undefined,
-          size: variant?.getSize() ?? undefined,
+          sku: variant?.sku.getValue() || "",
+          color: variant?.color ?? undefined,
+          size: variant?.size ?? undefined,
           mediaCount: item.media.length,
           mediaAssets,
         };
@@ -426,7 +426,7 @@ export class VariantMediaManagementService {
     // Group by variant and get variant details
     const variantMediaMap = new Map<string, VariantMedia[]>();
     for (const vm of colorVariantMedia) {
-      const variantIdStr = vm.getVariantId().toString();
+      const variantIdStr = vm.variantId.getValue();
       if (!variantMediaMap.has(variantIdStr)) {
         variantMediaMap.set(variantIdStr, []);
       }
@@ -443,22 +443,22 @@ export class VariantMediaManagementService {
           const mediaAssets = await Promise.all(
             mediaList.map(async (vm) => {
               const assetIdEntity = EntityMediaAssetId.fromString(
-                vm.getAssetId().toString(),
+                vm.mediaAssetId.getValue(),
               );
               const asset =
                 await this.mediaAssetRepository.findById(assetIdEntity);
               return {
-                assetId: vm.getAssetId().toString(),
-                storageKey: asset?.getStorageKey() || "",
-                mimeType: asset?.getMime() || "",
+                assetId: vm.mediaAssetId.getValue(),
+                storageKey: asset?.storageKey || "",
+                mimeType: asset?.mime || "",
               };
             }),
           );
 
           return {
             variantId: variantIdStr,
-            sku: variant?.getSku().toString() || "",
-            size: variant?.getSize() ?? undefined,
+            sku: variant?.sku.getValue() || "",
+            size: variant?.size ?? undefined,
             mediaAssets,
           };
         },
@@ -503,7 +503,7 @@ export class VariantMediaManagementService {
     // Group by variant and get variant details
     const variantMediaMap = new Map<string, VariantMedia[]>();
     for (const vm of sizeVariantMedia) {
-      const variantIdStr = vm.getVariantId().toString();
+      const variantIdStr = vm.variantId.getValue();
       if (!variantMediaMap.has(variantIdStr)) {
         variantMediaMap.set(variantIdStr, []);
       }
@@ -520,22 +520,22 @@ export class VariantMediaManagementService {
           const mediaAssets = await Promise.all(
             mediaList.map(async (vm) => {
               const assetIdEntity = EntityMediaAssetId.fromString(
-                vm.getAssetId().toString(),
+                vm.mediaAssetId.getValue(),
               );
               const asset =
                 await this.mediaAssetRepository.findById(assetIdEntity);
               return {
-                assetId: vm.getAssetId().toString(),
-                storageKey: asset?.getStorageKey() || "",
-                mimeType: asset?.getMime() || "",
+                assetId: vm.mediaAssetId.getValue(),
+                storageKey: asset?.storageKey || "",
+                mimeType: asset?.mime || "",
               };
             }),
           );
 
           return {
             variantId: variantIdStr,
-            sku: variant?.getSku().toString() || "",
-            color: variant?.getColor() ?? undefined,
+            sku: variant?.sku.getValue() || "",
+            color: variant?.color ?? undefined,
             mediaAssets,
           };
         },
@@ -591,12 +591,12 @@ export class VariantMediaManagementService {
     // Check if all referenced assets exist
     for (const vm of variantMedia) {
       const assetIdEntity = EntityMediaAssetId.fromString(
-        vm.getAssetId().toString(),
+        vm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (!asset) {
         issues.push(
-          `Referenced media asset ${vm.getAssetId().toString()} not found`,
+          `Referenced media asset ${vm.mediaAssetId.getValue()} not found`,
         );
       }
     }
@@ -633,12 +633,12 @@ export class VariantMediaManagementService {
 
     for (const vm of variantMedia) {
       const assetIdEntity = EntityMediaAssetId.fromString(
-        vm.getAssetId().toString(),
+        vm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (asset) {
-        const mime = asset.getMime();
-        const bytes = asset.getBytes() || 0;
+        const mime = asset.mime;
+        const bytes = asset.bytes || 0;
         totalSize += bytes;
 
         if (mime.startsWith("image/")) {

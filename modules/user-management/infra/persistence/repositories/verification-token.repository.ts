@@ -129,7 +129,7 @@ export class VerificationTokenRepository
   }
 
   private toDomain(row: any): VerificationToken {
-    return VerificationToken.reconstitute({
+    return VerificationToken.fromPersistence({
       tokenId: row.token_id,
       userId: row.user_id,
       token: row.token,

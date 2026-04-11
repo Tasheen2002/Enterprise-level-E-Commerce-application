@@ -1,81 +1,79 @@
 export {
   Product,
   ProductStatus,
-  CreateProductData,
-  ProductData,
-  ProductRow,
+  type ProductProps,
+  type ProductDTO,
+  ProductCreatedEvent,
+  ProductUpdatedEvent,
+  ProductPublishedEvent,
+  ProductArchivedEvent,
+  ProductDeletedEvent,
 } from "./product.entity";
 export {
   ProductVariant,
-  CreateVariantData,
-  VariantData,
-  VariantRow,
+  type ProductVariantProps,
+  type ProductVariantDTO,
+  VariantCreatedEvent,
+  VariantUpdatedEvent,
+  VariantDeletedEvent,
 } from "./product-variant.entity";
 export {
   Category,
-  CreateCategoryData,
-  CategoryData,
-  CategoryRow,
+  type CategoryProps,
+  type CategoryDTO,
 } from "./category.entity";
 export {
   MediaAsset,
   MediaAssetId,
-  CreateMediaAssetData,
-  MediaAssetData,
-  MediaAssetRow,
+  type MediaAssetProps,
+  type MediaAssetDTO,
+  MediaAssetCreatedEvent,
+  MediaAssetUpdatedEvent,
+  MediaAssetDeletedEvent,
 } from "./media-asset.entity";
 export {
   ProductTag,
   ProductTagId,
-  CreateProductTagData,
-  ProductTagData,
-  ProductTagRow,
+  type ProductTagProps,
+  type ProductTagDTO,
 } from "./product-tag.entity";
 export {
   SizeGuide,
   SizeGuideId,
   Region,
-  CreateSizeGuideData,
-  SizeGuideData,
-  SizeGuideRow,
+  type SizeGuideProps,
+  type SizeGuideDTO,
 } from "./size-guide.entity";
 export {
   EditorialLook,
   EditorialLookId,
-  CreateEditorialLookData,
-  EditorialLookData,
-  EditorialLookRow,
+  type EditorialLookProps,
+  type EditorialLookDTO,
 } from "./editorial-look.entity";
 
 // Association entities
 export {
   ProductCategory,
-  CreateProductCategoryData,
-  ProductCategoryData,
-  ProductCategoryRow,
+  type ProductCategoryProps,
+  type ProductCategoryDTO,
 } from "./product-category.entity";
 export {
   ProductMedia,
-  ProductMediaId,
-  CreateProductMediaData,
-  ProductMediaData,
-  ProductMediaRow,
+  type ProductMediaProps,
+  type ProductMediaDTO,
 } from "./product-media.entity";
 export {
   VariantMedia,
-  CreateVariantMediaData,
-  VariantMediaData,
-  VariantMediaRow,
+  type VariantMediaProps,
+  type VariantMediaDTO,
 } from "./variant-media.entity";
 export {
   ProductTagAssociation,
-  CreateProductTagAssociationData,
-  ProductTagAssociationData,
-  ProductTagAssociationRow,
+  type ProductTagAssociationProps,
+  type ProductTagAssociationDTO,
 } from "./product-tag-association.entity";
 export {
   EditorialLookProduct,
-  CreateEditorialLookProductData,
-  EditorialLookProductData,
-  EditorialLookProductRow,
+  type EditorialLookProductProps,
+  type EditorialLookProductDTO,
 } from "./editorial-look-product.entity";

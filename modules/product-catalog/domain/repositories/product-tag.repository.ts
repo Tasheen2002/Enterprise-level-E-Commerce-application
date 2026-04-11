@@ -52,7 +52,7 @@ export interface IProductTagRepository {
 export interface ProductTagQueryOptions {
   limit?: number;
   offset?: number;
-  sortBy?: "tag" | "kind" | "usage_count";
+  sortBy?: "tag" | "kind";
   sortOrder?: "asc" | "desc";
   kind?: string;
 }

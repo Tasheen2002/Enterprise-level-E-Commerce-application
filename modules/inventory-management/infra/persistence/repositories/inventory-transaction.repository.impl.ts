@@ -18,8 +18,8 @@ interface InventoryTransactionDatabaseRow {
 export class InventoryTransactionRepositoryImpl implements IInventoryTransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}
   private toEntity(row: InventoryTransactionDatabaseRow): InventoryTransaction {
-    return InventoryTransaction.reconstitute({
-      invTxnId: TransactionId.create(row.invTxnId),
+    return InventoryTransaction.fromPersistence({
+      invTxnId: TransactionId.fromString(row.invTxnId),
       variantId: row.variantId,
       locationId: row.locationId,
       qtyDelta: row.qtyDelta,
@@ -33,14 +33,13 @@ export class InventoryTransactionRepositoryImpl implements IInventoryTransaction
   async save(transaction: InventoryTransaction): Promise<void> {
     await (this.prisma as any).inventoryTransaction.create({
       data: {
-        invTxnId: transaction.getInvTxnId().getValue(),
-        variantId: transaction.getVariantId(),
-        locationId: transaction.getLocationId(),
-        qtyDelta: transaction.getQtyDelta(),
-        reason: transaction.getReason().getValue(),
-
-        referenceId: transaction.getReferenceId(),
-        createdAt: transaction.getCreatedAt(),
+        invTxnId: transaction.invTxnId.getValue(),
+        variantId: transaction.variantId,
+        locationId: transaction.locationId,
+        qtyDelta: transaction.qtyDelta,
+        reason: transaction.reason.getValue(),
+        referenceId: transaction.referenceId,
+        createdAt: transaction.createdAt,
       },
     });
   }

@@ -1,7 +1,5 @@
-import {
-  UserProfileService,
-  UserProfileDto,
-} from '../services/user-profile.service';
+import { UserProfileService } from '../services/user-profile.service';
+import { UserProfileDTO } from '../../domain/entities/user-profile.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -28,7 +26,7 @@ export interface UpdateProfileInput extends ICommand {
 
 export class UpdateProfileHandler
   implements
-    ICommandHandler<UpdateProfileInput, CommandResult<UserProfileDto>>
+    ICommandHandler<UpdateProfileInput, CommandResult<UserProfileDTO>>
 {
   constructor(
     private readonly userProfileService: UserProfileService
@@ -36,7 +34,7 @@ export class UpdateProfileHandler
 
   async handle(
     input: UpdateProfileInput
-  ): Promise<CommandResult<UserProfileDto>> {
+  ): Promise<CommandResult<UserProfileDTO>> {
     const updatedProfile = await this.userProfileService.updateUserProfile(
       input.userId,
       {

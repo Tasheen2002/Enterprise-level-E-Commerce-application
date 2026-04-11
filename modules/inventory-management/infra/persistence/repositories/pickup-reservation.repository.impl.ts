@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { PickupReservation } from "../../../domain/entities/pickup-reservation.entity";
 import { ReservationId } from "../../../domain/value-objects/reservation-id.vo";
+import {
+  ReservationStatus,
+  ReservationStatusVO,
+} from "../../../domain/value-objects/reservation-status.vo";
 import { IPickupReservationRepository } from "../../../domain/repositories/pickup-reservation.repository";
 
 interface PickupReservationDatabaseRow {
@@ -10,96 +14,44 @@ interface PickupReservationDatabaseRow {
   locationId: string;
   qty: number;
   expiresAt: Date;
+  status: string;
 }
 
-class ReservationStatusTracker {
-  private static cancelledReservations = new Set<string>();
-  private static fulfilledReservations = new Set<string>();
-  private static expiredReservations = new Set<string>();
-
-  static markCancelled(reservationId: string): void {
-    this.cancelledReservations.add(reservationId);
-    this.expiredReservations.delete(reservationId);
-  }
-
-  static markFulfilled(reservationId: string): void {
-    this.fulfilledReservations.add(reservationId);
-    this.expiredReservations.delete(reservationId);
-    this.cancelledReservations.delete(reservationId);
-  }
-
-  static markExpired(reservationId: string): void {
-    this.expiredReservations.add(reservationId);
-  }
-
-  static isCancelled(reservationId: string): boolean {
-    return this.cancelledReservations.has(reservationId);
-  }
-
-  static isFulfilled(reservationId: string): boolean {
-    return this.fulfilledReservations.has(reservationId);
-  }
-
-  static isManuallyExpired(reservationId: string): boolean {
-    return this.expiredReservations.has(reservationId);
-  }
-
-  static clear(): void {
-    this.cancelledReservations.clear();
-    this.fulfilledReservations.clear();
-    this.expiredReservations.clear();
-  }
-}
-
-export class PickupReservationRepositoryImpl implements IPickupReservationRepository {
+export class PickupReservationRepositoryImpl
+  implements IPickupReservationRepository
+{
   constructor(private readonly prisma: PrismaClient) {}
 
   private toEntity(row: PickupReservationDatabaseRow): PickupReservation {
-    return PickupReservation.reconstitute({
-      reservationId: ReservationId.create(row.reservationId),
+    return PickupReservation.fromPersistence({
+      reservationId: ReservationId.fromString(row.reservationId),
       orderId: row.orderId,
       variantId: row.variantId,
       locationId: row.locationId,
       qty: row.qty,
       expiresAt: row.expiresAt,
-      isCancelled: ReservationStatusTracker.isCancelled(row.reservationId),
-      isManuallyExpired: ReservationStatusTracker.isManuallyExpired(
-        row.reservationId,
-      ),
-      isFulfilled: ReservationStatusTracker.isFulfilled(row.reservationId),
+      status: ReservationStatusVO.create(row.status ?? ReservationStatus.ACTIVE),
     });
   }
 
   async save(reservation: PickupReservation): Promise<void> {
-    const reservationId = reservation.getReservationId().getValue();
-
-    if (reservation.isCancelled()) {
-      ReservationStatusTracker.markCancelled(reservationId);
-    }
-    if (reservation.isFulfilled()) {
-      ReservationStatusTracker.markFulfilled(reservationId);
-    }
-    if (
-      reservation.isExpired() &&
-      !reservation.isCancelled() &&
-      !reservation.isFulfilled()
-    ) {
-      ReservationStatusTracker.markExpired(reservationId);
-    }
+    const reservationId = reservation.reservationId.getValue();
 
     await (this.prisma as any).pickupReservation.upsert({
       where: { reservationId },
       create: {
         reservationId,
-        orderId: reservation.getOrderId(),
-        variantId: reservation.getVariantId(),
-        locationId: reservation.getLocationId(),
-        qty: reservation.getQty(),
-        expiresAt: reservation.getExpiresAt(),
+        orderId: reservation.orderId,
+        variantId: reservation.variantId,
+        locationId: reservation.locationId,
+        qty: reservation.qty,
+        expiresAt: reservation.expiresAt,
+        status: reservation.status.getValue(),
       },
       update: {
-        qty: reservation.getQty(),
-        expiresAt: reservation.getExpiresAt(),
+        qty: reservation.qty,
+        expiresAt: reservation.expiresAt,
+        status: reservation.status.getValue(),
       },
     });
   }
@@ -212,9 +164,8 @@ export class PickupReservationRepositoryImpl implements IPickupReservationReposi
       where: {
         variantId,
         locationId,
-        expiresAt: {
-          gte: now,
-        },
+        status: ReservationStatus.ACTIVE,
+        expiresAt: { gte: now },
       },
       orderBy: { expiresAt: "asc" },
     });
@@ -229,16 +180,13 @@ export class PickupReservationRepositoryImpl implements IPickupReservationReposi
     locationId: string,
   ): Promise<number> {
     const reservations = await (this.prisma as any).pickupReservation.findMany({
-      where: {
-        variantId,
-        locationId,
-      },
+      where: { variantId, locationId },
     });
 
     return reservations
       .map((r: PickupReservationDatabaseRow) => this.toEntity(r))
       .filter((r: PickupReservation) => r.isActive())
-      .reduce((total: number, r: PickupReservation) => total + r.getQty(), 0);
+      .reduce((total: number, r: PickupReservation) => total + r.qty, 0);
   }
 
   async exists(reservationId: ReservationId): Promise<boolean> {

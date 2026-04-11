@@ -1,19 +1,27 @@
 import { FastifyInstance } from "fastify";
-import { MediaController, CreateMediaAssetRequest, UpdateMediaAssetRequest, MediaAssetQueryParams } from "../controllers/media.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { MediaController } from "../controllers/media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  mediaParamsSchema,
+  listMediaSchema,
+  createMediaSchema,
+  updateMediaSchema,
+  mediaResponseSchema,
+} from "../validation/media.schema";
 
 export async function registerMediaRoutes(
   fastify: FastifyInstance,
   controller: MediaController,
 ): Promise<void> {
   // GET /media — List media assets (Staff+)
-  fastify.get<{ Querystring: MediaAssetQueryParams }>(
+  fastify.get(
     "/media",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [validateQuery(listMediaSchema), RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Get paginated list of media assets with filtering options",
+        description: "Get paginated list of media assets with filtering options",
         tags: ["Media"],
         summary: "List Media Assets",
         security: [{ bearerAuth: [] }],
@@ -28,52 +36,47 @@ export async function registerMediaRoutes(
             hasRenditions: { type: "boolean" },
             minBytes: { type: "integer", minimum: 0 },
             maxBytes: { type: "integer", minimum: 0 },
-            minWidth: { type: "integer", minimum: 1 },
-            maxWidth: { type: "integer", minimum: 1 },
-            minHeight: { type: "integer", minimum: 1 },
-            maxHeight: { type: "integer", minimum: 1 },
-            sortBy: {
-              type: "string",
-              enum: ["createdAt", "bytes", "width", "height", "version"],
-              default: "createdAt",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
+            sortBy: { type: "string", enum: ["createdAt", "bytes", "width", "height", "version"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "object", properties: { assets: { type: "array", items: mediaResponseSchema }, meta: { type: "object" } } },
             },
           },
         },
       },
     },
-    controller.getMediaAssets.bind(controller),
+    (request, reply) => controller.getMediaAssets(request as AuthenticatedRequest, reply),
   );
 
   // GET /media/:id — Get media asset by ID (Staff+)
-  fastify.get<{ Params: { id: string } }>(
+  fastify.get(
     "/media/:id",
     {
+      preValidation: [validateParams(mediaParamsSchema)],
       preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get media asset by ID",
         tags: ["Media"],
         summary: "Get Media Asset",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
       },
     },
-    controller.getMediaAsset.bind(controller),
+    (request, reply) => controller.getMediaAsset(request as AuthenticatedRequest, reply),
   );
 
   // POST /media — Create media asset (Admin only)
-  fastify.post<{ Body: CreateMediaAssetRequest }>(
+  fastify.post(
     "/media",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [validateBody(createMediaSchema), RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new media asset",
         tags: ["Media"],
@@ -83,57 +86,35 @@ export async function registerMediaRoutes(
           type: "object",
           required: ["storageKey", "mime"],
           properties: {
-            storageKey: {
-              type: "string",
-              description: "Storage key for the asset",
-            },
-            mime: { type: "string", description: "MIME type" },
-            width: { type: "integer", minimum: 1, description: "Image width" },
-            height: {
-              type: "integer",
-              minimum: 1,
-              description: "Image height",
-            },
-            bytes: {
-              type: "integer",
-              minimum: 0,
-              description: "File size in bytes",
-            },
-            altText: {
-              type: "string",
-              description: "Alt text for accessibility",
-            },
-            focalX: {
-              type: "integer",
-              description: "Focal point X coordinate",
-            },
-            focalY: {
-              type: "integer",
-              description: "Focal point Y coordinate",
-            },
-            renditions: { type: "object", description: "Renditions data" },
+            storageKey: { type: "string" },
+            mime: { type: "string" },
+            width: { type: "integer", minimum: 1 },
+            height: { type: "integer", minimum: 1 },
+            bytes: { type: "integer", minimum: 0 },
+            altText: { type: "string" },
+            focalX: { type: "integer" },
+            focalY: { type: "integer" },
+            renditions: { type: "object" },
           },
         },
+        response: { 201: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
       },
     },
-    controller.createMediaAsset.bind(controller),
+    (request, reply) => controller.createMediaAsset(request as AuthenticatedRequest, reply),
   );
 
   // PUT /media/:id — Update media asset (Admin only)
-  fastify.put<{ Params: { id: string }; Body: UpdateMediaAssetRequest }>(
+  fastify.put(
     "/media/:id",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(mediaParamsSchema)],
+      preHandler: [validateBody(updateMediaSchema), RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update an existing media asset",
         tags: ["Media"],
         summary: "Update Media Asset",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
         body: {
           type: "object",
           properties: {
@@ -147,28 +128,32 @@ export async function registerMediaRoutes(
             renditions: { type: "object" },
           },
         },
+        response: { 200: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
       },
     },
-    controller.updateMediaAsset.bind(controller),
+    (request, reply) => controller.updateMediaAsset(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /media/:id — Delete media asset (Admin only)
-  fastify.delete<{ Params: { id: string } }>(
+  fastify.delete(
     "/media/:id",
     {
+      preValidation: [validateParams(mediaParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a media asset",
         tags: ["Media"],
         summary: "Delete Media Asset",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
+        params: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
+        response: {
+          204: {
+            description: 'Media asset deleted successfully',
+            type: 'null',
+          },
         },
       },
     },
-    controller.deleteMediaAsset.bind(controller),
+    (request, reply) => controller.deleteMediaAsset(request as AuthenticatedRequest, reply),
   );
 }

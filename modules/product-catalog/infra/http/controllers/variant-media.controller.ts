@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
   VariantMediaManagementService,
   VariantMediaServiceQueryOptions,
@@ -37,7 +38,7 @@ export class VariantMediaController {
   ) {}
 
   async getVariantMedia(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -52,18 +53,13 @@ export class VariantMediaController {
         variantMedia,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product variant not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async addMediaToVariant(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { variantId: string };
       Body: AddMediaToVariantRequest;
     }>,
@@ -83,11 +79,6 @@ export class VariantMediaController {
         "Media added to variant successfully",
       );
     } catch (error) {
-      request.log.error(error, "Failed to add media to variant");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       if (
         error instanceof Error &&
@@ -106,7 +97,7 @@ export class VariantMediaController {
   }
 
   async removeMediaFromVariant(
-    request: FastifyRequest<{ Params: { variantId: string; assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { variantId: string; assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -117,23 +108,15 @@ export class VariantMediaController {
         assetId,
       );
 
-      return ResponseHelper.ok(
-        reply,
-        "Media removed from variant successfully",
-      );
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to remove media from variant");
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeAllVariantMedia(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -141,23 +124,15 @@ export class VariantMediaController {
 
       await this.variantMediaManagementService.removeAllVariantMedia(variantId);
 
-      return ResponseHelper.ok(
-        reply,
-        "All media removed from variant successfully",
-      );
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to remove all variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product variant not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setVariantMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { variantId: string };
       Body: SetVariantMediaRequest;
     }>,
@@ -172,20 +147,15 @@ export class VariantMediaController {
         assetIds,
       );
 
-      return ResponseHelper.ok(reply, "Variant media set successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to set variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async addMediaToMultipleVariants(
-    request: FastifyRequest<{ Body: AddMediaToMultipleVariantsRequest }>,
+    request: AuthenticatedRequest<{ Body: AddMediaToMultipleVariantsRequest }>,
     reply: FastifyReply,
   ) {
     try {
@@ -201,18 +171,13 @@ export class VariantMediaController {
         `Media added to ${variantIds.length} variants successfully`,
       );
     } catch (error) {
-      request.log.error(error, "Failed to add media to multiple variants");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async addMultipleMediaToVariant(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { variantId: string };
       Body: { assetIds: string[] };
     }>,
@@ -232,18 +197,13 @@ export class VariantMediaController {
         `${assetIds.length} media assets added to variant successfully`,
       );
     } catch (error) {
-      request.log.error(error, "Failed to add multiple media to variant");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async duplicateVariantMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { sourceVariantId: string; targetVariantId: string };
     }>,
     reply: FastifyReply,
@@ -256,20 +216,15 @@ export class VariantMediaController {
         targetVariantId,
       );
 
-      return ResponseHelper.ok(reply, "Variant media duplicated successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to duplicate variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getProductVariantMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Querystring: VariantMediaQueryParams;
     }>,
@@ -291,18 +246,13 @@ export class VariantMediaController {
         productVariantMedia,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get product variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async copyProductVariantMedia(
-    request: FastifyRequest<{ Body: CopyProductVariantMediaRequest }>,
+    request: AuthenticatedRequest<{ Body: CopyProductVariantMediaRequest }>,
     reply: FastifyReply,
   ) {
     try {
@@ -314,23 +264,15 @@ export class VariantMediaController {
         variantMapping,
       );
 
-      return ResponseHelper.ok(
-        reply,
-        "Product variant media copied successfully",
-      );
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to copy product variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getVariantsUsingAsset(
-    request: FastifyRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -345,18 +287,13 @@ export class VariantMediaController {
         variantIds,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get variants using asset");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getAssetUsageCount(
-    request: FastifyRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -371,18 +308,13 @@ export class VariantMediaController {
         { assetId, usageCount },
       );
     } catch (error) {
-      request.log.error(error, "Failed to get asset usage count");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getColorVariantMedia(
-    request: FastifyRequest<{ Params: { productId: string; color: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string; color: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -400,18 +332,13 @@ export class VariantMediaController {
         colorVariantMedia,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get color variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getSizeVariantMedia(
-    request: FastifyRequest<{ Params: { productId: string; size: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string; size: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -429,18 +356,13 @@ export class VariantMediaController {
         sizeVariantMedia,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get size variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getUnusedAssets(
-    request: FastifyRequest<{ Querystring: { productId?: string } }>,
+    request: AuthenticatedRequest<{ Querystring: { productId?: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -456,18 +378,13 @@ export class VariantMediaController {
         },
       });
     } catch (error) {
-      request.log.error(error, "Failed to get unused assets");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async validateVariantMedia(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -484,18 +401,13 @@ export class VariantMediaController {
         validation,
       );
     } catch (error) {
-      request.log.error(error, "Failed to validate variant media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product variant not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getVariantMediaStatistics(
-    request: FastifyRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -512,11 +424,6 @@ export class VariantMediaController {
         statistics,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get variant media statistics");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product variant not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }

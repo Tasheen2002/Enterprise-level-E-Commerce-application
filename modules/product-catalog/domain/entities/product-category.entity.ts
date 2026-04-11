@@ -1,92 +1,111 @@
-import { ProductId } from "../value-objects/product-id.vo";
-import { CategoryId } from "../value-objects/category-id.vo";
+import { ProductId } from '../value-objects/product-id.vo';
+import { CategoryId } from '../value-objects/category-id.vo';
+
+export interface ProductCategoryProps {
+  id: string;
+  productId: ProductId;
+  categoryId: CategoryId;
+  displayOrder: number;
+  isPrimary: boolean;
+  createdAt: Date;
+}
 
 export class ProductCategory {
-  private constructor(
-    private readonly productId: ProductId,
-    private readonly categoryId: CategoryId,
-  ) {}
+  private props: ProductCategoryProps;
 
-  static create(data: CreateProductCategoryData): ProductCategory {
-    return new ProductCategory(
-      ProductId.fromString(data.productId),
-      CategoryId.fromString(data.categoryId),
-    );
+  private constructor(props: ProductCategoryProps) {
+    this.props = props;
   }
 
-  static reconstitute(data: ProductCategoryData): ProductCategory {
-    return new ProductCategory(
-      ProductId.fromString(data.productId),
-      CategoryId.fromString(data.categoryId),
-    );
+  static create(params: {
+    id: string;
+    productId: string;
+    categoryId: string;
+    displayOrder: number;
+    isPrimary: boolean;
+  }): ProductCategory {
+    const now = new Date();
+    return new ProductCategory({
+      id: params.id,
+      productId: ProductId.fromString(params.productId),
+      categoryId: CategoryId.fromString(params.categoryId),
+      displayOrder: params.displayOrder,
+      isPrimary: params.isPrimary,
+      createdAt: now,
+    });
   }
 
-  static fromDatabaseRow(row: ProductCategoryRow): ProductCategory {
-    return new ProductCategory(
-      ProductId.fromString(row.product_id),
-      CategoryId.fromString(row.category_id),
-    );
+  static fromPersistence(props: ProductCategoryProps): ProductCategory {
+    return new ProductCategory(props);
   }
 
   // Getters
-  getProductId(): ProductId {
-    return this.productId;
+  get id(): string {
+    return this.props.id;
   }
 
-  getCategoryId(): CategoryId {
-    return this.categoryId;
+  get productId(): ProductId {
+    return this.props.productId;
   }
 
-  // Validation methods
-  isAssociationFor(productId: ProductId, categoryId: CategoryId): boolean {
-    return (
-      this.productId.equals(productId) && this.categoryId.equals(categoryId)
-    );
+  get categoryId(): CategoryId {
+    return this.props.categoryId;
+  }
+
+  get displayOrder(): number {
+    return this.props.displayOrder;
+  }
+
+  get isPrimary(): boolean {
+    return this.props.isPrimary;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  // Business methods
+  updateDisplayOrder(order: number): void {
+    this.props.displayOrder = order;
+  }
+
+  markAsPrimary(): void {
+    this.props.isPrimary = true;
+  }
+
+  unmarkAsPrimary(): void {
+    this.props.isPrimary = false;
   }
 
   isForProduct(productId: ProductId): boolean {
-    return this.productId.equals(productId);
+    return this.props.productId.equals(productId);
   }
 
   isForCategory(categoryId: CategoryId): boolean {
-    return this.categoryId.equals(categoryId);
-  }
-
-  // Convert to data for persistence
-  toData(): ProductCategoryData {
-    return {
-      productId: this.productId.getValue(),
-      categoryId: this.categoryId.getValue(),
-    };
-  }
-
-  toDatabaseRow(): ProductCategoryRow {
-    return {
-      product_id: this.productId.getValue(),
-      category_id: this.categoryId.getValue(),
-    };
+    return this.props.categoryId.equals(categoryId);
   }
 
   equals(other: ProductCategory): boolean {
-    return (
-      this.productId.equals(other.productId) &&
-      this.categoryId.equals(other.categoryId)
-    );
+    return this.props.id === other.props.id;
+  }
+
+  static toDTO(entity: ProductCategory): ProductCategoryDTO {
+    return {
+      id: entity.props.id,
+      productId: entity.props.productId.getValue(),
+      categoryId: entity.props.categoryId.getValue(),
+      displayOrder: entity.props.displayOrder,
+      isPrimary: entity.props.isPrimary,
+      createdAt: entity.props.createdAt.toISOString(),
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateProductCategoryData {
+export interface ProductCategoryDTO {
+  id: string;
   productId: string;
   categoryId: string;
-}
-
-export interface ProductCategoryData {
-  productId: string;
-  categoryId: string;
-}
-
-export interface ProductCategoryRow {
-  product_id: string;
-  category_id: string;
+  displayOrder: number;
+  isPrimary: boolean;
+  createdAt: string;
 }

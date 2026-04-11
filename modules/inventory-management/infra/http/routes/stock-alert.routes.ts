@@ -1,65 +1,25 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { StockAlertController } from "../controllers/stock-alert.controller";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
-  StockAlertController,
-  ListAlertsQuerystring,
-  CreateAlertBody,
-} from "../controllers/stock-alert.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  alertParamsSchema,
+  listStockAlertsSchema,
+  createStockAlertSchema,
+  stockAlertResponseSchema,
+} from "../validation/stock-alert.schema";
 
 export async function registerStockAlertRoutes(
   fastify: FastifyInstance,
   controller: StockAlertController,
 ): Promise<void> {
   // List alerts
-  fastify.get<{ Querystring: ListAlertsQuerystring }>(
+  fastify.get(
     "/alerts",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listStockAlertsSchema)],
       schema: {
         description: "List stock alerts (Staff/Admin only)",
         tags: ["Stock Alerts"],
@@ -74,12 +34,23 @@ export async function registerStockAlertRoutes(
           },
         },
         response: {
-          200: { description: "List of alerts" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  alerts: { type: "array", items: stockAlertResponseSchema },
+                  total: { type: "integer" },
+                },
+              },
+            },
+          },
         },
       },
     },
-    controller.listAlerts.bind(controller),
+    (request, reply) => controller.listAlerts(request as AuthenticatedRequest, reply),
   );
 
   // Get active alerts
@@ -93,18 +64,24 @@ export async function registerStockAlertRoutes(
         summary: "Get Active Alerts",
         security: [{ bearerAuth: [] }],
         response: {
-          200: { description: "Active alerts" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: stockAlertResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getActiveAlerts.bind(controller),
+    (request, reply) => controller.getActiveAlerts(request as AuthenticatedRequest, reply),
   );
 
   // Get alert
-  fastify.get<{ Params: { alertId: string } }>(
+  fastify.get(
     "/alerts/:alertId",
     {
+      preValidation: [validateParams(alertParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get alert by ID (Staff/Admin only)",
@@ -119,19 +96,24 @@ export async function registerStockAlertRoutes(
           required: ["alertId"],
         },
         response: {
-          200: { description: "Alert details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockAlertResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getAlert.bind(controller),
+    (request, reply) => controller.getAlert(request as AuthenticatedRequest, reply),
   );
 
   // Create alert
-  fastify.post<{ Body: CreateAlertBody }>(
+  fastify.post(
     "/alerts",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createStockAlertSchema)],
       schema: {
         description: "Create stock alert",
         tags: ["Stock Alerts"],
@@ -146,18 +128,24 @@ export async function registerStockAlertRoutes(
           },
         },
         response: {
-          201: { description: "Alert created successfully" },
-          ...errorResponses,
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockAlertResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.createAlert.bind(controller),
+    (request, reply) => controller.createAlert(request as AuthenticatedRequest, reply),
   );
 
   // Resolve alert
-  fastify.put<{ Params: { alertId: string } }>(
+  fastify.put(
     "/alerts/:alertId/resolve",
     {
+      preValidation: [validateParams(alertParamsSchema)],
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Resolve stock alert",
@@ -172,11 +160,16 @@ export async function registerStockAlertRoutes(
           required: ["alertId"],
         },
         response: {
-          200: { description: "Alert resolved successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockAlertResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.resolveAlert.bind(controller),
+    (request, reply) => controller.resolveAlert(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,71 +1,77 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { UserId } from "../value-objects/user-id.vo";
-import { DomainValidationError, InvalidOperationError } from "../errors/user-management.errors";
-import { SocialProvider } from "../enums/social-provider.enum";
+import { UserId } from '../value-objects/user-id.vo';
+import { SocialLoginId } from '../value-objects/social-login-id';
+import { DomainValidationError, InvalidOperationError } from '../errors/user-management.errors';
+import { SocialProvider } from '../enums/social-provider.enum';
 
-export { SocialProvider };
+export { SocialProvider, SocialLoginId };
 
-// Props interface
+// ============================================================================
+// Props Interface
+// ============================================================================
+
 export interface SocialLoginProps {
-  id: string;
+  id: SocialLoginId;
   userId: UserId;
   provider: SocialProvider;
   providerUserId: string;
   createdAt: Date;
 }
 
-export class SocialLogin extends AggregateRoot {
-  private props: SocialLoginProps;
+// ============================================================================
+// DTO Interface
+// ============================================================================
 
-  private constructor(props: SocialLoginProps) {
+export interface SocialLoginDTO {
+  id: string;
+  userId: string;
+  provider: string;
+  providerUserId: string;
+  displayName: string;
+  createdAt: string;
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class SocialLogin extends AggregateRoot {
+  private constructor(private props: SocialLoginProps) {
     super();
-    this.props = props;
   }
 
-  // Factory methods
+  // --- Static factories ---
+
   static create(params: {
     userId: string;
     provider: SocialProvider;
     providerUserId: string;
   }): SocialLogin {
-    const now = new Date();
-
     const socialLogin = new SocialLogin({
-      id: crypto.randomUUID(),
+      id: SocialLoginId.create(),
       userId: UserId.fromString(params.userId),
       provider: params.provider,
       providerUserId: params.providerUserId,
-      createdAt: now,
+      createdAt: new Date(),
     });
-
     socialLogin.validate();
     return socialLogin;
   }
 
-  static reconstitute(props: SocialLoginProps): SocialLogin {
-    const socialLogin = new SocialLogin(props);
-    socialLogin.validate();
-    return socialLogin;
+  static fromPersistence(props: SocialLoginProps): SocialLogin {
+    return new SocialLogin(props);
   }
 
-  // Getters
-  getId(): string {
-    return this.props.id;
-  }
-  getUserId(): UserId {
-    return this.props.userId;
-  }
-  getProvider(): SocialProvider {
-    return this.props.provider;
-  }
-  getProviderUserId(): string {
-    return this.props.providerUserId;
-  }
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
+  // --- Native getters ---
 
-  // Business logic methods
+  get id(): SocialLoginId { return this.props.id; }
+  get userId(): UserId { return this.props.userId; }
+  get provider(): SocialProvider { return this.props.provider; }
+  get providerUserId(): string { return this.props.providerUserId; }
+  get createdAt(): Date { return this.props.createdAt; }
+
+  // --- Business methods ---
+
   belongsToUser(userId: UserId): boolean {
     return this.props.userId.equals(userId);
   }
@@ -75,51 +81,36 @@ export class SocialLogin extends AggregateRoot {
   }
 
   getDisplayName(): string {
-    return `${SocialProvider.getDisplayName(
-      this.props.provider
-    )} User (${this.props.providerUserId.substring(0, 8)}...)`;
+    return `${SocialProvider.getDisplayName(this.props.provider)} User (${this.props.providerUserId.substring(0, 8)}...)`;
   }
 
-  // Validation methods
   validate(): void {
     if (!SocialProvider.getAllValues().includes(this.props.provider)) {
       throw new InvalidOperationError(`Invalid social provider: ${this.props.provider}`);
     }
-
-    if (!this.props.providerUserId || this.props.providerUserId.trim() === "") {
-      throw new DomainValidationError("Provider user ID cannot be empty");
+    if (!this.props.providerUserId || this.props.providerUserId.trim() === '') {
+      throw new DomainValidationError('Provider user ID cannot be empty');
     }
   }
 
-  isSameProviderConnection(
-    provider: SocialProvider,
-    providerUserId: string
-  ): boolean {
+  isSameProviderConnection(provider: SocialProvider, providerUserId: string): boolean {
     return this.props.provider === provider && this.props.providerUserId === providerUserId;
   }
 
   equals(other: SocialLogin): boolean {
-    return this.props.id === other.props.id;
+    return this.props.id.equals(other.props.id);
   }
+
+  // --- Static DTO mapper ---
 
   static toDTO(socialLogin: SocialLogin): SocialLoginDTO {
     return {
-      id: socialLogin.props.id,
-      userId: socialLogin.props.userId.getValue(),
-      provider: socialLogin.props.provider.toString(),
-      providerUserId: socialLogin.props.providerUserId,
+      id: socialLogin.id.getValue(),
+      userId: socialLogin.userId.getValue(),
+      provider: socialLogin.provider.toString(),
+      providerUserId: socialLogin.providerUserId,
       displayName: socialLogin.getDisplayName(),
-      createdAt: socialLogin.props.createdAt.toISOString(),
+      createdAt: socialLogin.createdAt.toISOString(),
     };
   }
-}
-
-// DTO Interface
-export interface SocialLoginDTO {
-  id: string;
-  userId: string;
-  provider: string;
-  providerUserId: string;
-  displayName: string;
-  createdAt: string;
 }

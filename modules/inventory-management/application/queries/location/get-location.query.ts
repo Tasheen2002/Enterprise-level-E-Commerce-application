@@ -1,12 +1,21 @@
-import { IQuery } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { LocationDTO } from "../../../domain/entities/location.entity";
+import { LocationManagementService } from "../../services/location-management.service";
 
 export interface GetLocationQuery extends IQuery {
   locationId: string;
 }
 
-export interface LocationResult {
-  locationId: string;
-  type: string;
-  name: string;
-  address?: any;
+export type LocationResult = LocationDTO;
+
+export class GetLocationHandler implements IQueryHandler<
+  GetLocationQuery,
+  QueryResult<LocationResult>
+> {
+  constructor(private readonly locationService: LocationManagementService) {}
+
+  async handle(query: GetLocationQuery): Promise<QueryResult<LocationResult>> {
+    const location = await this.locationService.getLocation(query.locationId);
+    return QueryResult.success(location);
+  }
 }

@@ -4,7 +4,7 @@ import { DomainValidationError } from "../errors/cart.errors";
 export class Quantity {
   private readonly value: number;
 
-  constructor(value: number) {
+  private constructor(value: number) {
     if (!Number.isInteger(value)) {
       throw new DomainValidationError("Quantity must be a whole number");
     }

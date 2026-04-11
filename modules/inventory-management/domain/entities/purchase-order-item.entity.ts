@@ -1,6 +1,8 @@
 import { PurchaseOrderId } from "../value-objects/purchase-order-id.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
 
+// ── Props & DTO ────────────────────────────────────────────────────────
+
 export interface PurchaseOrderItemProps {
   poId: PurchaseOrderId;
   variantId: string;
@@ -8,50 +10,64 @@ export interface PurchaseOrderItemProps {
   receivedQty: number;
 }
 
+export interface PurchaseOrderItemDTO {
+  poId: string;
+  variantId: string;
+  orderedQty: number;
+  receivedQty: number;
+  remainingQty: number;
+  isFullyReceived: boolean;
+  isPartiallyReceived: boolean;
+}
+
+// ── Entity ─────────────────────────────────────────────────────────────
+
 export class PurchaseOrderItem {
-  private constructor(private readonly props: PurchaseOrderItemProps) {
+  private props: PurchaseOrderItemProps;
+
+  private constructor(props: PurchaseOrderItemProps) {
+    this.props = props;
     this.validate();
   }
 
-  static create(props: PurchaseOrderItemProps): PurchaseOrderItem {
-    return new PurchaseOrderItem(props);
+  static create(params: {
+    poId: PurchaseOrderId;
+    variantId: string;
+    orderedQty: number;
+    receivedQty?: number;
+  }): PurchaseOrderItem {
+    return new PurchaseOrderItem({
+      poId: params.poId,
+      variantId: params.variantId,
+      orderedQty: params.orderedQty,
+      receivedQty: params.receivedQty ?? 0,
+    });
   }
 
-  static reconstitute(props: PurchaseOrderItemProps): PurchaseOrderItem {
+  static fromPersistence(props: PurchaseOrderItemProps): PurchaseOrderItem {
     return new PurchaseOrderItem(props);
   }
 
   private validate(): void {
     if (this.props.orderedQty <= 0) {
-      throw new DomainValidationError(
-        "Ordered quantity must be greater than zero",
-      );
+      throw new DomainValidationError("Ordered quantity must be greater than zero");
     }
     if (this.props.receivedQty < 0) {
       throw new DomainValidationError("Received quantity cannot be negative");
     }
     if (this.props.receivedQty > this.props.orderedQty) {
-      throw new DomainValidationError(
-        "Received quantity cannot exceed ordered quantity",
-      );
+      throw new DomainValidationError("Received quantity cannot exceed ordered quantity");
     }
   }
 
-  getPoId(): PurchaseOrderId {
-    return this.props.poId;
-  }
+  // ── Getters ────────────────────────────────────────────────────────
 
-  getVariantId(): string {
-    return this.props.variantId;
-  }
+  get poId(): PurchaseOrderId { return this.props.poId; }
+  get variantId(): string { return this.props.variantId; }
+  get orderedQty(): number { return this.props.orderedQty; }
+  get receivedQty(): number { return this.props.receivedQty; }
 
-  getOrderedQty(): number {
-    return this.props.orderedQty;
-  }
-
-  getReceivedQty(): number {
-    return this.props.receivedQty;
-  }
+  // ── Business Logic ─────────────────────────────────────────────────
 
   getRemainingQty(): number {
     return this.props.orderedQty - this.props.receivedQty;
@@ -65,11 +81,9 @@ export class PurchaseOrderItem {
     return this.props.receivedQty > 0 && !this.isFullyReceived();
   }
 
-  receiveQuantity(quantity: number): PurchaseOrderItem {
+  receiveQuantity(quantity: number): void {
     if (quantity <= 0) {
-      throw new DomainValidationError(
-        "Receive quantity must be greater than zero",
-      );
+      throw new DomainValidationError("Receive quantity must be greater than zero");
     }
     const newReceivedQty = this.props.receivedQty + quantity;
     if (newReceivedQty > this.props.orderedQty) {
@@ -77,38 +91,37 @@ export class PurchaseOrderItem {
         `Cannot receive ${quantity} units. Would exceed ordered quantity of ${this.props.orderedQty}`,
       );
     }
-    return new PurchaseOrderItem({
-      ...this.props,
-      receivedQty: newReceivedQty,
-    });
+    this.props.receivedQty = newReceivedQty;
   }
 
-  updateOrderedQty(orderedQty: number): PurchaseOrderItem {
+  updateOrderedQty(orderedQty: number): void {
     if (orderedQty <= 0) {
-      throw new DomainValidationError(
-        "Ordered quantity must be greater than zero",
-      );
+      throw new DomainValidationError("Ordered quantity must be greater than zero");
     }
     if (orderedQty < this.props.receivedQty) {
-      throw new InvalidOperationError(
-        "Cannot reduce ordered quantity below already received quantity",
-      );
+      throw new InvalidOperationError("Cannot reduce ordered quantity below already received quantity");
     }
-    return new PurchaseOrderItem({
-      ...this.props,
-      orderedQty,
-    });
+    this.props.orderedQty = orderedQty;
   }
 
-  toJSON() {
+  equals(other: PurchaseOrderItem): boolean {
+    return (
+      this.props.poId.equals(other.props.poId) &&
+      this.props.variantId === other.props.variantId
+    );
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
+
+  static toDTO(entity: PurchaseOrderItem): PurchaseOrderItemDTO {
     return {
-      poId: this.props.poId.getValue(),
-      variantId: this.props.variantId,
-      orderedQty: this.props.orderedQty,
-      receivedQty: this.props.receivedQty,
-      remainingQty: this.getRemainingQty(),
-      isFullyReceived: this.isFullyReceived(),
-      isPartiallyReceived: this.isPartiallyReceived(),
+      poId: entity.props.poId.getValue(),
+      variantId: entity.props.variantId,
+      orderedQty: entity.props.orderedQty,
+      receivedQty: entity.props.receivedQty,
+      remainingQty: entity.getRemainingQty(),
+      isFullyReceived: entity.isFullyReceived(),
+      isPartiallyReceived: entity.isPartiallyReceived(),
     };
   }
 }

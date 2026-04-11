@@ -2,26 +2,39 @@ import { SUPPORTED_CURRENCIES, MAJOR_CURRENCIES } from "../constants";
 import { DomainValidationError } from "../errors/cart.errors";
 
 export class Currency {
-  private readonly value: string;
+  private constructor(private readonly value: string) {}
 
-  constructor(value: string) {
+  private static validate(value: string): string {
     if (!value) {
       throw new DomainValidationError("Currency is required");
     }
-
-    const upperCaseValue = value.toUpperCase().trim();
-
-    if (!this.isValidCurrency(upperCaseValue)) {
+    const upper = value.toUpperCase().trim();
+    if (!(SUPPORTED_CURRENCIES as readonly string[]).includes(upper)) {
       throw new DomainValidationError(
         `Unsupported currency: ${value}. Supported currencies: ${SUPPORTED_CURRENCIES.join(", ")}`,
       );
     }
-
-    this.value = upperCaseValue;
+    return upper;
   }
 
-  private isValidCurrency(currency: string): boolean {
-    return (SUPPORTED_CURRENCIES as readonly string[]).includes(currency);
+  static fromString(value: string): Currency {
+    return new Currency(Currency.validate(value));
+  }
+
+  static USD(): Currency {
+    return new Currency("USD");
+  }
+
+  static EUR(): Currency {
+    return new Currency("EUR");
+  }
+
+  static GBP(): Currency {
+    return new Currency("GBP");
+  }
+
+  static getSupported(): string[] {
+    return [...SUPPORTED_CURRENCIES];
   }
 
   getValue(): string {
@@ -36,15 +49,6 @@ export class Currency {
     return this.value;
   }
 
-  static fromString(value: string): Currency {
-    return new Currency(value);
-  }
-
-  static getSupported(): string[] {
-    return [...SUPPORTED_CURRENCIES];
-  }
-
-  // Currency utility methods
   isUSD(): boolean {
     return this.value === "USD";
   }
@@ -60,27 +64,26 @@ export class Currency {
   getCurrencySymbol(): string {
     const symbols: Record<string, string> = {
       USD: "$",
-      EUR: "�",
-      GBP: "�",
-      JPY: "�",
+      EUR: "€",
+      GBP: "£",
+      JPY: "¥",
       CAD: "C$",
       AUD: "A$",
       CHF: "CHF",
-      CNY: "�",
+      CNY: "¥",
       SEK: "kr",
       NZD: "NZ$",
       MXN: "$",
       SGD: "S$",
       HKD: "HK$",
       NOK: "kr",
-      KRW: "�",
-      TRY: "�",
-      RUB: "�",
-      INR: "�",
+      KRW: "₩",
+      TRY: "₺",
+      RUB: "₽",
+      INR: "₹",
       BRL: "R$",
       ZAR: "R",
     };
-
     return symbols[this.value] || this.value;
   }
 
@@ -107,20 +110,6 @@ export class Currency {
       BRL: "Brazilian Real",
       ZAR: "South African Rand",
     };
-
     return names[this.value] || this.value;
-  }
-
-  // Common currency constants
-  static USD(): Currency {
-    return new Currency("USD");
-  }
-
-  static EUR(): Currency {
-    return new Currency("EUR");
-  }
-
-  static GBP(): Currency {
-    return new Currency("GBP");
   }
 }

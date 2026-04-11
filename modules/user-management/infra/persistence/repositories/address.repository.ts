@@ -41,7 +41,7 @@ export class AddressRepository
       updatedAt: data.updatedAt,
     };
 
-    return Address.reconstitute(props);
+    return Address.fromPersistence(props);
   }
 
   // Maps an Address domain entity to a Prisma-compatible persistence object
@@ -49,13 +49,13 @@ export class AddressRepository
     create: Prisma.UserAddressUncheckedCreateInput;
     update: Prisma.UserAddressUncheckedUpdateInput;
   } {
-    const addressData = address.getAddressValue().toData();
+    const addressData = address.addressValue.toData();
 
     const create = {
-      id: address.getId().getValue(),
-      userId: address.getUserId().getValue(),
-      type: address.getType().toString(),
-      isDefault: address.getIsDefault(),
+      id: address.id.getValue(),
+      userId: address.userId.getValue(),
+      type: address.type.toString(),
+      isDefault: address.isDefault,
       firstName: addressData.firstName || null,
       lastName: addressData.lastName || null,
       company: addressData.company || null,
@@ -66,8 +66,8 @@ export class AddressRepository
       postalCode: addressData.postalCode || null,
       country: addressData.country,
       phone: addressData.phone || null,
-      createdAt: address.getCreatedAt(),
-      updatedAt: address.getUpdatedAt(),
+      createdAt: address.createdAt,
+      updatedAt: address.updatedAt,
     };
 
     const { id, userId, createdAt, ...update } = create;
@@ -79,7 +79,7 @@ export class AddressRepository
     const data = this.toPersistence(address);
 
     await this.prisma.userAddress.upsert({
-      where: { id: address.getId().getValue() },
+      where: { id: address.id.getValue() },
       create: data.create,
       update: data.update,
     });

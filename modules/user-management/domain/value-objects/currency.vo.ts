@@ -3,7 +3,7 @@ import { DomainValidationError } from "../errors/user-management.errors";
 export class Currency {
   private readonly value: string;
 
-  constructor(currency: string) {
+  private constructor(currency: string) {
     if (!currency) {
       throw new DomainValidationError("Currency is required");
     }
@@ -190,6 +190,10 @@ export class Currency {
     return this.value;
   }
 
+  static create(currency: string): Currency {
+    return new Currency(currency);
+  }
+
   static fromString(currency: string): Currency {
     return new Currency(currency);
   }
@@ -235,7 +239,7 @@ export class Currency {
 
   static isValidCurrencyCode(currency: string): boolean {
     try {
-      new Currency(currency);
+      Currency.create(currency);
       return true;
     } catch {
       return false;

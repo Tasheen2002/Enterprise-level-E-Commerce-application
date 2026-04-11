@@ -1,7 +1,49 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { PurchaseOrderId } from "../value-objects/purchase-order-id.vo";
 import { SupplierId } from "../value-objects/supplier-id.vo";
-import { PurchaseOrderStatusVO } from "../value-objects/purchase-order-status.vo";
+import { PurchaseOrderStatusVO, PurchaseOrderStatus } from "../value-objects/purchase-order-status.vo";
 import { InvalidOperationError } from "../errors";
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class PurchaseOrderCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly poId: string,
+    public readonly supplierId: string,
+  ) {
+    super(poId, "PurchaseOrder");
+  }
+  get eventType(): string { return "purchase_order.created"; }
+  getPayload(): Record<string, unknown> {
+    return { poId: this.poId, supplierId: this.supplierId };
+  }
+}
+
+export class PurchaseOrderStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly poId: string,
+    public readonly status: string,
+  ) {
+    super(poId, "PurchaseOrder");
+  }
+  get eventType(): string { return "purchase_order.status_changed"; }
+  getPayload(): Record<string, unknown> {
+    return { poId: this.poId, status: this.status };
+  }
+}
+
+export class PurchaseOrderDeletedEvent extends DomainEvent {
+  constructor(public readonly poId: string) {
+    super(poId, "PurchaseOrder");
+  }
+  get eventType(): string { return "purchase_order.deleted"; }
+  getPayload(): Record<string, unknown> {
+    return { poId: this.poId };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface PurchaseOrderProps {
   poId: PurchaseOrderId;
@@ -12,94 +54,108 @@ export interface PurchaseOrderProps {
   updatedAt: Date;
 }
 
-export class PurchaseOrder {
-  private constructor(private readonly props: PurchaseOrderProps) {}
+export interface PurchaseOrderDTO {
+  poId: string;
+  supplierId: string;
+  eta?: Date;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  static create(props: PurchaseOrderProps): PurchaseOrder {
-    return new PurchaseOrder(props);
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class PurchaseOrder extends AggregateRoot {
+  private props: PurchaseOrderProps;
+
+  private constructor(props: PurchaseOrderProps) {
+    super();
+    this.props = props;
   }
 
-  static reconstitute(props: PurchaseOrderProps): PurchaseOrder {
-    return new PurchaseOrder(props);
-  }
-
-  getPoId(): PurchaseOrderId {
-    return this.props.poId;
-  }
-
-  getSupplierId(): SupplierId {
-    return this.props.supplierId;
-  }
-
-  getEta(): Date | undefined {
-    return this.props.eta;
-  }
-
-  getStatus(): PurchaseOrderStatusVO {
-    return this.props.status;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  updateEta(eta: Date): PurchaseOrder {
-    return new PurchaseOrder({
-      ...this.props,
-      eta,
-      updatedAt: new Date(),
+  static create(params: {
+    supplierId: string;
+    eta?: Date;
+  }): PurchaseOrder {
+    const now = new Date();
+    const po = new PurchaseOrder({
+      poId: PurchaseOrderId.create(),
+      supplierId: SupplierId.fromString(params.supplierId),
+      eta: params.eta,
+      status: PurchaseOrderStatusVO.create("draft"),
+      createdAt: now,
+      updatedAt: now,
     });
+    po.addDomainEvent(
+      new PurchaseOrderCreatedEvent(
+        po.props.poId.getValue(),
+        params.supplierId,
+      ),
+    );
+    return po;
   }
 
-  updateStatus(newStatus: PurchaseOrderStatusVO): PurchaseOrder {
+  static fromPersistence(props: PurchaseOrderProps): PurchaseOrder {
+    return new PurchaseOrder(props);
+  }
+
+  // ── Getters ────────────────────────────────────────────────────────
+
+  get poId(): PurchaseOrderId { return this.props.poId; }
+  get supplierId(): SupplierId { return this.props.supplierId; }
+  get eta(): Date | undefined { return this.props.eta; }
+  get status(): PurchaseOrderStatusVO { return this.props.status; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
+
+  // ── Business Logic ─────────────────────────────────────────────────
+
+  updateEta(eta: Date): void {
+    this.props.eta = eta;
+    this.props.updatedAt = new Date();
+  }
+
+  updateStatus(newStatus: PurchaseOrderStatusVO): void {
     if (!this.props.status.canTransitionTo(newStatus)) {
       throw new InvalidOperationError(
         `Cannot transition from ${this.props.status.getValue()} to ${newStatus.getValue()}`,
       );
     }
-    return new PurchaseOrder({
-      ...this.props,
-      status: newStatus,
-      updatedAt: new Date(),
-    });
+    this.props.status = newStatus;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new PurchaseOrderStatusChangedEvent(
+        this.props.poId.getValue(),
+        newStatus.getValue(),
+      ),
+    );
   }
 
-  isDraft(): boolean {
-    return this.props.status.getValue() === "draft";
+  markDeleted(): void {
+    this.addDomainEvent(new PurchaseOrderDeletedEvent(this.props.poId.getValue()));
   }
 
-  isSent(): boolean {
-    return this.props.status.getValue() === "sent";
+  isDraft(): boolean { return this.props.status.getValue() === PurchaseOrderStatus.DRAFT; }
+  isSent(): boolean { return this.props.status.getValue() === PurchaseOrderStatus.SENT; }
+  isPartiallyReceived(): boolean { return this.props.status.getValue() === PurchaseOrderStatus.PART_RECEIVED; }
+  isFullyReceived(): boolean { return this.props.status.getValue() === PurchaseOrderStatus.RECEIVED; }
+  isCancelled(): boolean { return this.props.status.getValue() === PurchaseOrderStatus.CANCELLED; }
+  canEdit(): boolean { return this.isDraft(); }
+
+  equals(other: PurchaseOrder): boolean {
+    return this.props.poId.equals(other.props.poId);
   }
 
-  isPartiallyReceived(): boolean {
-    return this.props.status.getValue() === "part_received";
-  }
+  // ── Serialisation ──────────────────────────────────────────────────
 
-  isFullyReceived(): boolean {
-    return this.props.status.getValue() === "received";
-  }
-
-  isCancelled(): boolean {
-    return this.props.status.getValue() === "cancelled";
-  }
-
-  canEdit(): boolean {
-    return this.isDraft();
-  }
-
-  toJSON() {
+  static toDTO(entity: PurchaseOrder): PurchaseOrderDTO {
     return {
-      poId: this.props.poId.getValue(),
-      supplierId: this.props.supplierId.getValue(),
-      eta: this.props.eta,
-      status: this.props.status.getValue(),
-      createdAt: this.props.createdAt,
-      updatedAt: this.props.updatedAt,
+      poId: entity.props.poId.getValue(),
+      supplierId: entity.props.supplierId.getValue(),
+      eta: entity.props.eta,
+      status: entity.props.status.getValue(),
+      createdAt: entity.props.createdAt,
+      updatedAt: entity.props.updatedAt,
     };
   }
 }

@@ -1,12 +1,7 @@
-import { v4 as uuidv4 } from "uuid";
-import { PurchaseOrder } from "../../domain/entities/purchase-order.entity";
-import { PurchaseOrderItem } from "../../domain/entities/purchase-order-item.entity";
+import { PurchaseOrder, PurchaseOrderDTO } from "../../domain/entities/purchase-order.entity";
+import { PurchaseOrderItem, PurchaseOrderItemDTO } from "../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderId } from "../../domain/value-objects/purchase-order-id.vo";
-import { SupplierId } from "../../domain/value-objects/supplier-id.vo";
-import {
-  PurchaseOrderStatus,
-  PurchaseOrderStatusVO,
-} from "../../domain/value-objects/purchase-order-status.vo";
+import { PurchaseOrderStatus, PurchaseOrderStatusVO } from "../../domain/value-objects/purchase-order-status.vo";
 import { IPurchaseOrderRepository } from "../../domain/repositories/purchase-order.repository";
 import { IPurchaseOrderItemRepository } from "../../domain/repositories/purchase-order-item.repository";
 import { StockManagementService } from "./stock-management.service";
@@ -28,64 +23,55 @@ export class PurchaseOrderManagementService {
   async createPurchaseOrder(
     supplierId: string,
     eta?: Date,
-  ): Promise<PurchaseOrder> {
-    const purchaseOrder = PurchaseOrder.create({
-      poId: PurchaseOrderId.create(uuidv4()),
-      supplierId: SupplierId.create(supplierId),
-      eta,
-      status: PurchaseOrderStatusVO.create("draft"),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  ): Promise<PurchaseOrderDTO> {
+    const purchaseOrder = PurchaseOrder.create({ supplierId, eta });
 
     await this.purchaseOrderRepository.save(purchaseOrder);
-    return purchaseOrder;
+    return PurchaseOrder.toDTO(purchaseOrder);
   }
 
   async updatePurchaseOrderStatus(
     poId: string,
     status: string,
-  ): Promise<PurchaseOrder> {
+  ): Promise<PurchaseOrderDTO> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    const updatedPurchaseOrder = purchaseOrder.updateStatus(
-      PurchaseOrderStatusVO.create(status),
-    );
+    purchaseOrder.updateStatus(PurchaseOrderStatusVO.create(status));
 
-    await this.purchaseOrderRepository.save(updatedPurchaseOrder);
-    return updatedPurchaseOrder;
+    await this.purchaseOrderRepository.save(purchaseOrder);
+    return PurchaseOrder.toDTO(purchaseOrder);
   }
 
   async updatePurchaseOrderEta(
     poId: string,
     eta: Date,
-  ): Promise<PurchaseOrder> {
+  ): Promise<PurchaseOrderDTO> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    const updatedPurchaseOrder = purchaseOrder.updateEta(eta);
-    await this.purchaseOrderRepository.save(updatedPurchaseOrder);
-    return updatedPurchaseOrder;
+    purchaseOrder.updateEta(eta);
+    await this.purchaseOrderRepository.save(purchaseOrder);
+    return PurchaseOrder.toDTO(purchaseOrder);
   }
 
   async addPurchaseOrderItem(
     poId: string,
     variantId: string,
     orderedQty: number,
-  ): Promise<PurchaseOrderItem> {
+  ): Promise<PurchaseOrderItemDTO> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
@@ -93,41 +79,35 @@ export class PurchaseOrderManagementService {
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(
-        poId,
-        purchaseOrder.getStatus().getValue(),
-      );
+      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
     }
 
-    // Check if item already exists
-    const existingItem =
-      await this.purchaseOrderItemRepository.findByPoAndVariant(
-        PurchaseOrderId.create(poId),
-        variantId,
-      );
+    const existingItem = await this.purchaseOrderItemRepository.findByPoAndVariant(
+      PurchaseOrderId.fromString(poId),
+      variantId,
+    );
 
     if (existingItem) {
-      throw new PurchaseOrderItemAlreadyExistsError(poId, variantId);
+      throw new PurchaseOrderItemAlreadyExistsError(variantId);
     }
 
     const item = PurchaseOrderItem.create({
-      poId: PurchaseOrderId.create(poId),
+      poId: PurchaseOrderId.fromString(poId),
       variantId,
       orderedQty,
-      receivedQty: 0,
     });
 
     await this.purchaseOrderItemRepository.save(item);
-    return item;
+    return PurchaseOrderItem.toDTO(item);
   }
 
   async updatePurchaseOrderItem(
     poId: string,
     variantId: string,
     orderedQty: number,
-  ): Promise<PurchaseOrderItem> {
+  ): Promise<PurchaseOrderItemDTO> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
@@ -135,24 +115,21 @@ export class PurchaseOrderManagementService {
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(
-        poId,
-        purchaseOrder.getStatus().getValue(),
-      );
+      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
     }
 
     const item = await this.purchaseOrderItemRepository.findByPoAndVariant(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
       variantId,
     );
 
     if (!item) {
-      throw new PurchaseOrderItemNotFoundError(poId, variantId);
+      throw new PurchaseOrderItemNotFoundError(variantId);
     }
 
-    const updatedItem = item.updateOrderedQty(orderedQty);
-    await this.purchaseOrderItemRepository.save(updatedItem);
-    return updatedItem;
+    item.updateOrderedQty(orderedQty);
+    await this.purchaseOrderItemRepository.save(item);
+    return PurchaseOrderItem.toDTO(item);
   }
 
   async removePurchaseOrderItem(
@@ -160,7 +137,7 @@ export class PurchaseOrderManagementService {
     variantId: string,
   ): Promise<void> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
@@ -168,14 +145,11 @@ export class PurchaseOrderManagementService {
     }
 
     if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(
-        poId,
-        purchaseOrder.getStatus().getValue(),
-      );
+      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
     }
 
     await this.purchaseOrderItemRepository.delete(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
       variantId,
     );
   }
@@ -184,9 +158,9 @@ export class PurchaseOrderManagementService {
     poId: string,
     locationId: string,
     items: { variantId: string; receivedQty: number }[],
-  ): Promise<{ purchaseOrder: PurchaseOrder; items: PurchaseOrderItem[] }> {
+  ): Promise<{ purchaseOrder: PurchaseOrderDTO; items: PurchaseOrderItemDTO[] }> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
@@ -195,96 +169,77 @@ export class PurchaseOrderManagementService {
 
     const updatedItems: PurchaseOrderItem[] = [];
 
-    // Process each received item
     for (const { variantId, receivedQty } of items) {
       const item = await this.purchaseOrderItemRepository.findByPoAndVariant(
-        PurchaseOrderId.create(poId),
+        PurchaseOrderId.fromString(poId),
         variantId,
       );
 
       if (!item) {
-        throw new PurchaseOrderItemNotFoundError(poId, variantId);
+        throw new PurchaseOrderItemNotFoundError(variantId);
       }
 
-      // Update item received quantity
-      const updatedItem = item.receiveQuantity(receivedQty);
-      await this.purchaseOrderItemRepository.save(updatedItem);
-      updatedItems.push(updatedItem);
+      item.receiveQuantity(receivedQty);
+      await this.purchaseOrderItemRepository.save(item);
+      updatedItems.push(item);
 
-      // Add stock to inventory
-      await this.stockManagementService.addStock(
-        variantId,
-        locationId,
-        receivedQty,
-        "po",
-      );
+      await this.stockManagementService.addStock(variantId, locationId, receivedQty, "po");
     }
 
-    // Check if all items are fully received
     const allItems = await this.purchaseOrderItemRepository.findByPurchaseOrder(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     const allFullyReceived = allItems.every((item) => item.isFullyReceived());
-    const anyPartiallyReceived = allItems.some((item) =>
-      item.isPartiallyReceived(),
-    );
+    const anyPartiallyReceived = allItems.some((item) => item.isPartiallyReceived());
 
-    // Update purchase order status
-    let updatedPurchaseOrder = purchaseOrder;
     if (allFullyReceived) {
-      updatedPurchaseOrder = purchaseOrder.updateStatus(
-        PurchaseOrderStatusVO.create("received"),
-      );
+      purchaseOrder.updateStatus(PurchaseOrderStatusVO.create("received"));
     } else if (anyPartiallyReceived || updatedItems.length > 0) {
-      if (purchaseOrder.getStatus().getValue() === "sent") {
-        updatedPurchaseOrder = purchaseOrder.updateStatus(
-          PurchaseOrderStatusVO.create("part_received"),
-        );
+      if (purchaseOrder.status.getValue() === "sent") {
+        purchaseOrder.updateStatus(PurchaseOrderStatusVO.create("part_received"));
       }
     }
 
-    await this.purchaseOrderRepository.save(updatedPurchaseOrder);
+    await this.purchaseOrderRepository.save(purchaseOrder);
 
     return {
-      purchaseOrder: updatedPurchaseOrder,
-      items: updatedItems,
+      purchaseOrder: PurchaseOrder.toDTO(purchaseOrder),
+      items: updatedItems.map(PurchaseOrderItem.toDTO),
     };
   }
 
   async deletePurchaseOrder(poId: string): Promise<void> {
     const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    // Only allow deletion of draft purchase orders
     if (!purchaseOrder.isDraft()) {
-      throw new InvalidOperationError(
-        "Only draft purchase orders can be deleted",
-      );
+      throw new InvalidOperationError("Only draft purchase orders can be deleted");
     }
 
-    await this.purchaseOrderRepository.delete(PurchaseOrderId.create(poId));
+    await this.purchaseOrderRepository.delete(PurchaseOrderId.fromString(poId));
   }
 
-  async getPurchaseOrder(poId: string): Promise<PurchaseOrder> {
+  async getPurchaseOrder(poId: string): Promise<PurchaseOrderDTO> {
     const po = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.create(poId),
+      PurchaseOrderId.fromString(poId),
     );
     if (!po) {
       throw new PurchaseOrderNotFoundError(poId);
     }
-    return po;
+    return PurchaseOrder.toDTO(po);
   }
 
-  async getPurchaseOrderItems(poId: string): Promise<PurchaseOrderItem[]> {
-    return this.purchaseOrderItemRepository.findByPurchaseOrder(
-      PurchaseOrderId.create(poId),
+  async getPurchaseOrderItems(poId: string): Promise<PurchaseOrderItemDTO[]> {
+    const items = await this.purchaseOrderItemRepository.findByPurchaseOrder(
+      PurchaseOrderId.fromString(poId),
     );
+    return items.map(PurchaseOrderItem.toDTO);
   }
 
   async listPurchaseOrders(options?: {
@@ -294,20 +249,26 @@ export class PurchaseOrderManagementService {
     supplierId?: string;
     sortBy?: "createdAt" | "updatedAt" | "eta";
     sortOrder?: "asc" | "desc";
-  }): Promise<{ purchaseOrders: PurchaseOrder[]; total: number }> {
-    return this.purchaseOrderRepository.findAll({
+  }): Promise<{ purchaseOrders: PurchaseOrderDTO[]; total: number }> {
+    const result = await this.purchaseOrderRepository.findAll({
       ...options,
       status: options?.status
         ? (options.status.toLowerCase() as PurchaseOrderStatus)
         : undefined,
     });
+    return {
+      purchaseOrders: result.purchaseOrders.map(PurchaseOrder.toDTO),
+      total: result.total,
+    };
   }
 
-  async getOverduePurchaseOrders(): Promise<PurchaseOrder[]> {
-    return this.purchaseOrderRepository.findOverduePurchaseOrders();
+  async getOverduePurchaseOrders(): Promise<PurchaseOrderDTO[]> {
+    const orders = await this.purchaseOrderRepository.findOverduePurchaseOrders();
+    return orders.map(PurchaseOrder.toDTO);
   }
 
-  async getPendingReceival(): Promise<PurchaseOrder[]> {
-    return this.purchaseOrderRepository.findPendingReceival();
+  async getPendingReceival(): Promise<PurchaseOrderDTO[]> {
+    const orders = await this.purchaseOrderRepository.findPendingReceival();
+    return orders.map(PurchaseOrder.toDTO);
   }
 }

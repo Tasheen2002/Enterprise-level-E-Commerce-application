@@ -31,6 +31,30 @@ import {
   ProductMediaManagementService,
   VariantMediaManagementService,
 } from "../../../application/services";
+import {
+  CreateProductHandler,
+  UpdateProductHandler,
+  DeleteProductHandler,
+  CreateCategoryHandler,
+  UpdateCategoryHandler,
+  DeleteCategoryHandler,
+  ReorderCategoriesHandler,
+  CreateProductVariantHandler,
+  UpdateProductVariantHandler,
+  DeleteProductVariantHandler,
+  GetProductHandler,
+  ListProductsHandler,
+  SearchProductsHandler,
+  GetCategoryHandler,
+  ListCategoriesHandler,
+  GetCategoryHierarchyHandler,
+  GetVariantHandler,
+  ListVariantsHandler,
+  GetSearchSuggestionsHandler,
+  GetPopularSearchesHandler,
+  GetSearchFiltersHandler,
+  GetSearchStatsHandler,
+} from "../../../application";
 
 export interface ProductCatalogRouteServices {
   productService: ProductManagementService;
@@ -49,13 +73,35 @@ export async function registerProductCatalogRoutes(
   fastify: FastifyInstance,
   services: ProductCatalogRouteServices,
 ): Promise<void> {
+  // Initialize handlers
+  const searchProductsHandler = new SearchProductsHandler(services.productSearchService);
+
   // Initialize controllers
   const productController = new ProductController(
+    new CreateProductHandler(services.productService),
+    new UpdateProductHandler(services.productService),
+    new DeleteProductHandler(services.productService),
+    new GetProductHandler(services.productService),
+    new ListProductsHandler(services.productService),
+    searchProductsHandler,
     services.productService,
-    services.productSearchService,
   );
-  const categoryController = new CategoryController(services.categoryService);
-  const variantController = new VariantController(services.variantService);
+  const categoryController = new CategoryController(
+    new CreateCategoryHandler(services.categoryService),
+    new UpdateCategoryHandler(services.categoryService),
+    new DeleteCategoryHandler(services.categoryService),
+    new ReorderCategoriesHandler(services.categoryService),
+    new GetCategoryHandler(services.categoryService),
+    new ListCategoriesHandler(services.categoryService),
+    new GetCategoryHierarchyHandler(services.categoryService),
+  );
+  const variantController = new VariantController(
+    new CreateProductVariantHandler(services.variantService),
+    new UpdateProductVariantHandler(services.variantService),
+    new DeleteProductVariantHandler(services.variantService),
+    new ListVariantsHandler(services.variantService),
+    new GetVariantHandler(services.variantService),
+  );
   const mediaController = new MediaController(services.mediaService);
   const productMediaController = new ProductMediaController(
     services.productMediaService,
@@ -63,7 +109,13 @@ export async function registerProductCatalogRoutes(
   const productTagController = new ProductTagController(
     services.productTagService,
   );
-  const searchController = new SearchController(services.productSearchService);
+  const searchController = new SearchController(
+    searchProductsHandler,
+    new GetSearchSuggestionsHandler(services.productSearchService),
+    new GetPopularSearchesHandler(services.productSearchService),
+    new GetSearchFiltersHandler(services.productSearchService),
+    new GetSearchStatsHandler(services.productSearchService),
+  );
   const sizeGuideController = new SizeGuideController(
     services.sizeGuideService,
   );

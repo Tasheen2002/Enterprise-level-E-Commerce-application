@@ -23,13 +23,11 @@ export class ProductTagRepository implements IProductTagRepository {
   }
 
   async save(tag: ProductTag): Promise<void> {
-    const data = tag.toDatabaseRow();
-
     await this.productTagModel.create({
       data: {
-        id: data.tag_id,
-        tag: data.tag,
-        kind: data.kind,
+        id: tag.id.getValue(),
+        tag: tag.tag,
+        kind: tag.kind,
       },
     });
   }
@@ -43,8 +41,8 @@ export class ProductTagRepository implements IProductTagRepository {
       return null;
     }
 
-    return ProductTag.fromDatabaseRow({
-      tag_id: tagData.id,
+    return ProductTag.fromPersistence({
+      id: ProductTagId.fromString(tagData.id),
       tag: tagData.tag,
       kind: tagData.kind,
     });
@@ -59,8 +57,8 @@ export class ProductTagRepository implements IProductTagRepository {
       return null;
     }
 
-    return ProductTag.fromDatabaseRow({
-      tag_id: tagData.id,
+    return ProductTag.fromPersistence({
+      id: ProductTagId.fromString(tagData.id),
       tag: tagData.tag,
       kind: tagData.kind,
     });
@@ -88,8 +86,8 @@ export class ProductTagRepository implements IProductTagRepository {
     });
 
     return tags.map((tagData: any) =>
-      ProductTag.fromDatabaseRow({
-        tag_id: tagData.id,
+      ProductTag.fromPersistence({
+        id: ProductTagId.fromString(tagData.id),
         tag: tagData.tag,
         kind: tagData.kind,
       }),
@@ -115,8 +113,8 @@ export class ProductTagRepository implements IProductTagRepository {
     });
 
     return tags.map((tagData: any) =>
-      ProductTag.fromDatabaseRow({
-        tag_id: tagData.id,
+      ProductTag.fromPersistence({
+        id: ProductTagId.fromString(tagData.id),
         tag: tagData.tag,
         kind: tagData.kind,
       }),
@@ -130,8 +128,8 @@ export class ProductTagRepository implements IProductTagRepository {
     });
 
     return associations.map((assoc: any) =>
-      ProductTag.fromDatabaseRow({
-        tag_id: assoc.tag.id,
+      ProductTag.fromPersistence({
+        id: ProductTagId.fromString(assoc.tag.id),
         tag: assoc.tag.tag,
         kind: assoc.tag.kind,
       }),
@@ -162,8 +160,8 @@ export class ProductTagRepository implements IProductTagRepository {
     });
 
     return tags.map((tagData: any) =>
-      ProductTag.fromDatabaseRow({
-        tag_id: tagData.id,
+      ProductTag.fromPersistence({
+        id: ProductTagId.fromString(tagData.id),
         tag: tagData.tag,
         kind: tagData.kind,
       }),
@@ -188,8 +186,8 @@ export class ProductTagRepository implements IProductTagRepository {
     });
 
     return results.map((result: any) => ({
-      tag: ProductTag.fromDatabaseRow({
-        tag_id: result.id,
+      tag: ProductTag.fromPersistence({
+        id: ProductTagId.fromString(result.id),
         tag: result.tag,
         kind: result.kind,
       }),
@@ -198,13 +196,11 @@ export class ProductTagRepository implements IProductTagRepository {
   }
 
   async update(tag: ProductTag): Promise<void> {
-    const data = tag.toDatabaseRow();
-
     await this.productTagModel.update({
-      where: { id: data.tag_id },
+      where: { id: tag.id.getValue() },
       data: {
-        tag: data.tag,
-        kind: data.kind,
+        tag: tag.tag,
+        kind: tag.kind,
       },
     });
   }

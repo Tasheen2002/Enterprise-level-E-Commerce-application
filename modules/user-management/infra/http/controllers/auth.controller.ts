@@ -1,52 +1,20 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import {
-  RegisterUserInput,
-  RegisterUserHandler,
-} from "../../../application/commands/register-user.command";
-import {
-  LoginUserInput,
-  LoginUserHandler,
-} from "../../../application/commands/login-user.command";
-import {
-  LogoutInput,
-  LogoutHandler,
-} from "../../../application/commands/logout.command";
-import {
-  RefreshTokenInput,
-  RefreshTokenHandler,
-} from "../../../application/commands/refresh-token.command";
-import {
-  ChangePasswordInput,
-  ChangePasswordHandler,
-} from "../../../application/commands/change-password.command";
-import {
-  ChangeEmailInput,
-  ChangeEmailHandler,
-} from "../../../application/commands/change-email.command";
-import {
-  InitiatePasswordResetInput,
-  InitiatePasswordResetHandler,
-} from "../../../application/commands/initiate-password-reset.command";
-import {
-  ResetPasswordInput,
-  ResetPasswordHandler,
-} from "../../../application/commands/reset-password.command";
-import {
-  VerifyEmailInput,
-  VerifyEmailHandler,
-} from "../../../application/commands/verify-email.command";
-import {
-  GetUserByEmailInput,
-  GetUserByEmailHandler,
-} from "../../../application/queries/get-user-by-email.query";
-import {
-  DeleteAccountInput,
-  DeleteAccountHandler,
-} from "../../../application/commands/delete-account.command";
+import { RegisterUserHandler } from "../../../application/commands/register-user.command";
+import { LoginUserHandler } from "../../../application/commands/login-user.command";
+import { LogoutHandler } from "../../../application/commands/logout.command";
+import { RefreshTokenHandler } from "../../../application/commands/refresh-token.command";
+import { ChangePasswordHandler } from "../../../application/commands/change-password.command";
+import { ChangeEmailHandler } from "../../../application/commands/change-email.command";
+import { InitiatePasswordResetHandler } from "../../../application/commands/initiate-password-reset.command";
+import { ResetPasswordHandler } from "../../../application/commands/reset-password.command";
+import { VerifyEmailHandler } from "../../../application/commands/verify-email.command";
+import { GetUserByEmailHandler } from "../../../application/queries/get-user-by-email.query";
+import { DeleteAccountHandler } from "../../../application/commands/delete-account.command";
 import { ITokenBlacklistService } from "../../../application/services/itoken-blacklist.service";
 import { UserRole } from "../../../domain/entities/user.entity";
+import { DomainValidationError } from "../../../domain/errors/user-management.errors";
 import crypto from "crypto";
 
 export class AuthController {
@@ -115,7 +83,7 @@ export class AuthController {
       const lastName = rawData.lastName?.trim();
       const phone = rawData.phone?.trim();
 
-      const command: RegisterUserInput = {
+      const command = {
         email,
         password: rawData.password,
         phone,
@@ -143,23 +111,6 @@ export class AuthController {
 
         // TODO: Send verification email with token
         // Token generated and stored — email service integration pending
-
-        return ResponseHelper.success(reply, 201, "Registration successful", {
-          accessToken: result.data.accessToken,
-          refreshToken: result.data.refreshToken,
-          user: {
-            id: result.data.user.id,
-            email,
-            role: result.data.user.role,
-            isGuest: result.data.user.isGuest,
-            emailVerified: result.data.user.emailVerified,
-            phoneVerified: result.data.user.phoneVerified,
-            status: "active",
-          },
-          expiresIn: result.data.expiresIn,
-          tokenType: "Bearer",
-          ...(process.env.NODE_ENV === "development" && { verificationToken }),
-        });
       }
 
       return ResponseHelper.fromCommand(
@@ -208,7 +159,7 @@ export class AuthController {
         });
       }
 
-      const command: LoginUserInput = {
+      const command = {
         email,
         password,
         rememberMe,
@@ -217,7 +168,7 @@ export class AuthController {
       const result = await this.loginHandler.handle(command);
 
       if (result.success && result.data) {
-        const authResult = result.data as any;
+        const authResult = result.data;
         this.tokenBlacklistService.clearFailedAttempts(email);
         this.logSecurityEvent(
           "USER_LOGIN_SUCCESS",
@@ -248,7 +199,7 @@ export class AuthController {
         { email, reason: result.error, deviceInfo },
         request,
       );
-      return ResponseHelper.unauthorized(reply, "Invalid email or password");
+      return ResponseHelper.fromCommand(reply, result, "Login failed");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -270,7 +221,7 @@ export class AuthController {
         }
       }
 
-      const command: LogoutInput = {
+      const command = {
         token,
         userId: request.user.userId,
         timestamp: new Date(),
@@ -322,7 +273,7 @@ export class AuthController {
         }
       }
 
-      const command: RefreshTokenInput = {
+      const command = {
         refreshToken,
         currentAccessToken,
         timestamp: new Date(),
@@ -344,10 +295,7 @@ export class AuthController {
         { deviceInfo },
         request,
       );
-      return ResponseHelper.unauthorized(
-        reply,
-        result.error || "Token refresh failed",
-      );
+      return ResponseHelper.fromCommand(reply, result, "Token refresh failed");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -366,7 +314,7 @@ export class AuthController {
       const deviceInfo = this.extractDeviceInfo(request);
 
       const email = (rawEmail || "").trim().toLowerCase();
-      const command: InitiatePasswordResetInput = {
+      const command = {
         email,
         timestamp: new Date(),
       };
@@ -429,13 +377,10 @@ export class AuthController {
 
       const tokenData = this.tokenBlacklistService.getPasswordResetToken(token);
       if (!tokenData) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Invalid or expired reset token",
-        );
+        throw new DomainValidationError("Invalid or expired reset token");
       }
 
-      const command: ResetPasswordInput = {
+      const command = {
         email: tokenData.email,
         newPassword,
         timestamp: new Date(),
@@ -478,13 +423,10 @@ export class AuthController {
 
       const tokenData = this.tokenBlacklistService.getVerificationToken(token);
       if (!tokenData) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Invalid or expired verification token",
-        );
+        throw new DomainValidationError("Invalid or expired verification token");
       }
 
-      const command: VerifyEmailInput = {
+      const command = {
         userId: tokenData.userId,
         timestamp: new Date(),
       };
@@ -505,11 +447,7 @@ export class AuthController {
         );
       }
 
-      if (result.error === "Email is already verified") {
-        return ResponseHelper.badRequest(reply, "Email is already verified");
-      }
-
-      return ResponseHelper.fromCommand(reply, result, "");
+      return ResponseHelper.fromCommand(reply, result, "Email verification failed");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -528,24 +466,25 @@ export class AuthController {
       const deviceInfo = this.extractDeviceInfo(request);
 
       const email = (rawEmail || "").trim().toLowerCase();
-      const query: GetUserByEmailInput = { email, timestamp: new Date() };
-      const userResult = await this.getUserByEmailHandler.handle(query);
+      const query = { email, timestamp: new Date() };
 
-      if (!userResult.success || !userResult.data) {
+      let userInfo: { userId: string; emailVerified: boolean } | null = null;
+      try {
+        userInfo = await this.getUserByEmailHandler.handle(query);
+      } catch {
         // For security, don't reveal if email exists or not
+      }
+
+      if (!userInfo) {
         return ResponseHelper.ok(
           reply,
           "If an account with that email exists, verification email has been sent.",
-          {
-            action: "verification_sent",
-          },
+          { action: "verification_sent" },
         );
       }
 
-      const userInfo = userResult.data;
-
       if (userInfo.emailVerified) {
-        return ResponseHelper.badRequest(reply, "Email is already verified");
+        throw new DomainValidationError("Email is already verified");
       }
 
       const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -566,9 +505,7 @@ export class AuthController {
       return ResponseHelper.ok(
         reply,
         "Verification email has been sent. Please check your inbox.",
-        {
-          action: "verification_sent",
-        },
+        { action: "verification_sent" },
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -589,7 +526,7 @@ export class AuthController {
       const { currentPassword, newPassword } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
 
-      const command: ChangePasswordInput = {
+      const command = {
         userId: request.user.userId,
         currentPassword,
         newPassword,
@@ -632,7 +569,7 @@ export class AuthController {
       const { newEmail, password } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
 
-      const command: ChangeEmailInput = {
+      const command = {
         userId: request.user.userId,
         newEmail,
         password,
@@ -683,7 +620,7 @@ export class AuthController {
         }
       }
 
-      const command: DeleteAccountInput = {
+      const command = {
         userId: request.user.userId,
         password,
         currentAccessToken,
@@ -743,7 +680,7 @@ export class AuthController {
     reply: FastifyReply,
   ): Promise<void> {
     if (process.env.NODE_ENV === "production") {
-      return ResponseHelper.notFound(reply);
+      return reply.status(404).send({ success: false, statusCode: 404, message: "Not found" });
     }
 
     try {

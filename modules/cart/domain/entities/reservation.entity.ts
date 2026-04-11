@@ -1,13 +1,73 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { ReservationId } from "../value-objects/reservation-id.vo";
 import { CartId } from "../value-objects/cart-id.vo";
 import { VariantId } from "../value-objects/variant-id.vo";
 import { Quantity } from "../value-objects/quantity.vo";
-import { DomainValidationError } from "../errors";
+import { DomainValidationError, InvalidReservationOperationError } from "../errors";
 import {
   RESERVATION_DEFAULT_DURATION_MINUTES,
   RESERVATION_MAX_DURATION_MINUTES,
   RESERVATION_EXPIRY_GRACE_PERIOD_HOURS,
   RESERVATION_EXPIRING_SOON_THRESHOLD_MINUTES,
 } from "../constants";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class ReservationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly reservationId: string,
+    public readonly cartId: string,
+    public readonly variantId: string,
+    public readonly quantity: number,
+  ) {
+    super(reservationId, "Reservation");
+  }
+
+  get eventType(): string {
+    return "reservation.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      reservationId: this.reservationId,
+      cartId: this.cartId,
+      variantId: this.variantId,
+      quantity: this.quantity,
+    };
+  }
+}
+
+export class ReservationExtendedEvent extends DomainEvent {
+  constructor(
+    public readonly reservationId: string,
+    public readonly expiresAt: string,
+  ) {
+    super(reservationId, "Reservation");
+  }
+
+  get eventType(): string {
+    return "reservation.extended";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { reservationId: this.reservationId, expiresAt: this.expiresAt };
+  }
+}
+
+// ============================================================================
+// Props & Data Interfaces
+// ============================================================================
+
+export interface ReservationProps {
+  reservationId: ReservationId;
+  cartId: CartId;
+  variantId: VariantId;
+  quantity: Quantity;
+  expiresAt: Date;
+}
 
 export interface CreateReservationData {
   cartId: string;
@@ -24,83 +84,116 @@ export interface ReservationEntityData {
   expiresAt: Date;
 }
 
-export class Reservation {
-  private constructor(
-    private readonly reservationId: string,
-    private readonly cartId: CartId,
-    private readonly variantId: VariantId,
-    private quantity: Quantity,
-    private expiresAt: Date,
-  ) {}
+// ============================================================================
+// DTO
+// ============================================================================
 
-  // Factory methods
+export interface ReservationDTO {
+  reservationId: string;
+  cartId: string;
+  variantId: string;
+  quantity: number;
+  expiresAt: string;
+  status: "active" | "expiring_soon" | "expired" | "recently_expired";
+  isExpired: boolean;
+  isExpiringSoon: boolean;
+  timeUntilExpirySeconds: number;
+  canBeExtended: boolean;
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class Reservation extends AggregateRoot {
+  private constructor(private props: ReservationProps) {
+    super();
+  }
+
   static create(data: CreateReservationData): Reservation {
-    const reservationId = crypto.randomUUID();
-    const cartId = CartId.fromString(data.cartId);
-    const variantId = VariantId.fromString(data.variantId);
-    const quantity = Quantity.fromNumber(data.quantity);
-
+    const reservationId = ReservationId.create();
     const durationMinutes = data.durationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES;
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
 
-    return new Reservation(
+    const reservation = new Reservation({
       reservationId,
-      cartId,
-      variantId,
-      quantity,
+      cartId: CartId.fromString(data.cartId),
+      variantId: VariantId.fromString(data.variantId),
+      quantity: Quantity.fromNumber(data.quantity),
       expiresAt,
+    });
+
+    reservation.addDomainEvent(
+      new ReservationCreatedEvent(
+        reservationId.getValue(),
+        data.cartId,
+        data.variantId,
+        data.quantity,
+      ),
     );
+
+    return reservation;
   }
 
   static reconstitute(data: ReservationEntityData): Reservation {
-    const cartId = CartId.fromString(data.cartId);
-    const variantId = VariantId.fromString(data.variantId);
-    const quantity = Quantity.fromNumber(data.quantity);
+    return new Reservation({
+      reservationId: ReservationId.fromString(data.reservationId),
+      cartId: CartId.fromString(data.cartId),
+      variantId: VariantId.fromString(data.variantId),
+      quantity: Quantity.fromNumber(data.quantity),
+      expiresAt: data.expiresAt,
+    });
+  }
 
-    return new Reservation(
-      data.reservationId,
-      cartId,
-      variantId,
-      quantity,
-      data.expiresAt,
-    );
+  static toDTO(reservation: Reservation): ReservationDTO {
+    return {
+      reservationId: reservation.props.reservationId.getValue(),
+      cartId: reservation.props.cartId.getValue(),
+      variantId: reservation.props.variantId.getValue(),
+      quantity: reservation.props.quantity.getValue(),
+      expiresAt: reservation.props.expiresAt.toISOString(),
+      status: reservation.status,
+      isExpired: reservation.isExpired,
+      isExpiringSoon: reservation.isExpiringSoon(),
+      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
+      canBeExtended: reservation.canBeExtended,
+    };
   }
 
   // Getters
-  getReservationId(): string {
-    return this.reservationId;
+  get reservationId(): ReservationId {
+    return this.props.reservationId;
   }
 
-  getCartId(): CartId {
-    return this.cartId;
+  get cartId(): CartId {
+    return this.props.cartId;
   }
 
-  getVariantId(): VariantId {
-    return this.variantId;
+  get variantId(): VariantId {
+    return this.props.variantId;
   }
 
-  getQuantity(): Quantity {
-    return this.quantity;
+  get quantity(): Quantity {
+    return this.props.quantity;
   }
 
-  getExpiresAt(): Date {
-    return this.expiresAt;
+  get expiresAt(): Date {
+    return this.props.expiresAt;
   }
 
   // Business methods
   updateQuantity(newQuantity: number): void {
-    this.quantity = Quantity.fromNumber(newQuantity);
+    this.props.quantity = Quantity.fromNumber(newQuantity);
   }
 
   incrementQuantity(amount: number = 1): void {
-    const newQuantity = this.quantity.getValue() + amount;
-    this.updateQuantity(newQuantity);
+    this.updateQuantity(this.props.quantity.getValue() + amount);
   }
 
   decrementQuantity(amount: number = 1): void {
-    const newQuantity = this.quantity.getValue() - amount;
+    const newQuantity = this.props.quantity.getValue() - amount;
     if (newQuantity <= 0) {
-      throw new DomainValidationError(
+      throw new InvalidReservationOperationError(
         "Cannot decrease reservation quantity to zero or below. Use release() instead.",
       );
     }
@@ -108,124 +201,103 @@ export class Reservation {
   }
 
   // Expiration management
-  isExpired(): boolean {
-    return new Date() > this.expiresAt;
+  get isExpired(): boolean {
+    return new Date() > this.props.expiresAt;
   }
 
   extend(additionalMinutes: number): void {
     if (additionalMinutes <= 0) {
       throw new DomainValidationError("Extension duration must be positive");
     }
-
     const now = new Date();
-    const currentExpiry = this.isExpired() ? now : this.expiresAt;
-    this.expiresAt = new Date(
-      currentExpiry.getTime() + additionalMinutes * 60 * 1000,
+    const currentExpiry = this.isExpired ? now : this.props.expiresAt;
+    this.props.expiresAt = new Date(currentExpiry.getTime() + additionalMinutes * 60 * 1000);
+    this.addDomainEvent(
+      new ReservationExtendedEvent(
+        this.props.reservationId.getValue(),
+        this.props.expiresAt.toISOString(),
+      ),
     );
   }
 
-  renew(durationMinutes: number = 30): void {
+  renew(durationMinutes: number = RESERVATION_DEFAULT_DURATION_MINUTES): void {
     if (durationMinutes <= 0) {
       throw new DomainValidationError("Renewal duration must be positive");
     }
-
-    this.expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
-  }
-
-  getTimeUntilExpiry(): number {
-    const now = new Date();
-    const timeLeft = this.expiresAt.getTime() - now.getTime();
-    return Math.max(0, Math.floor(timeLeft / 1000)); // Returns seconds
-  }
-
-  getTimeUntilExpiryMinutes(): number {
-    return Math.floor(this.getTimeUntilExpiry() / 60);
-  }
-
-  isExpiringSoon(thresholdMinutes: number = RESERVATION_EXPIRING_SOON_THRESHOLD_MINUTES): boolean {
-    const timeLeftMinutes = this.getTimeUntilExpiryMinutes();
-    return timeLeftMinutes <= thresholdMinutes && timeLeftMinutes > 0;
-  }
-
-  // Reservation status
-  canBeExtended(): boolean {
-    // Allow extension if reservation hasn't been expired for more than 1 hour
-    if (!this.isExpired()) {
-      return true;
+    if (durationMinutes > RESERVATION_MAX_DURATION_MINUTES) {
+      throw new DomainValidationError(
+        `Renewal duration cannot exceed ${RESERVATION_MAX_DURATION_MINUTES} minutes`,
+      );
     }
-
-    const now = new Date();
-    const hoursSinceExpiry =
-      (now.getTime() - this.expiresAt.getTime()) / (1000 * 60 * 60);
-    return hoursSinceExpiry <= RESERVATION_EXPIRY_GRACE_PERIOD_HOURS;
-  }
-
-  getStatus(): "active" | "expiring_soon" | "expired" | "recently_expired" {
-    if (this.isExpired()) {
-      const now = new Date();
-      const hoursSinceExpiry =
-        (now.getTime() - this.expiresAt.getTime()) / (1000 * 60 * 60);
-      return hoursSinceExpiry <= RESERVATION_EXPIRY_GRACE_PERIOD_HOURS ? "recently_expired" : "expired";
-    }
-
-    if (this.isExpiringSoon()) {
-      return "expiring_soon";
-    }
-
-    return "active";
-  }
-
-  // Validation methods
-  isValidForCart(cartId: string): boolean {
-    return this.cartId.getValue() === cartId;
-  }
-
-  isValidForVariant(variantId: string): boolean {
-    return this.variantId.getValue() === variantId;
-  }
-
-  canCover(requestedQuantity: number): boolean {
-    return this.quantity.getValue() >= requestedQuantity && !this.isExpired();
-  }
-
-  // Utility methods
-  equals(other: Reservation): boolean {
-    return (
-      this.reservationId === other.reservationId &&
-      this.cartId.equals(other.cartId) &&
-      this.variantId.equals(other.variantId)
+    this.props.expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+    this.addDomainEvent(
+      new ReservationExtendedEvent(
+        this.props.reservationId.getValue(),
+        this.props.expiresAt.toISOString(),
+      ),
     );
   }
 
-  toString(): string {
-    return `Reservation(${this.reservationId}): ${this.quantity.getValue()} units of ${this.variantId.getValue()} for cart ${this.cartId.getValue()}, expires ${this.expiresAt.toISOString()}`;
+  get timeUntilExpirySeconds(): number {
+    const timeLeft = this.props.expiresAt.getTime() - new Date().getTime();
+    return Math.max(0, Math.floor(timeLeft / 1000));
+  }
+
+  get timeUntilExpiryMinutes(): number {
+    return Math.floor(this.timeUntilExpirySeconds / 60);
+  }
+
+  isExpiringSoon(thresholdMinutes: number = RESERVATION_EXPIRING_SOON_THRESHOLD_MINUTES): boolean {
+    const timeLeftMinutes = this.timeUntilExpiryMinutes;
+    return timeLeftMinutes <= thresholdMinutes && timeLeftMinutes > 0;
+  }
+
+  get canBeExtended(): boolean {
+    if (!this.isExpired) return true;
+    const hoursSinceExpiry =
+      (new Date().getTime() - this.props.expiresAt.getTime()) / (1000 * 60 * 60);
+    return hoursSinceExpiry <= RESERVATION_EXPIRY_GRACE_PERIOD_HOURS;
+  }
+
+  get status(): "active" | "expiring_soon" | "expired" | "recently_expired" {
+    if (this.isExpired) {
+      const hoursSinceExpiry =
+        (new Date().getTime() - this.props.expiresAt.getTime()) / (1000 * 60 * 60);
+      return hoursSinceExpiry <= RESERVATION_EXPIRY_GRACE_PERIOD_HOURS
+        ? "recently_expired"
+        : "expired";
+    }
+    if (this.isExpiringSoon()) return "expiring_soon";
+    return "active";
+  }
+
+  isValidForCart(cartId: string): boolean {
+    return this.props.cartId.getValue() === cartId;
+  }
+
+  isValidForVariant(variantId: string): boolean {
+    return this.props.variantId.getValue() === variantId;
+  }
+
+  canCover(requestedQuantity: number): boolean {
+    return this.props.quantity.getValue() >= requestedQuantity && !this.isExpired;
+  }
+
+  equals(other: Reservation): boolean {
+    return (
+      this.props.reservationId.equals(other.props.reservationId) &&
+      this.props.cartId.equals(other.props.cartId) &&
+      this.props.variantId.equals(other.props.variantId)
+    );
   }
 
   toSnapshot(): ReservationEntityData {
     return {
-      reservationId: this.reservationId,
-      cartId: this.cartId.getValue(),
-      variantId: this.variantId.getValue(),
-      quantity: this.quantity.getValue(),
-      expiresAt: this.expiresAt,
-    };
-  }
-
-  // Summary for API responses
-  getSummary() {
-    const status = this.getStatus();
-    return {
-      reservationId: this.reservationId,
-      cartId: this.cartId.getValue(),
-      variantId: this.variantId.getValue(),
-      quantity: this.quantity.getValue(),
-      expiresAt: this.expiresAt,
-      status,
-      isExpired: this.isExpired(),
-      isExpiringSoon: this.isExpiringSoon(),
-      timeUntilExpirySeconds: this.getTimeUntilExpiry(),
-      timeUntilExpiryMinutes: this.getTimeUntilExpiryMinutes(),
-      canBeExtended: this.canBeExtended(),
+      reservationId: this.props.reservationId.getValue(),
+      cartId: this.props.cartId.getValue(),
+      variantId: this.props.variantId.getValue(),
+      quantity: this.props.quantity.getValue(),
+      expiresAt: this.props.expiresAt,
     };
   }
 
@@ -236,12 +308,7 @@ export class Reservation {
     durationMinutes?: number,
   ): Reservation[] {
     return items.map((item) =>
-      Reservation.create({
-        cartId,
-        variantId: item.variantId,
-        quantity: item.quantity,
-        durationMinutes,
-      }),
+      Reservation.create({ cartId, variantId: item.variantId, quantity: item.quantity, durationMinutes }),
     );
   }
 

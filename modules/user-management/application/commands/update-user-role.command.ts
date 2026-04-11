@@ -1,8 +1,6 @@
-import { IUserRepository } from '../../domain/repositories/iuser.repository';
-import { UserId } from '../../domain/value-objects/user-id.vo';
+import { UserService } from '../services/user.service';
 import { UserRole } from '../../domain/enums/user-role.enum';
-import { User, UserDTO } from '../../domain/entities/user.entity';
-import { UserNotFoundError } from '../../domain/errors/user-management.errors';
+import { UserDTO } from '../../domain/entities/user.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -15,25 +13,11 @@ export interface UpdateUserRoleInput extends ICommand {
   reason?: string;
 }
 
-export class UpdateUserRoleHandler implements ICommandHandler<
-  UpdateUserRoleInput,
-  CommandResult<UserDTO>
-> {
-  constructor(private readonly userRepository: IUserRepository) {}
+export class UpdateUserRoleHandler implements ICommandHandler<UpdateUserRoleInput, CommandResult<UserDTO>> {
+  constructor(private readonly userService: UserService) {}
 
-  async handle(
-    input: UpdateUserRoleInput
-  ): Promise<CommandResult<UserDTO>> {
-    const userId = UserId.fromString(input.userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!user) {
-      throw new UserNotFoundError(input.userId);
-    }
-
-    user.updateRole(input.role);
-    await this.userRepository.save(user);
-
-    return CommandResult.success(User.toDTO(user));
+  async handle(input: UpdateUserRoleInput): Promise<CommandResult<UserDTO>> {
+    const dto = await this.userService.updateUserRole(input.userId, input.role);
+    return CommandResult.success(dto);
   }
 }

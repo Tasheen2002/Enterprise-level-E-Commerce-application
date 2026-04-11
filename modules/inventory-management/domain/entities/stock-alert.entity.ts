@@ -1,6 +1,39 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AlertId } from "../value-objects/alert-id.vo";
 import { AlertTypeVO } from "../value-objects/alert-type.vo";
 import { InvalidOperationError } from "../errors";
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class StockAlertCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly alertId: string,
+    public readonly variantId: string,
+    public readonly type: string,
+  ) {
+    super(alertId, "StockAlert");
+  }
+  get eventType(): string { return "stock_alert.created"; }
+  getPayload(): Record<string, unknown> {
+    return { alertId: this.alertId, variantId: this.variantId, type: this.type };
+  }
+}
+
+export class StockAlertResolvedEvent extends DomainEvent {
+  constructor(
+    public readonly alertId: string,
+    public readonly variantId: string,
+  ) {
+    super(alertId, "StockAlert");
+  }
+  get eventType(): string { return "stock_alert.resolved"; }
+  getPayload(): Record<string, unknown> {
+    return { alertId: this.alertId, variantId: this.variantId };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface StockAlertProps {
   alertId: AlertId;
@@ -10,59 +43,90 @@ export interface StockAlertProps {
   resolvedAt?: Date;
 }
 
-export class StockAlert {
-  private constructor(private readonly props: StockAlertProps) {}
+export interface StockAlertDTO {
+  alertId: string;
+  variantId: string;
+  type: string;
+  triggeredAt: Date;
+  resolvedAt?: Date;
+  isResolved: boolean;
+}
 
-  static create(props: StockAlertProps): StockAlert {
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class StockAlert extends AggregateRoot {
+  private props: StockAlertProps;
+
+  private constructor(props: StockAlertProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    variantId: string;
+    type: string;
+  }): StockAlert {
+    const alert = new StockAlert({
+      alertId: AlertId.create(),
+      variantId: params.variantId,
+      type: AlertTypeVO.create(params.type),
+      triggeredAt: new Date(),
+    });
+    alert.addDomainEvent(
+      new StockAlertCreatedEvent(
+        alert.props.alertId.getValue(),
+        params.variantId,
+        params.type,
+      ),
+    );
+    return alert;
+  }
+
+  static fromPersistence(props: StockAlertProps): StockAlert {
     return new StockAlert(props);
   }
 
-  static reconstitute(props: StockAlertProps): StockAlert {
-    return new StockAlert(props);
-  }
+  // ── Getters ────────────────────────────────────────────────────────
 
-  getAlertId(): AlertId {
-    return this.props.alertId;
-  }
+  get alertId(): AlertId { return this.props.alertId; }
+  get variantId(): string { return this.props.variantId; }
+  get type(): AlertTypeVO { return this.props.type; }
+  get triggeredAt(): Date { return this.props.triggeredAt; }
+  get resolvedAt(): Date | undefined { return this.props.resolvedAt; }
 
-  getVariantId(): string {
-    return this.props.variantId;
-  }
-
-  getType(): AlertTypeVO {
-    return this.props.type;
-  }
-
-  getTriggeredAt(): Date {
-    return this.props.triggeredAt;
-  }
-
-  getResolvedAt(): Date | undefined {
-    return this.props.resolvedAt;
-  }
+  // ── Business Logic ─────────────────────────────────────────────────
 
   isResolved(): boolean {
     return this.props.resolvedAt !== undefined;
   }
 
-  resolve(resolvedAt: Date): StockAlert {
+  resolve(resolvedAt: Date): void {
     if (this.isResolved()) {
       throw new InvalidOperationError("Alert is already resolved");
     }
-    return new StockAlert({
-      ...this.props,
-      resolvedAt,
-    });
+    this.props.resolvedAt = resolvedAt;
+    this.addDomainEvent(
+      new StockAlertResolvedEvent(
+        this.props.alertId.getValue(),
+        this.props.variantId,
+      ),
+    );
   }
 
-  toJSON() {
+  equals(other: StockAlert): boolean {
+    return this.props.alertId.equals(other.props.alertId);
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
+
+  static toDTO(entity: StockAlert): StockAlertDTO {
     return {
-      alertId: this.props.alertId.getValue(),
-      variantId: this.props.variantId,
-      type: this.props.type.getValue(),
-      triggeredAt: this.props.triggeredAt,
-      resolvedAt: this.props.resolvedAt,
-      isResolved: this.isResolved(),
+      alertId: entity.props.alertId.getValue(),
+      variantId: entity.props.variantId,
+      type: entity.props.type.getValue(),
+      triggeredAt: entity.props.triggeredAt,
+      resolvedAt: entity.props.resolvedAt,
+      isResolved: entity.isResolved(),
     };
   }
 }
