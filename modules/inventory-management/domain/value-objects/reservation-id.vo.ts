@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
 
 export class ReservationId extends UuidId {
@@ -5,8 +6,12 @@ export class ReservationId extends UuidId {
     super(value, "Reservation ID");
   }
 
-  static create(value: string): ReservationId {
-    return new ReservationId(value);
+  static create(): ReservationId {
+    return new ReservationId(randomUUID());
+  }
+
+  static fromString(id: string): ReservationId {
+    return new ReservationId(id);
   }
 
   equals(other: ReservationId | null | undefined): boolean {

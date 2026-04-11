@@ -1,19 +1,46 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { LocationId } from "../value-objects/location-id.vo";
-import {
-  LocationType,
-  LocationTypeVO,
-} from "../value-objects/location-type.vo";
+import { LocationTypeVO } from "../value-objects/location-type.vo";
+import { LocationAddress } from "../value-objects/location-address.vo";
 import { DomainValidationError } from "../errors";
 
-export interface LocationAddress {
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-  phone?: string;
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class LocationCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly locationId: string,
+    public readonly name: string,
+  ) {
+    super(locationId, "Location");
+  }
+  get eventType(): string { return "location.created"; }
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId, name: this.name };
+  }
 }
+
+export class LocationUpdatedEvent extends DomainEvent {
+  constructor(public readonly locationId: string) {
+    super(locationId, "Location");
+  }
+  get eventType(): string { return "location.updated"; }
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId };
+  }
+}
+
+export class LocationDeletedEvent extends DomainEvent {
+  constructor(public readonly locationId: string) {
+    super(locationId, "Location");
+  }
+  get eventType(): string { return "location.deleted"; }
+  getPayload(): Record<string, unknown> {
+    return { locationId: this.locationId };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface LocationProps {
   locationId: LocationId;
@@ -22,16 +49,45 @@ export interface LocationProps {
   address?: LocationAddress;
 }
 
-export class Location {
-  private constructor(private readonly props: LocationProps) {
+export interface LocationDTO {
+  locationId: string;
+  type: string;
+  name: string;
+  address?: ReturnType<LocationAddress["toJSON"]>;
+}
+
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class Location extends AggregateRoot {
+  private props: LocationProps;
+
+  private constructor(props: LocationProps) {
+    super();
+    this.props = props;
     this.validate();
   }
 
-  static create(props: LocationProps): Location {
-    return new Location(props);
+  static create(params: {
+    type: string;
+    name: string;
+    address?: ReturnType<LocationAddress["toJSON"]>;
+  }): Location {
+    const location = new Location({
+      locationId: LocationId.create(),
+      type: LocationTypeVO.create(params.type),
+      name: params.name,
+      address: params.address ? LocationAddress.create(params.address) : undefined,
+    });
+    location.addDomainEvent(
+      new LocationCreatedEvent(
+        location.props.locationId.getValue(),
+        params.name,
+      ),
+    );
+    return location;
   }
 
-  static reconstitute(props: LocationProps): Location {
+  static fromPersistence(props: LocationProps): Location {
     return new Location(props);
   }
 
@@ -41,45 +97,46 @@ export class Location {
     }
   }
 
-  getLocationId(): LocationId {
-    return this.props.locationId;
-  }
+  // ── Getters ────────────────────────────────────────────────────────
 
-  getType(): LocationTypeVO {
-    return this.props.type;
-  }
+  get locationId(): LocationId { return this.props.locationId; }
+  get type(): LocationTypeVO { return this.props.type; }
+  get name(): string { return this.props.name; }
+  get address(): LocationAddress | undefined { return this.props.address; }
 
-  getName(): string {
-    return this.props.name;
-  }
+  // ── Business Logic ─────────────────────────────────────────────────
 
-  getAddress(): LocationAddress | undefined {
-    return this.props.address;
-  }
-
-  updateName(name: string): Location {
+  updateName(name: string): void {
     if (!name || name.trim().length === 0) {
       throw new DomainValidationError("Location name is required");
     }
-    return new Location({
-      ...this.props,
-      name,
-    });
+    this.props.name = name;
+    this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
   }
 
-  updateAddress(address: LocationAddress): Location {
-    return new Location({
-      ...this.props,
-      address,
-    });
+  updateAddress(address: LocationAddress): void {
+    this.props.address = address;
+    this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
   }
 
-  toJSON() {
+  markDeleted(): void {
+    this.addDomainEvent(
+      new LocationDeletedEvent(this.props.locationId.getValue()),
+    );
+  }
+
+  equals(other: Location): boolean {
+    return this.props.locationId.equals(other.props.locationId);
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
+
+  static toDTO(entity: Location): LocationDTO {
     return {
-      locationId: this.props.locationId.getValue(),
-      type: this.props.type.getValue(),
-      name: this.props.name,
-      address: this.props.address,
+      locationId: entity.props.locationId.getValue(),
+      type: entity.props.type.getValue(),
+      name: entity.props.name,
+      address: entity.props.address?.toJSON(),
     };
   }
 }

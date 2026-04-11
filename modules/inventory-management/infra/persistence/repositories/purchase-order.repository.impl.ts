@@ -20,9 +20,9 @@ interface PurchaseOrderDatabaseRow {
 export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
   constructor(private readonly prisma: PrismaClient) {}
   private toEntity(row: PurchaseOrderDatabaseRow): PurchaseOrder {
-    return PurchaseOrder.reconstitute({
-      poId: PurchaseOrderId.create(row.poId),
-      supplierId: SupplierId.create(row.supplierId),
+    return PurchaseOrder.fromPersistence({
+      poId: PurchaseOrderId.fromString(row.poId),
+      supplierId: SupplierId.fromString(row.supplierId),
       eta: row.eta || undefined,
       status: PurchaseOrderStatusVO.create(row.status),
       createdAt: row.createdAt,
@@ -32,19 +32,19 @@ export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
 
   async save(purchaseOrder: PurchaseOrder): Promise<void> {
     await (this.prisma as any).purchaseOrder.upsert({
-      where: { poId: purchaseOrder.getPoId().getValue() },
+      where: { poId: purchaseOrder.poId.getValue() },
       create: {
-        poId: purchaseOrder.getPoId().getValue(),
-        supplierId: purchaseOrder.getSupplierId().getValue(),
-        eta: purchaseOrder.getEta(),
-        status: purchaseOrder.getStatus().getValue(),
-        createdAt: purchaseOrder.getCreatedAt(),
-        updatedAt: purchaseOrder.getUpdatedAt(),
+        poId: purchaseOrder.poId.getValue(),
+        supplierId: purchaseOrder.supplierId.getValue(),
+        eta: purchaseOrder.eta,
+        status: purchaseOrder.status.getValue(),
+        createdAt: purchaseOrder.createdAt,
+        updatedAt: purchaseOrder.updatedAt,
       },
       update: {
-        eta: purchaseOrder.getEta(),
-        status: purchaseOrder.getStatus().getValue(),
-        updatedAt: purchaseOrder.getUpdatedAt(),
+        eta: purchaseOrder.eta,
+        status: purchaseOrder.status.getValue(),
+        updatedAt: purchaseOrder.updatedAt,
       },
     });
   }
@@ -67,9 +67,9 @@ export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
     });
   }
 
-  async findBySupplier(supplierId: SupplierId): Promise<PurchaseOrder[]> {
+  async findBySupplier(supplierId: string): Promise<PurchaseOrder[]> {
     const purchaseOrders = await (this.prisma as any).purchaseOrder.findMany({
-      where: { supplierId: supplierId.getValue() },
+      where: { supplierId },
       orderBy: { createdAt: "desc" },
     });
 

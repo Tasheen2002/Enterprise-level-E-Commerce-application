@@ -1,68 +1,28 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { PurchaseOrderController } from "../controllers/purchase-order.controller";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
-  PurchaseOrderController,
-  ListPOQuerystring,
-  CreatePOWithItemsBody,
-  UpdatePOStatusBody,
-  ReceivePOItemsBody,
-  UpdatePOEtaBody,
-} from "../controllers/purchase-order.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  poParamsSchema,
+  listPurchaseOrdersSchema,
+  createPurchaseOrderWithItemsSchema,
+  updatePOStatusSchema,
+  updatePOEtaSchema,
+  receivePOItemsSchema,
+  purchaseOrderResponseSchema,
+} from "../validation/purchase-order.schema";
 
 export async function registerPurchaseOrderRoutes(
   fastify: FastifyInstance,
   controller: PurchaseOrderController,
 ): Promise<void> {
   // List purchase orders
-  fastify.get<{ Querystring: ListPOQuerystring }>(
+  fastify.get(
     "/purchase-orders",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listPurchaseOrdersSchema)],
       schema: {
         description: "List all purchase orders (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -83,12 +43,23 @@ export async function registerPurchaseOrderRoutes(
           },
         },
         response: {
-          200: { description: "List of purchase orders" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  purchaseOrders: { type: "array", items: purchaseOrderResponseSchema },
+                  total: { type: "integer" },
+                },
+              },
+            },
+          },
         },
       },
     },
-    controller.listPurchaseOrders.bind(controller),
+    (request, reply) => controller.listPurchaseOrders(request as AuthenticatedRequest, reply),
   );
 
   // Get overdue purchase orders
@@ -102,12 +73,17 @@ export async function registerPurchaseOrderRoutes(
         summary: "Get Overdue Purchase Orders",
         security: [{ bearerAuth: [] }],
         response: {
-          200: { description: "Overdue purchase orders" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: purchaseOrderResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getOverduePurchaseOrders.bind(controller),
+    (request, reply) => controller.getOverduePurchaseOrders(request as AuthenticatedRequest, reply),
   );
 
   // Get pending receival purchase orders
@@ -121,18 +97,24 @@ export async function registerPurchaseOrderRoutes(
         summary: "Get Pending Receival",
         security: [{ bearerAuth: [] }],
         response: {
-          200: { description: "Pending receival purchase orders" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: purchaseOrderResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getPendingReceival.bind(controller),
+    (request, reply) => controller.getPendingReceival(request as AuthenticatedRequest, reply),
   );
 
   // Get purchase order
-  fastify.get<{ Params: { poId: string } }>(
+  fastify.get(
     "/purchase-orders/:poId",
     {
+      preValidation: [validateParams(poParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get purchase order by ID (Staff/Admin only)",
@@ -147,22 +129,26 @@ export async function registerPurchaseOrderRoutes(
           required: ["poId"],
         },
         response: {
-          200: { description: "Purchase order details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: purchaseOrderResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getPurchaseOrder.bind(controller),
+    (request, reply) => controller.getPurchaseOrder(request as AuthenticatedRequest, reply),
   );
 
   // Create purchase order with items
-  fastify.post<{ Body: CreatePOWithItemsBody }>(
+  fastify.post(
     "/purchase-orders/full",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createPurchaseOrderWithItemsSchema)],
       schema: {
-        description:
-          "Create a new purchase order with items (Staff/Admin only)",
+        description: "Create a new purchase order with items (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Create Purchase Order With Items",
         security: [{ bearerAuth: [] }],
@@ -170,36 +156,18 @@ export async function registerPurchaseOrderRoutes(
           type: "object",
           required: ["supplierId", "items"],
           properties: {
-            supplierId: {
-              type: "string",
-              format: "uuid",
-              description: "The supplier ID for this purchase order",
-            },
-            eta: {
-              type: "string",
-              format: "date-time",
-              description: "Expected delivery date and time",
-            },
+            supplierId: { type: "string", format: "uuid" },
+            eta: { type: "string", format: "date-time" },
             items: {
               type: "array",
               minItems: 1,
               maxItems: 100,
-              description: "List of items to include in the purchase order",
               items: {
                 type: "object",
                 required: ["variantId", "orderedQty"],
                 properties: {
-                  variantId: {
-                    type: "string",
-                    format: "uuid",
-                    description: "Product variant ID",
-                  },
-                  orderedQty: {
-                    type: "integer",
-                    minimum: 1,
-                    maximum: 10000,
-                    description: "Quantity to order",
-                  },
+                  variantId: { type: "string", format: "uuid" },
+                  orderedQty: { type: "integer", minimum: 1, maximum: 10000 },
                 },
               },
             },
@@ -207,59 +175,24 @@ export async function registerPurchaseOrderRoutes(
         },
         response: {
           201: {
-            description: "Purchase order with items created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  poId: { type: "string", format: "uuid" },
-                  supplierId: { type: "string", format: "uuid" },
-                  eta: { type: "string", format: "date-time" },
-                  status: {
-                    type: "string",
-                    enum: [
-                      "draft",
-                      "sent",
-                      "part_received",
-                      "received",
-                      "cancelled",
-                    ],
-                  },
-                  createdAt: { type: "string" },
-                  updatedAt: { type: "string" },
-                  items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        variantId: { type: "string", format: "uuid" },
-                        orderedQty: { type: "integer" },
-                        receivedQty: { type: "integer" },
-                      },
-                    },
-                  },
-                },
-              },
-              message: {
-                type: "string",
-                example: "Purchase order with items created successfully",
-              },
+              success: { type: "boolean" },
+              data: purchaseOrderResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.createPurchaseOrderWithItems.bind(controller),
+    (request, reply) => controller.createPurchaseOrderWithItems(request as AuthenticatedRequest, reply),
   );
 
   // Update PO status
-  fastify.put<{ Params: { poId: string }; Body: UpdatePOStatusBody }>(
+  fastify.put(
     "/purchase-orders/:poId/status",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOStatusSchema)],
       schema: {
         description: "Update purchase order status (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -283,22 +216,33 @@ export async function registerPurchaseOrderRoutes(
           },
         },
         response: {
-          200: { description: "Status updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  poId: { type: "string", format: "uuid" },
+                  status: { type: "string" },
+                },
+              },
+            },
+          },
         },
       },
     },
-    controller.updatePOStatus.bind(controller),
+    (request, reply) => controller.updatePOStatus(request as AuthenticatedRequest, reply),
   );
 
   // Update PO ETA
-  fastify.put<{ Params: { poId: string }; Body: UpdatePOEtaBody }>(
+  fastify.put(
     "/purchase-orders/:poId/eta",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOEtaSchema)],
       schema: {
-        description:
-          "Update purchase order estimated arrival (Staff/Admin only)",
+        description: "Update purchase order estimated arrival (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Update PO ETA",
         security: [{ bearerAuth: [] }],
@@ -313,27 +257,36 @@ export async function registerPurchaseOrderRoutes(
           type: "object",
           required: ["eta"],
           properties: {
-            eta: {
-              type: "string",
-              format: "date-time",
-              description: "New estimated arrival date and time",
-            },
+            eta: { type: "string", format: "date-time" },
           },
         },
         response: {
-          200: { description: "ETA updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  poId: { type: "string", format: "uuid" },
+                  eta: { type: "string", format: "date-time", nullable: true },
+                  status: { type: "string" },
+                },
+              },
+            },
+          },
         },
       },
     },
-    controller.updatePOEta.bind(controller),
+    (request, reply) => controller.updatePOEta(request as AuthenticatedRequest, reply),
   );
 
   // Receive PO items
-  fastify.post<{ Params: { poId: string }; Body: ReceivePOItemsBody }>(
+  fastify.post(
     "/purchase-orders/:poId/receive",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(receivePOItemsSchema)],
       schema: {
         description: "Receive items from purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -366,18 +319,24 @@ export async function registerPurchaseOrderRoutes(
           },
         },
         response: {
-          200: { description: "Items received successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              message: { type: "string" },
+            },
+          },
         },
       },
     },
-    controller.receivePOItems.bind(controller),
+    (request, reply) => controller.receivePOItems(request as AuthenticatedRequest, reply),
   );
 
   // Delete purchase order
-  fastify.delete<{ Params: { poId: string } }>(
+  fastify.delete(
     "/purchase-orders/:poId",
     {
+      preValidation: [validateParams(poParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Delete purchase order (draft only, Staff/Admin only)",
@@ -392,11 +351,10 @@ export async function registerPurchaseOrderRoutes(
           required: ["poId"],
         },
         response: {
-          200: { description: "Purchase order deleted successfully" },
-          ...errorResponses,
+          204: { description: "Purchase order deleted successfully", type: "null" },
         },
       },
     },
-    controller.deletePurchaseOrder.bind(controller),
+    (request, reply) => controller.deletePurchaseOrder(request as AuthenticatedRequest, reply),
   );
 }

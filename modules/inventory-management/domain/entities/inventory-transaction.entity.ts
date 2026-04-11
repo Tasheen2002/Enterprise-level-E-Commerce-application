@@ -1,6 +1,28 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { TransactionId } from "../value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../value-objects/transaction-reason.vo";
 import { DomainValidationError } from "../errors";
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class InventoryTransactionRecordedEvent extends DomainEvent {
+  constructor(
+    public readonly invTxnId: string,
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly qtyDelta: number,
+    public readonly reason: string,
+  ) {
+    super(invTxnId, "InventoryTransaction");
+  }
+  get eventType(): string { return "inventory_transaction.recorded"; }
+  getPayload(): Record<string, unknown> {
+    return { invTxnId: this.invTxnId, variantId: this.variantId, locationId: this.locationId, qtyDelta: this.qtyDelta, reason: this.reason };
+  }
+}
+
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface InventoryTransactionProps {
   invTxnId: TransactionId;
@@ -12,16 +34,56 @@ export interface InventoryTransactionProps {
   createdAt: Date;
 }
 
-export class InventoryTransaction {
-  private constructor(private readonly props: InventoryTransactionProps) {
+export interface InventoryTransactionDTO {
+  invTxnId: string;
+  variantId: string;
+  locationId: string;
+  qtyDelta: number;
+  reason: string;
+  referenceId?: string;
+  createdAt: Date;
+}
+
+// ── Entity ─────────────────────────────────────────────────────────────
+
+export class InventoryTransaction extends AggregateRoot {
+  private props: InventoryTransactionProps;
+
+  private constructor(props: InventoryTransactionProps) {
+    super();
+    this.props = props;
     this.validate();
   }
 
-  static create(props: InventoryTransactionProps): InventoryTransaction {
-    return new InventoryTransaction(props);
+  static create(params: {
+    variantId: string;
+    locationId: string;
+    qtyDelta: number;
+    reason: string;
+    referenceId?: string;
+  }): InventoryTransaction {
+    const txn = new InventoryTransaction({
+      invTxnId: TransactionId.create(),
+      variantId: params.variantId,
+      locationId: params.locationId,
+      qtyDelta: params.qtyDelta,
+      reason: TransactionReasonVO.create(params.reason),
+      referenceId: params.referenceId,
+      createdAt: new Date(),
+    });
+    txn.addDomainEvent(
+      new InventoryTransactionRecordedEvent(
+        txn.props.invTxnId.getValue(),
+        params.variantId,
+        params.locationId,
+        params.qtyDelta,
+        params.reason,
+      ),
+    );
+    return txn;
   }
 
-  static reconstitute(props: InventoryTransactionProps): InventoryTransaction {
+  static fromPersistence(props: InventoryTransactionProps): InventoryTransaction {
     return new InventoryTransaction(props);
   }
 
@@ -31,51 +93,36 @@ export class InventoryTransaction {
     }
   }
 
-  getInvTxnId(): TransactionId {
-    return this.props.invTxnId;
+  // ── Getters ────────────────────────────────────────────────────────
+
+  get invTxnId(): TransactionId { return this.props.invTxnId; }
+  get variantId(): string { return this.props.variantId; }
+  get locationId(): string { return this.props.locationId; }
+  get qtyDelta(): number { return this.props.qtyDelta; }
+  get reason(): TransactionReasonVO { return this.props.reason; }
+  get referenceId(): string | undefined { return this.props.referenceId; }
+  get createdAt(): Date { return this.props.createdAt; }
+
+  // ── Business Logic ─────────────────────────────────────────────────
+
+  isIncrease(): boolean { return this.props.qtyDelta > 0; }
+  isDecrease(): boolean { return this.props.qtyDelta < 0; }
+
+  equals(other: InventoryTransaction): boolean {
+    return this.props.invTxnId.equals(other.props.invTxnId);
   }
 
-  getVariantId(): string {
-    return this.props.variantId;
-  }
+  // ── Serialisation ──────────────────────────────────────────────────
 
-  getLocationId(): string {
-    return this.props.locationId;
-  }
-
-  getQtyDelta(): number {
-    return this.props.qtyDelta;
-  }
-
-  getReason(): TransactionReasonVO {
-    return this.props.reason;
-  }
-
-  getReferenceId(): string | undefined {
-    return this.props.referenceId;
-  }
-
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-
-  isIncrease(): boolean {
-    return this.props.qtyDelta > 0;
-  }
-
-  isDecrease(): boolean {
-    return this.props.qtyDelta < 0;
-  }
-
-  toJSON() {
+  static toDTO(entity: InventoryTransaction): InventoryTransactionDTO {
     return {
-      invTxnId: this.props.invTxnId.getValue(),
-      variantId: this.props.variantId,
-      locationId: this.props.locationId,
-      qtyDelta: this.props.qtyDelta,
-      reason: this.props.reason.getValue(),
-      referenceId: this.props.referenceId,
-      createdAt: this.props.createdAt,
+      invTxnId: entity.props.invTxnId.getValue(),
+      variantId: entity.props.variantId,
+      locationId: entity.props.locationId,
+      qtyDelta: entity.props.qtyDelta,
+      reason: entity.props.reason.getValue(),
+      referenceId: entity.props.referenceId,
+      createdAt: entity.props.createdAt,
     };
   }
 }

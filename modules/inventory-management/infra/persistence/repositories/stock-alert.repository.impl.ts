@@ -18,8 +18,8 @@ interface StockAlertDatabaseRow {
 export class StockAlertRepositoryImpl implements IStockAlertRepository {
   constructor(private readonly prisma: PrismaClient) {}
   private toEntity(row: StockAlertDatabaseRow): StockAlert {
-    return StockAlert.reconstitute({
-      alertId: AlertId.create(row.alertId),
+    return StockAlert.fromPersistence({
+      alertId: AlertId.fromString(row.alertId),
       variantId: row.variantId,
       type: AlertTypeVO.create(row.type),
       triggeredAt: row.triggeredAt,
@@ -29,18 +29,18 @@ export class StockAlertRepositoryImpl implements IStockAlertRepository {
 
   async save(alert: StockAlert): Promise<void> {
     await (this.prisma as any).stockAlert.upsert({
-      where: { alertId: alert.getAlertId().getValue() },
+      where: { alertId: alert.alertId.getValue() },
       create: {
-        alertId: alert.getAlertId().getValue(),
-        variantId: alert.getVariantId(),
-        type: alert.getType().getValue(),
-        triggeredAt: alert.getTriggeredAt(),
-        resolvedAt: alert.getResolvedAt(),
+        alertId: alert.alertId.getValue(),
+        variantId: alert.variantId,
+        type: alert.type.getValue(),
+        triggeredAt: alert.triggeredAt,
+        resolvedAt: alert.resolvedAt,
       },
       update: {
-        type: alert.getType().getValue(),
-        triggeredAt: alert.getTriggeredAt(),
-        resolvedAt: alert.getResolvedAt(),
+        type: alert.type.getValue(),
+        triggeredAt: alert.triggeredAt,
+        resolvedAt: alert.resolvedAt,
       },
     });
   }

@@ -1,78 +1,55 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  GetTransactionsByVariantQuery,
   GetTransactionsByVariantHandler,
-  ListTransactionsQuery,
   ListTransactionsHandler,
-  GetTransactionQuery,
   GetTransactionHandler,
 } from "../../../application";
 import { StockManagementService } from "../../../application/services/stock-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface TransactionsByVariantQuerystring {
-  locationId?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface ListTransactionsQuerystring {
-  variantId?: string;
-  locationId?: string;
-  limit?: number;
-  offset?: number;
-}
 
 export class InventoryTransactionController {
   private getTransactionsByVariantHandler: GetTransactionsByVariantHandler;
   private listTransactionsHandler: ListTransactionsHandler;
   private getTransactionHandler: GetTransactionHandler;
 
-  constructor(private readonly stockService: StockManagementService) {
-    this.getTransactionsByVariantHandler = new GetTransactionsByVariantHandler(
-      stockService,
-    );
+  constructor(stockService: StockManagementService) {
+    this.getTransactionsByVariantHandler = new GetTransactionsByVariantHandler(stockService);
     this.listTransactionsHandler = new ListTransactionsHandler(stockService);
     this.getTransactionHandler = new GetTransactionHandler(stockService);
   }
 
   async getTransaction(
-    request: FastifyRequest<{ Params: { transactionId: string } }>,
+    request: AuthenticatedRequest<{
+      Params: { transactionId: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const { transactionId } = request.params;
-      const query: GetTransactionQuery = { transactionId };
-      const result = await this.getTransactionHandler.handle(query);
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Transaction retrieved",
-        "Transaction not found",
-      );
+      const result = await this.getTransactionHandler.handle({ transactionId });
+      return ResponseHelper.fromQuery(reply, result, "Transaction retrieved", "Transaction not found");
     } catch (error) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getTransactionsByVariant(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { variantId: string };
-      Querystring: TransactionsByVariantQuerystring;
+      Querystring: { locationId?: string; limit?: number; offset?: number };
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { variantId } = request.params;
-      const queryParams = request.query;
-      const query: GetTransactionsByVariantQuery = {
+      const { locationId, limit, offset } = request.query;
+      const result = await this.getTransactionsByVariantHandler.handle({
         variantId,
-        locationId: queryParams.locationId,
-        limit: queryParams.limit ? Number(queryParams.limit) : undefined,
-        offset: queryParams.offset ? Number(queryParams.offset) : undefined,
-      };
-
-      const result = await this.getTransactionsByVariantHandler.handle(query);
+        locationId,
+        limit: limit ? Number(limit) : undefined,
+        offset: offset ? Number(offset) : undefined,
+      });
       return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
     } catch (error) {
       return ResponseHelper.error(reply, error);
@@ -80,19 +57,19 @@ export class InventoryTransactionController {
   }
 
   async listTransactions(
-    request: FastifyRequest<{ Querystring: ListTransactionsQuerystring }>,
+    request: AuthenticatedRequest<{
+      Querystring: { variantId?: string; locationId?: string; limit?: number; offset?: number };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const queryParams = request.query;
-      const query: ListTransactionsQuery = {
-        variantId: queryParams.variantId,
-        locationId: queryParams.locationId,
-        limit: queryParams.limit ? Number(queryParams.limit) : undefined,
-        offset: queryParams.offset ? Number(queryParams.offset) : undefined,
-      };
-
-      const result = await this.listTransactionsHandler.handle(query);
+      const { variantId, locationId, limit, offset } = request.query;
+      const result = await this.listTransactionsHandler.handle({
+        variantId,
+        locationId,
+        limit: limit ? Number(limit) : undefined,
+        offset: offset ? Number(offset) : undefined,
+      });
       return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
     } catch (error) {
       return ResponseHelper.error(reply, error);
