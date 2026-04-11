@@ -1,140 +1,49 @@
 import { FastifyInstance } from "fastify";
-import { ProductController, ProductQueryParams, CreateProductRequest, UpdateProductRequest } from "../controllers/product.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { ProductController } from "../controllers/product.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
+import {
+  listProductsSchema,
+  createProductSchema,
+  updateProductSchema,
+  productParamsSchema,
+  productSlugParamsSchema,
+  productResponseSchema,
+  paginatedProductsResponseSchema,
+} from "../validation/product.schema";
 
 export async function registerProductRoutes(
   fastify: FastifyInstance,
   controller: ProductController,
 ): Promise<void> {
   // GET /products — List products (public)
-  fastify.get<{ Querystring: ProductQueryParams }>(
+  fastify.get(
     "/products",
     {
+      preHandler: [validateQuery(listProductsSchema)],
       schema: {
         description: "Get paginated list of products with filtering options",
         tags: ["Products"],
         summary: "List Products",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            status: {
-              type: "string",
-              enum: ["draft", "published", "scheduled", "archived"],
-            },
-            categoryId: { type: "string", format: "uuid" },
-            brand: { type: "string" },
-            includeDrafts: { type: "boolean", default: false },
-            sortBy: {
-              type: "string",
-              enum: ["title", "createdAt", "updatedAt", "publishAt"],
-              default: "createdAt",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
-          },
-        },
-        response: {
-          200: {
-            description: "List of products with pagination",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  products: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        productId: { type: "string", format: "uuid" },
-                        title: { type: "string" },
-                        slug: { type: "string" },
-                        brand: { type: "string", nullable: true },
-                        shortDesc: { type: "string", nullable: true },
-                        status: {
-                          type: "string",
-                          enum: ["draft", "published", "scheduled", "archived"],
-                        },
-                        longDescHtml: { type: "string", nullable: true },
-                        countryOfOrigin: { type: "string", nullable: true },
-                        seoTitle: { type: "string", nullable: true },
-                        seoDescription: { type: "string", nullable: true },
-                        publishAt: {
-                          type: "string",
-                          format: "date-time",
-                          nullable: true,
-                        },
-                        price: { type: "number" },
-                        priceSgd: { type: "number", nullable: true },
-                        priceUsd: { type: "number", nullable: true },
-                        compareAtPrice: { type: "number", nullable: true },
-                        createdAt: { type: "string", format: "date-time" },
-                        updatedAt: { type: "string", format: "date-time" },
-                        variants: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              id: { type: "string" },
-                              sku: { type: "string" },
-                              size: { type: "string", nullable: true },
-                              color: { type: "string", nullable: true },
-                              inventory: { type: "integer" },
-                            },
-                          },
-                        },
-                        images: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              url: { type: "string" },
-                              alt: { type: "string", nullable: true },
-                              width: { type: "integer", nullable: true },
-                              height: { type: "integer", nullable: true },
-                            },
-                          },
-                        },
-                        categories: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              id: { type: "string" },
-                              name: { type: "string" },
-                              slug: { type: "string" },
-                              position: { type: "integer", nullable: true },
-                            },
-                          },
-                        },
-                      },
-                    },
-                  },
-                  total: { type: "integer" },
-                  page: { type: "integer" },
-                  limit: { type: "integer" },
-                },
-              },
-            },
-          },
-        },
+        response: { 200: paginatedProductsResponseSchema },
       },
     },
-    controller.listProducts.bind(controller),
+    (request, reply) =>
+      controller.listProducts(request as AuthenticatedRequest, reply),
   );
 
-  // GET /products/slug/:slug — Get by slug (public, registered before /:productId to avoid conflict)
+  // GET /products/slug/:slug — Get by slug (registered before /:productId)
   fastify.get(
     "/products/slug/:slug",
     {
+      preValidation: [validateParams(productSlugParamsSchema)],
       schema: {
-        description: "Get product by slug with full details",
+        description: "Get product by slug",
         tags: ["Products"],
         summary: "Get Product by Slug",
         params: {
@@ -144,98 +53,26 @@ export async function registerProductRoutes(
         },
         response: {
           200: {
-            description: "Product details",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  productId: { type: "string", format: "uuid" },
-                  title: { type: "string" },
-                  slug: { type: "string" },
-                  brand: { type: "string", nullable: true },
-                  shortDesc: { type: "string", nullable: true },
-                  longDescHtml: { type: "string", nullable: true },
-                  status: {
-                    type: "string",
-                    enum: ["draft", "published", "scheduled", "archived"],
-                  },
-                  publishAt: {
-                    type: "string",
-                    format: "date-time",
-                    nullable: true,
-                  },
-                  countryOfOrigin: { type: "string", nullable: true },
-                  seoTitle: { type: "string", nullable: true },
-                  seoDescription: { type: "string", nullable: true },
-                  price: { type: "number" },
-                  priceSgd: { type: "number", nullable: true },
-                  priceUsd: { type: "number", nullable: true },
-                  compareAtPrice: { type: "number", nullable: true },
-                  createdAt: { type: "string", format: "date-time" },
-                  updatedAt: { type: "string", format: "date-time" },
-                  images: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        url: { type: "string" },
-                        alt: { type: "string" },
-                        width: { type: "number" },
-                        height: { type: "number" },
-                      },
-                    },
-                  },
-                  variants: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        id: { type: "string" },
-                        sku: { type: "string" },
-                        size: { type: "string", nullable: true },
-                        color: { type: "string", nullable: true },
-                        inventory: { type: "number" },
-                      },
-                    },
-                  },
-                  categories: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        id: { type: "string" },
-                        name: { type: "string" },
-                        slug: { type: "string" },
-                        position: { type: "number" },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          404: {
-            description: "Product not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Product not found" },
+              success: { type: "boolean" },
+              data: productResponseSchema,
             },
           },
         },
       },
     },
-    controller.getProductBySlug.bind(controller),
+    (request, reply) =>
+      controller.getProductBySlug(request as AuthenticatedRequest, reply),
   );
 
   // GET /products/:productId — Get by ID (public)
   fastify.get(
     "/products/:productId",
     {
+      preValidation: [validateParams(productParamsSchema)],
       schema: {
-        description: "Get product by ID with full details",
+        description: "Get product by ID",
         tags: ["Products"],
         summary: "Get Product by ID",
         params: {
@@ -245,69 +82,27 @@ export async function registerProductRoutes(
         },
         response: {
           200: {
-            description: "Product details",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  productId: { type: "string", format: "uuid" },
-                  title: { type: "string" },
-                  slug: { type: "string" },
-                  brand: { type: "string", nullable: true },
-                  shortDesc: { type: "string", nullable: true },
-                  longDescHtml: { type: "string", nullable: true },
-                  status: {
-                    type: "string",
-                    enum: ["draft", "published", "scheduled", "archived"],
-                  },
-                  publishAt: {
-                    type: "string",
-                    format: "date-time",
-                    nullable: true,
-                  },
-                  countryOfOrigin: { type: "string", nullable: true },
-                  seoTitle: { type: "string", nullable: true },
-                  seoDescription: { type: "string", nullable: true },
-                  createdAt: { type: "string", format: "date-time" },
-                  updatedAt: { type: "string", format: "date-time" },
-                  images: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        url: { type: "string" },
-                        alt: { type: "string", nullable: true },
-                        width: { type: "integer", nullable: true },
-                        height: { type: "integer", nullable: true },
-                      },
-                    },
-                  },
-                  media: { type: "array", items: { type: "object" } },
-                },
-              },
-            },
-          },
-          404: {
-            description: "Product not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Product not found" },
+              success: { type: "boolean" },
+              data: productResponseSchema,
             },
           },
         },
       },
     },
-    controller.getProduct.bind(controller),
+    (request, reply) =>
+      controller.getProduct(request as AuthenticatedRequest, reply),
   );
 
   // POST /products — Create product (Admin only)
-  fastify.post<{ Body: CreateProductRequest }>(
+  fastify.post(
     "/products",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [
+        validateBody(createProductSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Create a new product",
         tags: ["Products"],
@@ -317,90 +112,53 @@ export async function registerProductRoutes(
           type: "object",
           required: ["title"],
           properties: {
-            title: { type: "string", description: "Product title" },
-            brand: { type: "string", description: "Product brand" },
-            shortDesc: { type: "string", description: "Short description" },
-            longDescHtml: {
-              type: "string",
-              description: "Long description in HTML",
-            },
+            title: { type: "string" },
+            brand: { type: "string" },
+            shortDesc: { type: "string" },
+            longDescHtml: { type: "string" },
             status: {
               type: "string",
               enum: ["draft", "published", "scheduled"],
-              default: "draft",
             },
-            publishAt: {
-              type: "string",
-              format: "date-time",
-              description: "Publish date for scheduled products",
-            },
-            countryOfOrigin: {
-              type: "string",
-              description: "Country of origin",
-            },
-            seoTitle: { type: "string", description: "SEO title" },
-            seoDescription: { type: "string", description: "SEO description" },
-            price: { type: "number", minimum: 0, description: "Price in LKR" },
-            priceSgd: {
-              type: "number",
-              minimum: 0,
-              description: "Price in SGD",
-            },
-            priceUsd: {
-              type: "number",
-              minimum: 0,
-              description: "Price in USD",
-            },
-            compareAtPrice: {
-              type: "number",
-              minimum: 0,
-              description: "Compare-at price in LKR",
-            },
+            publishAt: { type: "string", format: "date-time" },
+            countryOfOrigin: { type: "string" },
+            seoTitle: { type: "string" },
+            seoDescription: { type: "string" },
+            price: { type: "number" },
+            priceSgd: { type: "number" },
+            priceUsd: { type: "number" },
+            compareAtPrice: { type: "number" },
             categoryIds: {
               type: "array",
               items: { type: "string", format: "uuid" },
-              description: "Category IDs",
             },
+            tags: { type: "array", items: { type: "string" } },
           },
         },
         response: {
           201: {
-            description: "Product created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  productId: { type: "string", format: "uuid" },
-                  title: { type: "string" },
-                  slug: { type: "string" },
-                  status: { type: "string" },
-                  createdAt: { type: "string", format: "date-time" },
-                },
-              },
-            },
-          },
-          400: {
-            description: "Validation error",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-              errors: { type: "array", items: { type: "string" } },
+              success: { type: "boolean" },
+              data: productResponseSchema,
             },
           },
         },
       },
     },
-    controller.createProduct.bind(controller),
+    (request, reply) =>
+      controller.createProduct(request as AuthenticatedRequest, reply),
   );
 
   // PUT /products/:productId — Update product (Admin only)
-  fastify.put<{ Params: { productId: string }; Body: UpdateProductRequest }>(
+  fastify.put(
     "/products/:productId",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(productParamsSchema)],
+      preHandler: [
+        validateBody(updateProductSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Update an existing product",
         tags: ["Products"],
@@ -420,16 +178,16 @@ export async function registerProductRoutes(
             longDescHtml: { type: "string" },
             status: {
               type: "string",
-              enum: ["draft", "published", "scheduled", "archived"],
+              enum: ["draft", "published", "scheduled"],
             },
             publishAt: { type: "string", format: "date-time" },
             countryOfOrigin: { type: "string" },
             seoTitle: { type: "string" },
             seoDescription: { type: "string" },
-            price: { type: "number", minimum: 0 },
-            priceSgd: { type: "number", minimum: 0, nullable: true },
-            priceUsd: { type: "number", minimum: 0, nullable: true },
-            compareAtPrice: { type: "number", minimum: 0, nullable: true },
+            price: { type: "number" },
+            priceSgd: { type: "number" },
+            priceUsd: { type: "number" },
+            compareAtPrice: { type: "number" },
             categoryIds: {
               type: "array",
               items: { type: "string", format: "uuid" },
@@ -439,29 +197,24 @@ export async function registerProductRoutes(
         },
         response: {
           200: {
-            description: "Product updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  productId: { type: "string", format: "uuid" },
-                  updatedAt: { type: "string", format: "date-time" },
-                },
-              },
+              success: { type: "boolean" },
+              data: productResponseSchema,
             },
           },
         },
       },
     },
-    controller.updateProduct.bind(controller),
+    (request, reply) =>
+      controller.updateProduct(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /products/:productId — Delete product (Admin only)
-  fastify.delete<{ Params: { productId: string } }>(
+  fastify.delete(
     "/products/:productId",
     {
+      preValidation: [validateParams(productParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a product",
@@ -474,20 +227,14 @@ export async function registerProductRoutes(
           properties: { productId: { type: "string", format: "uuid" } },
         },
         response: {
-          200: {
+          204: {
             description: "Product deleted successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: {
-                type: "string",
-                example: "Product deleted successfully",
-              },
-            },
+            type: "null",
           },
         },
       },
     },
-    controller.deleteProduct.bind(controller),
+    (request, reply) =>
+      controller.deleteProduct(request as AuthenticatedRequest, reply),
   );
 }

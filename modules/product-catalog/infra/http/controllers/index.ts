@@ -8,3 +8,4 @@ export { ProductTagController } from "./product-tag.controller";
 export { SizeGuideController } from "./size-guide.controller";
 export { EditorialLookController } from "./editorial-look.controller";
 export { ProductMediaController } from "./product-media.controller";
+export { VariantMediaController } from "./variant-media.controller";

@@ -1,91 +1,65 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { SupplierController } from "../controllers/supplier.controller";
 import {
-  SupplierController,
-  CreateSupplierBody,
-  UpdateSupplierBody,
-  ListSuppliersQuerystring,
-} from "../controllers/supplier.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
+import {
+  supplierParamsSchema,
+  listSuppliersSchema,
+  createSupplierSchema,
+  updateSupplierSchema,
+  supplierResponseSchema,
+} from "../validation/supplier.schema";
 
 export async function registerSupplierRoutes(
   fastify: FastifyInstance,
   controller: SupplierController,
 ): Promise<void> {
   // List suppliers
-  fastify.get<{ Querystring: ListSuppliersQuerystring }>(
+  fastify.get(
     "/suppliers",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [
+        authenticate,
+        RolePermissions.STAFF_LEVEL,
+        validateQuery(listSuppliersSchema),
+      ],
       schema: {
         description: "List all suppliers (Staff/Admin only)",
         tags: ["Suppliers"],
         summary: "List Suppliers",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
         response: {
-          200: { description: "List of suppliers" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  suppliers: { type: "array", items: supplierResponseSchema },
+                  total: { type: "integer" },
+                },
+              },
+            },
+          },
         },
       },
     },
-    controller.listSuppliers.bind(controller),
+    (request, reply) =>
+      controller.listSuppliers(request as AuthenticatedRequest, reply),
   );
 
   // Get supplier
-  fastify.get<{ Params: { supplierId: string } }>(
+  fastify.get(
     "/suppliers/:supplierId",
     {
+      preValidation: [validateParams(supplierParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get supplier by ID (Staff/Admin only)",
@@ -100,19 +74,29 @@ export async function registerSupplierRoutes(
           required: ["supplierId"],
         },
         response: {
-          200: { description: "Supplier details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: supplierResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getSupplier.bind(controller),
+    (request, reply) =>
+      controller.getSupplier(request as AuthenticatedRequest, reply),
   );
 
   // Create supplier
-  fastify.post<{ Body: CreateSupplierBody }>(
+  fastify.post(
     "/suppliers",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [
+        authenticate,
+        RolePermissions.ADMIN_ONLY,
+        validateBody(createSupplierSchema),
+      ],
       schema: {
         description: "Create a new supplier",
         tags: ["Suppliers"],
@@ -122,7 +106,7 @@ export async function registerSupplierRoutes(
           type: "object",
           required: ["name"],
           properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
+            name: { type: "string", minLength: 2, maxLength: 128 },
             leadTimeDays: { type: "integer", minimum: 0 },
             contacts: {
               type: "array",
@@ -138,19 +122,30 @@ export async function registerSupplierRoutes(
           },
         },
         response: {
-          201: { description: "Supplier created successfully" },
-          ...errorResponses,
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: supplierResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.createSupplier.bind(controller),
+    (request, reply) =>
+      controller.createSupplier(request as AuthenticatedRequest, reply),
   );
 
   // Update supplier
-  fastify.put<{ Params: { supplierId: string }; Body: UpdateSupplierBody }>(
+  fastify.put(
     "/suppliers/:supplierId",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(supplierParamsSchema)],
+      preHandler: [
+        authenticate,
+        RolePermissions.ADMIN_ONLY,
+        validateBody(updateSupplierSchema),
+      ],
       schema: {
         description: "Update supplier",
         tags: ["Suppliers"],
@@ -166,24 +161,31 @@ export async function registerSupplierRoutes(
         body: {
           type: "object",
           properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
+            name: { type: "string", minLength: 2, maxLength: 128 },
             leadTimeDays: { type: "integer", minimum: 0 },
             contacts: { type: "array" },
           },
         },
         response: {
-          200: { description: "Supplier updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: supplierResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.updateSupplier.bind(controller),
+    (request, reply) =>
+      controller.updateSupplier(request as AuthenticatedRequest, reply),
   );
 
   // Delete supplier
-  fastify.delete<{ Params: { supplierId: string } }>(
+  fastify.delete(
     "/suppliers/:supplierId",
     {
+      preValidation: [validateParams(supplierParamsSchema)],
       preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete supplier",
@@ -198,11 +200,11 @@ export async function registerSupplierRoutes(
           required: ["supplierId"],
         },
         response: {
-          200: { description: "Supplier deleted successfully" },
-          ...errorResponses,
+          204: { description: "Supplier deleted successfully", type: "null" },
         },
       },
     },
-    controller.deleteSupplier.bind(controller),
+    (request, reply) =>
+      controller.deleteSupplier(request as AuthenticatedRequest, reply),
   );
 }

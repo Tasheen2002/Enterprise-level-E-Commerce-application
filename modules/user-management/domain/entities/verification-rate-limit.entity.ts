@@ -1,4 +1,3 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { VerificationType } from '../enums/verification-type.enum';
 
 export interface VerificationRateLimitProps {
@@ -12,13 +11,19 @@ export interface VerificationRateLimitProps {
   resetAt: Date;
 }
 
-export class VerificationRateLimit extends AggregateRoot {
-  private props: VerificationRateLimitProps;
+export interface VerificationRateLimitDTO {
+  rateLimitId: string;
+  userId: string | null;
+  email: string | null;
+  phone: string | null;
+  type: VerificationType;
+  attempts: number;
+  lastAttemptAt: string;
+  resetAt: string;
+}
 
-  private constructor(props: VerificationRateLimitProps) {
-    super();
-    this.props = props;
-  }
+export class VerificationRateLimit {
+  private constructor(private props: VerificationRateLimitProps) {}
 
   static create(params: {
     userId?: string | null;
@@ -27,8 +32,6 @@ export class VerificationRateLimit extends AggregateRoot {
     type: VerificationType;
     resetAt: Date;
   }): VerificationRateLimit {
-    const now = new Date();
-
     return new VerificationRateLimit({
       rateLimitId: crypto.randomUUID(),
       userId: params.userId || null,
@@ -36,46 +39,23 @@ export class VerificationRateLimit extends AggregateRoot {
       phone: params.phone || null,
       type: params.type,
       attempts: 1,
-      lastAttemptAt: now,
+      lastAttemptAt: new Date(),
       resetAt: params.resetAt,
     });
   }
 
-  static reconstitute(props: VerificationRateLimitProps): VerificationRateLimit {
+  static fromPersistence(props: VerificationRateLimitProps): VerificationRateLimit {
     return new VerificationRateLimit(props);
   }
 
-  get rateLimitId(): string {
-    return this.props.rateLimitId;
-  }
-
-  get userId(): string | null {
-    return this.props.userId;
-  }
-
-  get email(): string | null {
-    return this.props.email;
-  }
-
-  get phone(): string | null {
-    return this.props.phone;
-  }
-
-  get type(): VerificationType {
-    return this.props.type;
-  }
-
-  get attempts(): number {
-    return this.props.attempts;
-  }
-
-  get lastAttemptAt(): Date {
-    return this.props.lastAttemptAt;
-  }
-
-  get resetAt(): Date {
-    return this.props.resetAt;
-  }
+  get rateLimitId(): string { return this.props.rateLimitId; }
+  get userId(): string | null { return this.props.userId; }
+  get email(): string | null { return this.props.email; }
+  get phone(): string | null { return this.props.phone; }
+  get type(): VerificationType { return this.props.type; }
+  get attempts(): number { return this.props.attempts; }
+  get lastAttemptAt(): Date { return this.props.lastAttemptAt; }
+  get resetAt(): Date { return this.props.resetAt; }
 
   isExpired(): boolean {
     return new Date() > this.props.resetAt;
@@ -84,5 +64,18 @@ export class VerificationRateLimit extends AggregateRoot {
   incrementAttempts(): void {
     this.props.attempts++;
     this.props.lastAttemptAt = new Date();
+  }
+
+  static toDTO(rateLimit: VerificationRateLimit): VerificationRateLimitDTO {
+    return {
+      rateLimitId: rateLimit.rateLimitId,
+      userId: rateLimit.userId,
+      email: rateLimit.email,
+      phone: rateLimit.phone,
+      type: rateLimit.type,
+      attempts: rateLimit.attempts,
+      lastAttemptAt: rateLimit.lastAttemptAt.toISOString(),
+      resetAt: rateLimit.resetAt.toISOString(),
+    };
   }
 }

@@ -21,7 +21,7 @@ export class SocialLoginRepository
     const data = this.toPersistence(socialLogin);
 
     await this.prisma.socialLogin.upsert({
-      where: { id: socialLogin.getId() },
+      where: { id: socialLogin.id.getValue() },
       create: data.create,
       update: data.update,
     });
@@ -99,21 +99,21 @@ export class SocialLoginRepository
   } {
     return {
       create: {
-        id: socialLogin.getId(),
-        userId: socialLogin.getUserId().getValue(),
-        provider: socialLogin.getProvider().toString(),
-        providerUserId: socialLogin.getProviderUserId(),
-        createdAt: socialLogin.getCreatedAt(),
+        id: socialLogin.id.getValue(),
+        userId: socialLogin.userId.getValue(),
+        provider: socialLogin.provider.toString(),
+        providerUserId: socialLogin.providerUserId,
+        createdAt: socialLogin.createdAt,
       },
       update: {
-        provider: socialLogin.getProvider().toString(),
-        providerUserId: socialLogin.getProviderUserId(),
+        provider: socialLogin.provider.toString(),
+        providerUserId: socialLogin.providerUserId,
       },
     };
   }
 
   private toDomain(row: any): SocialLogin {
-    return SocialLogin.reconstitute({
+    return SocialLogin.fromPersistence({
       id: row.id,
       userId: UserId.fromString(row.userId),
       provider: SocialProvider.fromString(row.provider),

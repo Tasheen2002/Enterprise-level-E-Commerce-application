@@ -1,136 +1,151 @@
-import { DomainValidationError } from "../errors";
-import { ProductTagId } from "../value-objects/product-tag-id.vo";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { DomainValidationError } from '../errors';
+import { ProductTagId } from '../value-objects/product-tag-id.vo';
 
 export { ProductTagId };
 
-export class ProductTag {
-  private constructor(
-    private readonly id: ProductTagId,
-    private tag: string,
-    private kind: string | null,
-  ) {}
+// Domain Events
+export class TagCreatedEvent extends DomainEvent {
+  constructor(public readonly tagId: string, public readonly tag: string) {
+    super(tagId, 'ProductTag');
+  }
+  get eventType(): string { return 'tag.created'; }
+  getPayload(): Record<string, unknown> { return { tagId: this.tagId, tag: this.tag }; }
+}
 
-  static create(data: CreateProductTagData): ProductTag {
+export class TagUpdatedEvent extends DomainEvent {
+  constructor(public readonly tagId: string) {
+    super(tagId, 'ProductTag');
+  }
+  get eventType(): string { return 'tag.updated'; }
+  getPayload(): Record<string, unknown> { return { tagId: this.tagId }; }
+}
+
+export class TagDeletedEvent extends DomainEvent {
+  constructor(public readonly tagId: string) {
+    super(tagId, 'ProductTag');
+  }
+  get eventType(): string { return 'tag.deleted'; }
+  getPayload(): Record<string, unknown> { return { tagId: this.tagId }; }
+}
+
+export interface ProductTagProps {
+  id: ProductTagId;
+  tag: string;
+  kind: string | null;
+}
+
+export class ProductTag extends AggregateRoot {
+  private props: ProductTagProps;
+
+  private constructor(props: ProductTagProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: { tag: string; kind?: string }): ProductTag {
     const tagId = ProductTagId.create();
 
-    return new ProductTag(tagId, data.tag, data.kind || null);
+    const productTag = new ProductTag({
+      id: tagId,
+      tag: params.tag,
+      kind: params.kind || null,
+    });
+
+    productTag.addDomainEvent(new TagCreatedEvent(tagId.getValue(), params.tag));
+
+    return productTag;
   }
 
-  static reconstitute(data: ProductTagData): ProductTag {
-    return new ProductTag(
-      ProductTagId.fromString(data.id),
-      data.tag,
-      data.kind,
-    );
-  }
-
-  static fromDatabaseRow(row: ProductTagRow): ProductTag {
-    return new ProductTag(
-      ProductTagId.fromString(row.tag_id),
-      row.tag,
-      row.kind,
-    );
+  static fromPersistence(props: ProductTagProps): ProductTag {
+    return new ProductTag(props);
   }
 
   // Getters
-  getId(): ProductTagId {
-    return this.id;
+  get id(): ProductTagId {
+    return this.props.id;
   }
 
-  getTag(): string {
-    return this.tag;
+  get tag(): string {
+    return this.props.tag;
   }
 
-  getKind(): string | null {
-    return this.kind;
+  get kind(): string | null {
+    return this.props.kind;
   }
 
   // Business logic methods
   updateTag(newTag: string): void {
     if (!newTag || newTag.trim().length === 0) {
-      throw new DomainValidationError("Tag cannot be empty");
+      throw new DomainValidationError('Tag cannot be empty');
     }
 
     if (newTag.trim().length > 100) {
-      throw new DomainValidationError("Tag cannot be longer than 100 characters");
+      throw new DomainValidationError('Tag cannot be longer than 100 characters');
     }
 
-    this.tag = newTag.trim();
+    this.props.tag = newTag.trim();
+    this.addDomainEvent(new TagUpdatedEvent(this.props.id.getValue()));
   }
 
   updateKind(newKind: string | null): void {
     if (newKind && newKind.trim().length > 50) {
-      throw new DomainValidationError("Kind cannot be longer than 50 characters");
+      throw new DomainValidationError('Kind cannot be longer than 50 characters');
     }
 
-    this.kind = newKind?.trim() || null;
+    this.props.kind = newKind?.trim() || null;
+    this.addDomainEvent(new TagUpdatedEvent(this.props.id.getValue()));
   }
 
   // Validation methods
   isCategory(): boolean {
-    return this.kind === "category";
+    return this.props.kind === 'category';
   }
 
   isBrand(): boolean {
-    return this.kind === "brand";
+    return this.props.kind === 'brand';
   }
 
   isColor(): boolean {
-    return this.kind === "color";
+    return this.props.kind === 'color';
   }
 
   isMaterial(): boolean {
-    return this.kind === "material";
+    return this.props.kind === 'material';
   }
 
   isSize(): boolean {
-    return this.kind === "size";
+    return this.props.kind === 'size';
   }
 
   isStyle(): boolean {
-    return this.kind === "style";
+    return this.props.kind === 'style';
   }
 
   isGeneral(): boolean {
-    return this.kind === null || this.kind === "general";
+    return this.props.kind === null || this.props.kind === 'general';
   }
 
-  // Convert to data for persistence
-  toData(): ProductTagData {
-    return {
-      id: this.id.getValue(),
-      tag: this.tag,
-      kind: this.kind,
-    };
-  }
-
-  toDatabaseRow(): ProductTagRow {
-    return {
-      tag_id: this.id.getValue(),
-      tag: this.tag,
-      kind: this.kind,
-    };
+  markAsDeleted(): void {
+    this.addDomainEvent(new TagDeletedEvent(this.props.id.getValue()));
   }
 
   equals(other: ProductTag): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(entity: ProductTag): ProductTagDTO {
+    return {
+      id: entity.props.id.getValue(),
+      tag: entity.props.tag,
+      kind: entity.props.kind,
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateProductTagData {
-  tag: string;
-  kind?: string;
-}
-
-export interface ProductTagData {
+export interface ProductTagDTO {
   id: string;
-  tag: string;
-  kind: string | null;
-}
-
-export interface ProductTagRow {
-  tag_id: string;
   tag: string;
   kind: string | null;
 }

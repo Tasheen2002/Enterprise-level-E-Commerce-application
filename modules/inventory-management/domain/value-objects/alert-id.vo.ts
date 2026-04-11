@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
 
 export class AlertId extends UuidId {
@@ -5,8 +6,12 @@ export class AlertId extends UuidId {
     super(value, "Alert ID");
   }
 
-  static create(value: string): AlertId {
-    return new AlertId(value);
+  static create(): AlertId {
+    return new AlertId(randomUUID());
+  }
+
+  static fromString(id: string): AlertId {
+    return new AlertId(id);
   }
 
   equals(other: AlertId | null | undefined): boolean {

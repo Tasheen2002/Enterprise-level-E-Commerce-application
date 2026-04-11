@@ -1,83 +1,111 @@
-import { CategoryId } from "../value-objects/category-id.vo";
-import { Slug } from "../value-objects/slug.vo";
-import { DomainValidationError, InvalidOperationError } from "../errors";
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { CategoryId } from '../value-objects/category-id.vo';
+import { Slug } from '../value-objects/slug.vo';
+import { DomainValidationError, InvalidOperationError } from '../errors';
 
-export class Category {
-  private constructor(
-    private readonly id: CategoryId,
-    private name: string,
-    private slug: Slug,
-    private parentId: CategoryId | null,
-    private position: number | null,
-  ) {}
+// Domain Events
+export class CategoryCreatedEvent extends DomainEvent {
+  constructor(public readonly categoryId: string, public readonly name: string) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.created'; }
+  getPayload(): Record<string, unknown> { return { categoryId: this.categoryId, name: this.name }; }
+}
 
-  static create(data: CreateCategoryData): Category {
+export class CategoryUpdatedEvent extends DomainEvent {
+  constructor(public readonly categoryId: string) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.updated'; }
+  getPayload(): Record<string, unknown> { return { categoryId: this.categoryId }; }
+}
+
+export class CategoryDeletedEvent extends DomainEvent {
+  constructor(public readonly categoryId: string) {
+    super(categoryId, 'Category');
+  }
+  get eventType(): string { return 'category.deleted'; }
+  getPayload(): Record<string, unknown> { return { categoryId: this.categoryId }; }
+}
+
+export interface CategoryProps {
+  id: CategoryId;
+  name: string;
+  slug: Slug;
+  parentId: CategoryId | null;
+  position: number | null;
+}
+
+export class Category extends AggregateRoot {
+  private props: CategoryProps;
+
+  private constructor(props: CategoryProps) {
+    super();
+    this.props = props;
+  }
+
+  static create(params: {
+    name: string;
+    parentId?: string;
+    position?: number;
+  }): Category {
     const categoryId = CategoryId.create();
-    const slug = Slug.create(data.name);
+    const slug = Slug.create(params.name);
 
-    return new Category(
-      categoryId,
-      data.name,
+    const category = new Category({
+      id: categoryId,
+      name: params.name,
       slug,
-      data.parentId ? CategoryId.fromString(data.parentId) : null,
-      data.position || null,
-    );
+      parentId: params.parentId ? CategoryId.fromString(params.parentId) : null,
+      position: params.position || null,
+    });
+
+    category.addDomainEvent(new CategoryCreatedEvent(categoryId.getValue(), params.name));
+
+    return category;
   }
 
-  static reconstitute(data: CategoryData): Category {
-    return new Category(
-      CategoryId.fromString(data.id),
-      data.name,
-      Slug.fromString(data.slug),
-      data.parentId ? CategoryId.fromString(data.parentId) : null,
-      data.position,
-    );
-  }
-
-  static fromDatabaseRow(row: CategoryRow): Category {
-    return new Category(
-      CategoryId.fromString(row.category_id),
-      row.name,
-      Slug.fromString(row.slug),
-      row.parent_id ? CategoryId.fromString(row.parent_id) : null,
-      row.position,
-    );
+  static fromPersistence(props: CategoryProps): Category {
+    return new Category(props);
   }
 
   // Getters
-  getId(): CategoryId {
-    return this.id;
+  get id(): CategoryId {
+    return this.props.id;
   }
 
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this.props.name;
   }
 
-  getSlug(): Slug {
-    return this.slug;
+  get slug(): Slug {
+    return this.props.slug;
   }
 
-  getParentId(): CategoryId | null {
-    return this.parentId;
+  get parentId(): CategoryId | null {
+    return this.props.parentId;
   }
 
-  getPosition(): number | null {
-    return this.position;
+  get position(): number | null {
+    return this.props.position;
   }
 
   // Business logic methods
   updateName(newName: string): void {
     if (!newName || newName.trim().length === 0) {
-      throw new DomainValidationError("Category name cannot be empty");
+      throw new DomainValidationError('Category name cannot be empty');
     }
 
-    this.name = newName.trim();
-    this.slug = Slug.create(newName);
+    this.props.name = newName.trim();
+    this.props.slug = Slug.create(newName);
+    this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
   updateSlug(newSlug: string): void {
     const slug = Slug.fromString(newSlug);
-    this.slug = slug;
+    this.props.slug = slug;
+    this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
   moveToParent(parentId: string | null): void {
@@ -85,81 +113,61 @@ export class Category {
       const newParentId = CategoryId.fromString(parentId);
 
       // Prevent self-referencing
-      if (this.id.equals(newParentId)) {
-        throw new InvalidOperationError("Category cannot be its own parent");
+      if (this.props.id.equals(newParentId)) {
+        throw new InvalidOperationError('Category cannot be its own parent');
       }
 
-      this.parentId = newParentId;
+      this.props.parentId = newParentId;
     } else {
-      this.parentId = null;
+      this.props.parentId = null;
     }
+    this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
   updatePosition(newPosition: number | null): void {
     if (newPosition !== null && newPosition < 0) {
-      throw new DomainValidationError("Position cannot be negative");
+      throw new DomainValidationError('Position cannot be negative');
     }
-    this.position = newPosition;
+    this.props.position = newPosition;
+    this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
   // Validation methods
   isRootCategory(): boolean {
-    return this.parentId === null;
+    return this.props.parentId === null;
   }
 
   hasParent(): boolean {
-    return this.parentId !== null;
+    return this.props.parentId !== null;
   }
 
   isChildOf(categoryId: CategoryId): boolean {
-    return this.parentId !== null && this.parentId.equals(categoryId);
+    return this.props.parentId !== null && this.props.parentId.equals(categoryId);
   }
 
-  // Convert to data for persistence
-  toData(): CategoryData {
-    return {
-      id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug.getValue(),
-      parentId: this.parentId?.getValue() || null,
-      position: this.position,
-    };
-  }
-
-  toDatabaseRow(): CategoryRow {
-    return {
-      category_id: this.id.getValue(),
-      name: this.name,
-      slug: this.slug.getValue(),
-      parent_id: this.parentId?.getValue() || null,
-      position: this.position,
-    };
+  markAsDeleted(): void {
+    this.addDomainEvent(new CategoryDeletedEvent(this.props.id.getValue()));
   }
 
   equals(other: Category): boolean {
-    return this.id.equals(other.id);
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(entity: Category): CategoryDTO {
+    return {
+      id: entity.props.id.getValue(),
+      name: entity.props.name,
+      slug: entity.props.slug.getValue(),
+      parentId: entity.props.parentId?.getValue() || null,
+      position: entity.props.position,
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateCategoryData {
-  name: string;
-  parentId?: string;
-  position?: number;
-}
-
-export interface CategoryData {
+export interface CategoryDTO {
   id: string;
   name: string;
   slug: string;
   parentId: string | null;
-  position: number | null;
-}
-
-export interface CategoryRow {
-  category_id: string;
-  name: string;
-  slug: string;
-  parent_id: string | null;
   position: number | null;
 }

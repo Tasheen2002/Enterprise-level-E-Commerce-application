@@ -2,7 +2,7 @@ import {
   EditorialLook,
   EditorialLookId,
 } from "../entities/editorial-look.entity";
-import { MediaAssetId } from "../entities/media-asset.entity";
+import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
 export interface IEditorialLookRepository {
   save(look: EditorialLook): Promise<void>;

@@ -184,12 +184,12 @@ export class PaymentMethodService {
     await this.paymentMethodRepository.delete(paymentMethodIdVo);
 
     // If this was the default payment method, set another as default
-    if (paymentMethod.getIsDefault()) {
+    if (paymentMethod.isDefault) {
       const remainingMethods =
         await this.paymentMethodRepository.findByUserId(userIdVo);
       if (remainingMethods.length > 0) {
         await this.paymentMethodRepository.setAsDefault(
-          remainingMethods[0].getId(),
+          remainingMethods[0].id,
           userIdVo,
         );
       }
@@ -287,7 +287,7 @@ export class PaymentMethodService {
 
     // Check if card is expired
     if (
-      paymentMethod.getType() === PaymentMethodType.CARD &&
+      paymentMethod.type === PaymentMethodType.CARD &&
       paymentMethod.isExpired()
     ) {
       errors.push("Payment method has expired");
@@ -295,16 +295,16 @@ export class PaymentMethodService {
 
     // Check if card expires soon
     if (
-      paymentMethod.getType() === PaymentMethodType.CARD &&
+      paymentMethod.type === PaymentMethodType.CARD &&
       paymentMethod.isExpiringSoon()
     ) {
       warnings.push("Payment method expires soon");
     }
 
     // Validate billing address if present
-    if (paymentMethod.getBillingAddressId()) {
+    if (paymentMethod.billingAddressId) {
       const address = await this.addressRepository.findById(
-        AddressId.fromString(paymentMethod.getBillingAddressId()!),
+        AddressId.fromString(paymentMethod.billingAddressId),
       );
       if (!address) {
         errors.push("Billing address not found");
@@ -346,16 +346,16 @@ export class PaymentMethodService {
 
     for (const method of paymentMethods) {
       // Count by type
-      const type = method.getType();
+      const type = method.type;
       stats.byType[type] = (stats.byType[type] || 0) + 1;
 
       // Check if default
-      if (method.getIsDefault()) {
+      if (method.isDefault) {
         stats.hasDefault = true;
       }
 
       // Count expired and expiring cards
-      if (method.getType() === PaymentMethodType.CARD) {
+      if (method.type === PaymentMethodType.CARD) {
         if (method.isExpired()) {
           stats.expired++;
         } else if (method.isExpiringSoon()) {

@@ -1,129 +1,55 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { authenticate } from "@/api/src/shared/middleware";
 import { RolePermissions } from "@/api/src/shared/middleware";
+import { StockController } from "../controllers/stock.controller";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
-  StockController,
-  ListStocksQuerystring,
-  GetStockParams,
-  VariantParams,
-  AddStockBody,
-  AdjustStockBody,
-  TransferStockBody,
-  ReserveStockBody,
-  FulfillReservationBody,
-  SetStockThresholdsBody,
-} from "../controllers/stock.controller";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+  listStocksSchema,
+  addStockSchema,
+  adjustStockSchema,
+  transferStockSchema,
+  reserveStockSchema,
+  fulfillReservationSchema,
+  setStockThresholdsSchema,
+  stockParamsSchema,
+  variantParamsSchema,
+  stockResponseSchema,
+  stockStatsResponseSchema,
+} from "../validation/stock.schema";
 
 export async function registerStockRoutes(
   fastify: FastifyInstance,
   controller: StockController,
 ): Promise<void> {
   // List stocks
-  fastify.get<{ Querystring: ListStocksQuerystring }>(
+  fastify.get(
     "/stocks",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listStocksSchema)],
       schema: {
         description: "List all stocks with pagination (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "List Stocks",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            offset: { type: "integer", minimum: 0, default: 0 },
-            search: {
-              type: "string",
-              description: "Search by product name, SKU, or brand",
-            },
-            status: {
-              type: "string",
-              enum: ["low_stock", "out_of_stock", "in_stock"],
-              description: "Filter by stock status",
-            },
-            locationId: {
-              type: "string",
-              description: "Filter by location ID",
-            },
-            sortBy: {
-              type: "string",
-              enum: ["available", "onHand", "location", "product"],
-              default: "product",
-              description: "Sort by field",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "asc",
-              description: "Sort order",
-            },
-          },
-        },
         response: {
           200: {
-            description: "List of stocks",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
               data: {
                 type: "object",
                 properties: {
-                  stocks: { type: "array" },
+                  stocks: { type: "array", items: stockResponseSchema },
                   total: { type: "integer" },
                 },
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.listStocks.bind(controller),
+    (request, reply) => controller.listStocks(request as AuthenticatedRequest, reply),
   );
 
   // Get stock stats
@@ -138,26 +64,16 @@ export async function registerStockRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            description: "Inventory statistics",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  totalItems: { type: "integer" },
-                  lowStockCount: { type: "integer" },
-                  outOfStockCount: { type: "integer" },
-                  totalValue: { type: "number" },
-                },
-              },
+              success: { type: "boolean" },
+              data: stockStatsResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.getStats.bind(controller),
+    (request, reply) => controller.getStats(request as AuthenticatedRequest, reply),
   );
 
   // Get low stock items
@@ -171,12 +87,17 @@ export async function registerStockRoutes(
         summary: "Get Low Stock Items",
         security: [{ bearerAuth: [] }],
         response: {
-          200: { description: "Low stock items" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: stockResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getLowStockItems.bind(controller),
+    (request, reply) => controller.getLowStockItems(request as AuthenticatedRequest, reply),
   );
 
   // Get out of stock items
@@ -190,22 +111,27 @@ export async function registerStockRoutes(
         summary: "Get Out Of Stock Items",
         security: [{ bearerAuth: [] }],
         response: {
-          200: { description: "Out of stock items" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: stockResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getOutOfStockItems.bind(controller),
+    (request, reply) => controller.getOutOfStockItems(request as AuthenticatedRequest, reply),
   );
 
   // Get stock by variant and location
-  fastify.get<{ Params: GetStockParams }>(
+  fastify.get(
     "/stocks/:variantId/:locationId",
     {
+      preValidation: [validateParams(stockParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Get stock for a specific variant at a location (Staff/Admin only)",
+        description: "Get stock for a specific variant at a location (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Stock",
         security: [{ bearerAuth: [] }],
@@ -218,224 +144,196 @@ export async function registerStockRoutes(
           required: ["variantId", "locationId"],
         },
         response: {
-          200: { description: "Stock details" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getStock.bind(controller),
+    (request, reply) => controller.getStock(request as AuthenticatedRequest, reply),
   );
 
   // Get stock by variant (all locations)
-  fastify.get<{ Params: VariantParams }>(
+  fastify.get(
     "/stocks/:variantId",
     {
+      preValidation: [validateParams(variantParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Get stock for a variant across all locations (Staff/Admin only)",
+        description: "Get stock for a variant across all locations (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Stock By Variant",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-          },
+          properties: { variantId: { type: "string", format: "uuid" } },
           required: ["variantId"],
         },
         response: {
-          200: { description: "Stock across all locations" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: stockResponseSchema },
+            },
+          },
         },
       },
     },
-    controller.getStockByVariant.bind(controller),
+    (request, reply) => controller.getStockByVariant(request as AuthenticatedRequest, reply),
   );
 
   // Get total available stock
-  fastify.get<{ Params: VariantParams }>(
+  fastify.get(
     "/stocks/:variantId/total",
     {
+      preValidation: [validateParams(variantParamsSchema)],
       preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Get total available stock for a variant (Staff/Admin only)",
+        description: "Get total available stock for a variant (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Total Available Stock",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-          },
+          properties: { variantId: { type: "string", format: "uuid" } },
           required: ["variantId"],
         },
         response: {
-          200: { description: "Total available stock" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "object", properties: { total: { type: "integer" } } },
+            },
+          },
         },
       },
     },
-    controller.getTotalAvailableStock.bind(controller),
+    (request, reply) => controller.getTotalAvailableStock(request as AuthenticatedRequest, reply),
   );
 
   // Add stock
-  fastify.post<{ Body: AddStockBody }>(
+  fastify.post(
     "/stocks/add",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(addStockSchema)],
       schema: {
         description: "Add stock to inventory",
         tags: ["Stock Management"],
         summary: "Add Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity", "reason"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-            reason: {
-              type: "string",
-              enum: ["return", "adjustment", "po"],
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockResponseSchema,
             },
           },
         },
-        response: {
-          201: { description: "Stock added successfully" },
-          ...errorResponses,
-        },
       },
     },
-    controller.addStock.bind(controller),
+    (request, reply) => controller.addStock(request as AuthenticatedRequest, reply),
   );
 
   // Adjust stock
-  fastify.post<{ Body: AdjustStockBody }>(
+  fastify.post(
     "/stocks/adjust",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(adjustStockSchema)],
       schema: {
         description: "Adjust stock quantity (positive or negative)",
         tags: ["Stock Management"],
         summary: "Adjust Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantityDelta", "reason"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantityDelta: { type: "integer" },
-            reason: {
-              type: "string",
-              minLength: 2,
-              maxLength: 64,
-              description: "Reason for adjustment (custom text allowed)",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockResponseSchema,
             },
           },
         },
-        response: {
-          200: { description: "Stock adjusted successfully" },
-          ...errorResponses,
-        },
       },
     },
-    controller.adjustStock.bind(controller),
+    (request, reply) => controller.adjustStock(request as AuthenticatedRequest, reply),
   );
 
   // Transfer stock
-  fastify.post<{ Body: TransferStockBody }>(
+  fastify.post(
     "/stocks/transfer",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(transferStockSchema)],
       schema: {
         description: "Transfer stock between locations",
         tags: ["Stock Management"],
         summary: "Transfer Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "fromLocationId", "toLocationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            fromLocationId: { type: "string", format: "uuid" },
-            toLocationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
         response: {
-          200: { description: "Stock transferred successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: { success: { type: "boolean" } },
+          },
         },
       },
     },
-    controller.transferStock.bind(controller),
+    (request, reply) => controller.transferStock(request as AuthenticatedRequest, reply),
   );
 
   // Reserve stock
-  fastify.post<{ Body: ReserveStockBody }>(
+  fastify.post(
     "/stocks/reserve",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(reserveStockSchema)],
       schema: {
         description: "Reserve stock for an order",
         tags: ["Stock Management"],
         summary: "Reserve Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
         response: {
-          200: { description: "Stock reserved successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: { success: { type: "boolean" } },
+          },
         },
       },
     },
-    controller.reserveStock.bind(controller),
+    (request, reply) => controller.reserveStock(request as AuthenticatedRequest, reply),
   );
 
   // Fulfill reservation
-  fastify.post<{ Body: FulfillReservationBody }>(
+  fastify.post(
     "/stocks/fulfill",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(fulfillReservationSchema)],
       schema: {
         description: "Fulfill stock reservation (removes from inventory)",
         tags: ["Stock Management"],
         summary: "Fulfill Reservation",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
         response: {
-          200: { description: "Reservation fulfilled successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: { success: { type: "boolean" } },
+          },
         },
       },
     },
-    controller.fulfillReservation.bind(controller),
+    (request, reply) => controller.fulfillReservation(request as AuthenticatedRequest, reply),
   );
 
   // Set stock thresholds
-  fastify.put<{ Params: GetStockParams; Body: SetStockThresholdsBody }>(
+  fastify.put(
     "/stocks/:variantId/:locationId/thresholds",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(stockParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(setStockThresholdsSchema)],
       schema: {
         description: "Set low stock and safety stock thresholds",
         tags: ["Stock Management"],
@@ -449,19 +347,17 @@ export async function registerStockRoutes(
           },
           required: ["variantId", "locationId"],
         },
-        body: {
-          type: "object",
-          properties: {
-            lowStockThreshold: { type: "integer", minimum: 0 },
-            safetyStock: { type: "integer", minimum: 0 },
-          },
-        },
         response: {
-          200: { description: "Thresholds updated successfully" },
-          ...errorResponses,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: stockResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.setStockThresholds.bind(controller),
+    (request, reply) => controller.setStockThresholds(request as AuthenticatedRequest, reply),
   );
 }

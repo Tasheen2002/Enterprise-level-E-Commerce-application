@@ -1,14 +1,14 @@
-import { ProductMedia, ProductMediaId } from "../entities/product-media.entity";
+import { ProductMedia } from "../entities/product-media.entity";
 import { ProductId } from "../value-objects/product-id.vo";
 import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
 export interface IProductMediaRepository {
   // Basic CRUD operations
   save(productMedia: ProductMedia): Promise<void>;
-  findById(id: ProductMediaId): Promise<ProductMedia | null>;
+  findById(id: string): Promise<ProductMedia | null>;
   update(productMedia: ProductMedia): Promise<void>;
-  delete(id: ProductMediaId): Promise<void>;
-  exists(id: ProductMediaId): Promise<boolean>;
+  delete(id: string): Promise<void>;
+  exists(id: string): Promise<boolean>;
 
   // Association management
   addMediaToProduct(
@@ -16,7 +16,7 @@ export interface IProductMediaRepository {
     assetId: MediaAssetId,
     position?: number,
     isCover?: boolean,
-  ): Promise<ProductMediaId>;
+  ): Promise<string>;
   removeMediaFromProduct(
     productId: ProductId,
     assetId: MediaAssetId,

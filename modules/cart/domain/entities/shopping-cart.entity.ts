@@ -1,19 +1,156 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { CartId } from "../value-objects/cart-id.vo";
 import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
 import { Currency } from "../value-objects/currency.vo";
 import {
   CartItem,
+  CartItemDTO,
   CreateCartItemData,
   CartItemEntityData,
 } from "./cart-item.entity";
-import { VariantId } from "../value-objects/variant-id.vo";
 import {
   DomainValidationError,
   CartItemNotFoundError,
   InvalidOperationError,
 } from "../errors";
 import { CART_RESERVATION_DEFAULT_EXTENSION_HOURS } from "../constants";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class CartCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly currency: string,
+    public readonly isGuestCart: boolean,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      cartId: this.cartId,
+      currency: this.currency,
+      isGuestCart: this.isGuestCart,
+    };
+  }
+}
+
+export class CartItemAddedEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly variantId: string,
+    public readonly quantity: number,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.item_added";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      cartId: this.cartId,
+      variantId: this.variantId,
+      quantity: this.quantity,
+    };
+  }
+}
+
+export class CartItemRemovedEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly variantId: string,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.item_removed";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId, variantId: this.variantId };
+  }
+}
+
+export class CartItemQuantityChangedEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly cartItemId: string,
+    public readonly variantId: string,
+    public readonly newQuantity: number,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.item_quantity_changed";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      cartId: this.cartId,
+      cartItemId: this.cartItemId,
+      variantId: this.variantId,
+      newQuantity: this.newQuantity,
+    };
+  }
+}
+
+export class CartClearedEvent extends DomainEvent {
+  constructor(public readonly cartId: string) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.cleared";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId };
+  }
+}
+
+export class CartTransferredToUserEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly userId: string,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.transferred_to_user";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId, userId: this.userId };
+  }
+}
+
+// ============================================================================
+// Props & Data Interfaces
+// ============================================================================
+
+export interface ShoppingCartProps {
+  cartId: CartId;
+  userId: CartOwnerId | null;
+  guestToken: GuestToken | null;
+  currency: Currency;
+  items: CartItem[];
+  reservationExpiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface CreateShoppingCartData {
   userId?: string;
@@ -33,205 +170,271 @@ export interface ShoppingCartEntityData {
   items: CartItemEntityData[];
 }
 
-export class ShoppingCart {
-  private constructor(
-    private readonly cartId: CartId,
-    private readonly userId: CartOwnerId | null,
-    private readonly guestToken: GuestToken | null,
-    private currency: Currency,
-    private items: CartItem[],
-    private reservationExpiresAt: Date | null,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
-  ) {
-    // Business rule: Cart must belong to either user or guest, not both
-    if (userId && guestToken) {
-      throw new DomainValidationError("Cart cannot belong to both user and guest");
+// ============================================================================
+// DTO
+// ============================================================================
+
+export interface ShoppingCartDTO {
+  cartId: string;
+  userId?: string;
+  guestToken?: string;
+  currency: string;
+  items: CartItemDTO[];
+  reservationExpiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  isUserCart: boolean;
+  isGuestCart: boolean;
+  isEmpty: boolean;
+  itemCount: number;
+  uniqueItemCount: number;
+  subtotal: number;
+  totalDiscount: number;
+  total: number;
+  hasGiftItems: boolean;
+  hasFreeShipping: boolean;
+  isReservationExpired: boolean;
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class ShoppingCart extends AggregateRoot {
+  private constructor(private props: ShoppingCartProps) {
+    super();
+    if (props.userId && props.guestToken) {
+      throw new DomainValidationError(
+        "Cart cannot belong to both user and guest",
+      );
     }
-    if (!userId && !guestToken) {
-      throw new DomainValidationError("Cart must belong to either user or guest");
+    if (!props.userId && !props.guestToken) {
+      throw new DomainValidationError(
+        "Cart must belong to either user or guest",
+      );
     }
   }
 
-  // Factory methods
   static createForUser(
     data: CreateShoppingCartData & { userId: string },
   ): ShoppingCart {
     const cartId = CartId.create();
-    const userId = CartOwnerId.fromString(data.userId);
-    const currency = Currency.fromString(data.currency);
     const now = new Date();
 
-    return new ShoppingCart(
+    const cart = new ShoppingCart({
       cartId,
-      userId,
-      null,
-      currency,
-      [],
-      data.reservationExpiresAt || null,
-      now,
-      now,
+      userId: CartOwnerId.fromString(data.userId),
+      guestToken: null,
+      currency: Currency.fromString(data.currency),
+      items: [],
+      reservationExpiresAt: data.reservationExpiresAt || null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    cart.addDomainEvent(
+      new CartCreatedEvent(cartId.getValue(), data.currency, false),
     );
+    return cart;
   }
 
   static createForGuest(
     data: CreateShoppingCartData & { guestToken: string },
   ): ShoppingCart {
     const cartId = CartId.create();
-    const guestToken = GuestToken.fromString(data.guestToken);
-    const currency = Currency.fromString(data.currency);
     const now = new Date();
 
-    return new ShoppingCart(
+    const cart = new ShoppingCart({
       cartId,
-      null,
-      guestToken,
-      currency,
-      [],
-      data.reservationExpiresAt || null,
-      now,
-      now,
+      userId: null,
+      guestToken: GuestToken.fromString(data.guestToken),
+      currency: Currency.fromString(data.currency),
+      items: [],
+      reservationExpiresAt: data.reservationExpiresAt || null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    cart.addDomainEvent(
+      new CartCreatedEvent(cartId.getValue(), data.currency, true),
     );
+    return cart;
   }
 
   static reconstitute(data: ShoppingCartEntityData): ShoppingCart {
-    const cartId = CartId.fromString(data.cartId);
-    const userId = data.userId ? CartOwnerId.fromString(data.userId) : null;
-    const guestToken = data.guestToken
-      ? GuestToken.fromString(data.guestToken)
-      : null;
-    const currency = Currency.fromString(data.currency);
-    const items = data.items.map((itemData) => CartItem.reconstitute(itemData));
+    return new ShoppingCart({
+      cartId: CartId.fromString(data.cartId),
+      userId: data.userId ? CartOwnerId.fromString(data.userId) : null,
+      guestToken: data.guestToken
+        ? GuestToken.fromString(data.guestToken)
+        : null,
+      currency: Currency.fromString(data.currency),
+      items: data.items.map((itemData) => CartItem.reconstitute(itemData)),
+      reservationExpiresAt: data.reservationExpiresAt || null,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    });
+  }
 
-    return new ShoppingCart(
-      cartId,
-      userId,
-      guestToken,
-      currency,
-      items,
-      data.reservationExpiresAt || null,
-      data.createdAt,
-      data.updatedAt,
-    );
+  static toDTO(cart: ShoppingCart): ShoppingCartDTO {
+    return {
+      cartId: cart.props.cartId.getValue(),
+      userId: cart.props.userId?.getValue(),
+      guestToken: cart.props.guestToken?.getValue(),
+      currency: cart.props.currency.getValue(),
+      items: cart.props.items.map((item) => CartItem.toDTO(item)),
+      reservationExpiresAt: cart.props.reservationExpiresAt?.toISOString(),
+      createdAt: cart.props.createdAt.toISOString(),
+      updatedAt: cart.props.updatedAt.toISOString(),
+      isUserCart: cart.isUserCart,
+      isGuestCart: cart.isGuestCart,
+      isEmpty: cart.isEmpty,
+      itemCount: cart.itemCount,
+      uniqueItemCount: cart.uniqueItemCount,
+      subtotal: cart.subtotal,
+      totalDiscount: cart.totalDiscount,
+      total: cart.total,
+      hasGiftItems: cart.hasGiftItems,
+      hasFreeShipping: cart.hasFreeShipping,
+      isReservationExpired: cart.isReservationExpired,
+    };
   }
 
   // Getters
-  getCartId(): CartId {
-    return this.cartId;
+  get cartId(): CartId {
+    return this.props.cartId;
   }
 
-  getCartOwnerId(): CartOwnerId | null {
-    return this.userId;
+  get cartOwnerId(): CartOwnerId | null {
+    return this.props.userId;
   }
 
-  getGuestToken(): GuestToken | null {
-    return this.guestToken;
+  get guestToken(): GuestToken | null {
+    return this.props.guestToken;
   }
 
-  getCurrency(): Currency {
-    return this.currency;
+  get currency(): Currency {
+    return this.props.currency;
   }
 
-  getItems(): CartItem[] {
-    return [...this.items];
+  get items(): CartItem[] {
+    return [...this.props.items];
   }
 
-  getReservationExpiresAt(): Date | null {
-    return this.reservationExpiresAt;
+  get reservationExpiresAt(): Date | null {
+    return this.props.reservationExpiresAt;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
   }
 
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Cart type identification
-  isUserCart(): boolean {
-    return this.userId !== null;
+  get isUserCart(): boolean {
+    return this.props.userId !== null;
   }
 
-  isGuestCart(): boolean {
-    return this.guestToken !== null;
+  get isGuestCart(): boolean {
+    return this.props.guestToken !== null;
   }
 
-  // Cart state methods
-  isEmpty(): boolean {
-    return this.items.length === 0;
+  // Cart state
+  get isEmpty(): boolean {
+    return this.props.items.length === 0;
   }
 
-  getItemCount(): number {
-    return this.items.reduce(
-      (total, item) => total + item.getQuantity().getValue(),
+  get itemCount(): number {
+    return this.props.items.reduce(
+      (total, item) => total + item.quantity.getValue(),
       0,
     );
   }
 
-  getUniqueItemCount(): number {
-    return this.items.length;
+  get uniqueItemCount(): number {
+    return this.props.items.length;
   }
 
   // Item management
   addItem(itemData: Omit<CreateCartItemData, "cartId">): void {
-    const createData: CreateCartItemData = {
-      ...itemData,
-      cartId: this.cartId.getValue(),
-    };
-
     const existingItem = this.findItemByVariantId(itemData.variantId);
 
     if (existingItem) {
-      // Update existing item quantity
-      const newQuantity =
-        existingItem.getQuantity().getValue() + itemData.quantity;
+      const newQuantity = existingItem.quantity.getValue() + itemData.quantity;
       existingItem.updateQuantity(newQuantity);
+      this.addDomainEvent(
+        new CartItemQuantityChangedEvent(
+          this.props.cartId.getValue(),
+          existingItem.id,
+          itemData.variantId,
+          newQuantity,
+        ),
+      );
     } else {
-      // Add new item
-      const newItem = CartItem.create(createData);
-      this.items.push(newItem);
+      const newItem = CartItem.create({
+        ...itemData,
+        cartId: this.props.cartId.getValue(),
+      });
+      this.props.items.push(newItem);
     }
 
+    this.addDomainEvent(
+      new CartItemAddedEvent(
+        this.props.cartId.getValue(),
+        itemData.variantId,
+        itemData.quantity,
+      ),
+    );
     this.touch();
   }
 
   updateItemQuantity(variantId: string, quantity: number): void {
     const item = this.findItemByVariantId(variantId);
-    if (!item) {
-      throw new CartItemNotFoundError(variantId);
-    }
+    if (!item) throw new CartItemNotFoundError(variantId);
 
     if (quantity <= 0) {
       this.removeItem(variantId);
     } else {
       item.updateQuantity(quantity);
+      this.addDomainEvent(
+        new CartItemQuantityChangedEvent(
+          this.props.cartId.getValue(),
+          item.id,
+          variantId,
+          quantity,
+        ),
+      );
       this.touch();
     }
   }
 
   removeItem(variantId: string): void {
-    const itemIndex = this.items.findIndex(
-      (item) => item.getVariantId().getValue() === variantId,
+    const itemIndex = this.props.items.findIndex(
+      (item) => item.variantId.getValue() === variantId,
     );
 
-    if (itemIndex === -1) {
-      throw new CartItemNotFoundError(variantId);
-    }
+    if (itemIndex === -1) throw new CartItemNotFoundError(variantId);
 
-    this.items.splice(itemIndex, 1);
+    this.props.items.splice(itemIndex, 1);
+    this.addDomainEvent(
+      new CartItemRemovedEvent(this.props.cartId.getValue(), variantId),
+    );
     this.touch();
   }
 
   clearItems(): void {
-    this.items = [];
+    this.props.items = [];
+    this.addDomainEvent(new CartClearedEvent(this.props.cartId.getValue()));
     this.touch();
   }
 
   // Item lookup
   findItemByVariantId(variantId: string): CartItem | undefined {
-    return this.items.find(
-      (item) => item.getVariantId().getValue() === variantId,
+    return this.props.items.find(
+      (item) => item.variantId.getValue() === variantId,
     );
   }
 
@@ -240,164 +443,146 @@ export class ShoppingCart {
   }
 
   // Price calculations
-  getSubtotal(): number {
-    return this.items.reduce((total, item) => total + item.getSubtotal(), 0);
+  get subtotal(): number {
+    return this.props.items.reduce((total, item) => total + item.subtotal, 0);
   }
 
-  getTotalDiscount(): number {
-    return this.items.reduce(
-      (total, item) => total + item.getDiscountAmount(),
+  get totalDiscount(): number {
+    return this.props.items.reduce(
+      (total, item) => total + item.discountAmount,
       0,
     );
   }
 
-  getTotal(): number {
-    return this.items.reduce((total, item) => total + item.getTotalPrice(), 0);
+  get total(): number {
+    return this.props.items.reduce((total, item) => total + item.totalPrice, 0);
   }
 
-  // Shipping calculations
-  hasItemsWithFreeShipping(): boolean {
-    return this.items.some((item) => item.hasFreeShipping());
+  // Shipping
+  get hasFreeShipping(): boolean {
+    return this.props.items.some((item) => item.hasFreeShipping);
   }
 
-  getItemsRequiringShipping(): CartItem[] {
-    return this.items.filter((item) => !item.hasFreeShipping());
+  get itemsRequiringShipping(): CartItem[] {
+    return this.props.items.filter((item) => !item.hasFreeShipping);
   }
 
-  // Gift functionality
-  getGiftItems(): CartItem[] {
-    return this.items.filter((item) => item.isGiftItem());
+  // Gift
+  get giftItems(): CartItem[] {
+    return this.props.items.filter((item) => item.isGift);
   }
 
-  hasGiftItems(): boolean {
-    return this.getGiftItems().length > 0;
+  get hasGiftItems(): boolean {
+    return this.giftItems.length > 0;
   }
 
   // Currency management
   updateCurrency(newCurrency: string): void {
-    this.currency = Currency.fromString(newCurrency);
+    this.props.currency = Currency.fromString(newCurrency);
     this.touch();
   }
 
   // Reservation management
   updateReservationExpiry(expiresAt: Date | null): void {
-    this.reservationExpiresAt = expiresAt;
+    this.props.reservationExpiresAt = expiresAt;
     this.touch();
   }
 
-  isReservationExpired(): boolean {
-    if (!this.reservationExpiresAt) {
-      return false;
-    }
-    return new Date() > this.reservationExpiresAt;
+  get isReservationExpired(): boolean {
+    if (!this.props.reservationExpiresAt) return false;
+    return new Date() > this.props.reservationExpiresAt;
   }
 
-  extendReservation(hours: number = CART_RESERVATION_DEFAULT_EXTENSION_HOURS): void {
-    const now = new Date();
-    this.reservationExpiresAt = new Date(
-      now.getTime() + hours * 60 * 60 * 1000,
+  extendReservation(
+    hours: number = CART_RESERVATION_DEFAULT_EXTENSION_HOURS,
+  ): void {
+    this.props.reservationExpiresAt = new Date(
+      new Date().getTime() + hours * 60 * 60 * 1000,
     );
     this.touch();
   }
 
   // Cart ownership transfer (guest to user)
   transferToUser(userId: string): ShoppingCart {
-    if (this.isUserCart()) {
-      throw new InvalidOperationError("Cannot transfer user cart to another user");
+    if (this.isUserCart) {
+      throw new InvalidOperationError(
+        "Cannot transfer user cart to another user",
+      );
     }
 
     const newCartOwnerId = CartOwnerId.fromString(userId);
-    const transferredCart = new ShoppingCart(
-      this.cartId,
-      newCartOwnerId,
-      null,
-      this.currency,
-      this.items,
-      this.reservationExpiresAt,
-      this.createdAt,
-      new Date(),
+    const transferredCart = new ShoppingCart({
+      ...this.props,
+      userId: newCartOwnerId,
+      guestToken: null,
+      updatedAt: new Date(),
+    });
+
+    transferredCart.addDomainEvent(
+      new CartTransferredToUserEvent(this.props.cartId.getValue(), userId),
     );
 
     return transferredCart;
   }
 
-  // Merge carts (for guest-to-user scenarios)
+  // Merge carts (guest-to-user)
   mergeWith(otherCart: ShoppingCart): void {
-    if (!this.isUserCart()) {
+    if (!this.isUserCart) {
       throw new InvalidOperationError("Can only merge into user cart");
     }
 
-    for (const otherItem of otherCart.items) {
+    for (const otherItem of otherCart.props.items) {
       const existingItem = this.findItemByVariantId(
-        otherItem.getVariantId().getValue(),
+        otherItem.variantId.getValue(),
       );
 
       if (existingItem) {
-        // Merge quantities
         const combinedQuantity =
-          existingItem.getQuantity().getValue() +
-          otherItem.getQuantity().getValue();
+          existingItem.quantity.getValue() + otherItem.quantity.getValue();
         existingItem.updateQuantity(combinedQuantity);
+        this.addDomainEvent(
+          new CartItemQuantityChangedEvent(
+            this.props.cartId.getValue(),
+            existingItem.id,
+            otherItem.variantId.getValue(),
+            combinedQuantity,
+          ),
+        );
       } else {
-        // Add the item with new cart ID
-        const itemData: CreateCartItemData = {
-          cartId: this.cartId.getValue(),
-          variantId: otherItem.getVariantId().getValue(),
-          quantity: otherItem.getQuantity().getValue(),
-          unitPrice: otherItem.getUnitPrice(),
-          appliedPromos: otherItem.getAppliedPromos().getValue(),
-          isGift: otherItem.isGiftItem(),
-          giftMessage: otherItem.getGiftMessage(),
-        };
-
-        const newItem = CartItem.create(itemData);
-        this.items.push(newItem);
+        const newItem = CartItem.create({
+          cartId: this.props.cartId.getValue(),
+          variantId: otherItem.variantId.getValue(),
+          quantity: otherItem.quantity.getValue(),
+          unitPrice: otherItem.unitPrice,
+          appliedPromos: otherItem.appliedPromos.getValue(),
+          isGift: otherItem.isGift,
+          giftMessage: otherItem.giftMessage,
+        });
+        this.props.items.push(newItem);
       }
     }
 
     this.touch();
   }
 
-  // Utility methods
-  private touch(): void {
-    this.updatedAt = new Date();
-  }
-
   equals(other: ShoppingCart): boolean {
-    return this.cartId.equals(other.cartId);
+    return this.props.cartId.equals(other.props.cartId);
   }
 
   toSnapshot(): ShoppingCartEntityData {
     return {
-      cartId: this.cartId.getValue(),
-      userId: this.userId?.getValue(),
-      guestToken: this.guestToken?.getValue(),
-      currency: this.currency.getValue(),
-      reservationExpiresAt: this.reservationExpiresAt || undefined,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-      items: this.items.map((item) => item.toSnapshot()),
+      cartId: this.props.cartId.getValue(),
+      userId: this.props.userId?.getValue(),
+      guestToken: this.props.guestToken?.getValue(),
+      currency: this.props.currency.getValue(),
+      reservationExpiresAt: this.props.reservationExpiresAt || undefined,
+      createdAt: this.props.createdAt,
+      updatedAt: this.props.updatedAt,
+      items: this.props.items.map((item) => item.toSnapshot()),
     };
   }
 
-  // Summary for API responses
-  getSummary() {
-    return {
-      cartId: this.cartId.getValue(),
-      isUserCart: this.isUserCart(),
-      isGuestCart: this.isGuestCart(),
-      currency: this.currency.getValue(),
-      itemCount: this.getItemCount(),
-      uniqueItemCount: this.getUniqueItemCount(),
-      subtotal: this.getSubtotal(),
-      totalDiscount: this.getTotalDiscount(),
-      total: this.getTotal(),
-      hasGiftItems: this.hasGiftItems(),
-      hasFreeShipping: this.hasItemsWithFreeShipping(),
-      isEmpty: this.isEmpty(),
-      isReservationExpired: this.isReservationExpired(),
-      reservationExpiresAt: this.reservationExpiresAt,
-      updatedAt: this.updatedAt,
-    };
+  private touch(): void {
+    this.props.updatedAt = new Date();
   }
 }

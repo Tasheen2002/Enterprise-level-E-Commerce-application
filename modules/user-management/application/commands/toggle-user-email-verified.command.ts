@@ -1,7 +1,5 @@
-import { IUserRepository } from '../../domain/repositories/iuser.repository';
-import { UserId } from '../../domain/value-objects/user-id.vo';
-import { User, UserDTO } from '../../domain/entities/user.entity';
-import { UserNotFoundError } from '../../domain/errors/user-management.errors';
+import { UserService } from '../services/user.service';
+import { UserDTO } from '../../domain/entities/user.entity';
 import {
   ICommand,
   ICommandHandler,
@@ -18,21 +16,10 @@ export class ToggleUserEmailVerifiedHandler implements ICommandHandler<
   ToggleUserEmailVerifiedInput,
   CommandResult<UserDTO>
 > {
-  constructor(private readonly userRepository: IUserRepository) {}
+  constructor(private readonly userService: UserService) {}
 
-  async handle(
-    input: ToggleUserEmailVerifiedInput
-  ): Promise<CommandResult<UserDTO>> {
-    const userId = UserId.fromString(input.userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!user) {
-      throw new UserNotFoundError(input.userId);
-    }
-
-    user.setEmailVerified(input.isVerified);
-    await this.userRepository.save(user);
-
-    return CommandResult.success(User.toDTO(user));
+  async handle(input: ToggleUserEmailVerifiedInput): Promise<CommandResult<UserDTO>> {
+    const dto = await this.userService.toggleEmailVerified(input.userId, input.isVerified);
+    return CommandResult.success(dto);
   }
 }

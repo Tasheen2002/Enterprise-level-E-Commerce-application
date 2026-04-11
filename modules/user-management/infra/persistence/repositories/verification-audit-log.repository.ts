@@ -99,7 +99,7 @@ export class VerificationAuditLogRepository
   }
 
   private toDomain(row: any): VerificationAuditLog {
-    return VerificationAuditLog.reconstitute({
+    return VerificationAuditLog.fromPersistence({
       logId: row.log_id,
       userId: row.user_id,
       email: row.email,

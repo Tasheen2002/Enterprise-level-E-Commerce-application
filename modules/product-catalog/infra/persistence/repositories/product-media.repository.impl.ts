@@ -4,10 +4,7 @@ import {
   ProductMediaQueryOptions,
   ProductMediaCountOptions,
 } from "../../../domain/repositories/product-media.repository";
-import {
-  ProductMedia,
-  ProductMediaId,
-} from "../../../domain/entities/product-media.entity";
+import { ProductMedia } from "../../../domain/entities/product-media.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
 
@@ -19,59 +16,72 @@ export class ProductMediaRepository implements IProductMediaRepository {
     return (this.prisma as any).productMedia;
   }
 
-  async save(productMedia: ProductMedia): Promise<void> {
-    const data = productMedia.toDatabaseRow();
+  private hydrate(row: {
+    id: string;
+    productId: string;
+    assetId: string;
+    position: number | null;
+    isCover: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }): ProductMedia {
+    const now = new Date();
+    return ProductMedia.fromPersistence({
+      id: row.id,
+      productId: ProductId.fromString(row.productId),
+      mediaAssetId: MediaAssetId.fromString(row.assetId),
+      displayOrder: row.position ?? 0,
+      isPrimary: row.isCover,
+      alt: null,
+      caption: null,
+      createdAt: row.createdAt ?? now,
+      updatedAt: row.updatedAt ?? now,
+    });
+  }
 
+  async save(productMedia: ProductMedia): Promise<void> {
     await this.productMediaModel.create({
       data: {
-        id: data.product_media_id,
-        productId: data.product_id,
-        assetId: data.asset_id,
-        position: data.position,
-        isCover: data.is_cover,
+        id: productMedia.id,
+        productId: productMedia.productId.getValue(),
+        assetId: productMedia.mediaAssetId.getValue(),
+        position: productMedia.displayOrder,
+        isCover: productMedia.isPrimary,
       },
     });
   }
 
-  async findById(id: ProductMediaId): Promise<ProductMedia | null> {
+  async findById(id: string): Promise<ProductMedia | null> {
     const mediaData = await this.productMediaModel.findUnique({
-      where: { id: id.getValue() },
+      where: { id },
     });
 
     if (!mediaData) {
       return null;
     }
 
-    return ProductMedia.fromDatabaseRow({
-      product_media_id: mediaData.id,
-      product_id: mediaData.productId,
-      asset_id: mediaData.assetId,
-      position: mediaData.position,
-      is_cover: mediaData.isCover,
-    });
+    return this.hydrate(mediaData);
   }
 
   async update(productMedia: ProductMedia): Promise<void> {
-    const data = productMedia.toDatabaseRow();
-
     await this.productMediaModel.update({
-      where: { id: data.product_media_id },
+      where: { id: productMedia.id },
       data: {
-        position: data.position,
-        isCover: data.is_cover,
+        position: productMedia.displayOrder,
+        isCover: productMedia.isPrimary,
       },
     });
   }
 
-  async delete(id: ProductMediaId): Promise<void> {
+  async delete(id: string): Promise<void> {
     await this.productMediaModel.delete({
-      where: { id: id.getValue() },
+      where: { id },
     });
   }
 
-  async exists(id: ProductMediaId): Promise<boolean> {
+  async exists(id: string): Promise<boolean> {
     const count = await this.productMediaModel.count({
-      where: { id: id.getValue() },
+      where: { id },
     });
     return count > 0;
   }
@@ -81,12 +91,12 @@ export class ProductMediaRepository implements IProductMediaRepository {
     assetId: MediaAssetId,
     position?: number,
     isCover?: boolean,
-  ): Promise<ProductMediaId> {
-    const productMediaId = ProductMediaId.create();
+  ): Promise<string> {
+    const id = crypto.randomUUID();
 
     await this.productMediaModel.create({
       data: {
-        id: productMediaId.getValue(),
+        id,
         productId: productId.getValue(),
         assetId: assetId.getValue(),
         position: position || null,
@@ -94,7 +104,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       },
     });
 
-    return productMediaId;
+    return id;
   }
 
   async removeMediaFromProduct(
@@ -148,15 +158,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return mediaList.map((data: any) =>
-      ProductMedia.fromDatabaseRow({
-        product_media_id: data.id,
-        product_id: data.productId,
-        asset_id: data.assetId,
-        position: data.position,
-        is_cover: data.isCover,
-      }),
-    );
+    return mediaList.map((data: any) => this.hydrate(data));
   }
 
   async findByAssetId(assetId: MediaAssetId): Promise<ProductMedia[]> {
@@ -164,15 +166,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       where: { assetId: assetId.getValue() },
     });
 
-    return mediaList.map((data: any) =>
-      ProductMedia.fromDatabaseRow({
-        product_media_id: data.id,
-        product_id: data.productId,
-        asset_id: data.assetId,
-        position: data.position,
-        is_cover: data.isCover,
-      }),
-    );
+    return mediaList.map((data: any) => this.hydrate(data));
   }
 
   async findAssociation(
@@ -190,13 +184,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       return null;
     }
 
-    return ProductMedia.fromDatabaseRow({
-      product_media_id: mediaData.id,
-      product_id: mediaData.productId,
-      asset_id: mediaData.assetId,
-      position: mediaData.position,
-      is_cover: mediaData.isCover,
-    });
+    return this.hydrate(mediaData);
   }
 
   async findAll(options?: ProductMediaQueryOptions): Promise<ProductMedia[]> {
@@ -221,15 +209,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return mediaList.map((data: any) =>
-      ProductMedia.fromDatabaseRow({
-        product_media_id: data.id,
-        product_id: data.productId,
-        asset_id: data.assetId,
-        position: data.position,
-        is_cover: data.isCover,
-      }),
-    );
+    return mediaList.map((data: any) => this.hydrate(data));
   }
 
   async getProductCoverImage(
@@ -246,13 +226,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       return null;
     }
 
-    return ProductMedia.fromDatabaseRow({
-      product_media_id: mediaData.id,
-      product_id: mediaData.productId,
-      asset_id: mediaData.assetId,
-      position: mediaData.position,
-      is_cover: mediaData.isCover,
-    });
+    return this.hydrate(mediaData);
   }
 
   async setProductCoverImage(
@@ -366,7 +340,7 @@ export class ProductMediaRepository implements IProductMediaRepository {
       mediaData.map((data, index) =>
         this.productMediaModel.create({
           data: {
-            id: ProductMediaId.create().getValue(),
+            id: crypto.randomUUID(),
             productId: productId.getValue(),
             assetId: data.assetId.getValue(),
             position: data.position || index + 1,
@@ -387,11 +361,11 @@ export class ProductMediaRepository implements IProductMediaRepository {
       sourceMedia.map((media) =>
         this.productMediaModel.create({
           data: {
-            id: ProductMediaId.create().getValue(),
+            id: crypto.randomUUID(),
             productId: targetProductId.getValue(),
-            assetId: media.getAssetId().getValue(),
-            position: media.getPosition(),
-            isCover: media.getIsCover(),
+            assetId: media.mediaAssetId.getValue(),
+            position: media.displayOrder,
+            isCover: media.isPrimary,
           },
         }),
       ),

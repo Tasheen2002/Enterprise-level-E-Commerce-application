@@ -3,6 +3,12 @@ export {
   ProductQueryOptions,
   ProductSearchOptions,
   ProductCountOptions,
+  type EnrichedVariantData,
+  type EnrichedImageData,
+  type EnrichedMediaData,
+  type EnrichedCategoryData,
+  type ProductEnrichment,
+  type ProductMediaEnrichment,
 } from "./product.repository";
 export {
   IProductVariantRepository,
@@ -37,11 +43,6 @@ export {
 
 // Association repository interfaces
 export {
-  IProductCategoryRepository,
-  ProductCategoryQueryOptions,
-  ProductCategoryCountOptions,
-} from "./product-category.repository";
-export {
   IProductMediaRepository,
   ProductMediaQueryOptions,
   ProductMediaCountOptions,
@@ -51,13 +52,3 @@ export {
   VariantMediaQueryOptions,
   VariantMediaCountOptions,
 } from "./variant-media.repository";
-export {
-  IProductTagAssociationRepository,
-  ProductTagAssociationQueryOptions,
-  ProductTagAssociationCountOptions,
-} from "./product-tag-association.repository";
-export {
-  IEditorialLookProductRepository,
-  EditorialLookProductQueryOptions,
-  EditorialLookProductCountOptions,
-} from "./editorial-look-product.repository";

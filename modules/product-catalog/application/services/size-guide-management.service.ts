@@ -5,10 +5,12 @@ import {
 } from "../../domain/repositories/size-guide.repository";
 import {
   SizeGuide,
+  SizeGuideDTO,
   SizeGuideId,
   Region,
-  CreateSizeGuideData,
 } from "../../domain/entities/size-guide.entity";
+
+type CreateSizeGuideData = { title: string; bodyHtml?: string; region: Region; category?: string };
 import {
   SizeGuideNotFoundError,
   DomainValidationError,
@@ -18,7 +20,7 @@ export class SizeGuideManagementService {
   constructor(private readonly sizeGuideRepository: ISizeGuideRepository) {}
 
   // Core CRUD operations
-  async createSizeGuide(data: CreateSizeGuideData): Promise<SizeGuide> {
+  async createSizeGuide(data: CreateSizeGuideData): Promise<SizeGuideDTO> {
     // Validate region-category combination for uniqueness
     if (data.category) {
       const existingGuide =
@@ -44,44 +46,40 @@ export class SizeGuideManagementService {
     const sizeGuide = SizeGuide.create(data);
     await this.sizeGuideRepository.save(sizeGuide);
 
-    return sizeGuide;
+    return SizeGuide.toDTO(sizeGuide);
   }
 
-  async getSizeGuideById(id: string): Promise<SizeGuide> {
-    const sizeGuideId = SizeGuideId.fromString(id);
-    const sizeGuide = await this.sizeGuideRepository.findById(sizeGuideId);
-
-    if (!sizeGuide) {
-      throw new SizeGuideNotFoundError(id);
-    }
-
-    return sizeGuide;
+  async getSizeGuideById(id: string): Promise<SizeGuideDTO> {
+    return SizeGuide.toDTO(await this.findSizeGuideById(id));
   }
 
   async getAllSizeGuides(
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findAll(options);
+  ): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findAll(options);
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async getSizeGuidesByRegion(
     region: Region,
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findByRegion(region, options);
+  ): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findByRegion(region, options);
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async getSizeGuidesByCategory(
     category: string,
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findByCategory(category, options);
+  ): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findByCategory(category, options);
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async getSizeGuideByRegionAndCategory(
     region: Region,
     category: string,
-  ): Promise<SizeGuide> {
+  ): Promise<SizeGuideDTO> {
     const guide = await this.sizeGuideRepository.findByRegionAndCategory(
       region,
       category,
@@ -89,11 +87,12 @@ export class SizeGuideManagementService {
     if (!guide) {
       throw new SizeGuideNotFoundError(`${region}:${category}`);
     }
-    return guide;
+    return SizeGuide.toDTO(guide);
   }
 
-  async getGeneralSizeGuides(region: Region): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findGeneral(region);
+  async getGeneralSizeGuides(region: Region): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findGeneral(region);
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async updateSizeGuide(
@@ -104,8 +103,8 @@ export class SizeGuideManagementService {
       region?: Region;
       category?: string;
     },
-  ): Promise<SizeGuide> {
-    const sizeGuide = await this.getSizeGuideById(id);
+  ): Promise<SizeGuideDTO> {
+    const sizeGuide = await this.findSizeGuideById(id);
 
     // Validate title if provided
     if (updates.title !== undefined) {
@@ -127,14 +126,14 @@ export class SizeGuideManagementService {
       const targetCategory =
         updates.category !== undefined
           ? updates.category
-          : sizeGuide.getCategory();
+          : sizeGuide.category;
       if (targetCategory) {
         const existingGuide =
           await this.sizeGuideRepository.findByRegionAndCategory(
             updates.region,
             targetCategory,
           );
-        if (existingGuide && !existingGuide.getId().equals(sizeGuide.getId())) {
+        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
           throw new DomainValidationError(
             `Size guide already exists for region "${updates.region}" and category "${targetCategory}"`,
           );
@@ -146,14 +145,14 @@ export class SizeGuideManagementService {
     // Update category if provided
     if (updates.category !== undefined) {
       const targetRegion =
-        updates.region !== undefined ? updates.region : sizeGuide.getRegion();
+        updates.region !== undefined ? updates.region : sizeGuide.region;
       if (updates.category) {
         const existingGuide =
           await this.sizeGuideRepository.findByRegionAndCategory(
             targetRegion,
             updates.category,
           );
-        if (existingGuide && !existingGuide.getId().equals(sizeGuide.getId())) {
+        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
           throw new DomainValidationError(
             `Size guide already exists for region "${targetRegion}" and category "${updates.category}"`,
           );
@@ -163,7 +162,7 @@ export class SizeGuideManagementService {
     }
 
     await this.sizeGuideRepository.update(sizeGuide);
-    return sizeGuide;
+    return SizeGuide.toDTO(sizeGuide);
   }
 
   async deleteSizeGuide(id: string): Promise<void> {
@@ -180,7 +179,7 @@ export class SizeGuideManagementService {
   async createRegionalSizeGuide(
     region: Region,
     data: Omit<CreateSizeGuideData, "region">,
-  ): Promise<SizeGuide> {
+  ): Promise<SizeGuideDTO> {
     return this.createSizeGuide({ ...data, region });
   }
 
@@ -191,8 +190,8 @@ export class SizeGuideManagementService {
   async getSizeGuidesByRegions(
     regions: Region[],
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    const allGuides: SizeGuide[] = [];
+  ): Promise<SizeGuideDTO[]> {
+    const allGuides: SizeGuideDTO[] = [];
 
     for (const region of regions) {
       const regionGuides = await this.getSizeGuidesByRegion(region, options);
@@ -207,19 +206,19 @@ export class SizeGuideManagementService {
     category: string,
     region: Region,
     data: Omit<CreateSizeGuideData, "category" | "region">,
-  ): Promise<SizeGuide> {
+  ): Promise<SizeGuideDTO> {
     return this.createSizeGuide({ ...data, category, region });
   }
 
   async getAvailableCategories(region?: Region): Promise<string[]> {
     const guides = region
-      ? await this.getSizeGuidesByRegion(region)
-      : await this.getAllSizeGuides();
+      ? await this.sizeGuideRepository.findByRegion(region)
+      : await this.sizeGuideRepository.findAll();
 
     const categories = new Set<string>();
 
     for (const guide of guides) {
-      const category = guide.getCategory();
+      const category = guide.category;
       if (category) {
         categories.add(category);
       }
@@ -231,31 +230,33 @@ export class SizeGuideManagementService {
   // Content management
   async getSizeGuidesWithContent(
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findAll({
+  ): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findAll({
       ...options,
       hasContent: true,
     });
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async getSizeGuidesWithoutContent(
     options?: SizeGuideQueryOptions,
-  ): Promise<SizeGuide[]> {
-    return await this.sizeGuideRepository.findAll({
+  ): Promise<SizeGuideDTO[]> {
+    const guides = await this.sizeGuideRepository.findAll({
       ...options,
       hasContent: false,
     });
+    return guides.map((g) => SizeGuide.toDTO(g));
   }
 
   async updateSizeGuideContent(
     id: string,
     htmlContent: string,
-  ): Promise<SizeGuide> {
+  ): Promise<SizeGuideDTO> {
     this.validateHtmlContent(htmlContent);
     return this.updateSizeGuide(id, { bodyHtml: htmlContent });
   }
 
-  async clearSizeGuideContent(id: string): Promise<SizeGuide> {
+  async clearSizeGuideContent(id: string): Promise<SizeGuideDTO> {
     return this.updateSizeGuide(id, { bodyHtml: undefined });
   }
 
@@ -279,11 +280,11 @@ export class SizeGuideManagementService {
     );
 
     // Count by category
-    const allGuides = await this.getAllSizeGuides();
+    const allGuides = await this.sizeGuideRepository.findAll();
     const categoryGroups = new Map<string | null, number>();
 
     for (const guide of allGuides) {
-      const category = guide.getCategory();
+      const category = guide.category;
       categoryGroups.set(category, (categoryGroups.get(category) || 0) + 1);
     }
 
@@ -312,10 +313,10 @@ export class SizeGuideManagementService {
 
   // Bulk operations
   async createMultipleSizeGuides(guidesData: CreateSizeGuideData[]): Promise<{
-    created: SizeGuide[];
+    created: SizeGuideDTO[];
     skipped: Array<{ title: string; reason: string }>;
   }> {
-    const createdGuides: SizeGuide[] = [];
+    const createdGuides: SizeGuideDTO[] = [];
     const skipped: Array<{ title: string; reason: string }> = [];
 
     for (const data of guidesData) {
@@ -370,6 +371,16 @@ export class SizeGuideManagementService {
   // Utility methods
   async getSizeGuideCount(options?: SizeGuideCountOptions): Promise<number> {
     return await this.sizeGuideRepository.count(options);
+  }
+
+  // Private helper — returns domain entity for internal mutation
+  private async findSizeGuideById(id: string): Promise<SizeGuide> {
+    const sizeGuideId = SizeGuideId.fromString(id);
+    const sizeGuide = await this.sizeGuideRepository.findById(sizeGuideId);
+    if (!sizeGuide) {
+      throw new SizeGuideNotFoundError(id);
+    }
+    return sizeGuide;
   }
 
   // Private validation methods

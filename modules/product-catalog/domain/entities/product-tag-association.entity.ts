@@ -1,111 +1,81 @@
-import { ProductId } from "../value-objects/product-id.vo";
-import { ProductTagId } from "../value-objects/product-tag-id.vo";
+import { ProductId } from '../value-objects/product-id.vo';
+import { ProductTagId } from '../value-objects/product-tag-id.vo';
+
+export interface ProductTagAssociationProps {
+  id: string;
+  productId: ProductId;
+  tagId: ProductTagId;
+  createdAt: Date;
+}
 
 export class ProductTagAssociation {
-  private constructor(
-    private readonly productId: ProductId,
-    private readonly tagId: ProductTagId,
-  ) {}
+  private props: ProductTagAssociationProps;
 
-  static create(data: CreateProductTagAssociationData): ProductTagAssociation {
-    return new ProductTagAssociation(
-      ProductId.fromString(data.productId),
-      ProductTagId.fromString(data.tagId),
-    );
+  private constructor(props: ProductTagAssociationProps) {
+    this.props = props;
   }
 
-  static reconstitute(data: ProductTagAssociationData): ProductTagAssociation {
-    return new ProductTagAssociation(
-      ProductId.fromString(data.productId),
-      ProductTagId.fromString(data.tagId),
-    );
+  static create(params: {
+    id: string;
+    productId: string;
+    tagId: string;
+  }): ProductTagAssociation {
+    const now = new Date();
+    return new ProductTagAssociation({
+      id: params.id,
+      productId: ProductId.fromString(params.productId),
+      tagId: ProductTagId.fromString(params.tagId),
+      createdAt: now,
+    });
   }
 
-  static fromDatabaseRow(row: ProductTagAssociationRow): ProductTagAssociation {
-    return new ProductTagAssociation(
-      ProductId.fromString(row.product_id),
-      ProductTagId.fromString(row.tag_id),
-    );
+  static fromPersistence(props: ProductTagAssociationProps): ProductTagAssociation {
+    return new ProductTagAssociation(props);
   }
 
   // Getters
-  getProductId(): ProductId {
-    return this.productId;
+  get id(): string {
+    return this.props.id;
   }
 
-  getTagId(): ProductTagId {
-    return this.tagId;
+  get productId(): ProductId {
+    return this.props.productId;
   }
 
-  // Validation methods
-  isAssociationFor(productId: ProductId, tagId: ProductTagId): boolean {
-    return this.productId.equals(productId) && this.tagId.equals(tagId);
+  get tagId(): ProductTagId {
+    return this.props.tagId;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  // Business methods
   isForProduct(productId: ProductId): boolean {
-    return this.productId.equals(productId);
+    return this.props.productId.equals(productId);
   }
 
   isForTag(tagId: ProductTagId): boolean {
-    return this.tagId.equals(tagId);
-  }
-
-  // Business logic methods
-  belongsToSameProductAs(other: ProductTagAssociation): boolean {
-    return this.productId.equals(other.productId);
-  }
-
-  usesSameTagAs(other: ProductTagAssociation): boolean {
-    return this.tagId.equals(other.tagId);
-  }
-
-  isIdenticalTo(other: ProductTagAssociation): boolean {
-    return this.isAssociationFor(other.productId, other.tagId);
-  }
-
-  // Helper methods for business logic
-  canBeRemovedFrom(productId: ProductId): boolean {
-    return this.productId.equals(productId);
-  }
-
-  representsTagging(productId: ProductId, tagId: ProductTagId): boolean {
-    return this.isAssociationFor(productId, tagId);
-  }
-
-  // Convert to data for persistence
-  toData(): ProductTagAssociationData {
-    return {
-      productId: this.productId.getValue(),
-      tagId: this.tagId.getValue(),
-    };
-  }
-
-  toDatabaseRow(): ProductTagAssociationRow {
-    return {
-      product_id: this.productId.getValue(),
-      tag_id: this.tagId.getValue(),
-    };
+    return this.props.tagId.equals(tagId);
   }
 
   equals(other: ProductTagAssociation): boolean {
-    return (
-      this.productId.equals(other.productId) && this.tagId.equals(other.tagId)
-    );
+    return this.props.id === other.props.id;
+  }
+
+  static toDTO(entity: ProductTagAssociation): ProductTagAssociationDTO {
+    return {
+      id: entity.props.id,
+      productId: entity.props.productId.getValue(),
+      tagId: entity.props.tagId.getValue(),
+      createdAt: entity.props.createdAt.toISOString(),
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateProductTagAssociationData {
+export interface ProductTagAssociationDTO {
+  id: string;
   productId: string;
   tagId: string;
-}
-
-export interface ProductTagAssociationData {
-  productId: string;
-  tagId: string;
-}
-
-export interface ProductTagAssociationRow {
-  product_id: string;
-  tag_id: string;
+  createdAt: string;
 }

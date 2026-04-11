@@ -1,9 +1,7 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { SizeGuideManagementService } from "../../../application/services/size-guide-management.service";
-import {
-  Region,
-  CreateSizeGuideData,
-} from "../../../domain/entities/size-guide.entity";
+import { Region } from "../../../domain/entities/size-guide.entity";
 import { SizeGuideQueryOptions } from "../../../domain/repositories/size-guide.repository";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
@@ -60,7 +58,7 @@ export class SizeGuideController {
   ) {}
 
   async getSizeGuides(
-    request: FastifyRequest<{ Querystring: SizeGuideQueryParams }>,
+    request: AuthenticatedRequest<{ Querystring: SizeGuideQueryParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -123,12 +121,7 @@ export class SizeGuideController {
           );
       }
 
-      // Serialize entities to plain objects
-      const serializedGuides = Array.isArray(guides)
-        ? guides
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
-            .filter(Boolean)
-        : guides;
+      const serializedGuides = Array.isArray(guides) ? guides.filter(Boolean) : guides;
 
       return ResponseHelper.ok(reply, "Size guides retrieved successfully", {
         sizeGuides: serializedGuides,
@@ -140,13 +133,12 @@ export class SizeGuideController {
         },
       });
     } catch (error) {
-      request.log.error(error, "Failed to get size guides");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getSizeGuide(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -160,26 +152,18 @@ export class SizeGuideController {
         guide,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createSizeGuide(
-    request: FastifyRequest<{ Body: CreateSizeGuideRequest }>,
+    request: AuthenticatedRequest<{ Body: CreateSizeGuideRequest }>,
     reply: FastifyReply,
   ) {
     try {
       const guideData = request.body;
 
-      const guide = await this.sizeGuideManagementService.createSizeGuide(
-        guideData as CreateSizeGuideData,
-      );
+      const guide = await this.sizeGuideManagementService.createSizeGuide(guideData);
 
       return ResponseHelper.created(
         reply,
@@ -187,8 +171,6 @@ export class SizeGuideController {
         guide,
       );
     } catch (error) {
-      request.log.error(error, "Failed to create size guide");
-
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
           success: false,
@@ -204,7 +186,7 @@ export class SizeGuideController {
   }
 
   async updateSizeGuide(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { id: string };
       Body: UpdateSizeGuideRequest;
     }>,
@@ -219,21 +201,8 @@ export class SizeGuideController {
         updateData,
       );
 
-      // Serialize entity to plain object
-      const serializedGuide = guide.toData ? guide.toData() : guide;
-
-      return ResponseHelper.ok(
-        reply,
-        "Size guide updated successfully",
-        serializedGuide,
-      );
+      return ResponseHelper.ok(reply, "Size guide updated successfully", guide);
     } catch (error) {
-      request.log.error(error, "Failed to update size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
           success: false,
@@ -249,7 +218,7 @@ export class SizeGuideController {
   }
 
   async deleteSizeGuide(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -257,20 +226,14 @@ export class SizeGuideController {
 
       await this.sizeGuideManagementService.deleteSizeGuide(id);
 
-      return ResponseHelper.ok(reply, "Size guide deleted successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to delete size guide");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getRegionalSizeGuides(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { region: string };
       Querystring: Omit<SizeGuideQueryParams, "region">;
     }>,
@@ -315,12 +278,7 @@ export class SizeGuideController {
         );
       }
 
-      // Serialize entities to plain objects
-      const serializedGuides = Array.isArray(guides)
-        ? guides
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
-            .filter(Boolean)
-        : [];
+      const serializedGuides = Array.isArray(guides) ? guides.filter(Boolean) : [];
 
       return ResponseHelper.ok(
         reply,
@@ -341,13 +299,12 @@ export class SizeGuideController {
         },
       );
     } catch (error) {
-      request.log.error(error, "Failed to get regional size guides");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createRegionalSizeGuide(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { region: string };
       Body: RegionalSizeGuideRequest;
     }>,
@@ -369,8 +326,6 @@ export class SizeGuideController {
         guide,
       );
     } catch (error) {
-      request.log.error(error, "Failed to create regional size guide");
-
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
           success: false,
@@ -386,7 +341,7 @@ export class SizeGuideController {
   }
 
   async getGeneralSizeGuides(
-    request: FastifyRequest<{ Params: { region: string } }>,
+    request: AuthenticatedRequest<{ Params: { region: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -408,13 +363,12 @@ export class SizeGuideController {
         },
       );
     } catch (error) {
-      request.log.error(error, "Failed to get general size guides");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createCategorySizeGuide(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { category: string; region: string };
       Body: CategorySizeGuideRequest;
     }>,
@@ -437,8 +391,6 @@ export class SizeGuideController {
         guide,
       );
     } catch (error) {
-      request.log.error(error, "Failed to create category size guide");
-
       if (error instanceof Error && error.message.includes("already exists")) {
         return reply.status(409).send({
           success: false,
@@ -454,7 +406,7 @@ export class SizeGuideController {
   }
 
   async updateSizeGuideContent(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { id: string };
       Body: { htmlContent: string };
     }>,
@@ -476,43 +428,26 @@ export class SizeGuideController {
         guide,
       );
     } catch (error) {
-      request.log.error(error, "Failed to update size guide content");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
   async clearSizeGuideContent(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { id } = request.params;
 
-      const guide =
-        await this.sizeGuideManagementService.clearSizeGuideContent(id);
+      await this.sizeGuideManagementService.clearSizeGuideContent(id);
 
-      return ResponseHelper.ok(
-        reply,
-        "Size guide content cleared successfully",
-        guide,
-      );
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to clear size guide content");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Size guide not found");
-      }
-
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getSizeGuideStats(request: FastifyRequest, reply: FastifyReply) {
+  async getSizeGuideStats(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const stats = await this.sizeGuideManagementService.getSizeGuideStats();
       return ResponseHelper.ok(
@@ -521,12 +456,11 @@ export class SizeGuideController {
         stats,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get size guide statistics");
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getAvailableRegions(request: FastifyRequest, reply: FastifyReply) {
+  async getAvailableRegions(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const regions =
         await this.sizeGuideManagementService.getAvailableRegions();
@@ -537,13 +471,12 @@ export class SizeGuideController {
         regions,
       );
     } catch (error) {
-      request.log.error(error, "Failed to get available regions");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getAvailableCategories(
-    request: FastifyRequest<{ Querystring: { region?: string } }>,
+    request: AuthenticatedRequest<{ Querystring: { region?: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -565,67 +498,47 @@ export class SizeGuideController {
         },
       );
     } catch (error) {
-      request.log.error(error, "Failed to get available categories");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createBulkSizeGuides(
-    request: FastifyRequest<{ Body: BulkCreateSizeGuidesRequest }>,
+    request: AuthenticatedRequest<{ Body: BulkCreateSizeGuidesRequest }>,
     reply: FastifyReply,
   ) {
     try {
       const { guides } = request.body;
 
       const result =
-        await this.sizeGuideManagementService.createMultipleSizeGuides(
-          guides as CreateSizeGuideData[],
-        );
-
-      // Serialize entities to plain objects
-      const serializedGuides = Array.isArray(result.created)
-        ? result.created
-            .map((guide) => (guide?.toData ? guide.toData() : guide))
-            .filter(Boolean)
-        : [];
+        await this.sizeGuideManagementService.createMultipleSizeGuides(guides);
 
       return ResponseHelper.created(
         reply,
-        `${serializedGuides.length} size guides created successfully${result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}`,
-        {
-          created: serializedGuides,
-          skipped: result.skipped,
-        },
+        `${result.created.length} size guides created successfully${result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}`,
+        result,
       );
     } catch (error) {
-      request.log.error(error, "Failed to create bulk size guides");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteBulkSizeGuides(
-    request: FastifyRequest<{ Body: BulkDeleteSizeGuidesRequest }>,
+    request: AuthenticatedRequest<{ Body: BulkDeleteSizeGuidesRequest }>,
     reply: FastifyReply,
   ) {
     try {
       const { ids } = request.body;
 
-      const result =
-        await this.sizeGuideManagementService.deleteMultipleSizeGuides(ids);
+      await this.sizeGuideManagementService.deleteMultipleSizeGuides(ids);
 
-      return ResponseHelper.ok(
-        reply,
-        `${result.deleted.length} size guides deleted successfully`,
-        result,
-      );
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to delete bulk size guides");
       return ResponseHelper.error(reply, error);
     }
   }
 
   async validateUniqueness(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Querystring: ValidateSizeGuideQueryParams;
     }>,
     reply: FastifyReply,
@@ -646,7 +559,6 @@ export class SizeGuideController {
         available: isUnique,
       });
     } catch (error) {
-      request.log.error(error, "Failed to validate size guide uniqueness");
       return ResponseHelper.error(reply, error);
     }
   }

@@ -1,15 +1,31 @@
 import { FastifyInstance } from "fastify";
-import { VariantController, VariantQueryParams, CreateVariantRequest, UpdateVariantRequest } from "../controllers/variant.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { VariantController } from "../controllers/variant.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
+import {
+  listVariantsSchema,
+  createVariantSchema,
+  updateVariantSchema,
+  variantParamsSchema,
+  variantByProductParamsSchema,
+  variantResponseSchema,
+} from "../validation/variant.schema";
 
 export async function registerVariantRoutes(
   fastify: FastifyInstance,
   controller: VariantController,
 ): Promise<void> {
   // GET /products/:productId/variants — List variants for a product (public)
-  fastify.get<{ Params: { productId: string }; Querystring: VariantQueryParams }>(
+  fastify.get(
     "/products/:productId/variants",
     {
+      preValidation: [validateParams(variantByProductParamsSchema)],
+      preHandler: [validateQuery(listVariantsSchema)],
       schema: {
         description: "Get variants for a product",
         tags: ["Variants"],
@@ -19,54 +35,65 @@ export async function registerVariantRoutes(
           required: ["productId"],
           properties: { productId: { type: "string", format: "uuid" } },
         },
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            size: { type: "string" },
-            color: { type: "string" },
-            inStock: { type: "boolean" },
-            sortBy: {
-              type: "string",
-              enum: ["sku", "createdAt", "size", "color"],
-              default: "createdAt",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "asc",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: {
+                type: "object",
+                properties: {
+                  variants: { type: "array", items: variantResponseSchema },
+                  meta: { type: "object" },
+                },
+              },
             },
           },
         },
       },
     },
-    controller.getVariants.bind(controller),
+    (request, reply) =>
+      controller.getVariants(request as AuthenticatedRequest, reply),
   );
 
-  // GET /variants/:id — Get variant by ID (public)
+  // GET /variants/:variantId — Get variant by ID (public)
   fastify.get(
-    "/variants/:id",
+    "/variants/:variantId",
     {
+      preValidation: [validateParams(variantParamsSchema)],
       schema: {
         description: "Get variant by ID",
         tags: ["Variants"],
         summary: "Get Variant",
         params: {
           type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
+          required: ["variantId"],
+          properties: { variantId: { type: "string", format: "uuid" } },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: variantResponseSchema,
+            },
+          },
         },
       },
     },
-    controller.getVariant.bind(controller),
+    (request, reply) =>
+      controller.getVariant(request as AuthenticatedRequest, reply),
   );
 
   // POST /products/:productId/variants — Create variant (Admin only)
-  fastify.post<{ Params: { productId: string }; Body: CreateVariantRequest }>(
+  fastify.post(
     "/products/:productId/variants",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(variantByProductParamsSchema)],
+      preHandler: [
+        validateBody(createVariantSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Create a new variant for a product",
         tags: ["Variants"],
@@ -81,36 +108,42 @@ export async function registerVariantRoutes(
           type: "object",
           required: ["sku"],
           properties: {
-            sku: { type: "string", description: "Stock Keeping Unit" },
-            size: { type: "string", description: "Product size" },
-            color: { type: "string", description: "Product color" },
-            barcode: { type: "string", description: "Barcode" },
-            weightG: {
-              type: "integer",
-              minimum: 0,
-              description: "Weight in grams",
-            },
-            dims: { type: "object", description: "Dimensions object" },
-            taxClass: { type: "string", description: "Tax classification" },
-            allowBackorder: { type: "boolean", description: "Allow backorder" },
-            allowPreorder: { type: "boolean", description: "Allow preorder" },
-            restockEta: {
-              type: "string",
-              format: "date-time",
-              description: "Restock ETA",
+            sku: { type: "string" },
+            size: { type: "string" },
+            color: { type: "string" },
+            barcode: { type: "string" },
+            weightG: { type: "integer", minimum: 0 },
+            dims: { type: "object" },
+            taxClass: { type: "string" },
+            allowBackorder: { type: "boolean" },
+            allowPreorder: { type: "boolean" },
+            restockEta: { type: "string", format: "date-time" },
+          },
+        },
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: variantResponseSchema,
             },
           },
         },
       },
     },
-    controller.createVariant.bind(controller),
+    (request, reply) =>
+      controller.createVariant(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /variants/:id — Update variant (Admin only)
-  fastify.put<{ Params: { id: string }; Body: UpdateVariantRequest }>(
-    "/variants/:id",
+  // PUT /variants/:variantId — Update variant (Admin only)
+  fastify.put(
+    "/variants/:variantId",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(variantParamsSchema)],
+      preHandler: [
+        validateBody(updateVariantSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Update an existing variant",
         tags: ["Variants"],
@@ -118,8 +151,8 @@ export async function registerVariantRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
+          required: ["variantId"],
+          properties: { variantId: { type: "string", format: "uuid" } },
         },
         body: {
           type: "object",
@@ -136,15 +169,26 @@ export async function registerVariantRoutes(
             restockEta: { type: "string", format: "date-time" },
           },
         },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: variantResponseSchema,
+            },
+          },
+        },
       },
     },
-    controller.updateVariant.bind(controller),
+    (request, reply) =>
+      controller.updateVariant(request as AuthenticatedRequest, reply),
   );
 
-  // DELETE /variants/:id — Delete variant (Admin only)
-  fastify.delete<{ Params: { id: string } }>(
-    "/variants/:id",
+  // DELETE /variants/:variantId — Delete variant (Admin only)
+  fastify.delete(
+    "/variants/:variantId",
     {
+      preValidation: [validateParams(variantParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a variant",
@@ -153,11 +197,18 @@ export async function registerVariantRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
+          required: ["variantId"],
+          properties: { variantId: { type: "string", format: "uuid" } },
+        },
+        response: {
+          204: {
+            description: "Variant deleted successfully",
+            type: "null",
+          },
         },
       },
     },
-    controller.deleteVariant.bind(controller),
+    (request, reply) =>
+      controller.deleteVariant(request as AuthenticatedRequest, reply),
   );
 }

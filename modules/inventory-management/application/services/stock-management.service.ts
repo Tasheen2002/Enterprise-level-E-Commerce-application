@@ -1,14 +1,11 @@
-import { v4 as uuidv4 } from "uuid";
-import { Stock } from "../../domain/entities/stock.entity";
-import { InventoryTransaction } from "../../domain/entities/inventory-transaction.entity";
-import { StockLevel } from "../../domain/value-objects/stock-level.vo";
+import { Stock, StockDTO } from "../../domain/entities/stock.entity";
+import { InventoryTransaction, InventoryTransactionDTO } from "../../domain/entities/inventory-transaction.entity";
 import { TransactionId } from "../../domain/value-objects/transaction-id.vo";
-import { TransactionReasonVO } from "../../domain/value-objects/transaction-reason.vo";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
 import {
-  DomainValidationError,
   StockNotFoundError,
+  InventoryTransactionNotFoundError,
 } from "../../domain/errors/inventory-management.errors";
 
 export class StockManagementService {
@@ -22,37 +19,30 @@ export class StockManagementService {
     locationId: string,
     quantity: number,
     reason: string,
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     let stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
     );
 
     if (!stock) {
-      stock = Stock.create({
-        variantId,
-        locationId,
-        stockLevel: StockLevel.create(quantity, 0),
-      });
+      stock = Stock.create({ variantId, locationId, onHand: quantity, reserved: 0 });
     } else {
-      stock = stock.addStock(quantity);
+      stock.addStock(quantity);
     }
 
     await this.stockRepository.save(stock);
 
     const transaction = InventoryTransaction.create({
-      invTxnId: TransactionId.create(uuidv4()),
       variantId,
       locationId,
       qtyDelta: quantity,
-      reason: TransactionReasonVO.create(reason),
-      referenceId: undefined,
-      createdAt: new Date(),
+      reason,
     });
 
     await this.transactionRepository.save(transaction);
 
-    return stock;
+    return Stock.toDTO(stock);
   }
 
   async adjustStock(
@@ -61,36 +51,35 @@ export class StockManagementService {
     quantityDelta: number,
     reason: string,
     referenceId?: string,
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
     );
 
     if (!stock) {
-      throw new StockNotFoundError(variantId, locationId);
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
     }
 
-    const updatedStock =
-      quantityDelta > 0
-        ? stock.addStock(quantityDelta)
-        : stock.removeStock(Math.abs(quantityDelta));
+    if (quantityDelta > 0) {
+      stock.addStock(quantityDelta);
+    } else {
+      stock.removeStock(Math.abs(quantityDelta));
+    }
 
-    await this.stockRepository.save(updatedStock);
+    await this.stockRepository.save(stock);
 
     const transaction = InventoryTransaction.create({
-      invTxnId: TransactionId.create(uuidv4()),
       variantId,
       locationId,
       qtyDelta: quantityDelta,
-      reason: TransactionReasonVO.create(reason),
-      referenceId: referenceId || undefined,
-      createdAt: new Date(),
+      reason,
+      referenceId,
     });
 
     await this.transactionRepository.save(transaction);
 
-    return updatedStock;
+    return Stock.toDTO(stock);
   }
 
   async transferStock(
@@ -98,27 +87,25 @@ export class StockManagementService {
     fromLocationId: string,
     toLocationId: string,
     quantity: number,
-  ): Promise<{ fromStock: Stock; toStock: Stock }> {
+  ): Promise<{ fromStock: StockDTO; toStock: StockDTO }> {
     const fromStock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       fromLocationId,
     );
 
     if (!fromStock) {
-      throw new StockNotFoundError(variantId, fromLocationId);
+      throw new StockNotFoundError(`${variantId} at ${fromLocationId}`);
     }
 
-    const updatedFromStock = fromStock.removeStock(quantity);
-    await this.stockRepository.save(updatedFromStock);
+    fromStock.removeStock(quantity);
+    await this.stockRepository.save(fromStock);
 
     const outboundTxn = InventoryTransaction.create({
-      invTxnId: TransactionId.create(uuidv4()),
       variantId,
       locationId: fromLocationId,
       qtyDelta: -quantity,
-      reason: TransactionReasonVO.create("adjustment"),
+      reason: "adjustment",
       referenceId: toLocationId,
-      createdAt: new Date(),
     });
     await this.transactionRepository.save(outboundTxn);
 
@@ -128,79 +115,71 @@ export class StockManagementService {
     );
 
     if (!toStock) {
-      toStock = Stock.create({
-        variantId,
-        locationId: toLocationId,
-        stockLevel: StockLevel.create(quantity, 0),
-      });
+      toStock = Stock.create({ variantId, locationId: toLocationId, onHand: quantity, reserved: 0 });
     } else {
-      toStock = toStock.addStock(quantity);
+      toStock.addStock(quantity);
     }
 
     await this.stockRepository.save(toStock);
 
     const inboundTxn = InventoryTransaction.create({
-      invTxnId: TransactionId.create(uuidv4()),
       variantId,
       locationId: toLocationId,
       qtyDelta: quantity,
-      reason: TransactionReasonVO.create("adjustment"),
+      reason: "adjustment",
       referenceId: fromLocationId,
-      createdAt: new Date(),
     });
     await this.transactionRepository.save(inboundTxn);
 
-    return { fromStock: updatedFromStock, toStock };
+    return { fromStock: Stock.toDTO(fromStock), toStock: Stock.toDTO(toStock) };
   }
 
   async reserveStock(
     variantId: string,
     locationId: string,
     quantity: number,
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
     );
 
     if (!stock) {
-      throw new StockNotFoundError(variantId, locationId);
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
     }
 
-    const updatedStock = stock.reserveStock(quantity);
-    await this.stockRepository.save(updatedStock);
+    stock.reserveStock(quantity);
+    await this.stockRepository.save(stock);
 
-    return updatedStock;
+    return Stock.toDTO(stock);
   }
 
   async fulfillReservation(
     variantId: string,
     locationId: string,
     quantity: number,
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
     );
 
     if (!stock) {
-      throw new StockNotFoundError(variantId, locationId);
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
     }
 
-    const updatedStock = stock.fulfillReservation(quantity);
-    await this.stockRepository.save(updatedStock);
+    stock.fulfillReservation(quantity);
+    await this.stockRepository.save(stock);
 
     const transaction = InventoryTransaction.create({
-      invTxnId: TransactionId.create(uuidv4()),
       variantId,
       locationId,
       qtyDelta: -quantity,
-      reason: TransactionReasonVO.create("order"),
-      createdAt: new Date(),
+      reason: "order",
     });
     await this.transactionRepository.save(transaction);
 
-    return updatedStock;
+    return Stock.toDTO(stock);
   }
 
   async setStockThresholds(
@@ -208,40 +187,44 @@ export class StockManagementService {
     locationId: string,
     lowStockThreshold?: number,
     safetyStock?: number,
-  ): Promise<Stock> {
+  ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
       variantId,
       locationId,
     );
 
     if (!stock) {
-      throw new StockNotFoundError(variantId, locationId);
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
     }
 
-    const updatedStock = stock.updateThresholds(lowStockThreshold, safetyStock);
-    await this.stockRepository.save(updatedStock);
+    stock.updateThresholds(lowStockThreshold, safetyStock);
+    await this.stockRepository.save(stock);
 
-    return updatedStock;
+    return Stock.toDTO(stock);
   }
 
-  async getStock(variantId: string, locationId: string): Promise<Stock | null> {
-    return this.stockRepository.findByVariantAndLocation(variantId, locationId);
+  async getStock(variantId: string, locationId: string): Promise<StockDTO | null> {
+    const stock = await this.stockRepository.findByVariantAndLocation(variantId, locationId);
+    return stock ? Stock.toDTO(stock) : null;
   }
 
-  async getStockByVariant(variantId: string): Promise<Stock[]> {
-    return this.stockRepository.findByVariant(variantId);
+  async getStockByVariant(variantId: string): Promise<StockDTO[]> {
+    const stocks = await this.stockRepository.findByVariant(variantId);
+    return stocks.map(Stock.toDTO);
   }
 
   async getTotalAvailableStock(variantId: string): Promise<number> {
     return this.stockRepository.getTotalAvailableStock(variantId);
   }
 
-  async getLowStockItems(): Promise<Stock[]> {
-    return this.stockRepository.findLowStockItems();
+  async getLowStockItems(): Promise<StockDTO[]> {
+    const stocks = await this.stockRepository.findLowStockItems();
+    return stocks.map(Stock.toDTO);
   }
 
-  async getOutOfStockItems(): Promise<Stock[]> {
-    return this.stockRepository.findOutOfStockItems();
+  async getOutOfStockItems(): Promise<StockDTO[]> {
+    const stocks = await this.stockRepository.findOutOfStockItems();
+    return stocks.map(Stock.toDTO);
   }
 
   async listStocks(options?: {
@@ -252,33 +235,33 @@ export class StockManagementService {
     locationId?: string;
     sortBy?: "available" | "onHand" | "location" | "product";
     sortOrder?: "asc" | "desc";
-  }): Promise<{ stocks: Stock[]; total: number }> {
-    return this.stockRepository.findAll(options);
+  }): Promise<{ stocks: StockDTO[]; total: number }> {
+    const result = await this.stockRepository.findAll(options);
+    return { stocks: result.stocks.map(Stock.toDTO), total: result.total };
   }
 
   async getTransactionHistory(
     variantId: string,
     locationId?: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<{ transactions: InventoryTransaction[]; total: number }> {
-    if (locationId) {
-      return this.transactionRepository.findByVariantAndLocation(
-        variantId,
-        locationId,
-        options,
-      );
-    }
-    return this.transactionRepository.findByVariant(variantId, options);
+  ): Promise<{ transactions: InventoryTransactionDTO[]; total: number }> {
+    const result = locationId
+      ? await this.transactionRepository.findByVariantAndLocation(variantId, locationId, options)
+      : await this.transactionRepository.findByVariant(variantId, options);
+    return {
+      transactions: result.transactions.map(InventoryTransaction.toDTO),
+      total: result.total,
+    };
   }
 
-  async getTransaction(transactionId: string): Promise<InventoryTransaction> {
+  async getTransaction(transactionId: string): Promise<InventoryTransactionDTO> {
     const transaction = await this.transactionRepository.findById(
-      TransactionId.create(transactionId),
+      TransactionId.fromString(transactionId),
     );
     if (!transaction) {
       throw new InventoryTransactionNotFoundError(transactionId);
     }
-    return transaction;
+    return InventoryTransaction.toDTO(transaction);
   }
 
   async listTransactions(options?: {
@@ -286,8 +269,12 @@ export class StockManagementService {
     offset?: number;
     sortBy?: "createdAt";
     sortOrder?: "asc" | "desc";
-  }): Promise<{ transactions: InventoryTransaction[]; total: number }> {
-    return this.transactionRepository.findAll(options);
+  }): Promise<{ transactions: InventoryTransactionDTO[]; total: number }> {
+    const result = await this.transactionRepository.findAll(options);
+    return {
+      transactions: result.transactions.map(InventoryTransaction.toDTO),
+      total: result.total,
+    };
   }
 
   async getStats(): Promise<{

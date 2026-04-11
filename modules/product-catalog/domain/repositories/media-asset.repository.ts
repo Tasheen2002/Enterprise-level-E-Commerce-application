@@ -1,4 +1,5 @@
-import { MediaAsset, MediaAssetId } from "../entities/media-asset.entity";
+import { MediaAsset } from "../entities/media-asset.entity";
+import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
 export interface IMediaAssetRepository {
   save(asset: MediaAsset): Promise<void>;

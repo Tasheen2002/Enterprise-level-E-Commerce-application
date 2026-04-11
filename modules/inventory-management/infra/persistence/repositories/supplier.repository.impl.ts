@@ -1,9 +1,8 @@
 import { PrismaClient } from "@prisma/client";
-import {
-  Supplier,
-  SupplierContact,
-} from "../../../domain/entities/supplier.entity";
+import { Supplier } from "../../../domain/entities/supplier.entity";
 import { SupplierId } from "../../../domain/value-objects/supplier-id.vo";
+import { SupplierName } from "../../../domain/value-objects/supplier-name.vo";
+import { SupplierContact } from "../../../domain/value-objects/supplier-contact.vo";
 import { ISupplierRepository } from "../../../domain/repositories/supplier.repository";
 
 interface SupplierDatabaseRow {
@@ -15,28 +14,33 @@ interface SupplierDatabaseRow {
 
 export class SupplierRepositoryImpl implements ISupplierRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
   private toEntity(row: SupplierDatabaseRow): Supplier {
-    return Supplier.reconstitute({
-      supplierId: SupplierId.create(row.supplierId),
-      name: row.name,
-      leadTimeDays: row.leadTimeDays || undefined,
-      contacts: (row.contacts as SupplierContact[]) || [],
+    const contacts: SupplierContact[] = Array.isArray(row.contacts)
+      ? row.contacts.map((c: any) => SupplierContact.create(c))
+      : [];
+
+    return Supplier.fromPersistence({
+      supplierId: SupplierId.fromString(row.supplierId),
+      name: SupplierName.create(row.name),
+      leadTimeDays: row.leadTimeDays ?? undefined,
+      contacts,
     });
   }
 
   async save(supplier: Supplier): Promise<void> {
     await (this.prisma as any).supplier.upsert({
-      where: { supplierId: supplier.getSupplierId().getValue() },
+      where: { supplierId: supplier.supplierId.getValue() },
       create: {
-        supplierId: supplier.getSupplierId().getValue(),
-        name: supplier.getName(),
-        leadTimeDays: supplier.getLeadTimeDays(),
-        contacts: supplier.getContacts() as any,
+        supplierId: supplier.supplierId.getValue(),
+        name: supplier.name.getValue(),
+        leadTimeDays: supplier.leadTimeDays,
+        contacts: supplier.contacts.map((c) => c.toJSON()) as any,
       },
       update: {
-        name: supplier.getName(),
-        leadTimeDays: supplier.getLeadTimeDays(),
-        contacts: supplier.getContacts() as any,
+        name: supplier.name.getValue(),
+        leadTimeDays: supplier.leadTimeDays,
+        contacts: supplier.contacts.map((c) => c.toJSON()) as any,
       },
     });
   }

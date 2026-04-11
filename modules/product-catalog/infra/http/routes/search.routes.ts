@@ -1,104 +1,67 @@
 import { FastifyInstance } from "fastify";
-import {
-  SearchController,
-  SearchQueryParams,
-  SearchSuggestionsQueryParams,
-  SearchFiltersQueryParams,
-} from "../controllers/search.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { SearchController } from "../controllers/search.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { validateQuery } from "../validation/validator";
+import {
+  searchQuerySchema,
+  searchSuggestionsQuerySchema,
+  searchFiltersQuerySchema,
+  searchResultsResponseSchema,
+  searchSuggestionsResponseSchema,
+  popularSearchesResponseSchema,
+  searchFiltersResponseSchema,
+  searchStatsResponseSchema,
+} from "../validation/search.schema";
 
 export async function registerSearchRoutes(
   fastify: FastifyInstance,
   controller: SearchController,
 ): Promise<void> {
   // GET /search — Search products (public)
-  fastify.get<{ Querystring: SearchQueryParams }>(
+  fastify.get(
     "/search",
     {
+      preHandler: [validateQuery(searchQuerySchema)],
       schema: {
-        description:
-          "Full-text search across products with filtering and sorting",
+        description: "Full-text search across products with filtering and sorting",
         tags: ["Search"],
         summary: "Search Products",
         querystring: {
           type: "object",
           required: ["q"],
           properties: {
-            q: { type: "string", minLength: 2, description: "Search query" },
+            q: { type: "string", minLength: 2 },
             page: { type: "integer", minimum: 1, default: 1 },
             limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            category: {
-              type: "string",
-              description: "Filter by category ID or slug",
-            },
-            brand: { type: "string", description: "Filter by brand" },
-            minPrice: {
-              type: "number",
-              minimum: 0,
-              description: "Minimum price",
-            },
-            maxPrice: {
-              type: "number",
-              minimum: 0,
-              description: "Maximum price",
-            },
-            status: {
-              type: "string",
-              enum: ["draft", "published", "scheduled"],
-            },
-            tags: {
-              type: "array",
-              items: { type: "string" },
-              description: "Filter by tag names",
-            },
-            sortBy: {
-              type: "string",
-              enum: ["relevance", "price", "title", "createdAt"],
-              default: "relevance",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
+            category: { type: "string" },
+            brand: { type: "string" },
+            minPrice: { type: "number", minimum: 0 },
+            maxPrice: { type: "number", minimum: 0 },
+            status: { type: "string", enum: ["draft", "published", "scheduled"] },
+            sortBy: { type: "string", enum: ["relevance", "price", "title", "createdAt"], default: "relevance" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
           },
         },
         response: {
           200: {
-            description: "Search results",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  products: { type: "array", items: { type: "object" } },
-                  total: { type: "integer" },
-                  page: { type: "integer" },
-                  limit: { type: "integer" },
-                  query: { type: "string" },
-                },
-              },
-            },
-          },
-          400: {
-            description: "Invalid search query",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
+              success: { type: "boolean" },
+              data: searchResultsResponseSchema,
             },
           },
         },
       },
     },
-    controller.searchProducts.bind(controller),
+    (request, reply) => controller.searchProducts(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/suggestions — Get search suggestions (public)
-  fastify.get<{ Querystring: SearchSuggestionsQueryParams }>(
+  fastify.get(
     "/search/suggestions",
     {
+      preHandler: [validateQuery(searchSuggestionsQuerySchema)],
       schema: {
         description: "Get autocomplete suggestions for a search query",
         tags: ["Search"],
@@ -107,32 +70,23 @@ export async function registerSearchRoutes(
           type: "object",
           required: ["q"],
           properties: {
-            q: {
-              type: "string",
-              minLength: 1,
-              description: "Partial search query",
-            },
+            q: { type: "string", minLength: 1 },
             limit: { type: "integer", minimum: 1, maximum: 20, default: 5 },
-            type: {
-              type: "string",
-              enum: ["products", "categories", "brands", "all"],
-              default: "all",
-            },
+            type: { type: "string", enum: ["products", "categories", "brands", "all"], default: "all" },
           },
         },
         response: {
           200: {
-            description: "Search suggestions",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "array", items: { type: "object" } },
+              success: { type: "boolean" },
+              data: searchSuggestionsResponseSchema,
             },
           },
         },
       },
     },
-    controller.getSearchSuggestions.bind(controller),
+    (request, reply) => controller.getSearchSuggestions(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/popular — Get popular searches (public)
@@ -143,15 +97,25 @@ export async function registerSearchRoutes(
         description: "Get popular/trending search queries",
         tags: ["Search"],
         summary: "Get Popular Searches",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: popularSearchesResponseSchema,
+            },
+          },
+        },
       },
     },
-    controller.getPopularSearches.bind(controller),
+    (request, reply) => controller.getPopularSearches(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/filters — Get available search filters (public)
-  fastify.get<{ Querystring: SearchFiltersQueryParams }>(
+  fastify.get(
     "/search/filters",
     {
+      preHandler: [validateQuery(searchFiltersQuerySchema)],
       schema: {
         description: "Get available filters for search results",
         tags: ["Search"],
@@ -159,12 +123,21 @@ export async function registerSearchRoutes(
         querystring: {
           type: "object",
           properties: {
-            q: { type: "string", description: "Search query to scope filters" },
+            q: { type: "string" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: searchFiltersResponseSchema,
+            },
           },
         },
       },
     },
-    controller.getSearchFilters.bind(controller),
+    (request, reply) => controller.getSearchFilters(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/stats — Get search statistics (Staff+)
@@ -177,8 +150,17 @@ export async function registerSearchRoutes(
         tags: ["Search"],
         summary: "Get Search Statistics",
         security: [{ bearerAuth: [] }],
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: searchStatsResponseSchema,
+            },
+          },
+        },
       },
     },
-    controller.getSearchStats.bind(controller),
+    (request, reply) => controller.getSearchStats(request as AuthenticatedRequest, reply),
   );
 }

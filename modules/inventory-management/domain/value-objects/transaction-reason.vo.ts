@@ -1,23 +1,28 @@
 import { DomainValidationError } from "../errors/inventory-management.errors";
 
+export enum TransactionReason {
+  RETURN = "return",
+  ADJUSTMENT = "adjustment",
+  PO = "po",
+  ORDER = "order",
+  DAMAGE = "damage",
+  THEFT = "theft",
+}
+
 export class TransactionReasonVO {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: TransactionReason) {}
 
   static create(value: string): TransactionReasonVO {
-    const normalizedValue = value.trim();
-    if (
-      !normalizedValue ||
-      normalizedValue.length < 2 ||
-      normalizedValue.length > 64
-    ) {
+    const normalized = value.trim().toLowerCase();
+    if (!Object.values(TransactionReason).includes(normalized as TransactionReason)) {
       throw new DomainValidationError(
-        "Transaction reason must be between 2 and 64 characters.",
+        `Invalid transaction reason: ${value}. Must be one of: ${Object.values(TransactionReason).join(", ")}`,
       );
     }
-    return new TransactionReasonVO(normalizedValue);
+    return new TransactionReasonVO(normalized as TransactionReason);
   }
 
-  getValue(): string {
+  getValue(): TransactionReason {
     return this.value;
   }
 

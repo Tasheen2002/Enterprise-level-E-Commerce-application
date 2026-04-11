@@ -28,11 +28,16 @@ export async function registerAuthRoutes(
   fastify: FastifyInstance,
   controller: AuthController,
 ) {
+  fastify.addHook('onRequest', async (request, reply) => {
+    if (request.method !== 'GET') {
+      await authRateLimiter(request, reply);
+    }
+  });
+
   // POST /auth/register
   fastify.post(
     "/auth/register",
     {
-      preValidation: [authRateLimiter],
       preHandler: [validateBody(registerSchema)],
       schema: {
         tags: ["Authentication"],
@@ -59,7 +64,6 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/login",
     {
-      preValidation: [authRateLimiter],
       preHandler: [validateBody(loginSchema)],
       schema: {
         tags: ["Authentication"],
@@ -192,7 +196,6 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/forgot-password",
     {
-      preValidation: [authRateLimiter],
       preHandler: [validateBody(forgotPasswordSchema)],
       schema: {
         tags: ["Authentication"],
@@ -248,7 +251,6 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/resend-verification",
     {
-      preValidation: [authRateLimiter],
       preHandler: [validateBody(resendVerificationSchema)],
       schema: {
         tags: ["Authentication"],

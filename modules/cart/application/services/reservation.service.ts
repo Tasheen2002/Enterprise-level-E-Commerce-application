@@ -1,9 +1,6 @@
 import { IReservationRepository } from "../../domain/repositories/reservation.repository";
 import { ICartRepository } from "../../domain/repositories/cart.repository";
-import {
-  Reservation,
-  CreateReservationData,
-} from "../../domain/entities/reservation.entity";
+import { Reservation } from "../../domain/entities/reservation.entity";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { Quantity } from "../../domain/value-objects/quantity.vo";
@@ -129,7 +126,7 @@ export class ReservationService {
     if (existingReservation) {
       // Update existing reservation quantity
       const newQuantity =
-        existingReservation.getQuantity().getValue() + dto.quantity;
+        existingReservation.quantity.getValue() + dto.quantity;
       existingReservation.updateQuantity(newQuantity);
       await this.reservationRepository.update(existingReservation);
       return this.mapReservationToDto(existingReservation);
@@ -182,7 +179,7 @@ export class ReservationService {
       throw new ReservationNotFoundError(dto.reservationId);
     }
 
-    if (!reservation.canBeExtended()) {
+    if (!reservation.canBeExtended) {
       throw new InvalidReservationOperationError(
         "Reservation cannot be extended",
       );
@@ -447,19 +444,18 @@ export class ReservationService {
 
   // Utility methods
   private mapReservationToDto(reservation: Reservation): ReservationDto {
-    const summary = reservation.getSummary();
     return {
-      reservationId: summary.reservationId,
-      cartId: summary.cartId,
-      variantId: summary.variantId,
-      quantity: summary.quantity,
-      expiresAt: summary.expiresAt,
-      status: summary.status,
-      isExpired: summary.isExpired,
-      isExpiringSoon: summary.isExpiringSoon,
-      timeUntilExpirySeconds: summary.timeUntilExpirySeconds,
-      timeUntilExpiryMinutes: summary.timeUntilExpiryMinutes,
-      canBeExtended: summary.canBeExtended,
+      reservationId: reservation.reservationId.getValue(),
+      cartId: reservation.cartId.getValue(),
+      variantId: reservation.variantId.getValue(),
+      quantity: reservation.quantity.getValue(),
+      expiresAt: reservation.expiresAt,
+      status: reservation.status,
+      isExpired: reservation.isExpired,
+      isExpiringSoon: reservation.isExpiringSoon(),
+      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
+      timeUntilExpiryMinutes: reservation.timeUntilExpiryMinutes,
+      canBeExtended: reservation.canBeExtended,
     };
   }
 }

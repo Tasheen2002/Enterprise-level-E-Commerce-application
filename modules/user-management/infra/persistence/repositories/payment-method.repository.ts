@@ -35,7 +35,7 @@ export class PaymentMethodRepository
       updatedAt: data.updatedAt,
     };
 
-    return PaymentMethod.reconstitute(props);
+    return PaymentMethod.fromPersistence(props);
   }
 
   // Maps a PaymentMethod domain entity to a Prisma-compatible persistence object
@@ -44,18 +44,18 @@ export class PaymentMethodRepository
     update: Prisma.PaymentMethodUncheckedUpdateInput;
   } {
     const create = {
-      id: paymentMethod.getId().getValue(),
-      userId: paymentMethod.getUserId().getValue(),
-      type: paymentMethod.getType().toString(),
-      brand: paymentMethod.getBrand(),
-      last4: paymentMethod.getLast4(),
-      expMonth: paymentMethod.getExpMonth(),
-      expYear: paymentMethod.getExpYear(),
-      billingAddressId: paymentMethod.getBillingAddressId(),
-      providerRef: paymentMethod.getProviderRef(),
-      isDefault: paymentMethod.getIsDefault(),
-      createdAt: paymentMethod.getCreatedAt(),
-      updatedAt: paymentMethod.getUpdatedAt(),
+      id: paymentMethod.id.getValue(),
+      userId: paymentMethod.userId.getValue(),
+      type: paymentMethod.type.toString(),
+      brand: paymentMethod.brand,
+      last4: paymentMethod.last4,
+      expMonth: paymentMethod.expMonth,
+      expYear: paymentMethod.expYear,
+      billingAddressId: paymentMethod.billingAddressId,
+      providerRef: paymentMethod.providerRef,
+      isDefault: paymentMethod.isDefault,
+      createdAt: paymentMethod.createdAt,
+      updatedAt: paymentMethod.updatedAt,
     };
 
     const { id, userId, createdAt, ...update } = create;
@@ -67,7 +67,7 @@ export class PaymentMethodRepository
     const data = this.toPersistence(paymentMethod);
 
     await this.prisma.paymentMethod.upsert({
-      where: { id: paymentMethod.getId().getValue() },
+      where: { id: paymentMethod.id.getValue() },
       create: data.create,
       update: data.update,
     });

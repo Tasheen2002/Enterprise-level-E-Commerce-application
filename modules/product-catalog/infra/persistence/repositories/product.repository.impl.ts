@@ -10,26 +10,28 @@ import {
 import { Product } from "../../../domain/entities/product.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
+import { Price } from "../../../domain/value-objects/price.vo";
 
-function mapRow(productData: any): Product {
-  return Product.fromDatabaseRow({
-    product_id: productData.id,
-    title: productData.title,
-    slug: productData.slug,
-    brand: productData.brand,
-    short_desc: productData.shortDesc,
-    long_desc_html: productData.longDescHtml,
-    status: productData.status as any,
-    publish_at: productData.publishAt,
-    country_of_origin: productData.countryOfOrigin,
-    seo_title: productData.seoTitle,
-    seo_description: productData.seoDescription,
-    price: productData.price?.toString() ?? "0",
-    price_sgd: productData.priceSgd?.toString() ?? null,
-    price_usd: productData.priceUsd?.toString() ?? null,
-    compare_at_price: productData.compareAtPrice?.toString() ?? null,
-    created_at: productData.createdAt,
-    updated_at: productData.updatedAt,
+function mapRow(row: any): Product {
+  const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
+  return Product.fromPersistence({
+    id: ProductId.fromString(row.id),
+    title: row.title,
+    slug,
+    brand: row.brand,
+    shortDesc: row.shortDesc,
+    longDescHtml: row.longDescHtml,
+    status: row.status as any,
+    publishAt: row.publishAt,
+    countryOfOrigin: row.countryOfOrigin,
+    seoTitle: row.seoTitle,
+    seoDescription: row.seoDescription,
+    price: Price.create(parseFloat(row.price?.toString() ?? "0")),
+    priceSgd: row.priceSgd ? Price.create(parseFloat(row.priceSgd.toString())) : null,
+    priceUsd: row.priceUsd ? Price.create(parseFloat(row.priceUsd.toString())) : null,
+    compareAtPrice: row.compareAtPrice ? Price.create(parseFloat(row.compareAtPrice.toString())) : null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   });
 }
 
@@ -37,23 +39,21 @@ export class ProductRepository implements IProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(product: Product): Promise<void> {
-    const data = product.toDatabaseRow();
-
     await this.prisma.product.create({
       data: {
-        id: data.product_id,
-        title: data.title,
-        slug: data.slug,
-        brand: data.brand,
-        shortDesc: data.short_desc,
-        longDescHtml: data.long_desc_html,
-        status: data.status as any,
-        publishAt: data.publish_at,
-        countryOfOrigin: data.country_of_origin,
-        seoTitle: data.seo_title,
-        seoDescription: data.seo_description,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
+        id: product.id.getValue(),
+        title: product.title,
+        slug: product.slug.getValue(),
+        brand: product.brand,
+        shortDesc: product.shortDesc,
+        longDescHtml: product.longDescHtml,
+        status: product.status as any,
+        publishAt: product.publishAt,
+        countryOfOrigin: product.countryOfOrigin,
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
+        createdAt: product.createdAt,
+        updatedAt: product.updatedAt,
       },
     });
   }
@@ -62,26 +62,26 @@ export class ProductRepository implements IProductRepository {
     product: Product,
     categoryIds: string[],
   ): Promise<void> {
-    const data = product.toDatabaseRow();
+    const productId = product.id.getValue();
 
     // Use transaction to ensure atomicity
     await this.prisma.$transaction(async (tx) => {
       // Create product
       await tx.product.create({
         data: {
-          id: data.product_id,
-          title: data.title,
-          slug: data.slug,
-          brand: data.brand,
-          shortDesc: data.short_desc,
-          longDescHtml: data.long_desc_html,
-          status: data.status as any,
-          publishAt: data.publish_at,
-          countryOfOrigin: data.country_of_origin,
-          seoTitle: data.seo_title,
-          seoDescription: data.seo_description,
-          createdAt: data.created_at,
-          updatedAt: data.updated_at,
+          id: productId,
+          title: product.title,
+          slug: product.slug.getValue(),
+          brand: product.brand,
+          shortDesc: product.shortDesc,
+          longDescHtml: product.longDescHtml,
+          status: product.status as any,
+          publishAt: product.publishAt,
+          countryOfOrigin: product.countryOfOrigin,
+          seoTitle: product.seoTitle,
+          seoDescription: product.seoDescription,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
         },
       });
 
@@ -89,7 +89,7 @@ export class ProductRepository implements IProductRepository {
       if (categoryIds.length > 0) {
         await tx.productCategory.createMany({
           data: categoryIds.map((categoryId) => ({
-            productId: data.product_id,
+            productId,
             categoryId,
           })),
         });
@@ -334,22 +334,20 @@ export class ProductRepository implements IProductRepository {
   }
 
   async update(product: Product): Promise<void> {
-    const data = product.toDatabaseRow();
-
     await this.prisma.product.update({
-      where: { id: data.product_id },
+      where: { id: product.id.getValue() },
       data: {
-        title: data.title,
-        slug: data.slug,
-        brand: data.brand,
-        shortDesc: data.short_desc,
-        longDescHtml: data.long_desc_html,
-        status: data.status as any,
-        publishAt: data.publish_at,
-        countryOfOrigin: data.country_of_origin,
-        seoTitle: data.seo_title,
-        seoDescription: data.seo_description,
-        updatedAt: data.updated_at,
+        title: product.title,
+        slug: product.slug.getValue(),
+        brand: product.brand,
+        shortDesc: product.shortDesc,
+        longDescHtml: product.longDescHtml,
+        status: product.status as any,
+        publishAt: product.publishAt,
+        countryOfOrigin: product.countryOfOrigin,
+        seoTitle: product.seoTitle,
+        seoDescription: product.seoDescription,
+        updatedAt: product.updatedAt,
       },
     });
   }

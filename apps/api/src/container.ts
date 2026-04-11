@@ -85,6 +85,33 @@ import {
   VariantMediaManagementService,
 } from "../../../modules/product-catalog/application/services";
 
+// Product Catalog — Handlers
+import {
+  CreateProductHandler,
+  UpdateProductHandler,
+  DeleteProductHandler,
+  GetProductHandler,
+  ListProductsHandler,
+  SearchProductsHandler,
+  CreateCategoryHandler,
+  UpdateCategoryHandler,
+  DeleteCategoryHandler,
+  ReorderCategoriesHandler,
+  GetCategoryHandler,
+  ListCategoriesHandler,
+  GetCategoryHierarchyHandler,
+  CreateProductVariantHandler,
+  UpdateProductVariantHandler,
+  DeleteProductVariantHandler,
+  GetVariantHandler,
+  ListVariantsHandler,
+} from "../../../modules/product-catalog/application";
+
+// Product Catalog — Controllers
+import { ProductController } from "../../../modules/product-catalog/infra/http/controllers/product.controller";
+import { CategoryController } from "../../../modules/product-catalog/infra/http/controllers/category.controller";
+import { VariantController } from "../../../modules/product-catalog/infra/http/controllers/variant.controller";
+
 // Inventory Management — Repositories
 import {
   StockRepositoryImpl,
@@ -310,7 +337,7 @@ export class Container {
     const profileController = new ProfileController(getProfileHandler, updateProfileHandler);
     const addressesController = new AddressesController(addAddressHandler, updateAddressHandler, deleteAddressHandler, listAddressesHandler);
     const paymentMethodsController = new PaymentMethodsController(addPaymentMethodHandler, updatePaymentMethodHandler, deletePaymentMethodHandler, setDefaultPaymentMethodHandler, listPaymentMethodsHandler);
-    const usersController = new UsersController(getProfileHandler, getUserDetailsHandler, listUsersHandler, updateUserStatusHandler, updateUserRoleHandler, deleteUserHandler, toggleUserEmailVerifiedHandler);
+    const usersController = new UsersController(getUserDetailsHandler, listUsersHandler, updateUserStatusHandler, updateUserRoleHandler, deleteUserHandler, toggleUserEmailVerifiedHandler);
 
     // Store controllers
     this.services.set("authController", authController);
@@ -343,7 +370,6 @@ export class Container {
 
     const categoryManagementService = new CategoryManagementService(
       categoryRepository,
-      slugGeneratorService,
     );
 
     const mediaManagementService = new MediaManagementService(
@@ -412,6 +438,61 @@ export class Container {
       "variantMediaManagementService",
       variantMediaManagementService,
     );
+
+    // Product Catalog — Handlers
+    const createProductHandler = new CreateProductHandler(productManagementService);
+    const updateProductHandler = new UpdateProductHandler(productManagementService);
+    const deleteProductHandler = new DeleteProductHandler(productManagementService);
+    const getProductHandler = new GetProductHandler(productManagementService);
+    const listProductsHandler = new ListProductsHandler(productManagementService);
+    const searchProductsHandler = new SearchProductsHandler(productSearchService);
+
+    const createCategoryHandler = new CreateCategoryHandler(categoryManagementService);
+    const updateCategoryHandler = new UpdateCategoryHandler(categoryManagementService);
+    const deleteCategoryHandler = new DeleteCategoryHandler(categoryManagementService);
+    const reorderCategoriesHandler = new ReorderCategoriesHandler(categoryManagementService);
+    const getCategoryHandler = new GetCategoryHandler(categoryManagementService);
+    const listCategoriesHandler = new ListCategoriesHandler(categoryManagementService);
+    const getCategoryHierarchyHandler = new GetCategoryHierarchyHandler(categoryManagementService);
+
+    const createVariantHandler = new CreateProductVariantHandler(variantManagementService);
+    const updateVariantHandler = new UpdateProductVariantHandler(variantManagementService);
+    const deleteVariantHandler = new DeleteProductVariantHandler(variantManagementService);
+    const getVariantHandler = new GetVariantHandler(variantManagementService);
+    const listVariantsHandler = new ListVariantsHandler(variantManagementService);
+
+    // Product Catalog — Controllers
+    const productController = new ProductController(
+      createProductHandler,
+      updateProductHandler,
+      deleteProductHandler,
+      getProductHandler,
+      listProductsHandler,
+      searchProductsHandler,
+      productManagementService,
+    );
+
+    const categoryController = new CategoryController(
+      createCategoryHandler,
+      updateCategoryHandler,
+      deleteCategoryHandler,
+      reorderCategoriesHandler,
+      getCategoryHandler,
+      listCategoriesHandler,
+      getCategoryHierarchyHandler,
+    );
+
+    const variantController = new VariantController(
+      createVariantHandler,
+      updateVariantHandler,
+      deleteVariantHandler,
+      listVariantsHandler,
+      getVariantHandler,
+    );
+
+    this.services.set("productController", productController);
+    this.services.set("categoryController", categoryController);
+    this.services.set("variantController", variantController);
 
     // ============================================
     // Inventory Management Module
@@ -718,6 +799,9 @@ export class Container {
 
   getProductCatalogServices() {
     return {
+      productController: this.get<ProductController>("productController"),
+      categoryController: this.get<CategoryController>("categoryController"),
+      variantController: this.get<VariantController>("variantController"),
       productService: this.get<ProductManagementService>(
         "productManagementService",
       ),

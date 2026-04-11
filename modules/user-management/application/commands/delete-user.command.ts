@@ -1,6 +1,4 @@
-import { IUserRepository } from '../../domain/repositories/iuser.repository';
-import { UserId } from '../../domain/value-objects/user-id.vo';
-import { UserNotFoundError } from '../../domain/errors/user-management.errors';
+import { UserService } from '../services/user.service';
 import {
   ICommand,
   ICommandHandler,
@@ -11,24 +9,11 @@ export interface DeleteUserInput extends ICommand {
   userId: string;
 }
 
-export class DeleteUserHandler implements ICommandHandler<
-  DeleteUserInput,
-  CommandResult<void>
-> {
-  constructor(private readonly userRepository: IUserRepository) {}
+export class DeleteUserHandler implements ICommandHandler<DeleteUserInput, CommandResult<void>> {
+  constructor(private readonly userService: UserService) {}
 
-  async handle(
-    input: DeleteUserInput
-  ): Promise<CommandResult<void>> {
-    const userId = UserId.fromString(input.userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!user) {
-      throw new UserNotFoundError(input.userId);
-    }
-
-    await this.userRepository.delete(userId);
-
-    return CommandResult.success(undefined);
+  async handle(input: DeleteUserInput): Promise<CommandResult<void>> {
+    await this.userService.deleteUser(input.userId);
+    return CommandResult.success();
   }
 }

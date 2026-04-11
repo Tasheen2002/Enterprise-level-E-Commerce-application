@@ -21,36 +21,34 @@ export class UserProfileRepository
     super(prisma, eventBus);
   }
 
-  // Maps a Prisma record to a UserProfile domain entity
   private toDomain(data: any): UserProfile {
     const props: UserProfileProps = {
       userId: UserId.fromString(data.userId),
       defaultAddressId: data.defaultAddressId,
       defaultPaymentMethodId: data.defaultPaymentMethodId,
       preferences: (data.prefs || {}) as UserPreferences,
-      locale: data.locale ? new Locale(data.locale) : null,
-      currency: data.currency ? new Currency(data.currency) : null,
+      locale: data.locale ? Locale.fromString(data.locale) : null,
+      currency: data.currency ? Currency.fromString(data.currency) : null,
       stylePreferences: (data.stylePreferences || {}) as StylePreferences,
       preferredSizes: (data.preferredSizes || {}) as PreferredSizes,
     };
 
-    return UserProfile.reconstitute(props);
+    return UserProfile.fromPersistence(props);
   }
 
-  // Maps a UserProfile domain entity to a Prisma-compatible persistence object
   private toPersistence(userProfile: UserProfile): {
     create: Prisma.UserProfileUncheckedCreateInput;
     update: Prisma.UserProfileUncheckedUpdateInput;
   } {
     const create = {
-      userId: userProfile.getUserId().getValue(),
-      defaultAddressId: userProfile.getDefaultAddressId(),
-      defaultPaymentMethodId: userProfile.getDefaultPaymentMethodId(),
-      prefs: userProfile.getPreferences(),
-      locale: userProfile.getLocale()?.getValue() || null,
-      currency: userProfile.getCurrency()?.getValue() || null,
-      stylePreferences: userProfile.getStylePreferences(),
-      preferredSizes: userProfile.getPreferredSizes(),
+      userId: userProfile.userId.getValue(),
+      defaultAddressId: userProfile.defaultAddressId,
+      defaultPaymentMethodId: userProfile.defaultPaymentMethodId,
+      prefs: userProfile.preferences,
+      locale: userProfile.locale?.getValue() || null,
+      currency: userProfile.currency?.getValue() || null,
+      stylePreferences: userProfile.stylePreferences,
+      preferredSizes: userProfile.preferredSizes,
     };
 
     const { userId, ...update } = create;
@@ -62,7 +60,7 @@ export class UserProfileRepository
     const data = this.toPersistence(userProfile);
 
     await this.prisma.userProfile.upsert({
-      where: { userId: userProfile.getUserId().getValue() },
+      where: { userId: userProfile.userId.getValue() },
       create: data.create,
       update: data.update,
     });

@@ -222,10 +222,10 @@ export class CartManagementService {
       // CRITICAL: Check if this cart has a completed checkout
       // If so, don't reuse it - create a fresh cart instead
       const existingCheckout = await this.checkoutRepository.findByCartId(
-        existingCart.getCartId(),
+        existingCart.cartId,
       );
 
-      if (!existingCheckout || !existingCheckout.isCompleted()) {
+      if (!existingCheckout || !existingCheckout.isCompleted) {
         // Safe to reuse - update reservation expiry and return existing cart
         const newExpiryTime = new Date(
           Date.now() +
@@ -342,12 +342,12 @@ export class CartManagementService {
       const existingCheckout = await this.checkoutRepository.findByCartId(
         CartId.fromString(dto.cartId),
       );
-      if (existingCheckout && existingCheckout.isCompleted()) {
+      if (existingCheckout && existingCheckout.isCompleted) {
         // Cart has a completed order - create a new cart instead
         if (dto.guestToken) {
           const newCartDto = await this.createGuestCart({
             guestToken: dto.guestToken,
-            currency: cart.getCurrency().toString(),
+            currency: cart.currency.getValue(),
           });
           cart = await this.cartRepository.findById(
             CartId.fromString(newCartDto.cartId),
@@ -355,7 +355,7 @@ export class CartManagementService {
         } else if (dto.userId) {
           const newCartDto = await this.createUserCart({
             userId: dto.userId,
-            currency: cart.getCurrency().toString(),
+            currency: cart.currency.getValue(),
           });
           cart = await this.cartRepository.findById(
             CartId.fromString(newCartDto.cartId),
@@ -406,23 +406,23 @@ export class CartManagementService {
     // Check if reservation already exists for this cart+variant
     const existingReservation =
       await this.reservationRepository.findByCartAndVariant(
-        cart.getCartId(),
+        cart.cartId,
         VariantId.fromString(dto.variantId),
       );
 
     if (existingReservation) {
       // Update existing reservation quantity if needed
-      const currentReservedQty = existingReservation.getQuantity().getValue();
+      const currentReservedQty = existingReservation.quantity.getValue();
       const existingCartItem = cart.findItemByVariantId(dto.variantId);
       const currentCartQty = existingCartItem
-        ? existingCartItem.getQuantity().getValue()
+        ? existingCartItem.quantity.getValue()
         : 0;
       const newTotalQty = currentCartQty + dto.quantity;
 
       if (newTotalQty > currentReservedQty) {
         // Need to reserve additional quantity
         await this.reservationRepository.adjustReservation(
-          cart.getCartId(),
+          cart.cartId,
           VariantId.fromString(dto.variantId),
           newTotalQty,
         );
@@ -430,7 +430,7 @@ export class CartManagementService {
     } else {
       // Create new reservation
       await this.reservationRepository.reserveInventory(
-        cart.getCartId(),
+        cart.cartId,
         VariantId.fromString(dto.variantId),
         dto.quantity,
       );
@@ -466,7 +466,7 @@ export class CartManagementService {
 
     // Update reservation if exists
     const reservation = await this.reservationRepository.findByCartAndVariant(
-      cart.getCartId(),
+      cart.cartId,
       VariantId.fromString(dto.variantId),
     );
 
@@ -475,7 +475,7 @@ export class CartManagementService {
         reservation.updateQuantity(dto.quantity);
         await this.reservationRepository.update(reservation);
       } else {
-        await this.reservationRepository.delete(reservation.getReservationId());
+        await this.reservationRepository.delete(reservation.reservationId.getValue());
       }
     }
 
@@ -500,7 +500,7 @@ export class CartManagementService {
 
     // Remove reservation if exists
     await this.reservationRepository.deleteByCartAndVariant(
-      cart.getCartId(),
+      cart.cartId,
       VariantId.fromString(dto.variantId),
     );
 
@@ -526,7 +526,7 @@ export class CartManagementService {
     this.validateCartOwnership(cart, userId, guestToken);
 
     // Clear all reservations for this cart
-    await this.reservationRepository.deleteByCartId(cart.getCartId());
+    await this.reservationRepository.deleteByCartId(cart.cartId);
 
     // Clear cart items
     cart.clearItems();
@@ -559,20 +559,20 @@ export class CartManagementService {
         // Transfer reservations
         const guestReservations =
           await this.reservationRepository.findActiveByCartId(
-            guestCart.getCartId(),
+            guestCart.cartId,
           );
         for (const reservation of guestReservations) {
           // Create new reservations for user cart
           await this.reservationRepository.createReservation(
-            userCart.getCartId(),
-            reservation.getVariantId(),
-            reservation.getQuantity(),
+            userCart.cartId,
+            reservation.variantId,
+            reservation.quantity,
           );
         }
 
         // Delete guest cart and its reservations
-        await this.reservationRepository.deleteByCartId(guestCart.getCartId());
-        await this.cartRepository.delete(guestCart.getCartId());
+        await this.reservationRepository.deleteByCartId(guestCart.cartId);
+        await this.cartRepository.delete(guestCart.cartId);
 
         await this.refreshCartReservations(userCart);
         return await this.mapCartToDto(userCart);
@@ -589,10 +589,10 @@ export class CartManagementService {
 
   private async refreshCartReservations(cart: ShoppingCart): Promise<void> {
     try {
-      const items = cart.getItems();
+      const items = cart.items;
 
       for (const item of items) {
-        const quantity = item.getQuantity().getValue();
+        const quantity = item.quantity.getValue();
 
         // Find existing reservation (even if expired, as repo method might return it depending on implementation)
         // Usually findByCartAndVariant returns null if expired or doesn't exist?
@@ -600,17 +600,17 @@ export class CartManagementService {
 
         const existingReservation =
           await this.reservationRepository.findByCartAndVariant(
-            cart.getCartId(),
-            item.getVariantId(),
+            cart.cartId,
+            item.variantId,
           );
 
         let needsRenewal = false;
 
         if (!existingReservation) {
           needsRenewal = true;
-        } else if (existingReservation.isExpired()) {
+        } else if (existingReservation.isExpired) {
           needsRenewal = true;
-        } else if (existingReservation.getQuantity().getValue() < quantity) {
+        } else if (existingReservation.quantity.getValue() < quantity) {
           // If reserved less than cart quantity (e.g. partial expiry or update), renew/adjust
           needsRenewal = true;
         }
@@ -618,8 +618,8 @@ export class CartManagementService {
         if (needsRenewal) {
           try {
             await this.reservationRepository.reserveInventory(
-              cart.getCartId(),
-              item.getVariantId(),
+              cart.cartId,
+              item.variantId,
               quantity,
             );
           } catch (err) {
@@ -639,8 +639,8 @@ export class CartManagementService {
     userId?: string,
     guestToken?: string,
   ): void {
-    const cartCartOwnerId = cart.getCartOwnerId()?.getValue();
-    const cartGuestToken = cart.getGuestToken()?.getValue();
+    const cartCartOwnerId = cart.cartOwnerId?.getValue();
+    const cartGuestToken = cart.guestToken?.getValue();
 
     if (cartCartOwnerId) {
       if (!userId || cartCartOwnerId !== userId) {
@@ -656,17 +656,15 @@ export class CartManagementService {
   }
 
   private async mapCartToDto(cart: ShoppingCart): Promise<CartDto> {
-    const summary = cart.getSummary();
-
     // Map all cart items with product details
     const items = await Promise.all(
-      cart.getItems().map((item) => this.mapCartItemToDto(item)),
+      cart.items.map((item) => this.mapCartItemToDto(item)),
     );
 
     // Fetch checkout fields from database (they're not in the domain entity)
     const cartWithCheckoutInfo =
       await this.cartRepository.getCartWithCheckoutInfo(
-        cart.getCartId().getValue(),
+        cart.cartId.getValue(),
       );
 
     // Calculate shipping
@@ -675,24 +673,35 @@ export class CartManagementService {
       cartWithCheckoutInfo?.shippingOption,
     );
 
-    // Update total with shipping
-    // Note: cart.getSummary().total only includes item prices
-    const summaryWithShipping = {
-      ...summary,
-      total: summary.total + shippingCost,
+    const summary: CartSummaryDto = {
+      cartId: cart.cartId.getValue(),
+      isUserCart: cart.isUserCart,
+      isGuestCart: cart.isGuestCart,
+      currency: cart.currency.getValue(),
+      itemCount: cart.itemCount,
+      uniqueItemCount: cart.uniqueItemCount,
+      subtotal: cart.subtotal,
+      totalDiscount: cart.totalDiscount,
+      total: cart.total + shippingCost,
       shippingAmount: shippingCost,
+      hasGiftItems: cart.hasGiftItems,
+      hasFreeShipping: cart.hasFreeShipping,
+      isEmpty: cart.isEmpty,
+      isReservationExpired: cart.isReservationExpired,
+      reservationExpiresAt: cart.reservationExpiresAt ?? undefined,
+      updatedAt: cart.updatedAt,
     };
 
     return {
-      cartId: cart.getCartId().getValue(),
-      userId: cart.getCartOwnerId()?.getValue(),
-      guestToken: cart.getGuestToken()?.getValue(),
-      currency: cart.getCurrency().getValue(),
+      cartId: cart.cartId.getValue(),
+      userId: cart.cartOwnerId?.getValue(),
+      guestToken: cart.guestToken?.getValue(),
+      currency: cart.currency.getValue(),
       items,
-      summary: summaryWithShipping as CartSummaryDto,
-      reservationExpiresAt: cart.getReservationExpiresAt() || undefined,
-      createdAt: cart.getCreatedAt(),
-      updatedAt: cart.getUpdatedAt(),
+      summary,
+      reservationExpiresAt: cart.reservationExpiresAt ?? undefined,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
 
       // Checkout fields from database
       email: cartWithCheckoutInfo?.email || undefined,
@@ -741,7 +750,7 @@ export class CartManagementService {
   }
 
   private async mapCartItemToDto(item: CartItem): Promise<CartItemDto> {
-    const variantId = item.getVariantId().getValue();
+    const variantId = item.variantId.getValue();
 
     // Fetch variant details
     const variant = await this.productVariantRepository.findById({
@@ -793,18 +802,18 @@ export class CartManagementService {
     }
 
     return {
-      id: item.getId(),
+      id: item.id,
       variantId,
-      quantity: item.getQuantity().getValue(),
-      unitPrice: item.getUnitPrice(),
-      subtotal: item.getSubtotal(),
-      discountAmount: item.getDiscountAmount(),
-      totalPrice: item.getTotalPrice(),
-      appliedPromos: item.getAppliedPromos().getValue(),
-      isGift: item.isGiftItem(),
-      giftMessage: item.getGiftMessage(),
-      hasPromosApplied: item.hasPromosApplied(),
-      hasFreeShipping: item.hasFreeShipping(),
+      quantity: item.quantity.getValue(),
+      unitPrice: item.unitPrice,
+      subtotal: item.subtotal,
+      discountAmount: item.discountAmount,
+      totalPrice: item.totalPrice,
+      appliedPromos: item.appliedPromos.getValue(),
+      isGift: item.isGift,
+      giftMessage: item.giftMessage,
+      hasPromosApplied: item.hasPromosApplied,
+      hasFreeShipping: item.hasFreeShipping,
       product: productDetails,
       variant: variantDetails,
     };

@@ -14,8 +14,8 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
   constructor(private readonly prisma: PrismaClient) {}
 
   private toEntity(row: PurchaseOrderItemDatabaseRow): PurchaseOrderItem {
-    return PurchaseOrderItem.reconstitute({
-      poId: PurchaseOrderId.create(row.poId),
+    return PurchaseOrderItem.fromPersistence({
+      poId: PurchaseOrderId.fromString(row.poId),
       variantId: row.variantId,
       orderedQty: row.orderedQty,
       receivedQty: row.receivedQty,
@@ -26,19 +26,19 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
     await (this.prisma as any).purchaseOrderItem.upsert({
       where: {
         poId_variantId: {
-          poId: item.getPoId().getValue(),
-          variantId: item.getVariantId(),
+          poId: item.poId.getValue(),
+          variantId: item.variantId,
         },
       },
       create: {
-        poId: item.getPoId().getValue(),
-        variantId: item.getVariantId(),
-        orderedQty: item.getOrderedQty(),
-        receivedQty: item.getReceivedQty(),
+        poId: item.poId.getValue(),
+        variantId: item.variantId,
+        orderedQty: item.orderedQty,
+        receivedQty: item.receivedQty,
       },
       update: {
-        orderedQty: item.getOrderedQty(),
-        receivedQty: item.getReceivedQty(),
+        orderedQty: item.orderedQty,
+        receivedQty: item.receivedQty,
       },
     });
   }

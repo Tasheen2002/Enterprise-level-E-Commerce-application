@@ -1,16 +1,19 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
-import { UserId } from "../value-objects/user-id.vo";
-import { AddressId } from "../value-objects/address-id";
+import { UserId } from '../value-objects/user-id.vo';
+import { AddressId } from '../value-objects/address-id';
 import {
   Address as AddressVO,
   AddressData,
   AddressType,
-} from "../value-objects/address.vo";
-import { ShippingZone } from "../enums/shipping-zone.enum";
+} from '../value-objects/address.vo';
+import { ShippingZone } from '../enums/shipping-zone.enum';
 
 export { ShippingZone, AddressId };
 
-// Props interface
+// ============================================================================
+// Props Interface
+// ============================================================================
+
 export interface AddressProps {
   id: AddressId;
   userId: UserId;
@@ -21,15 +24,40 @@ export interface AddressProps {
   updatedAt: Date;
 }
 
-export class Address extends AggregateRoot {
-  private props: AddressProps;
+// ============================================================================
+// DTO Interface
+// ============================================================================
 
-  private constructor(props: AddressProps) {
+export interface AddressDTO {
+  id: string;
+  userId: string;
+  type: string;
+  isDefault: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  company: string | null;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  state: string | null;
+  postalCode: string | null;
+  country: string;
+  phone: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class Address extends AggregateRoot {
+  private constructor(private props: AddressProps) {
     super();
-    this.props = props;
   }
 
-  // Factory methods
+  // --- Static factories ---
+
   static create(params: {
     userId: string;
     addressData: AddressData;
@@ -37,7 +65,6 @@ export class Address extends AggregateRoot {
     isDefault?: boolean;
   }): Address {
     const now = new Date();
-
     return new Address({
       id: AddressId.create(),
       userId: UserId.fromString(params.userId),
@@ -49,73 +76,47 @@ export class Address extends AggregateRoot {
     });
   }
 
-  static reconstitute(props: AddressProps): Address {
+  static fromPersistence(props: AddressProps): Address {
     return new Address(props);
   }
 
-  // Getters
-  getId(): AddressId {
-    return this.props.id;
-  }
-  getUserId(): UserId {
-    return this.props.userId;
-  }
-  getAddressValue(): AddressVO {
-    return this.props.addressValue;
-  }
-  getType(): AddressType {
-    return this.props.type;
-  }
-  getIsDefault(): boolean {
-    return this.props.isDefault;
-  }
-  getCreatedAt(): Date {
-    return this.props.createdAt;
-  }
-  getUpdatedAt(): Date {
-    return this.props.updatedAt;
-  }
+  // --- Native getters ---
 
-  // Business logic methods
+  get id(): AddressId { return this.props.id; }
+  get userId(): UserId { return this.props.userId; }
+  get addressValue(): AddressVO { return this.props.addressValue; }
+  get type(): AddressType { return this.props.type; }
+  get isDefault(): boolean { return this.props.isDefault; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
+
+  // --- Business methods ---
+
   updateAddress(newAddressData: AddressData): void {
     const newAddressValue = AddressVO.fromData(newAddressData);
-
-    if (this.props.addressValue.equals(newAddressValue)) {
-      return; // No change needed
-    }
-
+    if (this.props.addressValue.equals(newAddressValue)) return;
     this.props.addressValue = newAddressValue;
     this.props.updatedAt = new Date();
   }
 
   setAsDefault(): void {
-    if (this.props.isDefault) {
-      return; // Already default
-    }
-
+    if (this.props.isDefault) return;
     this.props.isDefault = true;
     this.props.updatedAt = new Date();
   }
 
   removeAsDefault(): void {
-    if (!this.props.isDefault) {
-      return; // Already not default
-    }
-
+    if (!this.props.isDefault) return;
     this.props.isDefault = false;
     this.props.updatedAt = new Date();
   }
 
   changeType(newType: AddressType): void {
-    if (this.props.type === newType) {
-      return; // No change needed
-    }
-
+    if (this.props.type === newType) return;
     this.props.type = newType;
     this.props.updatedAt = new Date();
   }
 
-  // Validation methods
   isValidForShipping(): boolean {
     return this.props.addressValue.isShippable();
   }
@@ -136,45 +137,32 @@ export class Address extends AggregateRoot {
     return true;
   }
 
-  // Address-specific business methods
   calculateShippingZone(): ShippingZone {
     const country = this.props.addressValue.getCountry();
-
     switch (country) {
-      case "US":
-        return ShippingZone.DOMESTIC;
-      case "CA":
-      case "MX":
-        return ShippingZone.NORTH_AMERICA;
-      case "UK":
-      case "FR":
-      case "DE":
-      case "IT":
-      case "ES":
-        return ShippingZone.EUROPE;
-      default:
-        return ShippingZone.INTERNATIONAL;
+      case 'US': return ShippingZone.DOMESTIC;
+      case 'CA':
+      case 'MX': return ShippingZone.NORTH_AMERICA;
+      case 'UK':
+      case 'FR':
+      case 'DE':
+      case 'IT':
+      case 'ES': return ShippingZone.EUROPE;
+      default: return ShippingZone.INTERNATIONAL;
     }
   }
 
   estimateDeliveryDays(): number {
-    const zone = this.calculateShippingZone();
-
-    switch (zone) {
-      case ShippingZone.DOMESTIC:
-        return 3; // 1-3 business days
-      case ShippingZone.NORTH_AMERICA:
-        return 7; // 5-7 business days
-      case ShippingZone.EUROPE:
-        return 10; // 7-10 business days
-      case ShippingZone.INTERNATIONAL:
-        return 14; // 10-14 business days
-      default:
-        return 14;
+    switch (this.calculateShippingZone()) {
+      case ShippingZone.DOMESTIC: return 3;
+      case ShippingZone.NORTH_AMERICA: return 7;
+      case ShippingZone.EUROPE: return 10;
+      case ShippingZone.INTERNATIONAL: return 14;
+      default: return 14;
     }
   }
 
-  isInternationalShipping(fromCountry: string = "US"): boolean {
+  isInternationalShipping(fromCountry: string = 'US'): boolean {
     return this.props.addressValue.isInternational(fromCountry);
   }
 
@@ -182,51 +170,48 @@ export class Address extends AggregateRoot {
     return this.isInternationalShipping();
   }
 
-  // Tax-related methods
   getTaxJurisdiction(): string {
     const country = this.props.addressValue.getCountry();
     const state = this.props.addressValue.getState();
-
-    if (country === "US" && state) {
-      return `${country}-${state}`;
-    }
-
+    if (country === 'US' && state) return `${country}-${state}`;
     return country;
   }
 
-  // Address formatting for different purposes
   getShippingLabel(): AddressLabel {
     const formatted = this.props.addressValue.getFormattedAddress();
-
     return {
       recipient: formatted.recipient,
       addressLines: formatted.street,
       cityStateZip: formatted.cityStateZip,
       country: formatted.country,
-      type: "SHIPPING",
+      type: 'SHIPPING',
     };
   }
 
   getBillingLabel(): AddressLabel {
     const formatted = this.props.addressValue.getFormattedAddress();
-
     return {
       recipient: formatted.recipient,
       addressLines: formatted.street,
       cityStateZip: formatted.cityStateZip,
       country: formatted.country,
-      type: "BILLING",
+      type: 'BILLING',
     };
   }
 
-  // Static DTO conversion — called by service, NEVER by handler or controller
+  equals(other: Address): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
+  // --- Static DTO mapper ---
+
   static toDTO(address: Address): AddressDTO {
-    const data = address.props.addressValue.toData();
+    const data = address.addressValue.toData();
     return {
-      id: address.props.id.getValue(),
-      userId: address.props.userId.getValue(),
-      type: address.props.type.toString(),
-      isDefault: address.props.isDefault,
+      id: address.id.getValue(),
+      userId: address.userId.getValue(),
+      type: address.type.toString(),
+      isDefault: address.isDefault,
       firstName: data.firstName || null,
       lastName: data.lastName || null,
       company: data.company || null,
@@ -237,40 +222,20 @@ export class Address extends AggregateRoot {
       postalCode: data.postalCode || null,
       country: data.country,
       phone: data.phone || null,
-      createdAt: address.props.createdAt.toISOString(),
-      updatedAt: address.props.updatedAt.toISOString(),
+      createdAt: address.createdAt.toISOString(),
+      updatedAt: address.updatedAt.toISOString(),
     };
   }
-
-  equals(other: Address): boolean {
-    return this.props.id.equals(other.props.id);
-  }
 }
+
+// ============================================================================
+// Supporting types
+// ============================================================================
 
 export interface AddressLabel {
   recipient: string;
   addressLines: string[];
   cityStateZip: string;
   country: string;
-  type: "SHIPPING" | "BILLING";
-}
-
-// DTO Interface
-export interface AddressDTO {
-  id: string;
-  userId: string;
-  type: string;
-  isDefault: boolean;
-  firstName: string | null;
-  lastName: string | null;
-  company: string | null;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  state: string | null;
-  postalCode: string | null;
-  country: string;
-  phone: string | null;
-  createdAt: string;
-  updatedAt: string;
+  type: 'SHIPPING' | 'BILLING';
 }

@@ -114,12 +114,12 @@ export class AddressManagementService {
     await this.addressRepository.delete(addressIdVo);
 
     // If this was the default address, we might want to set another as default
-    if (address.getIsDefault()) {
+    if (address.isDefault) {
       const remainingAddresses =
         await this.addressRepository.findByUserId(userIdVo);
       if (remainingAddresses.length > 0) {
         await this.addressRepository.setAsDefault(
-          remainingAddresses[0].getId(),
+          remainingAddresses[0].id,
           userIdVo,
         );
       }

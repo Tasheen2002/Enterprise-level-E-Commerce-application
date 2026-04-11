@@ -89,18 +89,18 @@ export class AuthenticationService {
   }
 
   async login(credentials: LoginCredentials): Promise<LoginResult> {
-    const email = Email.fromString(credentials.email);
+    const email = Email.create(credentials.email);
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
       throw new InvalidCredentialsError();
     }
 
-    if (user.getIsGuest()) {
+    if (user.isGuest) {
       throw new InvalidCredentialsError(); // Guest users cannot login with password
     }
 
-    const passwordHash = user.getPasswordHash();
+    const passwordHash = user.passwordHash;
     if (!passwordHash) {
       // Should technically not happen for non-guest users without password
       throw new InvalidCredentialsError();
@@ -115,11 +115,11 @@ export class AuthenticationService {
       throw new InvalidCredentialsError();
     }
 
-    if (user.getStatus() === UserStatus.BLOCKED) {
+    if (user.status === UserStatus.BLOCKED) {
       throw new UserBlockedError();
     }
 
-    if (user.getStatus() === UserStatus.INACTIVE) {
+    if (user.status === UserStatus.INACTIVE) {
       throw new UserInactiveError();
     }
 
@@ -130,10 +130,10 @@ export class AuthenticationService {
     let user: User;
 
     if (email) {
-      const emailVo = Email.fromString(email);
+      const emailVo = Email.create(email);
       const existingUser = await this.userRepository.findByEmail(emailVo);
 
-      if (existingUser && !existingUser.getIsGuest()) {
+      if (existingUser && !existingUser.isGuest) {
         throw new UserAlreadyExistsError(email);
       }
 
@@ -178,7 +178,7 @@ export class AuthenticationService {
         throw new UserNotFoundError(payload.userId);
       }
 
-      if (user.getStatus() === UserStatus.BLOCKED) {
+      if (user.status === UserStatus.BLOCKED) {
         throw new UserBlockedError();
       }
 
@@ -216,7 +216,7 @@ export class AuthenticationService {
         throw new UserNotFoundError(payload.userId);
       }
 
-      if (user.getStatus() === UserStatus.BLOCKED) {
+      if (user.status === UserStatus.BLOCKED) {
         throw new UserBlockedError();
       }
 
@@ -270,11 +270,11 @@ export class AuthenticationService {
       throw new UserNotFoundError(userId);
     }
 
-    if (user.getIsGuest()) {
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot change password");
     }
 
-    const currentPasswordHash = user.getPasswordHash();
+    const currentPasswordHash = user.passwordHash;
     if (!currentPasswordHash) {
       throw new InvalidOperationError("User has no password set");
     }
@@ -317,11 +317,11 @@ export class AuthenticationService {
       throw new UserNotFoundError(userId);
     }
 
-    if (user.getIsGuest()) {
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot change email");
     }
 
-    const passwordHash = user.getPasswordHash();
+    const passwordHash = user.passwordHash;
     if (!passwordHash) {
       throw new InvalidOperationError("User has no password set");
     }
@@ -336,9 +336,9 @@ export class AuthenticationService {
     }
 
     // Check if new email is already taken
-    const emailVo = Email.fromString(newEmail);
+    const emailVo = Email.create(newEmail);
     const existingUser = await this.userRepository.findByEmail(emailVo);
-    if (existingUser && existingUser.getId().getValue() !== userId) {
+    if (existingUser && existingUser.id.getValue() !== userId) {
       throw new UserAlreadyExistsError(newEmail);
     }
 
@@ -354,7 +354,7 @@ export class AuthenticationService {
       throw new UserNotFoundError(userId);
     }
 
-    const passwordHash = user.getPasswordHash();
+    const passwordHash = user.passwordHash;
     if (!passwordHash) {
       throw new InvalidOperationError("User has no password set");
     }
@@ -370,10 +370,10 @@ export class AuthenticationService {
   }
 
   async register(userData: RegisterUserData): Promise<AuthResult> {
-    const email = new Email(userData.email);
+    const email = Email.create(userData.email);
 
     const existingUser = await this.userRepository.findByEmail(email);
-    if (existingUser && !existingUser.getIsGuest()) {
+    if (existingUser && !existingUser.isGuest) {
       throw new UserAlreadyExistsError(userData.email);
     }
 
@@ -392,7 +392,7 @@ export class AuthenticationService {
     }
 
     let user: User;
-    if (existingUser && existingUser.getIsGuest()) {
+    if (existingUser && existingUser.isGuest) {
       existingUser.convertFromGuest(userData.email, passwordHash);
       if (userData.phone) {
         existingUser.updatePhone(userData.phone);
@@ -417,27 +417,27 @@ export class AuthenticationService {
   async initiatePasswordReset(
     email: string,
   ): Promise<{ exists: boolean; token?: string; userId?: string }> {
-    const emailVo = Email.fromString(email);
+    const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
-    if (!user || user.getIsGuest()) {
+    if (!user || user.isGuest) {
       return { exists: false };
     }
 
     const resetToken = this.generateSecureToken();
 
-    return { exists: true, token: resetToken, userId: user.getId().getValue() };
+    return { exists: true, token: resetToken, userId: user.id.getValue() };
   }
 
   async resetPassword(email: string, newPassword: string): Promise<void> {
-    const emailVo = Email.fromString(email);
+    const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
     if (!user) {
       throw new UserNotFoundError(email);
     }
 
-    if (user.getIsGuest()) {
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot reset password");
     }
 
@@ -461,16 +461,16 @@ export class AuthenticationService {
   async getUserByEmail(
     email: string,
   ): Promise<{ userId: string; emailVerified: boolean }> {
-    const emailVo = Email.fromString(email);
+    const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
-    if (!user || user.getIsGuest()) {
+    if (!user || user.isGuest) {
       throw new UserNotFoundError();
     }
 
     return {
-      userId: user.getId().getValue(),
-      emailVerified: user.isEmailVerified(),
+      userId: user.id.getValue(),
+      emailVerified: user.emailVerified,
     };
   }
 
@@ -482,7 +482,7 @@ export class AuthenticationService {
       throw new UserNotFoundError(userId);
     }
 
-    if (user.isEmailVerified()) {
+    if (user.emailVerified) {
       throw new EmailAlreadyVerifiedError();
     }
 
@@ -506,12 +506,12 @@ export class AuthenticationService {
       accessToken,
       refreshToken,
       user: {
-        id: user.getId().getValue(),
-        email: user.getEmail().getValue(),
-        role: user.getRole(),
-        isGuest: user.getIsGuest(),
-        emailVerified: user.isEmailVerified(),
-        phoneVerified: user.isPhoneVerified(),
+        id: user.id.getValue(),
+        email: user.email.getValue(),
+        role: user.role,
+        isGuest: user.isGuest,
+        emailVerified: user.emailVerified,
+        phoneVerified: user.phoneVerified,
       },
       expiresIn: this.getTokenExpirationTime(this.accessTokenExpiresIn),
     };
@@ -519,9 +519,9 @@ export class AuthenticationService {
 
   private generateAccessToken(user: User): string {
     const payload: TokenPayload = {
-      userId: user.getId().getValue(),
-      email: user.getEmail().getValue(),
-      role: user.getRole(),
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      role: user.role,
       type: "access",
     };
 
@@ -532,9 +532,9 @@ export class AuthenticationService {
 
   private generateRefreshToken(user: User): string {
     const payload: TokenPayload = {
-      userId: user.getId().getValue(),
-      email: user.getEmail().getValue(),
-      role: user.getRole(),
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      role: user.role,
       type: "refresh",
     };
 

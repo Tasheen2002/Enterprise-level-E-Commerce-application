@@ -114,7 +114,7 @@ export class VerificationRateLimitRepository
   }
 
   private toDomain(row: any): VerificationRateLimit {
-    return VerificationRateLimit.reconstitute({
+    return VerificationRateLimit.fromPersistence({
       rateLimitId: row.rate_limit_id,
       userId: row.user_id,
       email: row.email,

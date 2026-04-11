@@ -1,77 +1,40 @@
-import { DomainValidationError } from "../errors/user-management.errors";
+import { DomainValidationError } from '../errors/user-management.errors';
 
 export class Email {
-  private readonly value: string;
+  private constructor(private readonly value: string) {}
 
-  constructor(email: string) {
-    if (!email) {
-      throw new DomainValidationError("Email is required");
-    }
+  static create(email: string): Email {
+    if (!email) throw new DomainValidationError('Email is required');
 
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmed = email.trim().toLowerCase();
 
-    if (!this.isValidEmail(trimmedEmail)) {
-      throw new DomainValidationError("Invalid email format");
-    }
+    if (!Email.isValidEmail(trimmed)) throw new DomainValidationError('Invalid email format');
+    if (trimmed.length > 254) throw new DomainValidationError('Email is too long (maximum 254 characters)');
 
-    if (trimmedEmail.length > 254) {
-      throw new DomainValidationError("Email is too long (maximum 254 characters)");
-    }
-    this.value = trimmedEmail;
+    return new Email(trimmed);
   }
 
-  private isValidEmail(email: string): boolean {
-    // RFC 5322 compliant email regex (simplified)
+  private static isValidEmail(email: string): boolean {
     const emailRegex =
       /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
     return emailRegex.test(email);
   }
 
-  getValue(): string {
-    return this.value;
-  }
+  getValue(): string { return this.value; }
+  getDomain(): string { return this.value.split('@')[1]; }
+  getLocalPart(): string { return this.value.split('@')[0]; }
 
-  getDomain(): string {
-    return this.value.split("@")[1];
-  }
+  equals(other: Email): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 
-  getLocalPart(): string {
-    return this.value.split("@")[0];
-  }
+  isGmail(): boolean { return this.getDomain() === 'gmail.com'; }
 
-  equals(other: Email): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-
-  static fromString(email: string): Email {
-    return new Email(email);
-  }
-
-  // Common business methods
-  isGmail(): boolean {
-    return this.getDomain() === "gmail.com";
-  }
   isPersonalEmail(): boolean {
-    const personalDomains = [
-      "gmail.com",
-      "yahoo.com",
-      "hotmail.com",
-      "outlook.com",
-    ];
+    const personalDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
     return personalDomains.includes(this.getDomain());
   }
 
   isBusinessEmail(): boolean {
-    const personalDomains = [
-      "gmail.com",
-      "yahoo.com",
-      "hotmail.com",
-      "outlook.com",
-    ];
-    return !personalDomains.includes(this.getDomain());
+    return !this.isPersonalEmail();
   }
 }

@@ -1,118 +1,94 @@
-import { EditorialLookId } from "../value-objects/editorial-look-id.vo";
-import { ProductId } from "../value-objects/product-id.vo";
+import { EditorialLookId } from '../value-objects/editorial-look-id.vo';
+import { ProductId } from '../value-objects/product-id.vo';
+
+export interface EditorialLookProductProps {
+  id: string;
+  editorialLookId: EditorialLookId;
+  productId: ProductId;
+  displayOrder: number;
+  createdAt: Date;
+}
 
 export class EditorialLookProduct {
-  private constructor(
-    private readonly lookId: EditorialLookId,
-    private readonly productId: ProductId,
-  ) {}
+  private props: EditorialLookProductProps;
 
-  static create(data: CreateEditorialLookProductData): EditorialLookProduct {
-    return new EditorialLookProduct(
-      EditorialLookId.fromString(data.lookId),
-      ProductId.fromString(data.productId),
-    );
+  private constructor(props: EditorialLookProductProps) {
+    this.props = props;
   }
 
-  static reconstitute(data: EditorialLookProductData): EditorialLookProduct {
-    return new EditorialLookProduct(
-      EditorialLookId.fromString(data.lookId),
-      ProductId.fromString(data.productId),
-    );
+  static create(params: {
+    id: string;
+    editorialLookId: string;
+    productId: string;
+    displayOrder: number;
+  }): EditorialLookProduct {
+    const now = new Date();
+    return new EditorialLookProduct({
+      id: params.id,
+      editorialLookId: EditorialLookId.fromString(params.editorialLookId),
+      productId: ProductId.fromString(params.productId),
+      displayOrder: params.displayOrder,
+      createdAt: now,
+    });
   }
 
-  static fromDatabaseRow(row: EditorialLookProductRow): EditorialLookProduct {
-    return new EditorialLookProduct(
-      EditorialLookId.fromString(row.look_id),
-      ProductId.fromString(row.product_id),
-    );
+  static fromPersistence(props: EditorialLookProductProps): EditorialLookProduct {
+    return new EditorialLookProduct(props);
   }
 
   // Getters
-  getLookId(): EditorialLookId {
-    return this.lookId;
+  get id(): string {
+    return this.props.id;
   }
 
-  getProductId(): ProductId {
-    return this.productId;
+  get editorialLookId(): EditorialLookId {
+    return this.props.editorialLookId;
   }
 
-  // Validation methods
-  isAssociationFor(lookId: EditorialLookId, productId: ProductId): boolean {
-    return this.lookId.equals(lookId) && this.productId.equals(productId);
+  get productId(): ProductId {
+    return this.props.productId;
+  }
+
+  get displayOrder(): number {
+    return this.props.displayOrder;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  // Business methods
+  updateDisplayOrder(order: number): void {
+    this.props.displayOrder = order;
   }
 
   isForLook(lookId: EditorialLookId): boolean {
-    return this.lookId.equals(lookId);
+    return this.props.editorialLookId.equals(lookId);
   }
 
   isForProduct(productId: ProductId): boolean {
-    return this.productId.equals(productId);
-  }
-
-  // Business logic methods
-  belongsToSameLookAs(other: EditorialLookProduct): boolean {
-    return this.lookId.equals(other.lookId);
-  }
-
-  featuresTheSameProductAs(other: EditorialLookProduct): boolean {
-    return this.productId.equals(other.productId);
-  }
-
-  isIdenticalTo(other: EditorialLookProduct): boolean {
-    return this.isAssociationFor(other.lookId, other.productId);
-  }
-
-  // Helper methods for editorial content management
-  canBeRemovedFromLook(lookId: EditorialLookId): boolean {
-    return this.lookId.equals(lookId);
-  }
-
-  representsProductFeaturing(
-    lookId: EditorialLookId,
-    productId: ProductId,
-  ): boolean {
-    return this.isAssociationFor(lookId, productId);
-  }
-
-  isPartOfEditorialContent(): boolean {
-    return true; // By definition, this association means the product is featured in editorial content
-  }
-
-  // Convert to data for persistence
-  toData(): EditorialLookProductData {
-    return {
-      lookId: this.lookId.getValue(),
-      productId: this.productId.getValue(),
-    };
-  }
-
-  toDatabaseRow(): EditorialLookProductRow {
-    return {
-      look_id: this.lookId.getValue(),
-      product_id: this.productId.getValue(),
-    };
+    return this.props.productId.equals(productId);
   }
 
   equals(other: EditorialLookProduct): boolean {
-    return (
-      this.lookId.equals(other.lookId) && this.productId.equals(other.productId)
-    );
+    return this.props.id === other.props.id;
+  }
+
+  static toDTO(entity: EditorialLookProduct): EditorialLookProductDTO {
+    return {
+      id: entity.props.id,
+      editorialLookId: entity.props.editorialLookId.getValue(),
+      productId: entity.props.productId.getValue(),
+      displayOrder: entity.props.displayOrder,
+      createdAt: entity.props.createdAt.toISOString(),
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateEditorialLookProductData {
-  lookId: string;
+export interface EditorialLookProductDTO {
+  id: string;
+  editorialLookId: string;
   productId: string;
-}
-
-export interface EditorialLookProductData {
-  lookId: string;
-  productId: string;
-}
-
-export interface EditorialLookProductRow {
-  look_id: string;
-  product_id: string;
+  displayOrder: number;
+  createdAt: string;
 }

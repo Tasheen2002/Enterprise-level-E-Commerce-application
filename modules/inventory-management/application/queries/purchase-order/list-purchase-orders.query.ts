@@ -1,5 +1,6 @@
-import { IQuery } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
 import { PurchaseOrderResult } from "./get-purchase-order.query";
+import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
 export interface ListPurchaseOrdersQuery extends IQuery {
   limit?: number;
@@ -13,4 +14,23 @@ export interface ListPurchaseOrdersQuery extends IQuery {
 export interface ListPurchaseOrdersResult {
   purchaseOrders: PurchaseOrderResult[];
   total: number;
+}
+
+export class ListPurchaseOrdersHandler implements IQueryHandler<
+  ListPurchaseOrdersQuery,
+  QueryResult<ListPurchaseOrdersResult>
+> {
+  constructor(private readonly poService: PurchaseOrderManagementService) {}
+
+  async handle(query: ListPurchaseOrdersQuery): Promise<QueryResult<ListPurchaseOrdersResult>> {
+    const result = await this.poService.listPurchaseOrders({
+      limit: query.limit,
+      offset: query.offset,
+      status: query.status,
+      supplierId: query.supplierId,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
+    return QueryResult.success({ purchaseOrders: result.purchaseOrders, total: result.total });
+  }
 }

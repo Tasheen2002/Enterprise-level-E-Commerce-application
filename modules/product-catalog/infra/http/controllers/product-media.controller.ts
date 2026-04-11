@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
   ProductMediaManagementService,
   ProductMediaServiceQueryOptions,
@@ -38,7 +39,7 @@ export class ProductMediaController {
   ) {}
 
   async getProductMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Querystring: ProductMediaQueryParams;
     }>,
@@ -56,18 +57,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media retrieved successfully", productMedia);
     } catch (error) {
-      request.log.error(error, "Failed to get product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async addMediaToProduct(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Body: AddMediaToProductRequest;
     }>,
@@ -87,11 +83,6 @@ export class ProductMediaController {
 
       return ResponseHelper.created(reply, "Media added to product successfully", { productMediaId });
     } catch (error) {
-      request.log.error(error, "Failed to add media to product");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       if (
         error instanceof Error &&
@@ -110,7 +101,7 @@ export class ProductMediaController {
   }
 
   async removeMediaFromProduct(
-    request: FastifyRequest<{ Params: { productId: string; assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string; assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -121,20 +112,15 @@ export class ProductMediaController {
         assetId,
       );
 
-      return ResponseHelper.ok(reply, "Media removed from product successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to remove media from product");
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeAllProductMedia(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -142,20 +128,15 @@ export class ProductMediaController {
 
       await this.productMediaManagementService.removeAllProductMedia(productId);
 
-      return ResponseHelper.ok(reply, "All media removed from product successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to remove all product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setProductCoverImage(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Body: SetProductCoverImageRequest;
     }>,
@@ -170,20 +151,15 @@ export class ProductMediaController {
         assetId,
       );
 
-      return ResponseHelper.ok(reply, "Product cover image set successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to set product cover image");
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeCoverImage(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -191,20 +167,15 @@ export class ProductMediaController {
 
       await this.productMediaManagementService.removeCoverImage(productId);
 
-      return ResponseHelper.ok(reply, "Product cover image removed successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to remove product cover image");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async reorderProductMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Body: ReorderProductMediaRequest;
     }>,
@@ -219,24 +190,15 @@ export class ProductMediaController {
         reorderData,
       );
 
-      return ResponseHelper.ok(reply, "Product media reordered successfully");
+      return ResponseHelper.noContent(reply);
     } catch (error) {
-      request.log.error(error, "Failed to reorder product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async moveMediaPosition(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Body: MoveMediaPositionRequest;
     }>,
@@ -254,25 +216,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Media position updated successfully");
     } catch (error) {
-      request.log.error(error, "Failed to move media position");
-
-      if (error instanceof Error && error.message.includes("not associated")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("Position must be greater than 0")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setProductMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { productId: string };
       Body: SetProductMediaRequest;
     }>,
@@ -289,25 +239,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media set successfully");
     } catch (error) {
-      request.log.error(error, "Failed to set product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
-
-      if (
-        error instanceof Error &&
-        error.message.includes("Only one media asset can be set as cover image")
-      ) {
-        return ResponseHelper.badRequest(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async duplicateProductMedia(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { sourceProductId: string; targetProductId: string };
     }>,
     reply: FastifyReply,
@@ -322,18 +260,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media duplicated successfully");
     } catch (error) {
-      request.log.error(error, "Failed to duplicate product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, error.message);
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getProductsUsingAsset(
-    request: FastifyRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -344,18 +277,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Products using asset retrieved successfully", productIds);
     } catch (error) {
-      request.log.error(error, "Failed to get products using asset");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getAssetUsageCount(
-    request: FastifyRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -366,18 +294,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Asset usage count retrieved successfully", { assetId, usageCount });
     } catch (error) {
-      request.log.error(error, "Failed to get asset usage count");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Media asset not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async compactProductMediaPositions(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -389,18 +312,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media positions compacted successfully");
     } catch (error) {
-      request.log.error(error, "Failed to compact product media positions");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async validateProductMedia(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -413,18 +331,13 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media validated successfully", validation);
     } catch (error) {
-      request.log.error(error, "Failed to validate product media");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getProductMediaStatistics(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -437,11 +350,6 @@ export class ProductMediaController {
 
       return ResponseHelper.ok(reply, "Product media statistics retrieved successfully", statistics);
     } catch (error) {
-      request.log.error(error, "Failed to get product media statistics");
-
-      if (error instanceof Error && error.message.includes("not found")) {
-        return ResponseHelper.notFound(reply, "Product not found");
-      }
 
       return ResponseHelper.error(reply, error);
     }

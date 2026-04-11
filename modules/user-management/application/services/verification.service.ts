@@ -59,10 +59,10 @@ export class VerificationService {
       throw new UserNotFoundError();
     }
 
-    if (user.isEmailVerified()) {
+    if (user.emailVerified) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
@@ -76,14 +76,14 @@ export class VerificationService {
 
     const rateLimitCheck = await this.checkRateLimit(
       userId,
-      user.getEmail().getValue(),
+      user.email.getValue(),
       null,
       VerificationType.EMAIL_VERIFICATION,
     );
     if (!rateLimitCheck.allowed) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
@@ -109,25 +109,25 @@ export class VerificationService {
       userId,
       token,
       type: VerificationType.EMAIL_VERIFICATION,
-      email: user.getEmail().getValue(),
+      email: user.email.getValue(),
       expiresAt,
     });
 
     try {
       await this.tokenRepository.save(verificationToken);
       await this.emailService.sendVerificationEmail(
-        user.getEmail().getValue(),
+        user.email.getValue(),
         token,
       );
       await this.updateRateLimit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
       );
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.SENT,
@@ -141,7 +141,7 @@ export class VerificationService {
     } catch (error) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
@@ -163,10 +163,10 @@ export class VerificationService {
       throw new UserNotFoundError();
     }
 
-    if (user.isEmailVerified()) {
+    if (user.emailVerified) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
@@ -186,7 +186,7 @@ export class VerificationService {
     if (!verificationToken || verificationToken.userId !== userId) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.FAILED,
@@ -201,7 +201,7 @@ export class VerificationService {
     if (!verificationToken.isValid()) {
       await this.logAudit(
         userId,
-        user.getEmail().getValue(),
+        user.email.getValue(),
         null,
         VerificationType.EMAIL_VERIFICATION,
         VerificationAction.EXPIRED,
@@ -222,7 +222,7 @@ export class VerificationService {
     await this.userRepository.save(user);
     await this.logAudit(
       userId,
-      user.getEmail().getValue(),
+      user.email.getValue(),
       null,
       VerificationType.EMAIL_VERIFICATION,
       VerificationAction.VERIFIED,
@@ -243,7 +243,7 @@ export class VerificationService {
       throw new InvalidOperationError("Email service not configured");
     }
 
-    const emailVo = Email.fromString(email);
+    const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
     if (!user) {
@@ -263,9 +263,9 @@ export class VerificationService {
       };
     }
 
-    if (user.getIsGuest()) {
+    if (user.isGuest) {
       await this.logAudit(
-        user.getId().getValue(),
+        user.id.getValue(),
         email,
         null,
         VerificationType.PASSWORD_RESET,
@@ -278,7 +278,7 @@ export class VerificationService {
       };
     }
 
-    const userId = user.getId().getValue();
+    const userId = user.id.getValue();
     const rateLimitCheck = await this.checkRateLimit(
       userId,
       email,
@@ -357,7 +357,7 @@ export class VerificationService {
     email: string,
     token: string,
   ): Promise<string> {
-    const emailVo = Email.fromString(email);
+    const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
 
     if (!user) {
@@ -371,7 +371,7 @@ export class VerificationService {
 
     if (
       !verificationToken ||
-      verificationToken.userId !== user.getId().getValue()
+      verificationToken.userId !== user.id.getValue()
     ) {
       throw new InvalidOperationError("Invalid or mismatched reset token");
     }
@@ -380,7 +380,7 @@ export class VerificationService {
       throw new InvalidOperationError("Reset token has expired or is invalid");
     }
 
-    return user.getId().getValue();
+    return user.id.getValue();
   }
 
   async consumePasswordResetToken(

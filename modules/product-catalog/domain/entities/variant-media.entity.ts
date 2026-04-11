@@ -1,99 +1,94 @@
-import { VariantId } from "../value-objects/variant-id.vo";
-import { MediaAssetId } from "../value-objects/media-asset-id.vo";
+import { VariantId } from '../value-objects/variant-id.vo';
+import { MediaAssetId } from '../value-objects/media-asset-id.vo';
+
+export interface VariantMediaProps {
+  id: string;
+  variantId: VariantId;
+  mediaAssetId: MediaAssetId;
+  displayOrder: number;
+  createdAt: Date;
+}
 
 export class VariantMedia {
-  private constructor(
-    private readonly variantId: VariantId,
-    private readonly assetId: MediaAssetId,
-  ) {}
+  private props: VariantMediaProps;
 
-  static create(data: CreateVariantMediaData): VariantMedia {
-    return new VariantMedia(
-      VariantId.fromString(data.variantId),
-      MediaAssetId.fromString(data.assetId),
-    );
+  private constructor(props: VariantMediaProps) {
+    this.props = props;
   }
 
-  static reconstitute(data: VariantMediaData): VariantMedia {
-    return new VariantMedia(
-      VariantId.fromString(data.variantId),
-      MediaAssetId.fromString(data.assetId),
-    );
+  static create(params: {
+    id: string;
+    variantId: string;
+    mediaAssetId: string;
+    displayOrder: number;
+  }): VariantMedia {
+    const now = new Date();
+    return new VariantMedia({
+      id: params.id,
+      variantId: VariantId.fromString(params.variantId),
+      mediaAssetId: MediaAssetId.fromString(params.mediaAssetId),
+      displayOrder: params.displayOrder,
+      createdAt: now,
+    });
   }
 
-  static fromDatabaseRow(row: VariantMediaRow): VariantMedia {
-    return new VariantMedia(
-      VariantId.fromString(row.variant_id),
-      MediaAssetId.fromString(row.asset_id),
-    );
+  static fromPersistence(props: VariantMediaProps): VariantMedia {
+    return new VariantMedia(props);
   }
 
   // Getters
-  getVariantId(): VariantId {
-    return this.variantId;
+  get id(): string {
+    return this.props.id;
   }
 
-  getAssetId(): MediaAssetId {
-    return this.assetId;
+  get variantId(): VariantId {
+    return this.props.variantId;
   }
 
-  // Validation methods
-  isAssociationFor(variantId: VariantId, assetId: MediaAssetId): boolean {
-    return this.variantId.equals(variantId) && this.assetId.equals(assetId);
+  get mediaAssetId(): MediaAssetId {
+    return this.props.mediaAssetId;
+  }
+
+  get displayOrder(): number {
+    return this.props.displayOrder;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  // Business methods
+  updateDisplayOrder(order: number): void {
+    this.props.displayOrder = order;
   }
 
   isForVariant(variantId: VariantId): boolean {
-    return this.variantId.equals(variantId);
+    return this.props.variantId.equals(variantId);
   }
 
   isForAsset(assetId: MediaAssetId): boolean {
-    return this.assetId.equals(assetId);
-  }
-
-  // Business logic methods
-  belongsToSameVariantAs(other: VariantMedia): boolean {
-    return this.variantId.equals(other.variantId);
-  }
-
-  useSameAssetAs(other: VariantMedia): boolean {
-    return this.assetId.equals(other.assetId);
-  }
-
-  // Convert to data for persistence
-  toData(): VariantMediaData {
-    return {
-      variantId: this.variantId.getValue(),
-      assetId: this.assetId.getValue(),
-    };
-  }
-
-  toDatabaseRow(): VariantMediaRow {
-    return {
-      variant_id: this.variantId.getValue(),
-      asset_id: this.assetId.getValue(),
-    };
+    return this.props.mediaAssetId.equals(assetId);
   }
 
   equals(other: VariantMedia): boolean {
-    return (
-      this.variantId.equals(other.variantId) &&
-      this.assetId.equals(other.assetId)
-    );
+    return this.props.id === other.props.id;
+  }
+
+  static toDTO(entity: VariantMedia): VariantMediaDTO {
+    return {
+      id: entity.props.id,
+      variantId: entity.props.variantId.getValue(),
+      mediaAssetId: entity.props.mediaAssetId.getValue(),
+      displayOrder: entity.props.displayOrder,
+      createdAt: entity.props.createdAt.toISOString(),
+    };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateVariantMediaData {
+export interface VariantMediaDTO {
+  id: string;
   variantId: string;
-  assetId: string;
-}
-
-export interface VariantMediaData {
-  variantId: string;
-  assetId: string;
-}
-
-export interface VariantMediaRow {
-  variant_id: string;
-  asset_id: string;
+  mediaAssetId: string;
+  displayOrder: number;
+  createdAt: string;
 }

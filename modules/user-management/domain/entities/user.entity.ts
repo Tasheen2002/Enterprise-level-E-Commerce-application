@@ -163,18 +163,39 @@ export interface UserProps {
 }
 
 // ============================================================================
+// DTO Interface
+// ============================================================================
+
+export interface UserDTO {
+  id: string;
+  email: string;
+  phone: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  title: string | null;
+  dateOfBirth: string | null;
+  residentOf: string | null;
+  nationality: string | null;
+  role: UserRole;
+  status: UserStatus;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  isGuest: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
 // Entity
 // ============================================================================
 
 export class User extends AggregateRoot {
-  private props: UserProps;
-
-  private constructor(props: UserProps) {
+  private constructor(private props: UserProps) {
     super();
-    this.props = props;
   }
 
-  // Factory: create new
+  // --- Static factories ---
+
   static create(params: {
     email: string;
     passwordHash: string;
@@ -189,9 +210,9 @@ export class User extends AggregateRoot {
 
     const user = new User({
       id,
-      email: new Email(params.email),
+      email: Email.create(params.email),
       passwordHash: params.passwordHash,
-      phone: params.phone ? new Phone(params.phone) : null,
+      phone: params.phone ? Phone.create(params.phone) : null,
       firstName: params.firstName || null,
       lastName: params.lastName || null,
       title: null,
@@ -220,14 +241,13 @@ export class User extends AggregateRoot {
     return user;
   }
 
-  // Factory: create guest
   static createGuest(): User {
     const id = UserId.create();
     const now = new Date();
 
     return new User({
       id,
-      email: new Email(`guest-${id.getValue()}@temp.modett.com`),
+      email: Email.create(`guest-${id.getValue()}@temp.modett.com`),
       passwordHash: '',
       phone: null,
       firstName: null,
@@ -246,33 +266,34 @@ export class User extends AggregateRoot {
     });
   }
 
-  // Factory: reconstitute from persistence
-  static reconstitute(props: UserProps): User {
+  static fromPersistence(props: UserProps): User {
     return new User(props);
   }
 
-  // Getters
-  getId(): UserId { return this.props.id; }
-  getEmail(): Email { return this.props.email; }
-  getPasswordHash(): string { return this.props.passwordHash; }
-  getPhone(): Phone | null { return this.props.phone; }
-  getFirstName(): string | null { return this.props.firstName; }
-  getLastName(): string | null { return this.props.lastName; }
-  getTitle(): string | null { return this.props.title; }
-  getDateOfBirth(): Date | null { return this.props.dateOfBirth; }
-  getResidentOf(): string | null { return this.props.residentOf; }
-  getNationality(): string | null { return this.props.nationality; }
-  getRole(): UserRole { return this.props.role; }
-  getStatus(): UserStatus { return this.props.status; }
-  isEmailVerified(): boolean { return this.props.emailVerified; }
-  isPhoneVerified(): boolean { return this.props.phoneVerified; }
-  getIsGuest(): boolean { return this.props.isGuest; }
-  getCreatedAt(): Date { return this.props.createdAt; }
-  getUpdatedAt(): Date { return this.props.updatedAt; }
+  // --- Native getters ---
 
-  // Business logic methods
+  get id(): UserId { return this.props.id; }
+  get email(): Email { return this.props.email; }
+  get passwordHash(): string { return this.props.passwordHash; }
+  get phone(): Phone | null { return this.props.phone; }
+  get firstName(): string | null { return this.props.firstName; }
+  get lastName(): string | null { return this.props.lastName; }
+  get title(): string | null { return this.props.title; }
+  get dateOfBirth(): Date | null { return this.props.dateOfBirth; }
+  get residentOf(): string | null { return this.props.residentOf; }
+  get nationality(): string | null { return this.props.nationality; }
+  get role(): UserRole { return this.props.role; }
+  get status(): UserStatus { return this.props.status; }
+  get emailVerified(): boolean { return this.props.emailVerified; }
+  get phoneVerified(): boolean { return this.props.phoneVerified; }
+  get isGuest(): boolean { return this.props.isGuest; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
+
+  // --- Business methods ---
+
   updateEmail(newEmail: string): void {
-    const email = new Email(newEmail);
+    const email = Email.create(newEmail);
     if (this.props.email.equals(email)) return;
     this.props.email = email;
     this.props.emailVerified = false;
@@ -281,7 +302,7 @@ export class User extends AggregateRoot {
   }
 
   updatePhone(newPhone: string | null): void {
-    const phone = newPhone ? new Phone(newPhone) : null;
+    const phone = newPhone ? Phone.create(newPhone) : null;
     if (this.props.phone === null && phone === null) return;
     if (this.props.phone !== null && phone !== null && this.props.phone.equals(phone)) return;
     this.props.phone = phone;
@@ -407,7 +428,7 @@ export class User extends AggregateRoot {
     if (!this.props.isGuest) {
       throw new InvalidOperationError('User is not a guest');
     }
-    this.props.email = new Email(email);
+    this.props.email = Email.create(email);
     this.props.passwordHash = passwordHash;
     this.props.isGuest = false;
     this.props.emailVerified = false;
@@ -442,47 +463,26 @@ export class User extends AggregateRoot {
     return this.props.id.equals(other.props.id);
   }
 
+  // --- Static DTO mapper ---
+
   static toDTO(user: User): UserDTO {
     return {
-      id: user.getId().getValue(),
-      email: user.getEmail().getValue(),
-      phone: user.getPhone()?.getValue() || null,
-      firstName: user.getFirstName(),
-      lastName: user.getLastName(),
-      title: user.getTitle(),
-      dateOfBirth: user.getDateOfBirth()?.toISOString() || null,
-      residentOf: user.getResidentOf(),
-      nationality: user.getNationality(),
-      role: user.getRole(),
-      status: user.getStatus(),
-      emailVerified: user.isEmailVerified(),
-      phoneVerified: user.isPhoneVerified(),
-      isGuest: user.getIsGuest(),
-      createdAt: user.getCreatedAt().toISOString(),
-      updatedAt: user.getUpdatedAt().toISOString(),
+      id: user.id.getValue(),
+      email: user.email.getValue(),
+      phone: user.phone?.getValue() || null,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      title: user.title,
+      dateOfBirth: user.dateOfBirth?.toISOString() || null,
+      residentOf: user.residentOf,
+      nationality: user.nationality,
+      role: user.role,
+      status: user.status,
+      emailVerified: user.emailVerified,
+      phoneVerified: user.phoneVerified,
+      isGuest: user.isGuest,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   }
-}
-
-// ============================================================================
-// DTO Interface
-// ============================================================================
-
-export interface UserDTO {
-  id: string;
-  email: string;
-  phone: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  title: string | null;
-  dateOfBirth: string | null;
-  residentOf: string | null;
-  nationality: string | null;
-  role: UserRole;
-  status: UserStatus;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  isGuest: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

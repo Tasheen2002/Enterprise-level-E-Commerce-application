@@ -18,7 +18,7 @@ export class StockRepositoryImpl implements IStockRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private toEntity(row: StockDatabaseRow): Stock {
-    return Stock.reconstitute({
+    return Stock.fromPersistence({
       variantId: row.variantId,
       locationId: row.locationId,
       stockLevel: StockLevel.create(
@@ -27,24 +27,22 @@ export class StockRepositoryImpl implements IStockRepository {
         row.lowStockThreshold,
         row.safetyStock,
       ),
-      variant: row.variant,
-      location: row.location,
     });
   }
 
   async save(stock: Stock): Promise<void> {
-    const stockLevel = stock.getStockLevel();
+    const stockLevel = stock.stockLevel;
 
     await (this.prisma as any).inventoryStock.upsert({
       where: {
         variantId_locationId: {
-          variantId: stock.getVariantId(),
-          locationId: stock.getLocationId(),
+          variantId: stock.variantId,
+          locationId: stock.locationId,
         },
       },
       create: {
-        variantId: stock.getVariantId(),
-        locationId: stock.getLocationId(),
+        variantId: stock.variantId,
+        locationId: stock.locationId,
         onHand: stockLevel.getOnHand(),
         reserved: stockLevel.getReserved(),
         lowStockThreshold: stockLevel.getLowStockThreshold(),
@@ -249,7 +247,7 @@ export class StockRepositoryImpl implements IStockRepository {
 
     if (status) {
       stockEntities = stockEntities.filter((stock: Stock) => {
-        const stockLevel = stock.getStockLevel();
+        const stockLevel = stock.stockLevel;
         if (status === "out_of_stock") {
           return stockLevel.isOutOfStock();
         } else if (status === "low_stock") {
@@ -263,8 +261,8 @@ export class StockRepositoryImpl implements IStockRepository {
 
     if (sortBy === "available") {
       stockEntities.sort((a: Stock, b: Stock) => {
-        const availableA = a.getStockLevel().getAvailable();
-        const availableB = b.getStockLevel().getAvailable();
+        const availableA = a.stockLevel.getAvailable();
+        const availableB = b.stockLevel.getAvailable();
         return sortOrder === "asc"
           ? availableA - availableB
           : availableB - availableA;

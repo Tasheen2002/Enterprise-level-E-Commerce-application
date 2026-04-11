@@ -111,10 +111,14 @@ export class ResponseHelper {
     reply: FastifyReply,
     result: CommandResult<T>,
     successMessage: string,
-    statusCode: 200 | 201 = 200,
+    statusCode?: 200 | 201,
+    noContentCode?: 204,
   ): FastifyReply {
     if (result.success) {
-      return ResponseHelper.success(reply, statusCode, successMessage, result.data);
+      if (noContentCode === 204) {
+        return reply.status(204).send();
+      }
+      return ResponseHelper.success(reply, statusCode ?? 200, successMessage, result.data);
     }
     return reply.status(400).send({
       success: false,
@@ -158,5 +162,9 @@ export class ResponseHelper {
     data?: T,
   ): FastifyReply {
     return this.success(reply, 200, message, data);
+  }
+
+  static noContent(reply: FastifyReply): FastifyReply {
+    return reply.status(204).send();
   }
 }
