@@ -1,0 +1,31 @@
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
+import { OrderManagementService } from "../services/order-management.service";
+import { Order, OrderDTO } from "../../domain/entities/order.entity";
+
+export interface UpdateOrderTotalsCommand extends ICommand {
+  orderId: string;
+  totals: {
+    tax: number;
+    shipping: number;
+    discount: number;
+  };
+}
+
+
+export class UpdateOrderTotalsCommandHandler implements ICommandHandler<
+  UpdateOrderTotalsCommand,
+  CommandResult<OrderDTO>
+> {
+  constructor(private orderService: OrderManagementService) {}
+
+  async handle(
+    command: UpdateOrderTotalsCommand,
+  ): Promise<CommandResult<OrderDTO>> {
+    const order = await this.orderService.updateOrderTotals(
+        command.orderId,
+        command.totals,
+      );
+
+      return CommandResult.success(Order.toDTO(order));
+  }
+}
