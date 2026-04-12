@@ -63,7 +63,7 @@ export async function paymentMethodRoutes(
   fastify.post(
     "/users/me/payment-methods",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(addPaymentMethodSchema)],
+      preHandler: [validateBody(addPaymentMethodSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
@@ -91,7 +91,7 @@ export async function paymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updatePaymentMethodSchema)],
+      preHandler: [validateBody(updatePaymentMethodSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",

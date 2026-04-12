@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ProductController } from "../controllers/product.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -14,23 +19,49 @@ import {
   productParamsSchema,
   productSlugParamsSchema,
   productResponseSchema,
-  paginatedProductsResponseSchema,
 } from "../validation/product.schema";
 
-export async function registerProductRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function productRoutes(
   fastify: FastifyInstance,
   controller: ProductController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /products — List products (public)
   fastify.get(
     "/products",
     {
-      preHandler: [validateQuery(listProductsSchema)],
+      preValidation: [validateQuery(listProductsSchema)],
       schema: {
         description: "Get paginated list of products with filtering options",
         tags: ["Products"],
         summary: "List Products",
-        response: { 200: paginatedProductsResponseSchema },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: {
+                type: "object",
+                properties: {
+                  products: { type: "array", items: productResponseSchema },
+                  total: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -56,6 +87,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -85,6 +118,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -140,6 +175,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -150,8 +187,8 @@ export async function registerProductRoutes(
       controller.createProduct(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /products/:productId — Update product (Admin only)
-  fastify.put(
+  // PATCH /products/:productId — Update product (Admin only)
+  fastify.patch(
     "/products/:productId",
     {
       preValidation: [validateParams(productParamsSchema)],
@@ -200,6 +237,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },

@@ -1,38 +1,38 @@
 // Stock
-export { GetStockHandler } from "./stock/get-stock.query";
-export { GetStockStatsHandler } from "./stock/get-stock-stats.query";
-export { GetStockByVariantHandler } from "./stock/get-stock-by-variant.query";
-export { ListStocksHandler } from "./stock/list-stocks.query";
-export { GetLowStockItemsHandler } from "./stock/get-low-stock-items.query";
-export { GetOutOfStockItemsHandler } from "./stock/get-out-of-stock-items.query";
-export { GetTotalAvailableStockHandler } from "./stock/get-total-available-stock.query";
+export { GetStockHandler } from "./get-stock.query";
+export { GetStockStatsHandler } from "./get-stock-stats.query";
+export { GetStockByVariantHandler } from "./get-stock-by-variant.query";
+export { ListStocksHandler } from "./list-stocks.query";
+export { GetLowStockItemsHandler } from "./get-low-stock-items.query";
+export { GetOutOfStockItemsHandler } from "./get-out-of-stock-items.query";
+export { GetTotalAvailableStockHandler } from "./get-total-available-stock.query";
 
 // Location
-export { GetLocationHandler } from "./location/get-location.query";
-export { ListLocationsHandler } from "./location/list-locations.query";
+export { GetLocationHandler } from "./get-location.query";
+export { ListLocationsHandler } from "./list-locations.query";
 
 // Supplier
-export { GetSupplierHandler } from "./supplier/get-supplier.query";
-export { ListSuppliersHandler } from "./supplier/list-suppliers.query";
+export { GetSupplierHandler } from "./get-supplier.query";
+export { ListSuppliersHandler } from "./list-suppliers.query";
 
 // Purchase Order
-export { GetPurchaseOrderHandler } from "./purchase-order/get-purchase-order.query";
-export { ListPurchaseOrdersHandler } from "./purchase-order/list-purchase-orders.query";
-export { GetPOItemsHandler } from "./purchase-order/get-po-items.query";
-export { GetOverduePurchaseOrdersHandler } from "./purchase-order/get-overdue-purchase-orders.query";
-export { GetPendingReceivalHandler } from "./purchase-order/get-pending-receival.query";
+export { GetPurchaseOrderHandler } from "./get-purchase-order.query";
+export { ListPurchaseOrdersHandler } from "./list-purchase-orders.query";
+export { GetPOItemsHandler } from "./get-po-items.query";
+export { GetOverduePurchaseOrdersHandler } from "./get-overdue-purchase-orders.query";
+export { GetPendingReceivalHandler } from "./get-pending-receival.query";
 
 // Stock Alert
-export { GetStockAlertHandler } from "./alert/get-stock-alert.query";
-export { ListStockAlertsHandler } from "./alert/list-stock-alerts.query";
-export { GetActiveAlertsHandler } from "./alert/get-active-alerts.query";
+export { GetStockAlertHandler } from "./get-stock-alert.query";
+export { ListStockAlertsHandler } from "./list-stock-alerts.query";
+export { GetActiveAlertsHandler } from "./get-active-alerts.query";
 
 // Pickup Reservation
-export { GetPickupReservationHandler } from "./pickup-reservation/get-pickup-reservation.query";
-export { ListPickupReservationsHandler } from "./pickup-reservation/list-pickup-reservations.query";
+export { GetPickupReservationHandler } from "./get-pickup-reservation.query";
+export { ListPickupReservationsHandler } from "./list-pickup-reservations.query";
 
 // Transaction
-export { GetTransactionHandler } from "./transaction/get-transaction.query";
-export { ListTransactionsHandler } from "./transaction/list-transactions.query";
-export { GetTransactionsByVariantHandler } from "./transaction/get-transactions-by-variant.query";
-export { GetTransactionHistoryHandler } from "./transaction/get-transaction-history.query";
+export { GetTransactionHandler } from "./get-transaction.query";
+export { ListTransactionsHandler } from "./list-transactions.query";
+export { GetTransactionsByVariantHandler } from "./get-transactions-by-variant.query";
+export { GetTransactionHistoryHandler } from "./get-transaction-history.query";

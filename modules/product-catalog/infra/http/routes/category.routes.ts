@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { CategoryController } from "../controllers/category.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -17,15 +22,26 @@ import {
   categoryResponseSchema,
 } from "../validation/category.schema";
 
-export async function registerCategoryRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function categoryRoutes(
   fastify: FastifyInstance,
   controller: CategoryController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /categories — List categories (public)
   fastify.get(
     "/categories",
     {
-      preHandler: [validateQuery(listCategoriesSchema)],
+      preValidation: [validateQuery(listCategoriesSchema)],
       schema: {
         description: "Get paginated list of categories",
         tags: ["Categories"],
@@ -35,6 +51,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -64,6 +82,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: categoryResponseSchema },
             },
           },
@@ -93,6 +113,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: categoryResponseSchema,
             },
           },
@@ -122,6 +144,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: categoryResponseSchema,
             },
           },
@@ -204,6 +228,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: categoryResponseSchema,
             },
           },
@@ -214,8 +240,8 @@ export async function registerCategoryRoutes(
       controller.createCategory(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /categories/:id — Update category (Admin only)
-  fastify.put(
+  // PATCH /categories/:id — Update category (Admin only)
+  fastify.patch(
     "/categories/:id",
     {
       preValidation: [validateParams(categoryParamsSchema)],
@@ -249,6 +275,8 @@ export async function registerCategoryRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: categoryResponseSchema,
             },
           },

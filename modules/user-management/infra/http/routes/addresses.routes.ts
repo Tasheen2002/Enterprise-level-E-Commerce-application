@@ -68,7 +68,7 @@ export async function addressRoutes(
   fastify.post(
     "/users/me/addresses",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(addAddressSchema)],
+      preHandler: [validateBody(addAddressSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Add a new address",
@@ -97,7 +97,7 @@ export async function addressRoutes(
     "/users/me/addresses/:addressId",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updateAddressSchema)],
+      preHandler: [validateBody(updateAddressSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Update an address",

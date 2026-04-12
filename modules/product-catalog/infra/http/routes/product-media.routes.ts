@@ -2,6 +2,11 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductMediaController } from "../controllers/product-media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
   productMediaParamsSchema,
@@ -12,16 +17,26 @@ import {
   reorderProductMediaSchema,
 } from "../validation/product-media.schema";
 
-export async function registerProductMediaRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function productMediaRoutes(
   fastify: FastifyInstance,
   controller: ProductMediaController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /products/:productId/media — Get all media for a product (public)
   fastify.get(
     "/products/:productId/media",
     {
-      preValidation: [validateParams(productMediaParamsSchema)],
-      preHandler: [validateQuery(getProductMediaQuerySchema)],
+      preValidation: [validateParams(productMediaParamsSchema), validateQuery(getProductMediaQuerySchema)],
       schema: {
         description: "Get all media assets associated with a product",
         tags: ["Product Media"],
@@ -39,6 +54,8 @@ export async function registerProductMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -149,8 +166,9 @@ export async function registerProductMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: { type: "object", properties: { productMediaId: { type: "string" } } },
+              statusCode: { type: "number" },
               message: { type: "string" },
+              data: { type: "object", properties: { productMediaId: { type: "string" } } },
             },
           },
         },

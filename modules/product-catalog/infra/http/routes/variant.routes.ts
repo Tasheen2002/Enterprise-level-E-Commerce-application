@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { VariantController } from "../controllers/variant.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -16,16 +21,26 @@ import {
   variantResponseSchema,
 } from "../validation/variant.schema";
 
-export async function registerVariantRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function variantRoutes(
   fastify: FastifyInstance,
   controller: VariantController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /products/:productId/variants — List variants for a product (public)
   fastify.get(
     "/products/:productId/variants",
     {
-      preValidation: [validateParams(variantByProductParamsSchema)],
-      preHandler: [validateQuery(listVariantsSchema)],
+      preValidation: [validateParams(variantByProductParamsSchema), validateQuery(listVariantsSchema)],
       schema: {
         description: "Get variants for a product",
         tags: ["Variants"],
@@ -40,6 +55,8 @@ export async function registerVariantRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -75,6 +92,8 @@ export async function registerVariantRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantResponseSchema,
             },
           },
@@ -125,6 +144,8 @@ export async function registerVariantRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantResponseSchema,
             },
           },
@@ -135,8 +156,8 @@ export async function registerVariantRoutes(
       controller.createVariant(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /variants/:variantId — Update variant (Admin only)
-  fastify.put(
+  // PATCH /variants/:variantId — Update variant (Admin only)
+  fastify.patch(
     "/variants/:variantId",
     {
       preValidation: [validateParams(variantParamsSchema)],
@@ -174,6 +195,8 @@ export async function registerVariantRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantResponseSchema,
             },
           },

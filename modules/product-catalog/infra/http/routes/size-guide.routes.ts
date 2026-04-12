@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { SizeGuideController } from "../controllers/size-guide.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -27,17 +32,28 @@ import {
   regionalSizeGuidesResponseSchema,
 } from "../validation/size-guide.schema";
 
-export async function registerSizeGuideRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function sizeGuideRoutes(
   fastify: FastifyInstance,
   controller: SizeGuideController,
 ): Promise<void> {
   const guideSchema = sizeGuideResponseSchema;
 
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /size-guides — List size guides (public)
   fastify.get(
     "/size-guides",
     {
-      preHandler: [validateQuery(listSizeGuidesSchema)],
+      preValidation: [validateQuery(listSizeGuidesSchema)],
       schema: {
         description: "Get paginated list of size guides with filtering options",
         tags: ["Size Guides"],
@@ -67,6 +83,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -97,6 +115,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: sizeGuideStatsResponseSchema,
             },
           },
@@ -119,6 +139,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: availableRegionsResponseSchema,
             },
           },
@@ -141,6 +163,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: availableCategoriesResponseSchema,
             },
           },
@@ -170,6 +194,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: generalSizeGuidesResponseSchema,
             },
           },
@@ -183,7 +209,7 @@ export async function registerSizeGuideRoutes(
   fastify.get(
     "/size-guides/validate",
     {
-      preHandler: [validateQuery(validateSizeGuideSchema)],
+      preValidation: [validateQuery(validateSizeGuideSchema)],
       schema: {
         description:
           "Validate size guide uniqueness for a region/category combination",
@@ -202,6 +228,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: validateSizeGuideUniquenessResponseSchema,
             },
           },
@@ -230,6 +258,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: regionalSizeGuidesResponseSchema,
             },
           },
@@ -256,7 +286,12 @@ export async function registerSizeGuideRoutes(
         response: {
           200: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: guideSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: guideSchema,
+            },
           },
         },
       },
@@ -302,6 +337,8 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: guideSchema },
             },
           },
@@ -342,7 +379,12 @@ export async function registerSizeGuideRoutes(
         response: {
           201: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: guideSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: guideSchema,
+            },
           },
         },
       },
@@ -377,7 +419,12 @@ export async function registerSizeGuideRoutes(
         response: {
           201: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: guideSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: guideSchema,
+            },
           },
         },
       },
@@ -385,8 +432,8 @@ export async function registerSizeGuideRoutes(
     (request, reply) => controller.createSizeGuide(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /size-guides/:id/content — Update size guide content (Admin only)
-  fastify.put(
+  // PATCH /size-guides/:id/content — Update size guide content (Admin only)
+  fastify.patch(
     "/size-guides/:id/content",
     {
       preValidation: [validateParams(sizeGuideParamsSchema)],
@@ -414,6 +461,7 @@ export async function registerSizeGuideRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
             },
           },
@@ -424,8 +472,8 @@ export async function registerSizeGuideRoutes(
       controller.updateSizeGuideContent(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /size-guides/:id — Update size guide (Admin only)
-  fastify.put(
+  // PATCH /size-guides/:id — Update size guide (Admin only)
+  fastify.patch(
     "/size-guides/:id",
     {
       preValidation: [validateParams(sizeGuideParamsSchema)],
@@ -455,7 +503,12 @@ export async function registerSizeGuideRoutes(
         response: {
           200: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: guideSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: guideSchema,
+            },
           },
         },
       },

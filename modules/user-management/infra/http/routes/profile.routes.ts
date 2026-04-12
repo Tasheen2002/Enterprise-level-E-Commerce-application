@@ -61,7 +61,7 @@ export async function profileRoutes(
   fastify.patch(
     "/users/me/profile",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updateProfileSchema)],
+      preHandler: [validateBody(updateProfileSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Profile"],
         summary: "Update current user profile",
