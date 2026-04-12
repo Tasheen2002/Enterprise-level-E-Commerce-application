@@ -1,67 +1,88 @@
-import { AddressSnapshot } from "../value-objects";
+import { AddressSnapshot, AddressSnapshotData } from "../value-objects";
+
 
 export interface OrderAddressProps {
   orderId: string;
   billingAddress: AddressSnapshot;
   shippingAddress: AddressSnapshot;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderAddressDTO {
+  orderId: string;
+  billingAddress: AddressSnapshotData;
+  shippingAddress: AddressSnapshotData;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class OrderAddress {
-  private orderId: string;
-  private billingAddress: AddressSnapshot;
-  private shippingAddress: AddressSnapshot;
+  private constructor(private props: OrderAddressProps) {}
 
-  private constructor(props: OrderAddressProps) {
-    this.orderId = props.orderId;
-    this.billingAddress = props.billingAddress;
-    this.shippingAddress = props.shippingAddress;
+  static create(
+    params: Omit<OrderAddressProps, "createdAt" | "updatedAt">,
+  ): OrderAddress {
+    return new OrderAddress({
+      ...params,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
-  static create(props: OrderAddressProps): OrderAddress {
+  static fromPersistence(props: OrderAddressProps): OrderAddress {
     return new OrderAddress(props);
   }
 
-  static reconstitute(props: OrderAddressProps): OrderAddress {
-    return new OrderAddress(props);
+  get orderId(): string {
+    return this.props.orderId;
   }
 
-  getOrderId(): string {
-    return this.orderId;
+  get billingAddress(): AddressSnapshot {
+    return this.props.billingAddress;
   }
 
-  getBillingAddress(): AddressSnapshot {
-    return this.billingAddress;
+  get shippingAddress(): AddressSnapshot {
+    return this.props.shippingAddress;
   }
 
-  getShippingAddress(): AddressSnapshot {
-    return this.shippingAddress;
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   updateBillingAddress(billingAddress: AddressSnapshot): void {
-    this.billingAddress = billingAddress;
+    this.props.billingAddress = billingAddress;
+    this.props.updatedAt = new Date();
   }
 
   updateShippingAddress(shippingAddress: AddressSnapshot): void {
-    this.shippingAddress = shippingAddress;
+    this.props.shippingAddress = shippingAddress;
+    this.props.updatedAt = new Date();
   }
 
   isSameAddress(): boolean {
-    return this.billingAddress.equals(this.shippingAddress);
+    return this.props.billingAddress.equals(this.props.shippingAddress);
   }
 
   equals(other: OrderAddress): boolean {
     return (
-      this.orderId === other.orderId &&
-      this.billingAddress.equals(other.billingAddress) &&
-      this.shippingAddress.equals(other.shippingAddress)
+      this.props.orderId === other.props.orderId &&
+      this.props.billingAddress.equals(other.props.billingAddress) &&
+      this.props.shippingAddress.equals(other.props.shippingAddress)
     );
   }
 
-  toSnapshot(): OrderAddressProps {
+  static toDTO(entity: OrderAddress): OrderAddressDTO {
     return {
-      orderId: this.orderId,
-      billingAddress: this.billingAddress,
-      shippingAddress: this.shippingAddress,
+      orderId: entity.props.orderId,
+      billingAddress: entity.props.billingAddress.getValue(),
+      shippingAddress: entity.props.shippingAddress.getValue(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

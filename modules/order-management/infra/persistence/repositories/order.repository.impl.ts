@@ -1,4 +1,6 @@
 import { PrismaClient, OrderStatusEnum as PrismaOrderStatusEnum } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IOrderRepository,
   OrderQueryOptions,
@@ -35,15 +37,20 @@ interface OrderDatabaseRow {
   shipments?: any[];
 }
 
-export class OrderRepositoryImpl implements IOrderRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class OrderRepositoryImpl
+  extends PrismaRepository<Order>
+  implements IOrderRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   // Hydration: Database row → Entity
   private toEntity(row: OrderDatabaseRow): Order {
     // Hydrate order items
     const items =
       row.items?.map((item) =>
-        OrderItem.reconstitute({
+        OrderItem.fromPersistence({
           orderItemId: item.id,
           orderId: row.id,
           variantId: item.variantId,
@@ -51,6 +58,8 @@ export class OrderRepositoryImpl implements IOrderRepository {
           productSnapshot: ProductSnapshot.create(item.productSnapshot),
           isGift: item.isGift,
           giftMessage: item.giftMessage,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
         }),
       ) || [];
 
@@ -75,10 +84,12 @@ export class OrderRepositoryImpl implements IOrderRepository {
 
       // Only create address if we have valid data
       if (hasBillingData && hasShippingData) {
-        address = OrderAddress.reconstitute({
+        address = OrderAddress.fromPersistence({
           orderId: row.id,
           billingAddress: AddressSnapshot.create(addressData.billingSnapshot),
           shippingAddress: AddressSnapshot.create(addressData.shippingSnapshot),
+          createdAt: addressData.createdAt,
+          updatedAt: addressData.updatedAt,
         });
       }
     }
@@ -86,7 +97,7 @@ export class OrderRepositoryImpl implements IOrderRepository {
     // Hydrate shipments
     const shipments =
       row.shipments?.map((shipment) =>
-        OrderShipment.reconstitute({
+        OrderShipment.fromPersistence({
           shipmentId: shipment.id,
           orderId: row.id,
           carrier: shipment.carrier,
@@ -96,12 +107,14 @@ export class OrderRepositoryImpl implements IOrderRepository {
           pickupLocationId: shipment.pickupLocationId,
           shippedAt: shipment.shippedAt,
           deliveredAt: shipment.deliveredAt,
+          createdAt: shipment.createdAt,
+          updatedAt: shipment.updatedAt,
         }),
       ) || [];
 
-    return Order.reconstitute({
-      orderId: row.id,
-      orderNumber: row.orderNo,
+    return Order.fromPersistence({
+      id: OrderId.fromString(row.id),
+      orderNumber: OrderNumber.fromString(row.orderNo),
       userId: row.userId || undefined,
       guestToken: row.guestToken || undefined,
       items,
@@ -117,25 +130,25 @@ export class OrderRepositoryImpl implements IOrderRepository {
   }
 
   async save(order: Order): Promise<void> {
-    const orderId = order.getOrderId().getValue();
-    const items = order.getItems();
-    const address = order.getAddress();
-    const shipments = order.getShipments();
+    const orderId = order.id.getValue();
+    const items = order.items;
+    const address = order.address;
+    const shipments = order.shipments;
 
     await this.prisma.$transaction(async (tx) => {
       // Create order
       await tx.order.create({
         data: {
           id: orderId,
-          orderNo: order.getOrderNumber().getValue(),
-          userId: order.getUserId() || null,
-          guestToken: order.getGuestToken() || null,
-          totals: order.getTotals().toJSON() as any,
-          status: order.getStatus().getValue() as PrismaOrderStatusEnum,
-          source: order.getSource().getValue(),
-          currency: order.getCurrency().getValue(),
-          createdAt: order.getCreatedAt(),
-          updatedAt: order.getUpdatedAt(),
+          orderNo: order.orderNumber.getValue(),
+          userId: order.userId || null,
+          guestToken: order.guestToken || null,
+          totals: order.totals.getValue() as any,
+          status: order.status.getValue() as PrismaOrderStatusEnum,
+          source: order.source.getValue(),
+          currency: order.currency.getValue(),
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
         },
       });
 
@@ -143,13 +156,13 @@ export class OrderRepositoryImpl implements IOrderRepository {
       if (items.length > 0) {
         await tx.orderItem.createMany({
           data: items.map((item) => ({
-            id: item.getOrderItemId(),
+            id: item.orderItemId,
             orderId: orderId,
-            variantId: item.getVariantId(),
-            qty: item.getQuantity(),
-            productSnapshot: item.getProductSnapshot().toJSON() as any,
-            isGift: item.isGiftItem(),
-            giftMessage: item.getGiftMessage(),
+            variantId: item.variantId,
+            qty: item.quantity,
+            productSnapshot: item.productSnapshot.getValue() as any,
+            isGift: item.isGift,
+            giftMessage: item.giftMessage,
           })),
         });
       }
@@ -159,8 +172,8 @@ export class OrderRepositoryImpl implements IOrderRepository {
         await tx.orderAddress.create({
           data: {
             orderId: orderId,
-            billingSnapshot: address.getBillingAddress().toJSON() as any,
-            shippingSnapshot: address.getShippingAddress().toJSON() as any,
+            billingSnapshot: address.billingAddress.getValue() as any,
+            shippingSnapshot: address.shippingAddress.getValue() as any,
           },
         });
       }
@@ -169,40 +182,42 @@ export class OrderRepositoryImpl implements IOrderRepository {
       if (shipments.length > 0) {
         await tx.orderShipment.createMany({
           data: shipments.map((shipment) => ({
-            id: shipment.getShipmentId(),
+            id: shipment.shipmentId,
             orderId: orderId,
-            carrier: shipment.getCarrier(),
-            service: shipment.getService(),
-            trackingNo: shipment.getTrackingNumber(),
-            giftReceipt: shipment.hasGiftReceipt(),
-            pickupLocationId: shipment.getPickupLocationId(),
-            shippedAt: shipment.getShippedAt(),
-            deliveredAt: shipment.getDeliveredAt(),
+            carrier: shipment.carrier,
+            service: shipment.service,
+            trackingNo: shipment.trackingNumber,
+            giftReceipt: shipment.giftReceipt,
+            pickupLocationId: shipment.pickupLocationId,
+            shippedAt: shipment.shippedAt,
+            deliveredAt: shipment.deliveredAt,
           })),
         });
       }
     });
+
+    await this.dispatchEvents(order);
   }
 
   async update(order: Order): Promise<void> {
-    const orderId = order.getOrderId().getValue();
-    const items = order.getItems();
-    const address = order.getAddress();
-    const shipments = order.getShipments();
+    const orderId = order.id.getValue();
+    const items = order.items;
+    const address = order.address;
+    const shipments = order.shipments;
 
     await this.prisma.$transaction(async (tx) => {
       // Update order
       await tx.order.update({
         where: { id: orderId },
         data: {
-          orderNo: order.getOrderNumber().getValue(),
-          userId: order.getUserId() || null,
-          guestToken: order.getGuestToken() || null,
-          totals: order.getTotals().toJSON() as any,
-          status: order.getStatus().getValue() as PrismaOrderStatusEnum,
-          source: order.getSource().getValue(),
-          currency: order.getCurrency().getValue(),
-          updatedAt: order.getUpdatedAt(),
+          orderNo: order.orderNumber.getValue(),
+          userId: order.userId || null,
+          guestToken: order.guestToken || null,
+          totals: order.totals.getValue() as any,
+          status: order.status.getValue() as PrismaOrderStatusEnum,
+          source: order.source.getValue(),
+          currency: order.currency.getValue(),
+          updatedAt: order.updatedAt,
         },
       });
 
@@ -214,13 +229,13 @@ export class OrderRepositoryImpl implements IOrderRepository {
       if (items.length > 0) {
         await tx.orderItem.createMany({
           data: items.map((item) => ({
-            id: item.getOrderItemId(),
+            id: item.orderItemId,
             orderId: orderId,
-            variantId: item.getVariantId(),
-            qty: item.getQuantity(),
-            productSnapshot: item.getProductSnapshot().toJSON() as any,
-            isGift: item.isGiftItem(),
-            giftMessage: item.getGiftMessage(),
+            variantId: item.variantId,
+            qty: item.quantity,
+            productSnapshot: item.productSnapshot.getValue() as any,
+            isGift: item.isGift,
+            giftMessage: item.giftMessage,
           })),
         });
       }
@@ -231,12 +246,12 @@ export class OrderRepositoryImpl implements IOrderRepository {
           where: { orderId: orderId },
           create: {
             orderId: orderId,
-            billingSnapshot: address.getBillingAddress().toJSON() as any,
-            shippingSnapshot: address.getShippingAddress().toJSON() as any,
+            billingSnapshot: address.billingAddress.getValue() as any,
+            shippingSnapshot: address.shippingAddress.getValue() as any,
           },
           update: {
-            billingSnapshot: address.getBillingAddress().toJSON() as any,
-            shippingSnapshot: address.getShippingAddress().toJSON() as any,
+            billingSnapshot: address.billingAddress.getValue() as any,
+            shippingSnapshot: address.shippingAddress.getValue() as any,
           },
         });
       } else {
@@ -253,19 +268,21 @@ export class OrderRepositoryImpl implements IOrderRepository {
       if (shipments.length > 0) {
         await tx.orderShipment.createMany({
           data: shipments.map((shipment) => ({
-            id: shipment.getShipmentId(),
+            id: shipment.shipmentId,
             orderId: orderId,
-            carrier: shipment.getCarrier(),
-            service: shipment.getService(),
-            trackingNo: shipment.getTrackingNumber(),
-            giftReceipt: shipment.hasGiftReceipt(),
-            pickupLocationId: shipment.getPickupLocationId(),
-            shippedAt: shipment.getShippedAt(),
-            deliveredAt: shipment.getDeliveredAt(),
+            carrier: shipment.carrier,
+            service: shipment.service,
+            trackingNo: shipment.trackingNumber,
+            giftReceipt: shipment.giftReceipt,
+            pickupLocationId: shipment.pickupLocationId,
+            shippedAt: shipment.shippedAt,
+            deliveredAt: shipment.deliveredAt,
           })),
         });
       }
     });
+
+    await this.dispatchEvents(order);
   }
 
   async delete(orderId: OrderId): Promise<void> {

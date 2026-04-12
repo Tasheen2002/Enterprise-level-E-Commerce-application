@@ -127,7 +127,7 @@ export class ProductSnapshot {
     return this.attributes;
   }
 
-  toJSON(): ProductSnapshotData {
+  getValue(): ProductSnapshotData {
     return {
       productId: this.productId,
       variantId: this.variantId,
@@ -141,6 +141,10 @@ export class ProductSnapshot {
       dimensions: this.dimensions,
       attributes: this.attributes,
     };
+  }
+
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 
   equals(other: ProductSnapshot): boolean {

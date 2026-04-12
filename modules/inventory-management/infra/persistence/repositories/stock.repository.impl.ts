@@ -281,44 +281,27 @@ export class StockRepositoryImpl implements IStockRepository {
   }
 
   async findLowStockItems(): Promise<Stock[]> {
-    const rows = await this.prisma.$queryRaw<
-      { variant_id: string; location_id: string; on_hand: number; reserved: number; low_stock_threshold: number | null; safety_stock: number | null }[]
-    >`
-      SELECT * FROM inventory_management.inventory_stocks
-      WHERE low_stock_threshold IS NOT NULL
-      AND on_hand <= low_stock_threshold
-    `;
+    const stocks = await (this.prisma as any).inventoryStock.findMany({
+      where: {
+        lowStockThreshold: { not: null },
+      },
+    });
 
-    return rows.map((r) =>
-      this.toEntity({
-        variantId: r.variant_id,
-        locationId: r.location_id,
-        onHand: r.on_hand,
-        reserved: r.reserved,
-        lowStockThreshold: r.low_stock_threshold,
-        safetyStock: r.safety_stock,
-      }),
-    );
+    return stocks
+      .filter((s: StockDatabaseRow) =>
+        s.lowStockThreshold !== null && s.onHand <= s.lowStockThreshold,
+      )
+      .map((s: StockDatabaseRow) => this.toEntity(s));
   }
 
   async findOutOfStockItems(): Promise<Stock[]> {
-    const rows = await this.prisma.$queryRaw<
-      { variant_id: string; location_id: string; on_hand: number; reserved: number; low_stock_threshold: number | null; safety_stock: number | null }[]
-    >`
-      SELECT * FROM inventory_management.inventory_stocks
-      WHERE on_hand <= reserved
-    `;
+    const stocks = await (this.prisma as any).inventoryStock.findMany({
+      where: {
+        onHand: { lte: 0 },
+      },
+    });
 
-    return rows.map((r) =>
-      this.toEntity({
-        variantId: r.variant_id,
-        locationId: r.location_id,
-        onHand: r.on_hand,
-        reserved: r.reserved,
-        lowStockThreshold: r.low_stock_threshold,
-        safetyStock: r.safety_stock,
-      }),
-    );
+    return stocks.map((s: StockDatabaseRow) => this.toEntity(s));
   }
 
   async getTotalAvailableStock(variantId: string): Promise<number> {
@@ -353,26 +336,26 @@ export class StockRepositoryImpl implements IStockRepository {
     outOfStockCount: number;
     totalValue: number;
   }> {
-    const totalStats = await (this.prisma as any).inventoryStock.aggregate({
-      _sum: { onHand: true },
-    });
-
-    const [lowStockCountRaw, outOfStockCountRaw] = await Promise.all([
-      this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::int as count FROM inventory_management.inventory_stocks
-        WHERE low_stock_threshold IS NOT NULL
-        AND on_hand <= low_stock_threshold
-      `,
-      this.prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::int as count FROM inventory_management.inventory_stocks
-        WHERE on_hand <= reserved
-      `,
+    const [totalStats, allStocks] = await Promise.all([
+      (this.prisma as any).inventoryStock.aggregate({
+        _sum: { onHand: true },
+      }),
+      (this.prisma as any).inventoryStock.findMany(),
     ]);
+
+    const lowStockCount = allStocks.filter(
+      (s: StockDatabaseRow) =>
+        s.lowStockThreshold !== null && s.onHand <= s.lowStockThreshold,
+    ).length;
+
+    const outOfStockCount = allStocks.filter(
+      (s: StockDatabaseRow) => s.onHand <= s.reserved,
+    ).length;
 
     return {
       totalItems: totalStats._sum.onHand || 0,
-      lowStockCount: Number(lowStockCountRaw[0]?.count || 0),
-      outOfStockCount: Number(outOfStockCountRaw[0]?.count || 0),
+      lowStockCount,
+      outOfStockCount,
       totalValue: 0,
     };
   }

@@ -101,45 +101,33 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
   async findPendingItemsByPO(
     poId: PurchaseOrderId,
   ): Promise<PurchaseOrderItem[]> {
-    const rows = await this.prisma.$queryRaw<
-      { po_id: string; variant_id: string; ordered_qty: number; received_qty: number }[]
-    >`
-      SELECT * FROM inventory_management.purchase_order_items
-      WHERE po_id = ${poId.getValue()}
-      AND received_qty < ordered_qty
-      ORDER BY variant_id ASC
-    `;
+    const items = await (this.prisma as any).purchaseOrderItem.findMany({
+      where: { poId: poId.getValue() },
+      orderBy: { variantId: "asc" },
+    });
 
-    return rows.map((r) =>
-      this.toEntity({
-        poId: r.po_id,
-        variantId: r.variant_id,
-        orderedQty: r.ordered_qty,
-        receivedQty: r.received_qty,
-      }),
-    );
+    return items
+      .filter(
+        (item: PurchaseOrderItemDatabaseRow) =>
+          item.receivedQty < item.orderedQty,
+      )
+      .map((item: PurchaseOrderItemDatabaseRow) => this.toEntity(item));
   }
 
   async findFullyReceivedItemsByPO(
     poId: PurchaseOrderId,
   ): Promise<PurchaseOrderItem[]> {
-    const rows = await this.prisma.$queryRaw<
-      { po_id: string; variant_id: string; ordered_qty: number; received_qty: number }[]
-    >`
-      SELECT * FROM inventory_management.purchase_order_items
-      WHERE po_id = ${poId.getValue()}
-      AND received_qty = ordered_qty
-      ORDER BY variant_id ASC
-    `;
+    const items = await (this.prisma as any).purchaseOrderItem.findMany({
+      where: { poId: poId.getValue() },
+      orderBy: { variantId: "asc" },
+    });
 
-    return rows.map((r) =>
-      this.toEntity({
-        poId: r.po_id,
-        variantId: r.variant_id,
-        orderedQty: r.ordered_qty,
-        receivedQty: r.received_qty,
-      }),
-    );
+    return items
+      .filter(
+        (item: PurchaseOrderItemDatabaseRow) =>
+          item.receivedQty === item.orderedQty,
+      )
+      .map((item: PurchaseOrderItemDatabaseRow) => this.toEntity(item));
   }
 
   async getTotalOrderedQty(poId: PurchaseOrderId): Promise<number> {

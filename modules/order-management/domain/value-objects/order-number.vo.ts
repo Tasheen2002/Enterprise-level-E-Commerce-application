@@ -29,6 +29,10 @@ export class OrderNumber {
     return new OrderNumber(`${prefix}-${timestamp}-${random}`);
   }
 
+  static fromString(value: string): OrderNumber {
+    return new OrderNumber(value);
+  }
+
   getValue(): string {
     return this.value;
   }

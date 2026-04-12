@@ -336,7 +336,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       return false;
     }
 
-    const currentExpiry = reservation.getExpiresAt();
+    const currentExpiry = reservation.expiresAt;
     const newExpiry = new Date(
       currentExpiry.getTime() + additionalMinutes * 60 * 1000,
     );
@@ -462,28 +462,14 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       return null;
     }
 
-    // Check if new quantity is available
-    const currentQuantity = existingReservation.getQuantity().getValue();
-    const quantityDifference = newQuantity - currentQuantity;
-
-    if (quantityDifference > 0) {
-      const availability = await this.checkAvailability(
-        variantId,
-        quantityDifference,
-      );
-      if (!availability.available) {
-        throw new Error(
-          "Insufficient inventory available for reservation adjustment",
-        );
-      }
-    }
+    const reservationId = existingReservation.reservationId.getValue();
 
     await this.prisma.reservation.update({
-      where: { id: existingReservation.getReservationId() },
+      where: { id: reservationId },
       data: { qty: newQuantity },
     });
 
-    return this.findById(existingReservation.getReservationId());
+    return this.findById(reservationId);
   }
 
   // Query operations
@@ -781,8 +767,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     const reservation = await this.findById(reservationId);
     if (!reservation) return false;
 
-    // Check if reservation is still active
-    return reservation.getExpiresAt() > new Date();
+    return reservation.expiresAt > new Date();
   }
 
   async canCreateReservation(
@@ -852,7 +837,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     if (!reservation) return null;
 
     const now = new Date();
-    const expiresAt = reservation.getExpiresAt();
+    const expiresAt = reservation.expiresAt;
     const timeUntilExpiryMinutes = Math.max(
       0,
       Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60)),
@@ -861,10 +846,10 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     const canBeExtended = expiresAt > now;
 
     return {
-      reservationId: reservation.getReservationId(),
-      cartId: reservation.getCartId().getValue(),
-      variantId: reservation.getVariantId().getValue(),
-      quantity: reservation.getQuantity().getValue(),
+      reservationId: reservation.reservationId.getValue(),
+      cartId: reservation.cartId.getValue(),
+      variantId: reservation.variantId.getValue(),
+      quantity: reservation.quantity.getValue(),
       status,
       expiresAt,
       timeUntilExpiryMinutes,

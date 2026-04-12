@@ -11,7 +11,7 @@ import {
 import { MediaAssetId } from "../../../domain/entities/media-asset.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 
-export class EditorialLookRepository implements IEditorialLookRepository {
+export class EditorialLookRepositoryImpl implements IEditorialLookRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(look: EditorialLook): Promise<void> {

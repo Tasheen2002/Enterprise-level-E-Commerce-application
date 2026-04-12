@@ -9,7 +9,7 @@ import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 
-export class VariantMediaRepository implements IVariantMediaRepository {
+export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private get model() {
@@ -209,7 +209,7 @@ export class VariantMediaRepository implements IVariantMediaRepository {
 
   async copyProductVariantMedia(
     sourceProductId: ProductId,
-    targetProductId: ProductId,
+    _targetProductId: ProductId,
     variantMapping: Map<VariantId, VariantId>,
   ): Promise<void> {
     const sourceMedia = await this.findByProductVariants(sourceProductId);

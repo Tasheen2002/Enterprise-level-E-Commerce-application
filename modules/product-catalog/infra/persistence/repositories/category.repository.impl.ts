@@ -8,7 +8,7 @@ import { Category } from "../../../domain/entities/category.entity";
 import { CategoryId } from "../../../domain/value-objects/category-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
 
-export class CategoryRepository implements ICategoryRepository {
+export class CategoryRepositoryImpl implements ICategoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(category: Category): Promise<void> {

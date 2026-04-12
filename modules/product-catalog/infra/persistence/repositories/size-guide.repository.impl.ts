@@ -10,7 +10,7 @@ import {
   Region,
 } from "../../../domain/entities/size-guide.entity";
 
-export class SizeGuideRepository implements ISizeGuideRepository {
+export class SizeGuideRepositoryImpl implements ISizeGuideRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private hydrate(row: {

@@ -114,7 +114,7 @@ export class AddressSnapshot {
     return this.email;
   }
 
-  toJSON(): AddressSnapshotData {
+  getValue(): AddressSnapshotData {
     return {
       firstName: this.firstName,
       lastName: this.lastName,
@@ -127,6 +127,10 @@ export class AddressSnapshot {
       phone: this.phone,
       email: this.email,
     };
+  }
+
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 
   equals(other: AddressSnapshot): boolean {

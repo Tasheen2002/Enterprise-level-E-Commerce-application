@@ -9,18 +9,12 @@ import {
   MediaAssetId,
 } from "../../../domain/entities/media-asset.entity";
 
-export class MediaAssetRepository implements IMediaAssetRepository {
+export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private convertBigIntToNumber(value: bigint | null): number | null {
     if (value === null) return null;
-    const numberValue = Number(value);
-    if (numberValue > Number.MAX_SAFE_INTEGER) {
-      console.warn(
-        `BigInt value ${value} exceeds MAX_SAFE_INTEGER, potential precision loss`,
-      );
-    }
-    return numberValue;
+    return Number(value);
   }
 
   private mapRow(row: any): MediaAsset {

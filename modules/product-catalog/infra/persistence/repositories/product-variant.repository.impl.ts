@@ -9,27 +9,27 @@ import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { SKU } from "../../../domain/value-objects/sku.vo";
 
-function mapRow(row: any): ProductVariant {
-  return ProductVariant.fromPersistence({
-    id: VariantId.fromString(row.id),
-    productId: ProductId.fromString(row.productId),
-    sku: SKU.fromString(row.sku),
-    size: row.size,
-    color: row.color,
-    barcode: row.barcode,
-    weightG: row.weightG,
-    dims: row.dims as any,
-    taxClass: row.taxClass,
-    allowBackorder: row.allowBackorder,
-    allowPreorder: row.allowPreorder,
-    restockEta: row.restockEta,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
-}
-
-export class ProductVariantRepository implements IProductVariantRepository {
+export class ProductVariantRepositoryImpl implements IProductVariantRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private mapRow(row: any): ProductVariant {
+    return ProductVariant.fromPersistence({
+      id: VariantId.fromString(row.id),
+      productId: ProductId.fromString(row.productId),
+      sku: SKU.fromString(row.sku),
+      size: row.size,
+      color: row.color,
+      barcode: row.barcode,
+      weightG: row.weightG,
+      dims: row.dims as any,
+      taxClass: row.taxClass,
+      allowBackorder: row.allowBackorder,
+      allowPreorder: row.allowPreorder,
+      restockEta: row.restockEta,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  }
 
   async save(variant: ProductVariant): Promise<void> {
     await this.prisma.productVariant.create({
@@ -62,7 +62,7 @@ export class ProductVariantRepository implements IProductVariantRepository {
       return null;
     }
 
-    return mapRow(variantData);
+    return this.mapRow(variantData);
   }
 
   async findBySku(sku: SKU): Promise<ProductVariant | null> {
@@ -74,7 +74,7 @@ export class ProductVariantRepository implements IProductVariantRepository {
       return null;
     }
 
-    return mapRow(variantData);
+    return this.mapRow(variantData);
   }
 
   async findByProductId(productId: ProductId): Promise<ProductVariant[]> {

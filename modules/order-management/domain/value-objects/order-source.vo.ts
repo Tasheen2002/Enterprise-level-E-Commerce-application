@@ -1,9 +1,5 @@
 import { DomainValidationError } from "../errors/order-management.errors";
-
-export enum OrderSourceEnum {
-  WEB = "web",
-  MOBILE = "mobile",
-}
+import { OrderSourceEnum } from "../enums";
 
 export class OrderSource {
   private readonly value: OrderSourceEnum;

@@ -1,116 +1,197 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import {
   DomainValidationError,
   InvalidOperationError,
 } from "../errors/order-management.errors";
 
+export class PreorderCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly orderItemId: string,
+    public readonly releaseDate?: string,
+  ) {
+    super(orderItemId, "Preorder");
+  }
+  get eventType(): string {
+    return "preorder.created";
+  }
+  getPayload(): Record<string, unknown> {
+    return {
+      orderItemId: this.orderItemId,
+      releaseDate: this.releaseDate,
+    };
+  }
+}
+
+export class PreorderReleaseDateUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly orderItemId: string,
+    public readonly releaseDate: string,
+  ) {
+    super(orderItemId, "Preorder");
+  }
+  get eventType(): string {
+    return "preorder.release_date.updated";
+  }
+  getPayload(): Record<string, unknown> {
+    return {
+      orderItemId: this.orderItemId,
+      releaseDate: this.releaseDate,
+    };
+  }
+}
+
+export class PreorderNotifiedEvent extends DomainEvent {
+  constructor(
+    public readonly orderItemId: string,
+    public readonly notifiedAt: string,
+  ) {
+    super(orderItemId, "Preorder");
+  }
+  get eventType(): string {
+    return "preorder.notified";
+  }
+  getPayload(): Record<string, unknown> {
+    return {
+      orderItemId: this.orderItemId,
+      notifiedAt: this.notifiedAt,
+    };
+  }
+}
+
 export interface PreorderProps {
   orderItemId: string;
   releaseDate?: Date;
   notifiedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface PreorderDatabaseRow {
-  order_item_id: string;
-  release_date?: Date | null;
-  notified_at?: Date | null;
+export interface PreorderDTO {
+  orderItemId: string;
+  releaseDate?: string;
+  notifiedAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export class Preorder {
-  private orderItemId: string;
-  private releaseDate?: Date;
-  private notifiedAt?: Date;
-
-  private constructor(props: PreorderProps) {
-    this.orderItemId = props.orderItemId;
-    this.releaseDate = props.releaseDate;
-    this.notifiedAt = props.notifiedAt;
+export class Preorder extends AggregateRoot {
+  private constructor(private props: PreorderProps) {
+    super();
   }
 
-  static create(props: PreorderProps): Preorder {
-    if (!props.orderItemId || props.orderItemId.trim().length === 0) {
-      throw new DomainValidationError("Order item ID is required");
-    }
+  static create(
+    params: Omit<PreorderProps, "createdAt" | "updatedAt">,
+  ): Preorder {
+    Preorder.validateOrderItemId(params.orderItemId);
 
-    if (props.releaseDate && props.releaseDate < new Date()) {
+    if (params.releaseDate && params.releaseDate < new Date()) {
       throw new DomainValidationError("Release date must be in the future");
     }
 
-    return new Preorder(props);
-  }
-
-  static reconstitute(props: PreorderProps): Preorder {
-    return new Preorder(props);
-  }
-
-  static fromDatabaseRow(row: PreorderDatabaseRow): Preorder {
-    return new Preorder({
-      orderItemId: row.order_item_id,
-      releaseDate: row.release_date || undefined,
-      notifiedAt: row.notified_at || undefined,
+    const preorder = new Preorder({
+      ...params,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
+
+    preorder.addDomainEvent(
+      new PreorderCreatedEvent(
+        preorder.props.orderItemId,
+        preorder.props.releaseDate?.toISOString(),
+      ),
+    );
+
+    return preorder;
   }
 
-  getOrderItemId(): string {
-    return this.orderItemId;
+  static fromPersistence(props: PreorderProps): Preorder {
+    return new Preorder(props);
   }
 
-  getReleaseDate(): Date | undefined {
-    return this.releaseDate;
+  private static validateOrderItemId(id: string): void {
+    if (!id || id.trim().length === 0) {
+      throw new DomainValidationError("Order item ID is required");
+    }
   }
 
-  getNotifiedAt(): Date | undefined {
-    return this.notifiedAt;
+  get orderItemId(): string {
+    return this.props.orderItemId;
+  }
+
+  get releaseDate(): Date | undefined {
+    return this.props.releaseDate;
+  }
+
+  get notifiedAt(): Date | undefined {
+    return this.props.notifiedAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   hasReleaseDate(): boolean {
-    return !!this.releaseDate;
+    return !!this.props.releaseDate;
   }
 
   isCustomerNotified(): boolean {
-    return !!this.notifiedAt;
+    return !!this.props.notifiedAt;
   }
 
   isReleased(): boolean {
-    return !!this.releaseDate && this.releaseDate <= new Date();
+    return !!this.props.releaseDate && this.props.releaseDate <= new Date();
   }
 
   updateReleaseDate(releaseDate: Date): void {
-    this.releaseDate = releaseDate;
+    this.props.releaseDate = releaseDate;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PreorderReleaseDateUpdatedEvent(
+        this.props.orderItemId,
+        releaseDate.toISOString(),
+      ),
+    );
   }
 
   markAsNotified(): void {
-    if (this.notifiedAt) {
+    if (this.props.notifiedAt) {
       throw new InvalidOperationError("Customer already notified");
     }
 
-    // Validate that the item is released before notifying
-    if (this.releaseDate && !this.isReleased()) {
+    if (this.props.releaseDate && !this.isReleased()) {
       throw new InvalidOperationError(
         "Cannot notify customer before release date",
       );
     }
 
-    this.notifiedAt = new Date();
+    this.props.notifiedAt = new Date();
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PreorderNotifiedEvent(
+        this.props.orderItemId,
+        this.props.notifiedAt.toISOString(),
+      ),
+    );
   }
 
   equals(other: Preorder): boolean {
-    return this.orderItemId === other.orderItemId;
+    return this.props.orderItemId === other.props.orderItemId;
   }
 
-  // Utility methods
-  toDatabaseRow(): PreorderDatabaseRow {
+  static toDTO(entity: Preorder): PreorderDTO {
     return {
-      order_item_id: this.orderItemId,
-      release_date: this.releaseDate || null,
-      notified_at: this.notifiedAt || null,
-    };
-  }
-
-  toSnapshot(): PreorderProps {
-    return {
-      orderItemId: this.orderItemId,
-      releaseDate: this.releaseDate,
-      notifiedAt: this.notifiedAt,
+      orderItemId: entity.props.orderItemId,
+      releaseDate: entity.props.releaseDate?.toISOString(),
+      notifiedAt: entity.props.notifiedAt?.toISOString(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

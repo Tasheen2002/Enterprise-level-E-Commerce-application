@@ -8,7 +8,7 @@ import { ProductMedia } from "../../../domain/entities/product-media.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
 
-export class ProductMediaRepository implements IProductMediaRepository {
+export class ProductMediaRepositoryImpl implements IProductMediaRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   // Helper to access productMedia model with proper typing

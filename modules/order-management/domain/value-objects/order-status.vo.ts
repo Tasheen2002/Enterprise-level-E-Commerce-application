@@ -1,18 +1,5 @@
 import { DomainValidationError } from "../errors/order-management.errors";
-
-export enum OrderStatusEnum {
-  CREATED = "created",
-  PENDING = "pending",
-  CONFIRMED = "confirmed",
-  PAID = "paid",
-  PROCESSING = "processing",
-  SHIPPED = "shipped",
-  DELIVERED = "delivered",
-  FULFILLED = "fulfilled", // Deprecating in favor of SHIPPED/DELIVERED
-  PARTIALLY_RETURNED = "partially_returned",
-  REFUNDED = "refunded",
-  CANCELLED = "cancelled",
-}
+import { OrderStatusEnum } from "../enums";
 
 export class OrderStatus {
   private readonly value: OrderStatusEnum;

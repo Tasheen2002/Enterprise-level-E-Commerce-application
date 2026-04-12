@@ -83,7 +83,7 @@ export class OrderTotals {
     return this.total;
   }
 
-  toJSON(): OrderTotalsData {
+  getValue(): OrderTotalsData {
     return {
       subtotal: this.subtotal,
       tax: this.tax,
@@ -91,6 +91,10 @@ export class OrderTotals {
       discount: this.discount,
       total: this.total,
     };
+  }
+
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 
   equals(other: OrderTotals): boolean {
