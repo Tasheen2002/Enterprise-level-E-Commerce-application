@@ -7,6 +7,11 @@ import {
   MediaAssetDTO,
   MediaAssetId,
 } from "../../domain/entities/media-asset.entity";
+import {
+  MediaAssetNotFoundError,
+  DomainValidationError,
+  InvalidOperationError,
+} from "../../domain/errors";
 
 /** Input shape for creating/updating a media asset — mirrors MediaAsset.create() params */
 type CreateMediaAssetInput = {
@@ -20,11 +25,6 @@ type CreateMediaAssetInput = {
   focalY?: number;
   renditions?: Record<string, any>;
 };
-import {
-  MediaAssetNotFoundError,
-  DomainValidationError,
-  InvalidOperationError,
-} from "../../domain/errors";
 
 export interface MediaAssetServiceQueryOptions {
   page?: number;

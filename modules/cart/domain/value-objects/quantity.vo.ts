@@ -69,6 +69,10 @@ export class Quantity {
     return this.value <= other.value;
   }
 
+  static create(value: number): Quantity {
+    return Quantity.fromNumber(value);
+  }
+
   static fromNumber(value: number): Quantity {
     return new Quantity(value);
   }

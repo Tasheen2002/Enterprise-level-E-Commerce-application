@@ -23,10 +23,7 @@ export interface PurchaseOrderItemDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PurchaseOrderItem {
-  private props: PurchaseOrderItemProps;
-
-  private constructor(props: PurchaseOrderItemProps) {
-    this.props = props;
+  private constructor(private props: PurchaseOrderItemProps) {
     this.validate();
   }
 

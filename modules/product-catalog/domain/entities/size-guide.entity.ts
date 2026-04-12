@@ -39,12 +39,17 @@ export interface SizeGuideProps {
   category: string | null;
 }
 
-export class SizeGuide extends AggregateRoot {
-  private props: SizeGuideProps;
+export interface SizeGuideDTO {
+  id: string;
+  title: string;
+  bodyHtml: string | null;
+  region: Region;
+  category: string | null;
+}
 
-  private constructor(props: SizeGuideProps) {
+export class SizeGuide extends AggregateRoot {
+  private constructor(private props: SizeGuideProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -173,12 +178,4 @@ export class SizeGuide extends AggregateRoot {
       category: entity.props.category,
     };
   }
-}
-
-export interface SizeGuideDTO {
-  id: string;
-  title: string;
-  bodyHtml: string | null;
-  region: Region;
-  category: string | null;
 }

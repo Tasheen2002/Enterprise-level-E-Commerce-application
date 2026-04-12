@@ -1,25 +1,25 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { SupplierDTO } from "../../../domain/entities/supplier.entity";
 import { SupplierContactProps } from "../../../domain/value-objects/supplier-contact.vo";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 
-export interface CreateSupplierInput extends ICommand {
+export interface CreateSupplierCommand extends ICommand {
   name: string;
   leadTimeDays?: number;
   contacts?: SupplierContactProps[];
 }
 
 export class CreateSupplierHandler implements ICommandHandler<
-  CreateSupplierInput,
+  CreateSupplierCommand,
   CommandResult<SupplierDTO>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
-  async handle(input: CreateSupplierInput): Promise<CommandResult<SupplierDTO>> {
+  async handle(command: CreateSupplierCommand): Promise<CommandResult<SupplierDTO>> {
     const supplier = await this.supplierService.createSupplier(
-      input.name,
-      input.leadTimeDays,
-      input.contacts,
+      command.name,
+      command.leadTimeDays,
+      command.contacts,
     );
     return CommandResult.success(supplier);
   }

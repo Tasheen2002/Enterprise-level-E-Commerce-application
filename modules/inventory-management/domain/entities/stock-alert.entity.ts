@@ -47,8 +47,8 @@ export interface StockAlertDTO {
   alertId: string;
   variantId: string;
   type: string;
-  triggeredAt: Date;
-  resolvedAt?: Date;
+  triggeredAt: string;
+  resolvedAt?: string;
   isResolved: boolean;
 }
 
@@ -124,8 +124,8 @@ export class StockAlert extends AggregateRoot {
       alertId: entity.props.alertId.getValue(),
       variantId: entity.props.variantId,
       type: entity.props.type.getValue(),
-      triggeredAt: entity.props.triggeredAt,
-      resolvedAt: entity.props.resolvedAt,
+      triggeredAt: entity.props.triggeredAt.toISOString(),
+      resolvedAt: entity.props.resolvedAt?.toISOString(),
       isResolved: entity.isResolved(),
     };
   }

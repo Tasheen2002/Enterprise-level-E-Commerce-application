@@ -30,9 +30,18 @@ export interface IMediaAssetRepository {
   count(options?: MediaAssetCountOptions): Promise<number>;
   getTotalSize(): Promise<number>; // Total size in bytes
   findWithFilters(
-    filters: any,
+    filters: MediaAssetFilters,
     options?: MediaAssetQueryOptions,
   ): Promise<MediaAsset[]>;
+}
+
+export interface MediaAssetFilters {
+  mimeType?: string;
+  isImage?: boolean;
+  isVideo?: boolean;
+  hasRenditions?: boolean;
+  minBytes?: number;
+  maxBytes?: number;
 }
 
 export interface MediaAssetQueryOptions {

@@ -10,11 +10,17 @@ export interface ProductCategoryProps {
   createdAt: Date;
 }
 
-export class ProductCategory {
-  private props: ProductCategoryProps;
+export interface ProductCategoryDTO {
+  id: string;
+  productId: string;
+  categoryId: string;
+  displayOrder: number;
+  isPrimary: boolean;
+  createdAt: string;
+}
 
-  private constructor(props: ProductCategoryProps) {
-    this.props = props;
+export class ProductCategory {
+  private constructor(private props: ProductCategoryProps) {
   }
 
   static create(params: {
@@ -99,13 +105,4 @@ export class ProductCategory {
       createdAt: entity.props.createdAt.toISOString(),
     };
   }
-}
-
-export interface ProductCategoryDTO {
-  id: string;
-  productId: string;
-  categoryId: string;
-  displayOrder: number;
-  isPrimary: boolean;
-  createdAt: string;
 }

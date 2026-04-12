@@ -86,7 +86,7 @@ export class CartItem {
     });
   }
 
-  static reconstitute(data: CartItemEntityData): CartItem {
+  static fromPersistence(data: CartItemEntityData): CartItem {
     return new CartItem({
       id: data.id,
       cartId: data.cartId,
@@ -97,22 +97,6 @@ export class CartItem {
       isGift: data.isGift,
       giftMessage: data.giftMessage,
     });
-  }
-
-  static toDTO(item: CartItem): CartItemDTO {
-    return {
-      id: item.props.id,
-      cartId: item.props.cartId,
-      variantId: item.props.variantId.getValue(),
-      quantity: item.props.quantity.getValue(),
-      unitPriceSnapshot: item.props.unitPriceSnapshot,
-      appliedPromos: item.props.appliedPromos.getValue(),
-      isGift: item.props.isGift,
-      giftMessage: item.props.giftMessage,
-      subtotal: item.subtotal,
-      discountAmount: item.discountAmount,
-      totalPrice: item.totalPrice,
-    };
   }
 
   // Getters
@@ -240,6 +224,22 @@ export class CartItem {
       appliedPromos: this.props.appliedPromos.getValue(),
       isGift: this.props.isGift,
       giftMessage: this.props.giftMessage,
+    };
+  }
+
+  static toDTO(item: CartItem): CartItemDTO {
+    return {
+      id: item.props.id,
+      cartId: item.props.cartId,
+      variantId: item.props.variantId.getValue(),
+      quantity: item.props.quantity.getValue(),
+      unitPriceSnapshot: item.props.unitPriceSnapshot,
+      appliedPromos: item.props.appliedPromos.getValue(),
+      isGift: item.props.isGift,
+      giftMessage: item.props.giftMessage,
+      subtotal: item.subtotal,
+      discountAmount: item.discountAmount,
+      totalPrice: item.totalPrice,
     };
   }
 }

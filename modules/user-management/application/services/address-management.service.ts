@@ -11,14 +11,14 @@ import {
   InvalidOperationError,
 } from "../../domain/errors/user-management.errors";
 
-export interface AddAddressDto {
+interface AddAddressDto {
   userId: string;
   addressData: AddressData;
   type: AddressType;
   isDefault?: boolean;
 }
 
-export interface UpdateAddressDto {
+interface UpdateAddressDto {
   addressId: string;
   userId: string;
   addressData?: AddressData;

@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
-import { RolePermissions } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { StockAlertController } from "../controllers/stock-alert.controller";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
@@ -11,15 +15,26 @@ import {
   stockAlertResponseSchema,
 } from "../validation/stock-alert.schema";
 
-export async function registerStockAlertRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function stockAlertRoutes(
   fastify: FastifyInstance,
   controller: StockAlertController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // List alerts
   fastify.get(
     "/alerts",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listStockAlertsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listStockAlertsSchema)],
       schema: {
         description: "List stock alerts (Staff/Admin only)",
         tags: ["Stock Alerts"],
@@ -38,6 +53,8 @@ export async function registerStockAlertRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -57,7 +74,7 @@ export async function registerStockAlertRoutes(
   fastify.get(
     "/alerts/active",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all active stock alerts (Staff/Admin only)",
         tags: ["Stock Alerts"],
@@ -68,6 +85,8 @@ export async function registerStockAlertRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: stockAlertResponseSchema },
             },
           },
@@ -82,7 +101,7 @@ export async function registerStockAlertRoutes(
     "/alerts/:alertId",
     {
       preValidation: [validateParams(alertParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get alert by ID (Staff/Admin only)",
         tags: ["Stock Alerts"],
@@ -100,6 +119,8 @@ export async function registerStockAlertRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: stockAlertResponseSchema,
             },
           },
@@ -113,7 +134,7 @@ export async function registerStockAlertRoutes(
   fastify.post(
     "/alerts",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createStockAlertSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(createStockAlertSchema)],
       schema: {
         description: "Create stock alert",
         tags: ["Stock Alerts"],
@@ -132,6 +153,8 @@ export async function registerStockAlertRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: stockAlertResponseSchema,
             },
           },
@@ -142,11 +165,11 @@ export async function registerStockAlertRoutes(
   );
 
   // Resolve alert
-  fastify.put(
+  fastify.patch(
     "/alerts/:alertId/resolve",
     {
       preValidation: [validateParams(alertParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Resolve stock alert",
         tags: ["Stock Alerts"],
@@ -164,6 +187,8 @@ export async function registerStockAlertRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: stockAlertResponseSchema,
             },
           },

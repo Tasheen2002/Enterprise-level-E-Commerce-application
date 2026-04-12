@@ -16,6 +16,7 @@ import { AddressManagementService } from "../../../modules/user-management/appli
 import { PaymentMethodService } from "../../../modules/user-management/application/services/payment-method.service";
 import { PasswordHasherService } from "../../../modules/user-management/application/services/password-hasher.service";
 import { VerificationService } from "../../../modules/user-management/application/services/verification.service";
+import { UserService } from "../../../modules/user-management/application/services/user.service";
 
 // User Management — Handlers
 import { RegisterUserHandler } from "../../../modules/user-management/application/commands/register-user.command";
@@ -150,7 +151,57 @@ import { CheckoutCompletionPortImpl } from "../../../modules/cart/infra/persiste
 import type {
   IProductSnapshotFactory,
   IExternalStockService,
+  IExternalProductVariantRepository,
+  IExternalProductRepository,
+  IExternalProductMediaRepository,
+  IExternalMediaAssetRepository,
 } from "../../../modules/cart/domain/external-services";
+
+// Cart — Handlers
+import {
+  AddToCartHandler,
+  UpdateCartItemHandler,
+  RemoveFromCartHandler,
+  ClearCartHandler,
+  CreateUserCartHandler,
+  CreateGuestCartHandler,
+  TransferCartHandler,
+  UpdateCartEmailHandler,
+  UpdateCartShippingInfoHandler,
+  UpdateCartAddressesHandler,
+  CleanupExpiredCartsHandler,
+  CreateReservationHandler,
+  ExtendReservationHandler,
+  RenewReservationHandler,
+  ReleaseReservationHandler,
+  AdjustReservationHandler,
+  CreateBulkReservationsHandler,
+  ResolveReservationConflictsHandler,
+  InitializeCheckoutHandler,
+  CompleteCheckoutHandler,
+  CancelCheckoutHandler,
+  CompleteCheckoutWithOrderHandler,
+  GetCartHandler,
+  GetActiveCartByUserHandler,
+  GetActiveCartByGuestTokenHandler,
+  GetCartSummaryHandler,
+  GetCartStatisticsHandler,
+  GetReservationsHandler,
+  GetReservationHandler,
+  GetReservationByVariantHandler,
+  GetVariantReservationsHandler,
+  CheckAvailabilityHandler,
+  GetReservedQuantityHandler,
+  GetReservationStatisticsHandler,
+  GetReservationsByStatusHandler,
+  GetCheckoutHandler,
+  GetOrderByCheckoutHandler,
+} from "../../../modules/cart/application";
+
+// Cart — Controllers
+import { CartController } from "../../../modules/cart/infra/http/controllers/cart.controller";
+import { ReservationController } from "../../../modules/cart/infra/http/controllers/reservation.controller";
+import { CheckoutController } from "../../../modules/cart/infra/http/controllers/checkout.controller";
 
 // Admin — Services (required by CartManagementService and CheckoutService)
 import { SettingsService } from "../../../modules/admin/application/services/settings.service";
@@ -173,6 +224,14 @@ import { OrderId } from "../../../modules/order-management/domain/value-objects/
 
 // Inventory Management — Value Objects (used by stock service adapter)
 import { LocationType } from "../../../modules/inventory-management/domain/value-objects/location-type.vo";
+
+// Order Management — External Ports
+import {
+  IExternalVariantService,
+  IExternalProductService,
+  IExternalProductMediaService,
+  IExternalStockService as IOrderExternalStockService,
+} from "../../../modules/order-management/domain/external-services";
 
 // Order Management — Services
 import { OrderManagementService } from "../../../modules/order-management/application/services/order-management.service";
@@ -287,6 +346,8 @@ export class Container {
       verificationAuditLogRepository,
     );
 
+    const userService = new UserService(userRepository);
+
     // Store User Management services
     this.services.set("authService", authService);
     this.services.set("profileService", profileService);
@@ -308,7 +369,7 @@ export class Container {
     const resetPasswordHandler = new ResetPasswordHandler(authService);
     const verifyEmailHandler = new VerifyEmailHandler(authService);
     const getUserByEmailHandler = new GetUserByEmailHandler(authService);
-    const deleteAccountHandler = new DeleteAccountHandler(authService, userRepository, TokenBlacklistService);
+    const deleteAccountHandler = new DeleteAccountHandler(authService, userService, TokenBlacklistService);
     const getProfileHandler = new GetUserProfileHandler(profileService);
     const updateProfileHandler = new UpdateProfileHandler(profileService);
     const addAddressHandler = new AddAddressHandler(addressService);
@@ -320,12 +381,12 @@ export class Container {
     const deletePaymentMethodHandler = new DeletePaymentMethodHandler(paymentMethodService);
     const setDefaultPaymentMethodHandler = new SetDefaultPaymentMethodHandler(paymentMethodService);
     const listPaymentMethodsHandler = new ListPaymentMethodsHandler(paymentMethodService);
-    const getUserDetailsHandler = new GetUserDetailsHandler(userRepository, addressRepository);
-    const listUsersHandler = new ListUsersHandler(userRepository);
-    const updateUserStatusHandler = new UpdateUserStatusHandler(userRepository);
-    const updateUserRoleHandler = new UpdateUserRoleHandler(userRepository);
-    const deleteUserHandler = new DeleteUserHandler(userRepository);
-    const toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(userRepository);
+    const getUserDetailsHandler = new GetUserDetailsHandler(userService);
+    const listUsersHandler = new ListUsersHandler(userService);
+    const updateUserStatusHandler = new UpdateUserStatusHandler(userService);
+    const updateUserRoleHandler = new UpdateUserRoleHandler(userService);
+    const deleteUserHandler = new DeleteUserHandler(userService);
+    const toggleUserEmailVerifiedHandler = new ToggleUserEmailVerifiedHandler(userService);
 
     // Controllers
     const authController = new AuthController(
@@ -469,7 +530,6 @@ export class Container {
       getProductHandler,
       listProductsHandler,
       searchProductsHandler,
-      productManagementService,
     );
 
     const categoryController = new CategoryController(
@@ -569,7 +629,7 @@ export class Container {
           LocationType.WAREHOUSE,
         );
         return locations.length > 0
-          ? locations[0].getLocationId().getValue()
+          ? locations[0].locationId.getValue()
           : null;
       },
     };
@@ -582,14 +642,46 @@ export class Container {
     // Services
     const settingsService = new SettingsService();
 
+    // Port adapters: wrap product-catalog repositories to satisfy cart external port interfaces
+    const externalProductVariantRepository: IExternalProductVariantRepository = {
+      findById: (variantId: { getValue(): string }) =>
+        productVariantRepository.findById(variantId as any) as any,
+    };
+
+    const externalProductRepository: IExternalProductRepository = {
+      findById: (productId: { getValue(): string }) =>
+        productRepository.findById(productId as any) as any,
+    };
+
+    const externalProductMediaRepository: IExternalProductMediaRepository = {
+      findByProductId: (productId: { getValue(): string }) =>
+        productMediaRepository.findByProductId(productId as any).then((items) =>
+          items.map((item) => ({
+            getAssetId: () => item.mediaAssetId,
+          })),
+        ),
+    };
+
+    const externalMediaAssetRepository: IExternalMediaAssetRepository = {
+      findById: (assetId: { getValue(): string }) =>
+        mediaAssetRepository.findById(assetId as any).then((asset) =>
+          asset
+            ? {
+                getStorageKey: () => asset.storageKey,
+                getAltText: () => asset.altText,
+              }
+            : null,
+        ),
+    };
+
     const cartManagementService = new CartManagementService(
       cartRepository,
       reservationRepository,
       checkoutRepository,
-      productVariantRepository,
-      productRepository,
-      productMediaRepository,
-      mediaAssetRepository,
+      externalProductVariantRepository,
+      externalProductRepository,
+      externalProductMediaRepository,
+      externalMediaAssetRepository,
       settingsService,
     );
 
@@ -610,19 +702,69 @@ export class Container {
       cartRepository,
       reservationRepository,
       stockServiceAdapter,
-      productRepository,
-      productVariantRepository,
+      externalProductRepository,
+      externalProductVariantRepository,
       {
         create: (data) => ProductSnapshot.create(data),
       } satisfies IProductSnapshotFactory,
       { defaultStockLocation: process.env.DEFAULT_STOCK_LOCATION },
     );
 
-    // Store Cart services
+    // Cart — Controllers
+    const cartController = new CartController(
+      new AddToCartHandler(cartManagementService),
+      new UpdateCartItemHandler(cartManagementService),
+      new RemoveFromCartHandler(cartManagementService),
+      new ClearCartHandler(cartManagementService),
+      new CreateUserCartHandler(cartManagementService),
+      new CreateGuestCartHandler(cartManagementService),
+      new TransferCartHandler(cartManagementService),
+      new UpdateCartEmailHandler(cartManagementService),
+      new UpdateCartShippingInfoHandler(cartManagementService),
+      new UpdateCartAddressesHandler(cartManagementService),
+      new CleanupExpiredCartsHandler(cartManagementService),
+      new GetCartHandler(cartManagementService),
+      new GetActiveCartByUserHandler(cartManagementService),
+      new GetActiveCartByGuestTokenHandler(cartManagementService),
+      new GetCartSummaryHandler(cartManagementService),
+      new GetCartStatisticsHandler(cartManagementService),
+    );
+
+    const reservationController = new ReservationController(
+      new CreateReservationHandler(reservationService),
+      new ExtendReservationHandler(reservationService),
+      new RenewReservationHandler(reservationService),
+      new ReleaseReservationHandler(reservationService),
+      new AdjustReservationHandler(reservationService),
+      new CreateBulkReservationsHandler(reservationService),
+      new ResolveReservationConflictsHandler(reservationService),
+      new GetReservationsHandler(reservationService),
+      new GetReservationHandler(reservationService),
+      new GetReservationByVariantHandler(reservationService),
+      new GetVariantReservationsHandler(reservationService),
+      new CheckAvailabilityHandler(reservationService),
+      new GetReservedQuantityHandler(reservationService),
+      new GetReservationStatisticsHandler(reservationService),
+      new GetReservationsByStatusHandler(reservationService),
+    );
+
+    const checkoutController = new CheckoutController(
+      new InitializeCheckoutHandler(checkoutService),
+      new CompleteCheckoutHandler(checkoutService),
+      new CancelCheckoutHandler(checkoutService),
+      new CompleteCheckoutWithOrderHandler(checkoutOrderService),
+      new GetCheckoutHandler(checkoutService),
+      new GetOrderByCheckoutHandler(checkoutOrderService),
+    );
+
+    // Store Cart services and controllers
     this.services.set("cartManagementService", cartManagementService);
     this.services.set("reservationService", reservationService);
     this.services.set("checkoutService", checkoutService);
     this.services.set("checkoutOrderService", checkoutOrderService);
+    this.services.set("cartController", cartController);
+    this.services.set("reservationController", reservationController);
+    this.services.set("checkoutController", checkoutController);
 
     // ============================================
     // Order Management Module
@@ -643,16 +785,76 @@ export class Container {
     // Services
     const orderEventService = new OrderEventService(orderEventRepository);
 
+    const externalVariantService: IExternalVariantService = {
+      getVariantById: async (variantId: string) => {
+        try {
+          const dto = await variantManagementService.getVariantById(variantId);
+          return {
+            getId: () => ({ getValue: () => dto.id }),
+            getProductId: () => ({ getValue: () => dto.productId }),
+            getSku: () => ({ getValue: () => dto.sku }),
+            getSize: () => dto.size,
+            getColor: () => dto.color,
+            getWeightG: () => dto.weightG,
+            getDims: () => dto.dims,
+          };
+        } catch {
+          return null;
+        }
+      },
+    };
+
+    const externalProductService: IExternalProductService = {
+      getProductById: async (productId: string) => {
+        try {
+          const dto = await productManagementService.getProductById(productId);
+          return {
+            getId: () => ({ getValue: () => dto.id }),
+            getTitle: () => dto.title,
+            getPrice: () => ({ getValue: () => dto.price }),
+          };
+        } catch {
+          return null;
+        }
+      },
+    };
+
+    const externalProductMediaService: IExternalProductMediaService = {
+      getProductMedia: async (productId: string, options?: { coverOnly?: boolean }) => {
+        const summary = await productMediaManagementService.getProductMedia(productId, {
+          coverOnly: options?.coverOnly,
+        });
+        return {
+          mediaAssets: summary.mediaAssets.map((a) => ({
+            isCover: a.isCover,
+            storageKey: a.storageKey,
+          })),
+        };
+      },
+    };
+
+    const externalStockService: IOrderExternalStockService = {
+      getStock: async (variantId: string, locationId: string) => {
+        const dto = await stockManagementService.getStock(variantId, locationId);
+        if (!dto) return null;
+        return {
+          getStockLevel: () => ({ getAvailable: () => dto.available }),
+        };
+      },
+      adjustStock: (...args) => stockManagementService.adjustStock(...args),
+      reserveStock: (...args) => stockManagementService.reserveStock(...args),
+    };
+
     const orderManagementService = new OrderManagementService(
       orderRepository,
       orderAddressRepository,
       orderItemRepository,
       orderShipmentRepository,
       orderStatusHistoryRepository,
-      variantManagementService,
-      productManagementService,
-      productMediaManagementService,
-      stockManagementService,
+      externalVariantService,
+      externalProductService,
+      externalProductMediaService,
+      externalStockService,
       orderEventService,
     );
 
@@ -835,14 +1037,9 @@ export class Container {
 
   getCartServices() {
     return {
-      cartManagementService: this.get<CartManagementService>(
-        "cartManagementService",
-      ),
-      reservationService: this.get<ReservationService>("reservationService"),
-      checkoutService: this.get<CheckoutService>("checkoutService"),
-      checkoutOrderService: this.get<CheckoutOrderService>(
-        "checkoutOrderService",
-      ),
+      cartController: this.get<CartController>("cartController"),
+      reservationController: this.get<ReservationController>("reservationController"),
+      checkoutController: this.get<CheckoutController>("checkoutController"),
     };
   }
 

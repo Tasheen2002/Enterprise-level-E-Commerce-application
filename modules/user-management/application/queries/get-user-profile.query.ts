@@ -5,14 +5,14 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface GetUserProfileInput extends IQuery {
+export interface GetUserProfileQuery extends IQuery {
   userId: string;
 }
 
-export class GetUserProfileHandler implements IQueryHandler<GetUserProfileInput, UserProfileDTO> {
+export class GetUserProfileHandler implements IQueryHandler<GetUserProfileQuery, UserProfileDTO> {
   constructor(private readonly userProfileService: UserProfileService) {}
 
-  async handle(input: GetUserProfileInput): Promise<UserProfileDTO> {
-    return this.userProfileService.getUserProfile(input.userId);
+  async handle(query: GetUserProfileQuery): Promise<UserProfileDTO> {
+    return this.userProfileService.getUserProfile(query.userId);
   }
 }

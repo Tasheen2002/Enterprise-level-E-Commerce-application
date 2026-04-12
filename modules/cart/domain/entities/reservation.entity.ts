@@ -135,7 +135,7 @@ export class Reservation extends AggregateRoot {
     return reservation;
   }
 
-  static reconstitute(data: ReservationEntityData): Reservation {
+  static fromPersistence(data: ReservationEntityData): Reservation {
     return new Reservation({
       reservationId: ReservationId.fromString(data.reservationId),
       cartId: CartId.fromString(data.cartId),
@@ -143,21 +143,6 @@ export class Reservation extends AggregateRoot {
       quantity: Quantity.fromNumber(data.quantity),
       expiresAt: data.expiresAt,
     });
-  }
-
-  static toDTO(reservation: Reservation): ReservationDTO {
-    return {
-      reservationId: reservation.props.reservationId.getValue(),
-      cartId: reservation.props.cartId.getValue(),
-      variantId: reservation.props.variantId.getValue(),
-      quantity: reservation.props.quantity.getValue(),
-      expiresAt: reservation.props.expiresAt.toISOString(),
-      status: reservation.status,
-      isExpired: reservation.isExpired,
-      isExpiringSoon: reservation.isExpiringSoon(),
-      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
-      canBeExtended: reservation.canBeExtended,
-    };
   }
 
   // Getters
@@ -318,5 +303,20 @@ export class Reservation extends AggregateRoot {
 
   static getMaxDurationMinutes(): number {
     return RESERVATION_MAX_DURATION_MINUTES;
+  }
+
+  static toDTO(reservation: Reservation): ReservationDTO {
+    return {
+      reservationId: reservation.props.reservationId.getValue(),
+      cartId: reservation.props.cartId.getValue(),
+      variantId: reservation.props.variantId.getValue(),
+      quantity: reservation.props.quantity.getValue(),
+      expiresAt: reservation.props.expiresAt.toISOString(),
+      status: reservation.status,
+      isExpired: reservation.isExpired,
+      isExpiringSoon: reservation.isExpiringSoon(),
+      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
+      canBeExtended: reservation.canBeExtended,
+    };
   }
 }

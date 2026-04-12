@@ -1,18 +1,18 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { LocationManagementService } from "../../services/location-management.service";
 
-export interface DeleteLocationInput extends ICommand {
+export interface DeleteLocationCommand extends ICommand {
   locationId: string;
 }
 
 export class DeleteLocationHandler implements ICommandHandler<
-  DeleteLocationInput,
+  DeleteLocationCommand,
   CommandResult<void>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
-  async handle(input: DeleteLocationInput): Promise<CommandResult<void>> {
-    await this.locationService.deleteLocation(input.locationId);
+  async handle(command: DeleteLocationCommand): Promise<CommandResult<void>> {
+    await this.locationService.deleteLocation(command.locationId);
     return CommandResult.success();
   }
 }

@@ -1,9 +1,9 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderDTO } from "../../../domain/entities/purchase-order.entity";
 import { PurchaseOrderItemDTO } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
-export interface CreatePurchaseOrderWithItemsInput extends ICommand {
+export interface CreatePurchaseOrderWithItemsCommand extends ICommand {
   supplierId: string;
   eta?: Date;
   items: Array<{ variantId: string; orderedQty: number }>;
@@ -15,21 +15,21 @@ export interface CreatePurchaseOrderWithItemsResult {
 }
 
 export class CreatePurchaseOrderWithItemsHandler implements ICommandHandler<
-  CreatePurchaseOrderWithItemsInput,
+  CreatePurchaseOrderWithItemsCommand,
   CommandResult<CreatePurchaseOrderWithItemsResult>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
   async handle(
-    input: CreatePurchaseOrderWithItemsInput,
+    command: CreatePurchaseOrderWithItemsCommand,
   ): Promise<CommandResult<CreatePurchaseOrderWithItemsResult>> {
     const purchaseOrder = await this.poService.createPurchaseOrder(
-      input.supplierId,
-      input.eta,
+      command.supplierId,
+      command.eta,
     );
 
     const addedItems: PurchaseOrderItemDTO[] = [];
-    for (const item of input.items) {
+    for (const item of command.items) {
       const poItem = await this.poService.addPurchaseOrderItem(
         purchaseOrder.poId,
         item.variantId,

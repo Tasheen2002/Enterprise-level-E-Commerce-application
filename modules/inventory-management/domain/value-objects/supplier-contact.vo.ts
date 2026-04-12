@@ -67,6 +67,19 @@ export class SupplierContact {
     );
   }
 
+  getValue(): SupplierContactProps {
+    return { ...this.props };
+  }
+
+  toString(): string {
+    const name = this.props.name ?? "";
+    const email = this.props.email ?? "";
+    if (name && email) return `${name} <${email}>`;
+    if (name) return name;
+    if (email) return email;
+    return "";
+  }
+
   toJSON(): SupplierContactProps {
     return { ...this.props };
   }

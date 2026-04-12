@@ -36,12 +36,15 @@ export interface ProductTagProps {
   kind: string | null;
 }
 
-export class ProductTag extends AggregateRoot {
-  private props: ProductTagProps;
+export interface ProductTagDTO {
+  id: string;
+  tag: string;
+  kind: string | null;
+}
 
-  private constructor(props: ProductTagProps) {
+export class ProductTag extends AggregateRoot {
+  private constructor(private props: ProductTagProps) {
     super();
-    this.props = props;
   }
 
   static create(params: { tag: string; kind?: string }): ProductTag {
@@ -142,10 +145,4 @@ export class ProductTag extends AggregateRoot {
       kind: entity.props.kind,
     };
   }
-}
-
-export interface ProductTagDTO {
-  id: string;
-  tag: string;
-  kind: string | null;
 }

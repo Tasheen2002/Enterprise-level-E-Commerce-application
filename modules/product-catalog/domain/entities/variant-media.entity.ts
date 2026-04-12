@@ -9,11 +9,16 @@ export interface VariantMediaProps {
   createdAt: Date;
 }
 
-export class VariantMedia {
-  private props: VariantMediaProps;
+export interface VariantMediaDTO {
+  id: string;
+  variantId: string;
+  mediaAssetId: string;
+  displayOrder: number;
+  createdAt: string;
+}
 
-  private constructor(props: VariantMediaProps) {
-    this.props = props;
+export class VariantMedia {
+  private constructor(private props: VariantMediaProps) {
   }
 
   static create(params: {
@@ -83,12 +88,4 @@ export class VariantMedia {
       createdAt: entity.props.createdAt.toISOString(),
     };
   }
-}
-
-export interface VariantMediaDTO {
-  id: string;
-  variantId: string;
-  mediaAssetId: string;
-  displayOrder: number;
-  createdAt: string;
 }

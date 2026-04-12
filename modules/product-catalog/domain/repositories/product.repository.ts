@@ -2,7 +2,6 @@ import { Product } from "../entities/product.entity";
 import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
 
-// Enrichment read-model DTOs returned by enrichment queries
 export interface EnrichedVariantData {
   id: string;
   sku: string;

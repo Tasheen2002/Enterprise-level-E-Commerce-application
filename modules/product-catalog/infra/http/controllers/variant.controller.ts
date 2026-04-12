@@ -39,7 +39,7 @@ export class VariantController {
         ...request.query,
       });
       return ResponseHelper.ok(reply, "Variants retrieved successfully", result);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -51,7 +51,7 @@ export class VariantController {
     try {
       const result = await this.getVariantHandler.handle({ variantId: request.params.variantId });
       return ResponseHelper.ok(reply, "Variant retrieved successfully", result);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -83,7 +83,7 @@ export class VariantController {
         restockEta: restockEta ? new Date(restockEta) : undefined,
       });
       return ResponseHelper.fromCommand(reply, result, "Variant created successfully", 201);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -114,7 +114,7 @@ export class VariantController {
         restockEta: restockEta ? new Date(restockEta) : undefined,
       });
       return ResponseHelper.fromCommand(reply, result, "Variant updated successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -126,7 +126,7 @@ export class VariantController {
     try {
       const result = await this.deleteVariantHandler.handle({ variantId: request.params.variantId });
       return ResponseHelper.fromCommand(reply, result, "Variant deleted successfully", undefined, 204);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

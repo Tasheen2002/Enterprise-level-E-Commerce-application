@@ -1,8 +1,8 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductVariantDTO } from "../../domain/entities/product-variant.entity";
 import { VariantManagementService } from "../services/variant-management.service";
 
-export interface UpdateProductVariantInput extends ICommand {
+export interface UpdateProductVariantCommand extends ICommand {
   variantId: string;
   sku?: string;
   size?: string;
@@ -16,11 +16,11 @@ export interface UpdateProductVariantInput extends ICommand {
   restockEta?: Date;
 }
 
-export class UpdateProductVariantHandler implements ICommandHandler<UpdateProductVariantInput, CommandResult<ProductVariantDTO>> {
+export class UpdateProductVariantHandler implements ICommandHandler<UpdateProductVariantCommand, CommandResult<ProductVariantDTO>> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: UpdateProductVariantInput): Promise<CommandResult<ProductVariantDTO>> {
-    const { variantId, ...updates } = input;
+  async handle(command: UpdateProductVariantCommand): Promise<CommandResult<ProductVariantDTO>> {
+    const { variantId, ...updates } = command;
     const dto = await this.variantManagementService.updateVariant(variantId, updates);
     return CommandResult.success(dto);
   }

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "../../../../../packages/core/src/application/cqrs";
 import { LocationDTO } from "../../../domain/entities/location.entity";
 import { LocationManagementService } from "../../services/location-management.service";
 

@@ -1,8 +1,8 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductDTO, ProductStatus } from "../../domain/entities/product.entity";
 import { ProductManagementService } from "../services/product-management.service";
 
-export interface UpdateProductInput extends ICommand {
+export interface UpdateProductCommand extends ICommand {
   productId: string;
   title?: string;
   brand?: string;
@@ -21,11 +21,11 @@ export interface UpdateProductInput extends ICommand {
   tags?: string[];
 }
 
-export class UpdateProductHandler implements ICommandHandler<UpdateProductInput, CommandResult<ProductDTO>> {
+export class UpdateProductHandler implements ICommandHandler<UpdateProductCommand, CommandResult<ProductDTO>> {
   constructor(private readonly productManagementService: ProductManagementService) {}
 
-  async handle(input: UpdateProductInput): Promise<CommandResult<ProductDTO>> {
-    const { productId, ...updates } = input;
+  async handle(command: UpdateProductCommand): Promise<CommandResult<ProductDTO>> {
+    const { productId, ...updates } = command;
     const dto = await this.productManagementService.updateProduct(productId, updates);
     return CommandResult.success(dto);
   }

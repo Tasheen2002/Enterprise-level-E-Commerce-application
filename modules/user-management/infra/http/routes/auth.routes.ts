@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { AuthController } from "../controllers/auth.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import { validateBody } from "../validation/validator";
 import {
   registerSchema,
@@ -24,12 +24,13 @@ import {
 
 const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 
-export async function registerAuthRoutes(
+
+export async function authRoutes(
   fastify: FastifyInstance,
   controller: AuthController,
 ) {
-  fastify.addHook('onRequest', async (request, reply) => {
-    if (request.method !== 'GET') {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
       await authRateLimiter(request, reply);
     }
   });
@@ -122,7 +123,7 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/logout",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Logout",
@@ -130,7 +131,15 @@ export async function registerAuthRoutes(
           "Invalidate the current session and revoke the refresh token.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -142,7 +151,7 @@ export async function registerAuthRoutes(
   fastify.get(
     "/auth/me",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Get current user",
@@ -177,14 +186,22 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/change-password",
     {
-      preHandler: [authenticate, validateBody(changePasswordSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(changePasswordSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Change password",
         description: "Change the authenticated user's account password.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -203,7 +220,15 @@ export async function registerAuthRoutes(
         description:
           "Send a password reset link to the given email. Always returns 200 to prevent email enumeration.",
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -222,7 +247,15 @@ export async function registerAuthRoutes(
         description:
           "Set a new password using the reset token received by email.",
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -240,7 +273,15 @@ export async function registerAuthRoutes(
         description:
           "Verify a user's email address using the token sent to their inbox.",
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -258,7 +299,15 @@ export async function registerAuthRoutes(
         description:
           "Resend the email verification link to the user's email address.",
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -270,7 +319,7 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/change-email",
     {
-      preHandler: [authenticate, validateBody(changeEmailSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(changeEmailSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Change email address",
@@ -278,7 +327,15 @@ export async function registerAuthRoutes(
           "Change the authenticated user's email. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },
@@ -290,7 +347,7 @@ export async function registerAuthRoutes(
   fastify.post(
     "/auth/delete-account",
     {
-      preHandler: [authenticate, validateBody(deleteAccountSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(deleteAccountSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Delete account",
@@ -298,7 +355,15 @@ export async function registerAuthRoutes(
           "Permanently delete the authenticated user's account. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },

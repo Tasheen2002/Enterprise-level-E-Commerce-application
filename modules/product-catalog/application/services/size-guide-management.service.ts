@@ -9,12 +9,12 @@ import {
   SizeGuideId,
   Region,
 } from "../../domain/entities/size-guide.entity";
-
-type CreateSizeGuideData = { title: string; bodyHtml?: string; region: Region; category?: string };
 import {
   SizeGuideNotFoundError,
   DomainValidationError,
 } from "../../domain/errors";
+
+type CreateSizeGuideData = { title: string; bodyHtml?: string; region: Region; category?: string };
 
 export class SizeGuideManagementService {
   constructor(private readonly sizeGuideRepository: ISizeGuideRepository) {}

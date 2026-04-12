@@ -73,7 +73,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const rawData = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -138,7 +138,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { email: rawEmail, password, rememberMe } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -208,7 +208,7 @@ export class AuthController {
   async logout(
     request: AuthenticatedRequest,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const authHeader = request.headers.authorization;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -259,7 +259,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { refreshToken } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -308,7 +308,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { email: rawEmail } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -370,7 +370,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { token, newPassword } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -416,7 +416,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { token } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -460,7 +460,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { email: rawEmail } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -521,7 +521,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { currentPassword, newPassword } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -564,7 +564,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { newEmail, password } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -606,7 +606,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { password } = request.body;
       const deviceInfo = this.extractDeviceInfo(request);
@@ -650,7 +650,7 @@ export class AuthController {
   async me(
     request: AuthenticatedRequest,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       return ResponseHelper.ok(reply, "User retrieved", {
         userId: request.user.userId,
@@ -670,7 +670,7 @@ export class AuthController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     return this.forgotPassword(request, reply);
   }
 
@@ -678,7 +678,7 @@ export class AuthController {
   async generateTestVerificationToken(
     request: FastifyRequest<{ Body: { email: string; userId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     if (process.env.NODE_ENV === "production") {
       return reply.status(404).send({ success: false, statusCode: 404, message: "Not found" });
     }

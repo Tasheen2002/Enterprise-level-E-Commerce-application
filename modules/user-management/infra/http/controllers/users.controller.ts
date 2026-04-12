@@ -22,7 +22,7 @@ export class UsersController {
   async getUser(
     request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const query = { userId: request.params.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
@@ -35,7 +35,7 @@ export class UsersController {
   async getCurrentUser(
     request: AuthenticatedRequest,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const query = { userId: request.user.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
@@ -59,7 +59,7 @@ export class UsersController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = request.query;
 
@@ -88,7 +88,7 @@ export class UsersController {
       Body: { status: string; notes?: string };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command = {
         userId: request.params.userId,
@@ -109,7 +109,7 @@ export class UsersController {
       Body: { role: UserRole; reason?: string };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command = {
         userId: request.params.userId,
@@ -130,7 +130,7 @@ export class UsersController {
       Body: { isVerified: boolean; reason?: string };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const result = await this.toggleUserEmailVerifiedHandler.handle({
         userId: request.params.userId,
@@ -146,14 +146,11 @@ export class UsersController {
   async deleteUser(
     request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command = { userId: request.params.userId, timestamp: new Date() };
       const result = await this.deleteUserHandler.handle(command);
-      if (result.success) {
-        return reply.status(204).send();
-      }
-      return ResponseHelper.fromCommand(reply, result, 'User deleted');
+      return ResponseHelper.fromCommand(reply, result, 'User deleted', undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

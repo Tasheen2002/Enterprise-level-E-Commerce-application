@@ -59,8 +59,8 @@ export interface PurchaseOrderDTO {
   supplierId: string;
   eta?: Date;
   status: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
@@ -154,8 +154,8 @@ export class PurchaseOrder extends AggregateRoot {
       supplierId: entity.props.supplierId.getValue(),
       eta: entity.props.eta,
       status: entity.props.status.getValue(),
-      createdAt: entity.props.createdAt,
-      updatedAt: entity.props.updatedAt,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

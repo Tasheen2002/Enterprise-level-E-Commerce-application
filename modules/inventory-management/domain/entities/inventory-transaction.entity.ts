@@ -41,7 +41,7 @@ export interface InventoryTransactionDTO {
   qtyDelta: number;
   reason: string;
   referenceId?: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export class InventoryTransaction extends AggregateRoot {
       qtyDelta: entity.props.qtyDelta,
       reason: entity.props.reason.getValue(),
       referenceId: entity.props.referenceId,
-      createdAt: entity.props.createdAt,
+      createdAt: entity.props.createdAt.toISOString(),
     };
   }
 }

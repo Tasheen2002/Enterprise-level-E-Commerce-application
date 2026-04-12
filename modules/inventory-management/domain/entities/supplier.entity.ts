@@ -65,11 +65,8 @@ export interface SupplierDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Supplier extends AggregateRoot {
-  private props: SupplierProps;
-
-  private constructor(props: SupplierProps) {
+  private constructor(private props: SupplierProps) {
     super();
-    this.props = props;
     this.validate();
   }
 

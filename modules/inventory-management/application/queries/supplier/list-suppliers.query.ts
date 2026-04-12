@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "../../../../../packages/core/src/application/cqrs";
 import { SupplierResult } from "./get-supplier.query";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 

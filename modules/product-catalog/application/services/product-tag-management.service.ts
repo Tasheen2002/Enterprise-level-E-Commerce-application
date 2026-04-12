@@ -8,14 +8,14 @@ import {
   ProductTagDTO,
   ProductTagId,
 } from "../../domain/entities/product-tag.entity";
-
-type CreateProductTagData = { tag: string; kind?: string };
 import {
   ProductTagNotFoundError,
   ProductTagAlreadyExistsError,
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+type CreateProductTagData = { tag: string; kind?: string };
 
 export class ProductTagManagementService {
   constructor(private readonly productTagRepository: IProductTagRepository) {}

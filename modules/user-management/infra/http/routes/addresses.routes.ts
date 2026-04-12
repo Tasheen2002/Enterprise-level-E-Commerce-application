@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { AddressesController } from "../controllers/addresses.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams } from "../validation/validator";
 import {
   addAddressSchema,
@@ -9,17 +14,27 @@ import {
   addressIdParamsSchema,
   addressResponseSchema,
 } from "../validation/address.schema";
-import { successResponseSchema } from "../validation/auth.schema";
 
-export async function registerAddressRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function addressRoutes(
   fastify: FastifyInstance,
   controller: AddressesController,
 ) {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /users/me/addresses
   fastify.get(
     "/users/me/addresses",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "List addresses",
@@ -53,7 +68,7 @@ export async function registerAddressRoutes(
   fastify.post(
     "/users/me/addresses",
     {
-      preHandler: [authenticate, validateBody(addAddressSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(addAddressSchema)],
       schema: {
         tags: ["Addresses"],
         summary: "Add a new address",
@@ -82,7 +97,7 @@ export async function registerAddressRoutes(
     "/users/me/addresses/:addressId",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate, validateBody(updateAddressSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updateAddressSchema)],
       schema: {
         tags: ["Addresses"],
         summary: "Update an address",
@@ -111,7 +126,7 @@ export async function registerAddressRoutes(
     "/users/me/addresses/:addressId",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Delete an address",
@@ -119,7 +134,10 @@ export async function registerAddressRoutes(
           "Permanently remove an address belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          204: {
+            type: "null",
+            description: "Address deleted successfully",
+          },
         },
       },
     },
@@ -132,14 +150,22 @@ export async function registerAddressRoutes(
     "/users/me/addresses/:addressId/set-default",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Set default address",
         description: "Mark an address as the user's default address.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },

@@ -1,23 +1,19 @@
 import { AuthenticationService } from '../services/authentication.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface VerifyEmailInput extends ICommand {
+export interface VerifyEmailCommand extends ICommand {
   userId: string;
 }
 
 export class VerifyEmailHandler
-  implements ICommandHandler<VerifyEmailInput, CommandResult<void>>
+  implements ICommandHandler<VerifyEmailCommand, CommandResult<void>>
 {
   constructor(private readonly authService: AuthenticationService) {}
 
   async handle(
-    input: VerifyEmailInput
+    command: VerifyEmailCommand
   ): Promise<CommandResult<void>> {
-    await this.authService.verifyEmail(input.userId);
+    await this.authService.verifyEmail(command.userId);
     return CommandResult.success();
   }
 }

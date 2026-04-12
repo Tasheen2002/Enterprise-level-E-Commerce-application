@@ -161,18 +161,6 @@ export interface IReservationRepository {
     timeUntilExpiryMinutes: number;
     canBeExtended: boolean;
   } | null>;
-  saveWithTransaction(
-    reservation: Reservation,
-    transactionContext?: any,
-  ): Promise<void>;
-  deleteWithTransaction(
-    reservationId: string,
-    transactionContext?: any,
-  ): Promise<void>;
-  saveBulkWithTransaction(
-    reservations: Reservation[],
-    transactionContext?: any,
-  ): Promise<void>;
   getReservationsForCleanup(batchSize?: number): Promise<Reservation[]>;
   getReservationsForExtension(
     thresholdMinutes: number,

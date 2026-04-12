@@ -12,7 +12,7 @@ export class Address {
   private readonly country: string;
   private readonly phone?: string;
 
-  constructor(data: AddressData) {
+  private constructor(data: AddressData) {
     // Validate required fields
     if (!data.addressLine1?.trim()) {
       throw new DomainValidationError("Address line 1 is required");

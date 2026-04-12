@@ -203,7 +203,7 @@ export class Checkout extends AggregateRoot {
     return checkout;
   }
 
-  static reconstitute(data: CheckoutEntityData): Checkout {
+  static fromPersistence(data: CheckoutEntityData): Checkout {
     return new Checkout({
       checkoutId: CheckoutId.fromString(data.checkoutId),
       cartId: CartId.fromString(data.cartId),
@@ -217,25 +217,6 @@ export class Checkout extends AggregateRoot {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
-  }
-
-  static toDTO(checkout: Checkout): CheckoutDTO {
-    return {
-      checkoutId: checkout.props.checkoutId.getValue(),
-      cartId: checkout.props.cartId.getValue(),
-      userId: checkout.props.userId?.getValue(),
-      guestToken: checkout.props.guestToken?.getValue(),
-      status: checkout.props.status.getValue(),
-      totalAmount: checkout.props.totalAmount,
-      currency: checkout.props.currency.getValue(),
-      expiresAt: checkout.props.expiresAt.toISOString(),
-      completedAt: checkout.props.completedAt?.toISOString(),
-      createdAt: checkout.props.createdAt.toISOString(),
-      updatedAt: checkout.props.updatedAt.toISOString(),
-      isExpired: checkout.isExpired,
-      isPending: checkout.isPending,
-      isCompleted: checkout.isCompleted,
-    };
   }
 
   // Business methods
@@ -377,6 +358,25 @@ export class Checkout extends AggregateRoot {
       completedAt: this.props.completedAt || undefined,
       createdAt: this.props.createdAt,
       updatedAt: this.props.updatedAt,
+    };
+  }
+
+  static toDTO(checkout: Checkout): CheckoutDTO {
+    return {
+      checkoutId: checkout.props.checkoutId.getValue(),
+      cartId: checkout.props.cartId.getValue(),
+      userId: checkout.props.userId?.getValue(),
+      guestToken: checkout.props.guestToken?.getValue(),
+      status: checkout.props.status.getValue(),
+      totalAmount: checkout.props.totalAmount,
+      currency: checkout.props.currency.getValue(),
+      expiresAt: checkout.props.expiresAt.toISOString(),
+      completedAt: checkout.props.completedAt?.toISOString(),
+      createdAt: checkout.props.createdAt.toISOString(),
+      updatedAt: checkout.props.updatedAt.toISOString(),
+      isExpired: checkout.isExpired,
+      isPending: checkout.isPending,
+      isCompleted: checkout.isCompleted,
     };
   }
 }

@@ -9,7 +9,7 @@ import { IEventBus } from '../../../../../packages/core/src/domain/events/domain
 import {
   IUserRepository,
   FindAllWithFiltersOptions,
-  UserListItemDTO,
+  UserListItem,
 } from '../../../domain/repositories/iuser.repository';
 import { User } from '../../../domain/entities/user.entity';
 import { UserId } from '../../../domain/value-objects/user-id.vo';
@@ -88,7 +88,7 @@ export class UserRepository
 
   async findAllWithFilters(
     options: FindAllWithFiltersOptions
-  ): Promise<{ users: UserListItemDTO[]; total: number }> {
+  ): Promise<{ users: UserListItem[]; total: number }> {
     const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = options;
 
     const where: any = {};
@@ -133,7 +133,7 @@ export class UserRepository
 
     return {
       users: rows.map(
-        (r: any): UserListItemDTO => ({
+        (r: any): UserListItem => ({
           userId: r.id,
           email: r.email,
           phone: r.phone ?? null,

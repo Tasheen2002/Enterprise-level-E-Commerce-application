@@ -8,10 +8,14 @@ export interface ILocationRepository {
   delete(locationId: LocationId): Promise<void>;
   findByType(type: LocationType): Promise<Location[]>;
   findByName(name: string): Promise<Location | null>;
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<{ locations: Location[]; total: number }>;
+  findAll(
+    options?: LocationQueryOptions,
+  ): Promise<{ locations: Location[]; total: number }>;
   exists(locationId: LocationId): Promise<boolean>;
   existsByName(name: string): Promise<boolean>;
+}
+
+export interface LocationQueryOptions {
+  limit?: number;
+  offset?: number;
 }

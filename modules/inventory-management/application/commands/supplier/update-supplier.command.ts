@@ -1,9 +1,9 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { SupplierDTO } from "../../../domain/entities/supplier.entity";
 import { SupplierContactProps } from "../../../domain/value-objects/supplier-contact.vo";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 
-export interface UpdateSupplierInput extends ICommand {
+export interface UpdateSupplierCommand extends ICommand {
   supplierId: string;
   name?: string;
   leadTimeDays?: number;
@@ -11,18 +11,18 @@ export interface UpdateSupplierInput extends ICommand {
 }
 
 export class UpdateSupplierHandler implements ICommandHandler<
-  UpdateSupplierInput,
+  UpdateSupplierCommand,
   CommandResult<SupplierDTO>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
-  async handle(input: UpdateSupplierInput): Promise<CommandResult<SupplierDTO>> {
+  async handle(command: UpdateSupplierCommand): Promise<CommandResult<SupplierDTO>> {
     const supplier = await this.supplierService.updateSupplier(
-      input.supplierId,
+      command.supplierId,
       {
-        name: input.name,
-        leadTimeDays: input.leadTimeDays,
-        contacts: input.contacts,
+        name: command.name,
+        leadTimeDays: command.leadTimeDays,
+        contacts: command.contacts,
       },
     );
     return CommandResult.success(supplier);

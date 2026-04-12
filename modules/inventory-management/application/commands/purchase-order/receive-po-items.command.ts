@@ -1,9 +1,9 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderDTO } from "../../../domain/entities/purchase-order.entity";
 import { PurchaseOrderItemDTO } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
-export interface ReceivePOItemsInput extends ICommand {
+export interface ReceivePOItemsCommand extends ICommand {
   poId: string;
   locationId: string;
   items: { variantId: string; receivedQty: number }[];
@@ -15,16 +15,16 @@ export interface ReceivePOItemsResult {
 }
 
 export class ReceivePOItemsHandler implements ICommandHandler<
-  ReceivePOItemsInput,
+  ReceivePOItemsCommand,
   CommandResult<ReceivePOItemsResult>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(input: ReceivePOItemsInput): Promise<CommandResult<ReceivePOItemsResult>> {
+  async handle(command: ReceivePOItemsCommand): Promise<CommandResult<ReceivePOItemsResult>> {
     const result = await this.poService.receivePurchaseOrderItems(
-      input.poId,
-      input.locationId,
-      input.items,
+      command.poId,
+      command.locationId,
+      command.items,
     );
     return CommandResult.success(result);
   }

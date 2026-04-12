@@ -70,7 +70,7 @@ export interface PickupReservationDTO {
   variantId: string;
   locationId: string;
   qty: number;
-  expiresAt: Date;
+  expiresAt: string;
   status: string;
   isActive: boolean;
   isExpired: boolean;
@@ -215,7 +215,7 @@ export class PickupReservation extends AggregateRoot {
       variantId: entity.props.variantId,
       locationId: entity.props.locationId,
       qty: entity.props.qty,
-      expiresAt: entity.props.expiresAt,
+      expiresAt: entity.props.expiresAt.toISOString(),
       status: entity.props.status.getValue(),
       isActive: entity.isActive(),
       isExpired: entity.isExpired(),

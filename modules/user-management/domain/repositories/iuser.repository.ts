@@ -13,8 +13,8 @@ export interface FindAllWithFiltersOptions {
   sortOrder: "asc" | "desc";
 }
 
-/** Plain DTO returned by the read-side query — no domain entity hydration. */
-export interface UserListItemDTO {
+/** Projection returned by the read-side list query — avoids full entity hydration. */
+export interface UserListItem {
   userId: string;
   email: string;
   phone: string | null;
@@ -39,8 +39,8 @@ export interface IUserRepository {
   // Query operations
   findByPhone(phone: string): Promise<User | null>;
 
-  /** Read-side: returns plain DTOs directly — no entity hydration. */
-  findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItemDTO[]; total: number }>;
+  /** Read-side list projection — no full entity hydration. */
+  findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItem[]; total: number }>;
 
   // Business operations
   existsByEmail(email: Email): Promise<boolean>;

@@ -69,7 +69,7 @@ export class Password {
   }
 }
 
-export interface PasswordPolicy {
+interface PasswordPolicy {
   minLength: number;
   maxLength?: number;
   requireUppercase: boolean;
@@ -77,12 +77,3 @@ export interface PasswordPolicy {
   requireNumbers: boolean;
   requireSpecialChars: boolean;
 }
-
-export const DEFAULT_PASSWORD_POLICY: PasswordPolicy = {
-  minLength: 8,
-  maxLength: 128,
-  requireUppercase: true,
-  requireLowercase: true,
-  requireNumbers: true,
-  requireSpecialChars: true,
-};

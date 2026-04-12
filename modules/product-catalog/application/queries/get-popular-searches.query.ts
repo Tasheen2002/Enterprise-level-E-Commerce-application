@@ -1,17 +1,17 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductSearchService } from "../services/product-search.service";
 
-export interface GetPopularSearchesInput extends IQuery {}
+export interface GetPopularSearchesQuery extends IQuery {}
 
 export interface PopularSearchResult {
   term: string;
   count: number;
 }
 
-export class GetPopularSearchesHandler implements IQueryHandler<GetPopularSearchesInput, PopularSearchResult[]> {
+export class GetPopularSearchesHandler implements IQueryHandler<GetPopularSearchesQuery, PopularSearchResult[]> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(_input: GetPopularSearchesInput): Promise<PopularSearchResult[]> {
-    return this.productSearchService.getPopularSearches();
+  async handle(_input: GetPopularSearchesQuery): Promise<PopularSearchResult[]> {
+    return await this.productSearchService.getPopularSearches();
   }
 }

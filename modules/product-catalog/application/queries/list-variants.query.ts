@@ -1,8 +1,8 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductVariantDTO } from "../../domain/entities/product-variant.entity";
 import { VariantManagementService } from "../services/variant-management.service";
 
-export interface ListVariantsInput extends IQuery {
+export interface ListVariantsQuery extends IQuery {
   productId: string;
   page?: number;
   limit?: number;
@@ -22,10 +22,10 @@ export interface ListVariantsResult {
   };
 }
 
-export class ListVariantsHandler implements IQueryHandler<ListVariantsInput, ListVariantsResult> {
+export class ListVariantsHandler implements IQueryHandler<ListVariantsQuery, ListVariantsResult> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: ListVariantsInput): Promise<ListVariantsResult> {
+  async handle(input: ListVariantsQuery): Promise<ListVariantsResult> {
     const page = Math.max(1, input.page ?? 1);
     const limit = Math.min(100, Math.max(1, input.limit ?? 20));
     const variants = await this.variantManagementService.getVariantsByProduct(input.productId, {

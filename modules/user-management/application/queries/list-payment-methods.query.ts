@@ -5,14 +5,14 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListPaymentMethodsInput extends IQuery {
+export interface ListPaymentMethodsQuery extends IQuery {
   userId: string;
 }
 
-export class ListPaymentMethodsHandler implements IQueryHandler<ListPaymentMethodsInput, PaymentMethodDTO[]> {
+export class ListPaymentMethodsHandler implements IQueryHandler<ListPaymentMethodsQuery, PaymentMethodDTO[]> {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 
-  async handle(input: ListPaymentMethodsInput): Promise<PaymentMethodDTO[]> {
-    return this.paymentMethodService.getUserPaymentMethods(input.userId);
+  async handle(query: ListPaymentMethodsQuery): Promise<PaymentMethodDTO[]> {
+    return this.paymentMethodService.getUserPaymentMethods(query.userId);
   }
 }

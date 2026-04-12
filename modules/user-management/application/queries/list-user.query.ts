@@ -6,7 +6,7 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListUsersInput extends IQuery {
+export interface ListUsersQuery extends IQuery {
   search?: string;
   role?: UserRole;
   status?: UserStatus;
@@ -17,19 +17,19 @@ export interface ListUsersInput extends IQuery {
   sortOrder?: 'asc' | 'desc';
 }
 
-export class ListUsersHandler implements IQueryHandler<ListUsersInput, ListUsersResult> {
+export class ListUsersHandler implements IQueryHandler<ListUsersQuery, ListUsersResult> {
   constructor(private readonly userService: UserService) {}
 
-  async handle(input: ListUsersInput): Promise<ListUsersResult> {
+  async handle(query: ListUsersQuery): Promise<ListUsersResult> {
     return this.userService.listUsers({
-      search: input.search,
-      role: input.role,
-      status: input.status,
-      emailVerified: input.emailVerified,
-      page: input.page,
-      limit: input.limit,
-      sortBy: input.sortBy,
-      sortOrder: input.sortOrder,
+      search: query.search,
+      role: query.role,
+      status: query.status,
+      emailVerified: query.emailVerified,
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     });
   }
 }

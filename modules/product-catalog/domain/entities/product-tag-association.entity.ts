@@ -8,11 +8,15 @@ export interface ProductTagAssociationProps {
   createdAt: Date;
 }
 
-export class ProductTagAssociation {
-  private props: ProductTagAssociationProps;
+export interface ProductTagAssociationDTO {
+  id: string;
+  productId: string;
+  tagId: string;
+  createdAt: string;
+}
 
-  private constructor(props: ProductTagAssociationProps) {
-    this.props = props;
+export class ProductTagAssociation {
+  private constructor(private props: ProductTagAssociationProps) {
   }
 
   static create(params: {
@@ -71,11 +75,4 @@ export class ProductTagAssociation {
       createdAt: entity.props.createdAt.toISOString(),
     };
   }
-}
-
-export interface ProductTagAssociationDTO {
-  id: string;
-  productId: string;
-  tagId: string;
-  createdAt: string;
 }

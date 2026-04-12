@@ -17,7 +17,7 @@ import {
   DomainValidationError,
 } from "../../domain/errors/user-management.errors";
 
-export interface AddPaymentMethodDto {
+interface AddPaymentMethodDto {
   userId: string;
   type: PaymentMethodType;
   brand?: string;
@@ -29,7 +29,7 @@ export interface AddPaymentMethodDto {
   isDefault?: boolean;
 }
 
-export interface UpdatePaymentMethodDto {
+interface UpdatePaymentMethodDto {
   paymentMethodId: string;
   userId: string;
   type?: PaymentMethodType;
@@ -42,7 +42,7 @@ export interface UpdatePaymentMethodDto {
   isDefault?: boolean;
 }
 
-export interface PaymentMethodValidationResult {
+interface PaymentMethodValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];

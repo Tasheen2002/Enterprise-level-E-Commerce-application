@@ -18,7 +18,6 @@ export default fp(
     await registerUserManagementRoutes(
       fastify,
       userManagementServices,
-      userManagementServices.prisma
     );
     fastify.log.info("✓ User Management module registered");
 

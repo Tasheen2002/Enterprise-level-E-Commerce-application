@@ -1,22 +1,22 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderDTO } from "../../../domain/entities/purchase-order.entity";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
-export interface CreatePurchaseOrderInput extends ICommand {
+export interface CreatePurchaseOrderCommand extends ICommand {
   supplierId: string;
   eta?: Date;
 }
 
 export class CreatePurchaseOrderHandler implements ICommandHandler<
-  CreatePurchaseOrderInput,
+  CreatePurchaseOrderCommand,
   CommandResult<PurchaseOrderDTO>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(input: CreatePurchaseOrderInput): Promise<CommandResult<PurchaseOrderDTO>> {
+  async handle(command: CreatePurchaseOrderCommand): Promise<CommandResult<PurchaseOrderDTO>> {
     const purchaseOrder = await this.poService.createPurchaseOrder(
-      input.supplierId,
-      input.eta,
+      command.supplierId,
+      command.eta,
     );
     return CommandResult.success(purchaseOrder);
   }

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "../../../../../packages/core/src/application/cqrs";
 import { PickupReservationResult } from "./get-pickup-reservation.query";
 import { PickupReservationService } from "../../services/pickup-reservation.service";
 

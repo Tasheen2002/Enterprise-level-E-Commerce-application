@@ -59,11 +59,8 @@ export interface LocationDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Location extends AggregateRoot {
-  private props: LocationProps;
-
-  private constructor(props: LocationProps) {
+  private constructor(private props: LocationProps) {
     super();
-    this.props = props;
     this.validate();
   }
 

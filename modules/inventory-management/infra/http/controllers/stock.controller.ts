@@ -15,45 +15,30 @@ import {
   GetLowStockItemsHandler,
   GetOutOfStockItemsHandler,
 } from "../../../application";
-import { StockManagementService } from "../../../application/services/stock-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class StockController {
-  private addStockHandler: AddStockHandler;
-  private adjustStockHandler: AdjustStockHandler;
-  private transferStockHandler: TransferStockHandler;
-  private reserveStockHandler: ReserveStockHandler;
-  private fulfillReservationHandler: FulfillReservationHandler;
-  private setStockThresholdsHandler: SetStockThresholdsHandler;
-  private getStockHandler: GetStockHandler;
-  private getStockByVariantHandler: GetStockByVariantHandler;
-  private getStockStatsHandler: GetStockStatsHandler;
-  private getTotalAvailableStockHandler: GetTotalAvailableStockHandler;
-  private listStocksHandler: ListStocksHandler;
-  private getLowStockItemsHandler: GetLowStockItemsHandler;
-  private getOutOfStockItemsHandler: GetOutOfStockItemsHandler;
-
-  constructor(stockService: StockManagementService) {
-    this.addStockHandler = new AddStockHandler(stockService);
-    this.adjustStockHandler = new AdjustStockHandler(stockService);
-    this.transferStockHandler = new TransferStockHandler(stockService);
-    this.reserveStockHandler = new ReserveStockHandler(stockService);
-    this.fulfillReservationHandler = new FulfillReservationHandler(stockService);
-    this.setStockThresholdsHandler = new SetStockThresholdsHandler(stockService);
-    this.getStockHandler = new GetStockHandler(stockService);
-    this.getStockByVariantHandler = new GetStockByVariantHandler(stockService);
-    this.getStockStatsHandler = new GetStockStatsHandler(stockService);
-    this.getTotalAvailableStockHandler = new GetTotalAvailableStockHandler(stockService);
-    this.listStocksHandler = new ListStocksHandler(stockService);
-    this.getLowStockItemsHandler = new GetLowStockItemsHandler(stockService);
-    this.getOutOfStockItemsHandler = new GetOutOfStockItemsHandler(stockService);
-  }
+  constructor(
+    private readonly addStockHandler: AddStockHandler,
+    private readonly adjustStockHandler: AdjustStockHandler,
+    private readonly transferStockHandler: TransferStockHandler,
+    private readonly reserveStockHandler: ReserveStockHandler,
+    private readonly fulfillReservationHandler: FulfillReservationHandler,
+    private readonly setStockThresholdsHandler: SetStockThresholdsHandler,
+    private readonly getStockHandler: GetStockHandler,
+    private readonly getStockByVariantHandler: GetStockByVariantHandler,
+    private readonly getStockStatsHandler: GetStockStatsHandler,
+    private readonly getTotalAvailableStockHandler: GetTotalAvailableStockHandler,
+    private readonly listStocksHandler: ListStocksHandler,
+    private readonly getLowStockItemsHandler: GetLowStockItemsHandler,
+    private readonly getOutOfStockItemsHandler: GetOutOfStockItemsHandler,
+  ) {}
 
   async getStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const result = await this.getStockStatsHandler.handle({});
       return ResponseHelper.fromQuery(reply, result, "Stock stats retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -68,7 +53,7 @@ export class StockController {
       const { variantId, locationId } = request.params;
       const result = await this.getStockHandler.handle({ variantId, locationId });
       return ResponseHelper.fromQuery(reply, result, "Stock retrieved", "Stock not found");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -83,7 +68,7 @@ export class StockController {
       const { variantId } = request.params;
       const result = await this.getStockByVariantHandler.handle({ variantId });
       return ResponseHelper.fromQuery(reply, result, "Stock by variant retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -98,7 +83,7 @@ export class StockController {
       const { variantId } = request.params;
       const result = await this.getTotalAvailableStockHandler.handle({ variantId });
       return ResponseHelper.fromQuery(reply, result, "Total available stock retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -129,7 +114,7 @@ export class StockController {
         sortOrder,
       });
       return ResponseHelper.fromQuery(reply, result, "Stocks retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -138,7 +123,7 @@ export class StockController {
     try {
       const result = await this.getLowStockItemsHandler.handle({});
       return ResponseHelper.fromQuery(reply, result, "Low stock items retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -147,7 +132,7 @@ export class StockController {
     try {
       const result = await this.getOutOfStockItemsHandler.handle({});
       return ResponseHelper.fromQuery(reply, result, "Out of stock items retrieved");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -161,7 +146,7 @@ export class StockController {
     try {
       const result = await this.addStockHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Stock added successfully", 201);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -175,7 +160,7 @@ export class StockController {
     try {
       const result = await this.adjustStockHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Stock adjusted successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -189,7 +174,7 @@ export class StockController {
     try {
       const result = await this.transferStockHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Stock transferred successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -203,7 +188,7 @@ export class StockController {
     try {
       const result = await this.reserveStockHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Stock reserved successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -217,7 +202,7 @@ export class StockController {
     try {
       const result = await this.fulfillReservationHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Reservation fulfilled successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -239,7 +224,7 @@ export class StockController {
         safetyStock,
       });
       return ResponseHelper.fromCommand(reply, result, "Stock thresholds updated successfully");
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

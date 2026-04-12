@@ -7,6 +7,15 @@ import {
   ProductVariant,
   ProductVariantDTO,
 } from "../../domain/entities/product-variant.entity";
+import { VariantId } from "../../domain/value-objects/variant-id.vo";
+import { ProductId } from "../../domain/value-objects/product-id.vo";
+import { SKU } from "../../domain/value-objects/sku.vo";
+import {
+  ProductNotFoundError,
+  ProductVariantNotFoundError,
+  SkuAlreadyExistsError,
+  DomainValidationError,
+} from "../../domain/errors";
 
 /** Input shape for creating/updating a variant — mirrors ProductVariant.create() params */
 type CreateVariantInput = {
@@ -23,15 +32,6 @@ type CreateVariantInput = {
   allowPreorder?: boolean;
   restockEta?: Date;
 };
-import { VariantId } from "../../domain/value-objects/variant-id.vo";
-import { ProductId } from "../../domain/value-objects/product-id.vo";
-import { SKU } from "../../domain/value-objects/sku.vo";
-import {
-  ProductNotFoundError,
-  ProductVariantNotFoundError,
-  SkuAlreadyExistsError,
-  DomainValidationError,
-} from "../../domain/errors";
 
 export interface VariantServiceQueryOptions {
   page?: number;

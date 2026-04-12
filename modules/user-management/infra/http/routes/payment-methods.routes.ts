@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { PaymentMethodsController } from "../controllers/payment-methods.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams } from "../validation/validator";
 import {
   addPaymentMethodSchema,
@@ -9,17 +14,28 @@ import {
   paymentMethodIdParamsSchema,
   paymentMethodResponseSchema,
 } from "../validation/payment-method.schema";
-import { successResponseSchema } from "../validation/auth.schema";
 
-export async function registerPaymentMethodRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+
+export async function paymentMethodRoutes(
   fastify: FastifyInstance,
   controller: PaymentMethodsController,
 ) {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /users/me/payment-methods
   fastify.get(
     "/users/me/payment-methods",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "List payment methods",
@@ -47,7 +63,7 @@ export async function registerPaymentMethodRoutes(
   fastify.post(
     "/users/me/payment-methods",
     {
-      preHandler: [authenticate, validateBody(addPaymentMethodSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(addPaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
@@ -75,7 +91,7 @@ export async function registerPaymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate, validateBody(updatePaymentMethodSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updatePaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",
@@ -104,7 +120,7 @@ export async function registerPaymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Remove a payment method",
@@ -112,7 +128,10 @@ export async function registerPaymentMethodRoutes(
           "Permanently delete a payment method belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          204: {
+            type: "null",
+            description: "Payment method deleted successfully",
+          },
         },
       },
     },
@@ -125,7 +144,7 @@ export async function registerPaymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId/set-default",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Set default payment method",
@@ -133,7 +152,15 @@ export async function registerPaymentMethodRoutes(
           "Mark a payment method as the user's default for checkout.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },

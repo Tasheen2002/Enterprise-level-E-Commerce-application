@@ -1,4 +1,4 @@
-import { IUserRepository, FindAllWithFiltersOptions, UserListItemDTO } from '../../domain/repositories/iuser.repository';
+import { IUserRepository, UserListItem } from '../../domain/repositories/iuser.repository';
 import { User, UserDTO } from '../../domain/entities/user.entity';
 import { UserId } from '../../domain/value-objects/user-id.vo';
 import { UserRole } from '../../domain/enums/user-role.enum';
@@ -8,7 +8,7 @@ import {
 } from '../../domain/errors/user-management.errors';
 
 export interface ListUsersResult {
-  users: UserListItemDTO[];
+  users: UserListItem[];
   pagination: {
     total: number;
     page: number;

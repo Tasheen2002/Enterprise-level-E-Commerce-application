@@ -97,7 +97,7 @@ export interface ProductDTO {
   shortDesc: string | null;
   longDescHtml: string | null;
   status: ProductStatus;
-  publishAt: Date | null;
+  publishAt: string | null;
   countryOfOrigin: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -105,18 +105,15 @@ export interface ProductDTO {
   priceSgd: number | null;
   priceUsd: number | null;
   compareAtPrice: number | null;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Product extends AggregateRoot {
-  private props: ProductProps;
-
-  private constructor(props: ProductProps) {
+  private constructor(private props: ProductProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -130,9 +127,9 @@ export class Product extends AggregateRoot {
     seoTitle?: string;
     seoDescription?: string;
     price?: number;
-    priceSgd?: number;
-    priceUsd?: number;
-    compareAtPrice?: number;
+    priceSgd?: number | null;
+    priceUsd?: number | null;
+    compareAtPrice?: number | null;
     categoryIds?: string[];
     tags?: string[];
   }): Product {
@@ -355,6 +352,10 @@ export class Product extends AggregateRoot {
 
   // ── Serialisation ──────────────────────────────────────────────────
 
+  equals(other: Product): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
   static toDTO(entity: Product): ProductDTO {
     return {
       id: entity.props.id.getValue(),
@@ -364,7 +365,7 @@ export class Product extends AggregateRoot {
       shortDesc: entity.props.shortDesc,
       longDescHtml: entity.props.longDescHtml,
       status: entity.props.status,
-      publishAt: entity.props.publishAt,
+      publishAt: entity.props.publishAt?.toISOString() ?? null,
       countryOfOrigin: entity.props.countryOfOrigin,
       seoTitle: entity.props.seoTitle,
       seoDescription: entity.props.seoDescription,
@@ -372,12 +373,8 @@ export class Product extends AggregateRoot {
       priceSgd: entity.props.priceSgd?.getValue() ?? null,
       priceUsd: entity.props.priceUsd?.getValue() ?? null,
       compareAtPrice: entity.props.compareAtPrice?.getValue() ?? null,
-      createdAt: entity.props.createdAt,
-      updatedAt: entity.props.updatedAt,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
-  }
-
-  equals(other: Product): boolean {
-    return this.props.id.equals(other.props.id);
   }
 }

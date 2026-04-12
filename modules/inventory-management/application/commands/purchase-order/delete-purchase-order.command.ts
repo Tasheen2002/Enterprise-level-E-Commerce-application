@@ -1,18 +1,18 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 
-export interface DeletePurchaseOrderInput extends ICommand {
+export interface DeletePurchaseOrderCommand extends ICommand {
   poId: string;
 }
 
 export class DeletePurchaseOrderHandler implements ICommandHandler<
-  DeletePurchaseOrderInput,
+  DeletePurchaseOrderCommand,
   CommandResult<void>
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(input: DeletePurchaseOrderInput): Promise<CommandResult<void>> {
-    await this.poService.deletePurchaseOrder(input.poId);
+  async handle(command: DeletePurchaseOrderCommand): Promise<CommandResult<void>> {
+    await this.poService.deletePurchaseOrder(command.poId);
     return CommandResult.success();
   }
 }

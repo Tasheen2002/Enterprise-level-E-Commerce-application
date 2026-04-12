@@ -6,8 +6,6 @@ import {
   Category,
   CategoryDTO,
 } from "../../domain/entities/category.entity";
-
-type CreateCategoryData = { name: string; parentId?: string; position?: number };
 import { CategoryId } from "../../domain/value-objects/category-id.vo";
 import { Slug } from "../../domain/value-objects/slug.vo";
 import {
@@ -16,6 +14,8 @@ import {
   CategoryDeletionError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+type CreateCategoryData = { name: string; parentId?: string; position?: number };
 
 export interface CategoryQueryServiceOptions {
   page?: number;

@@ -5,14 +5,14 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface ListAddressesInput extends IQuery {
+export interface ListAddressesQuery extends IQuery {
   userId: string;
 }
 
-export class ListAddressesHandler implements IQueryHandler<ListAddressesInput, AddressDTO[]> {
+export class ListAddressesHandler implements IQueryHandler<ListAddressesQuery, AddressDTO[]> {
   constructor(private readonly addressService: AddressManagementService) {}
 
-  async handle(input: ListAddressesInput): Promise<AddressDTO[]> {
-    return this.addressService.getUserAddresses(input.userId);
+  async handle(query: ListAddressesQuery): Promise<AddressDTO[]> {
+    return this.addressService.getUserAddresses(query.userId);
   }
 }

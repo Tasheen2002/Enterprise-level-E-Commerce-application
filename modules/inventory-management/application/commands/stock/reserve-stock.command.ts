@@ -1,24 +1,24 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { StockDTO } from "../../../domain/entities/stock.entity";
 import { StockManagementService } from "../../services/stock-management.service";
 
-export interface ReserveStockInput extends ICommand {
+export interface ReserveStockCommand extends ICommand {
   variantId: string;
   locationId: string;
   quantity: number;
 }
 
 export class ReserveStockHandler implements ICommandHandler<
-  ReserveStockInput,
+  ReserveStockCommand,
   CommandResult<StockDTO>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(input: ReserveStockInput): Promise<CommandResult<StockDTO>> {
+  async handle(command: ReserveStockCommand): Promise<CommandResult<StockDTO>> {
     const stock = await this.stockService.reserveStock(
-      input.variantId,
-      input.locationId,
-      input.quantity,
+      command.variantId,
+      command.locationId,
+      command.quantity,
     );
     return CommandResult.success(stock);
   }

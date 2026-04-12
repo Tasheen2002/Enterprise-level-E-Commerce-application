@@ -1,19 +1,19 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { StockAlertDTO } from "../../../domain/entities/stock-alert.entity";
 import { StockAlertService } from "../../services/stock-alert.service";
 
-export interface ResolveStockAlertInput extends ICommand {
+export interface ResolveStockAlertCommand extends ICommand {
   alertId: string;
 }
 
 export class ResolveStockAlertHandler implements ICommandHandler<
-  ResolveStockAlertInput,
+  ResolveStockAlertCommand,
   CommandResult<StockAlertDTO>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
-  async handle(input: ResolveStockAlertInput): Promise<CommandResult<StockAlertDTO>> {
-    const alert = await this.stockAlertService.resolveStockAlert(input.alertId);
+  async handle(command: ResolveStockAlertCommand): Promise<CommandResult<StockAlertDTO>> {
+    const alert = await this.stockAlertService.resolveStockAlert(command.alertId);
     return CommandResult.success(alert);
   }
 }

@@ -37,12 +37,17 @@ export interface CategoryProps {
   position: number | null;
 }
 
-export class Category extends AggregateRoot {
-  private props: CategoryProps;
+export interface CategoryDTO {
+  id: string;
+  name: string;
+  slug: string;
+  parentId: string | null;
+  position: number | null;
+}
 
-  private constructor(props: CategoryProps) {
+export class Category extends AggregateRoot {
+  private constructor(private props: CategoryProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -162,12 +167,4 @@ export class Category extends AggregateRoot {
       position: entity.props.position,
     };
   }
-}
-
-export interface CategoryDTO {
-  id: string;
-  name: string;
-  slug: string;
-  parentId: string | null;
-  position: number | null;
 }

@@ -1,24 +1,24 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { LocationDTO } from "../../../domain/entities/location.entity";
 import { LocationAddressProps } from "../../../domain/value-objects/location-address.vo";
 import { LocationManagementService } from "../../services/location-management.service";
 
-export interface UpdateLocationInput extends ICommand {
+export interface UpdateLocationCommand extends ICommand {
   locationId: string;
   name?: string;
   address?: LocationAddressProps;
 }
 
 export class UpdateLocationHandler implements ICommandHandler<
-  UpdateLocationInput,
+  UpdateLocationCommand,
   CommandResult<LocationDTO>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
-  async handle(input: UpdateLocationInput): Promise<CommandResult<LocationDTO>> {
+  async handle(command: UpdateLocationCommand): Promise<CommandResult<LocationDTO>> {
     const location = await this.locationService.updateLocation(
-      input.locationId,
-      { name: input.name, address: input.address },
+      command.locationId,
+      { name: command.name, address: command.address },
     );
     return CommandResult.success(location);
   }

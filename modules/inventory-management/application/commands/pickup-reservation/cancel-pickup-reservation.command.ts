@@ -1,19 +1,19 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { PickupReservationDTO } from "../../../domain/entities/pickup-reservation.entity";
 import { PickupReservationService } from "../../services/pickup-reservation.service";
 
-export interface CancelPickupReservationInput extends ICommand {
+export interface CancelPickupReservationCommand extends ICommand {
   reservationId: string;
 }
 
 export class CancelPickupReservationHandler implements ICommandHandler<
-  CancelPickupReservationInput,
+  CancelPickupReservationCommand,
   CommandResult<PickupReservationDTO>
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
-  async handle(input: CancelPickupReservationInput): Promise<CommandResult<PickupReservationDTO>> {
-    const reservation = await this.reservationService.cancelPickupReservation(input.reservationId);
+  async handle(command: CancelPickupReservationCommand): Promise<CommandResult<PickupReservationDTO>> {
+    const reservation = await this.reservationService.cancelPickupReservation(command.reservationId);
     return CommandResult.success(reservation);
   }
 }

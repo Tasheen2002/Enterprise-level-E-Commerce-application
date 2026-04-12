@@ -33,14 +33,14 @@ import {
 } from "../../domain/errors/cart.errors";
 
 // DTOs for service operations
-export interface CreateCartDto {
+interface CreateCartDto {
   userId?: string;
   guestToken?: string;
   currency: string;
   reservationDurationMinutes?: number;
 }
 
-export interface AddToCartDto {
+interface AddToCartDto {
   cartId?: string;
   userId?: string;
   guestToken?: string;
@@ -51,7 +51,7 @@ export interface AddToCartDto {
   giftMessage?: string;
 }
 
-export interface UpdateCartItemDto {
+interface UpdateCartItemDto {
   cartId: string;
   variantId: string;
   quantity: number;
@@ -59,14 +59,14 @@ export interface UpdateCartItemDto {
   guestToken?: string;
 }
 
-export interface RemoveFromCartDto {
+interface RemoveFromCartDto {
   cartId: string;
   variantId: string;
   userId?: string;
   guestToken?: string;
 }
 
-export interface TransferCartDto {
+interface TransferCartDto {
   guestToken: string;
   userId: string;
   mergeWithExisting?: boolean;
@@ -91,7 +91,7 @@ export interface CartSummaryDto {
   updatedAt: Date;
 }
 
-export interface CartItemDto {
+interface CartItemDto {
   id: string;
   variantId: string;
   quantity: number;

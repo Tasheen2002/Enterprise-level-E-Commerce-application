@@ -72,17 +72,14 @@ export interface MediaAssetDTO {
   focalY: number | null;
   renditions: Record<string, any>;
   version: number;
-  createdAt: Date;
+  createdAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class MediaAsset extends AggregateRoot {
-  private props: MediaAssetProps;
-
-  private constructor(props: MediaAssetProps) {
+  private constructor(private props: MediaAssetProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -315,6 +312,10 @@ export class MediaAsset extends AggregateRoot {
 
   // ── Serialisation ──────────────────────────────────────────────────
 
+  equals(other: MediaAsset): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
   static toDTO(entity: MediaAsset): MediaAssetDTO {
     return {
       id: entity.props.id.getValue(),
@@ -328,11 +329,7 @@ export class MediaAsset extends AggregateRoot {
       focalY: entity.props.focalY,
       renditions: entity.props.renditions,
       version: entity.props.version,
-      createdAt: entity.props.createdAt,
+      createdAt: entity.props.createdAt.toISOString(),
     };
-  }
-
-  equals(other: MediaAsset): boolean {
-    return this.props.id.equals(other.props.id);
   }
 }

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "../../../../../packages/core/src/application/cqrs";
 import { StockDTO } from "../../../domain/entities/stock.entity";
 import { StockManagementService } from "../../services/stock-management.service";
 

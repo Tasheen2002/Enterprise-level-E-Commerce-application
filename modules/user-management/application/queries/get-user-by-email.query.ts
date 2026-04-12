@@ -4,17 +4,17 @@ import {
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
 
-export interface GetUserByEmailInput extends IQuery {
+export interface GetUserByEmailQuery extends IQuery {
   email: string;
 }
 
 export class GetUserByEmailHandler implements IQueryHandler<
-  GetUserByEmailInput,
+  GetUserByEmailQuery,
   { userId: string; emailVerified: boolean }
 > {
   constructor(private readonly authService: AuthenticationService) {}
 
-  async handle(input: GetUserByEmailInput): Promise<{ userId: string; emailVerified: boolean }> {
-    return this.authService.getUserByEmail(input.email);
+  async handle(query: GetUserByEmailQuery): Promise<{ userId: string; emailVerified: boolean }> {
+    return this.authService.getUserByEmail(query.email);
   }
 }

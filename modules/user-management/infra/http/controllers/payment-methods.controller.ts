@@ -31,7 +31,7 @@ export class PaymentMethodsController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { userId } = request.params;
       const {
@@ -73,7 +73,7 @@ export class PaymentMethodsController {
   async listPaymentMethods(
     request: AuthenticatedRequest<{ Params: { userId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { userId } = request.params;
       const query = { userId, timestamp: new Date() };
@@ -93,7 +93,7 @@ export class PaymentMethodsController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { userId, paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
@@ -122,7 +122,7 @@ export class PaymentMethodsController {
       Params: { userId: string; paymentMethodId: string };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { userId, paymentMethodId } = request.params;
 
@@ -137,6 +137,8 @@ export class PaymentMethodsController {
         reply,
         result,
         "Payment method deleted",
+        undefined,
+        204,
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -157,7 +159,7 @@ export class PaymentMethodsController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const command = {
         userId: request.user.userId,
@@ -187,7 +189,7 @@ export class PaymentMethodsController {
   async getCurrentUserPaymentMethods(
     request: AuthenticatedRequest,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const query = {
         userId: request.user.userId,
@@ -209,7 +211,7 @@ export class PaymentMethodsController {
       };
     }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { paymentMethodId } = request.params;
       const { billingAddressId, isDefault } = request.body;
@@ -236,7 +238,7 @@ export class PaymentMethodsController {
   async deleteCurrentUserPaymentMethod(
     request: AuthenticatedRequest<{ Params: { paymentMethodId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { paymentMethodId } = request.params;
 
@@ -251,6 +253,8 @@ export class PaymentMethodsController {
         reply,
         result,
         "Payment method deleted",
+        undefined,
+        204,
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -260,7 +264,7 @@ export class PaymentMethodsController {
   async setDefaultPaymentMethod(
     request: AuthenticatedRequest<{ Params: { paymentMethodId: string } }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
       const { paymentMethodId } = request.params;
 

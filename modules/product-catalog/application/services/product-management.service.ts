@@ -5,29 +5,8 @@ import {
   ProductMediaEnrichment,
 } from "../../domain/repositories/product.repository";
 import { IProductTagRepository } from "../../domain/repositories/product-tag.repository";
-import {
-  Product,
-  ProductDTO,
-} from "../../domain/entities/product.entity";
-
-/** Input shape for creating/updating a product — mirrors Product.create() params */
-type CreateProductInput = {
-  title: string;
-  brand?: string;
-  shortDesc?: string;
-  longDescHtml?: string;
-  status?: import("../../domain/enums/product-catalog.enums").ProductStatus;
-  publishAt?: Date;
-  countryOfOrigin?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  price?: number;
-  priceSgd?: number;
-  priceUsd?: number;
-  compareAtPrice?: number;
-  categoryIds?: string[];
-  tags?: string[];
-};
+import { Product, ProductDTO } from "../../domain/entities/product.entity";
+import { ProductStatus } from "../../domain/enums/product-catalog.enums";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import { Slug } from "../../domain/value-objects/slug.vo";
 import {
@@ -36,6 +15,25 @@ import {
   ProductNotFoundError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+/** Input shape for creating/updating a product — mirrors Product.create() params */
+type CreateProductInput = {
+  title: string;
+  brand?: string;
+  shortDesc?: string;
+  longDescHtml?: string;
+  status?: ProductStatus;
+  publishAt?: Date;
+  countryOfOrigin?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  price?: number;
+  priceSgd?: number | null;
+  priceUsd?: number | null;
+  compareAtPrice?: number | null;
+  categoryIds?: string[];
+  tags?: string[];
+};
 
 export class ProductManagementService {
   constructor(
@@ -174,7 +172,10 @@ export class ProductManagementService {
       throw new DomainValidationError("Brand is required");
     }
 
-    const products = await this.productRepository.findByBrand(brand.trim(), options);
+    const products = await this.productRepository.findByBrand(
+      brand.trim(),
+      options,
+    );
     return products.map((p) => Product.toDTO(p));
   }
 
@@ -186,7 +187,10 @@ export class ProductManagementService {
       throw new DomainValidationError("Category ID is required");
     }
 
-    const products = await this.productRepository.findByCategory(categoryId, options);
+    const products = await this.productRepository.findByCategory(
+      categoryId,
+      options,
+    );
     return products.map((p) => Product.toDTO(p));
   }
 

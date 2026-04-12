@@ -1,8 +1,8 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { CategoryDTO } from "../../domain/entities/category.entity";
 import { CategoryManagementService } from "../services/category-management.service";
 
-export interface ListCategoriesInput extends IQuery {
+export interface ListCategoriesQuery extends IQuery {
   page?: number;
   limit?: number;
   parentId?: string;
@@ -23,10 +23,10 @@ export interface ListCategoriesResult {
   };
 }
 
-export class ListCategoriesHandler implements IQueryHandler<ListCategoriesInput, ListCategoriesResult> {
+export class ListCategoriesHandler implements IQueryHandler<ListCategoriesQuery, ListCategoriesResult> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(input: ListCategoriesInput): Promise<ListCategoriesResult> {
+  async handle(input: ListCategoriesQuery): Promise<ListCategoriesResult> {
     const page = Math.max(1, input.page ?? 1);
     const limit = Math.min(100, Math.max(1, input.limit ?? 50));
     const sortBy = input.sortBy ?? "position";

@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler, QueryResult } from "../../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderResult } from "./get-purchase-order.query";
 import { PurchaseOrderManagementService } from "../../services/purchase-order-management.service";
 

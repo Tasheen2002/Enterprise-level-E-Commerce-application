@@ -1,8 +1,8 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { StockDTO } from "../../../domain/entities/stock.entity";
 import { StockManagementService } from "../../services/stock-management.service";
 
-export interface TransferStockInput extends ICommand {
+export interface TransferStockCommand extends ICommand {
   variantId: string;
   fromLocationId: string;
   toLocationId: string;
@@ -15,17 +15,17 @@ export interface TransferStockResult {
 }
 
 export class TransferStockHandler implements ICommandHandler<
-  TransferStockInput,
+  TransferStockCommand,
   CommandResult<TransferStockResult>
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(input: TransferStockInput): Promise<CommandResult<TransferStockResult>> {
+  async handle(command: TransferStockCommand): Promise<CommandResult<TransferStockResult>> {
     const result = await this.stockService.transferStock(
-      input.variantId,
-      input.fromLocationId,
-      input.toLocationId,
-      input.quantity,
+      command.variantId,
+      command.fromLocationId,
+      command.toLocationId,
+      command.quantity,
     );
     return CommandResult.success(result);
   }

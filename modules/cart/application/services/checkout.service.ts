@@ -16,14 +16,14 @@ import {
   InvalidOperationError,
 } from "../../domain/errors/cart.errors";
 
-export interface InitializeCheckoutDto {
+interface InitializeCheckoutDto {
   cartId: string;
   userId?: string;
   guestToken?: string;
   expiresInMinutes?: number;
 }
 
-export interface CompleteCheckoutDto {
+interface CompleteCheckoutDto {
   checkoutId: string;
   userId?: string;
   guestToken?: string;

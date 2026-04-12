@@ -1,12 +1,8 @@
 import { UserProfileService } from '../services/user-profile.service';
 import { UserProfileDTO } from '../../domain/entities/user-profile.entity';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface UpdateProfileInput extends ICommand {
+export interface UpdateProfileCommand extends ICommand {
   userId: string;
   defaultAddressId?: string;
   defaultPaymentMethodId?: string;
@@ -26,32 +22,32 @@ export interface UpdateProfileInput extends ICommand {
 
 export class UpdateProfileHandler
   implements
-    ICommandHandler<UpdateProfileInput, CommandResult<UserProfileDTO>>
+    ICommandHandler<UpdateProfileCommand, CommandResult<UserProfileDTO>>
 {
   constructor(
     private readonly userProfileService: UserProfileService
   ) {}
 
   async handle(
-    input: UpdateProfileInput
+    command: UpdateProfileCommand
   ): Promise<CommandResult<UserProfileDTO>> {
     const updatedProfile = await this.userProfileService.updateUserProfile(
-      input.userId,
+      command.userId,
       {
-        defaultAddressId: input.defaultAddressId,
-        defaultPaymentMethodId: input.defaultPaymentMethodId,
-        prefs: input.prefs,
-        locale: input.locale,
-        currency: input.currency,
-        stylePreferences: input.stylePreferences,
-        preferredSizes: input.preferredSizes,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        phone: input.phone,
-        title: input.title,
-        dateOfBirth: input.dateOfBirth,
-        residentOf: input.residentOf,
-        nationality: input.nationality,
+        defaultAddressId: command.defaultAddressId,
+        defaultPaymentMethodId: command.defaultPaymentMethodId,
+        prefs: command.prefs,
+        locale: command.locale,
+        currency: command.currency,
+        stylePreferences: command.stylePreferences,
+        preferredSizes: command.preferredSizes,
+        firstName: command.firstName,
+        lastName: command.lastName,
+        phone: command.phone,
+        title: command.title,
+        dateOfBirth: command.dateOfBirth,
+        residentOf: command.residentOf,
+        nationality: command.nationality,
       }
     );
     return CommandResult.success(updatedProfile);

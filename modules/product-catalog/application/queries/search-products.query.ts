@@ -1,8 +1,8 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductDTO } from "../../domain/entities/product.entity";
 import { ProductSearchService } from "../services/product-search.service";
 
-export interface SearchProductsInput extends IQuery {
+export interface SearchProductsQuery extends IQuery {
   searchTerm: string;
   page?: number;
   limit?: number;
@@ -25,10 +25,10 @@ export interface SearchProductsResult {
   suggestions?: string[];
 }
 
-export class SearchProductsHandler implements IQueryHandler<SearchProductsInput, SearchProductsResult> {
+export class SearchProductsHandler implements IQueryHandler<SearchProductsQuery, SearchProductsResult> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(input: SearchProductsInput): Promise<SearchProductsResult> {
+  async handle(input: SearchProductsQuery): Promise<SearchProductsResult> {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
     const result = await this.productSearchService.searchProducts(input.searchTerm.trim(), {

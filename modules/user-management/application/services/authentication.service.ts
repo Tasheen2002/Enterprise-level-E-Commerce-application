@@ -18,7 +18,7 @@ import {
 } from "../../domain/errors/user-management.errors";
 import { UserStatus } from "../../domain/enums/user-status.enum";
 
-export interface LoginCredentials {
+interface LoginCredentials {
   email: string;
   password: string;
 }
@@ -39,7 +39,7 @@ export interface AuthResult {
 
 export type LoginResult = AuthResult;
 
-export interface TokenPayload {
+interface TokenPayload {
   userId: string;
   email: string;
   role: string;
@@ -54,7 +54,7 @@ export interface RefreshTokenResult {
   expiresIn: number;
 }
 
-export interface RegisterUserData {
+interface RegisterUserData {
   email: string;
   password: string;
   phone?: string;

@@ -9,11 +9,16 @@ export interface EditorialLookProductProps {
   createdAt: Date;
 }
 
-export class EditorialLookProduct {
-  private props: EditorialLookProductProps;
+export interface EditorialLookProductDTO {
+  id: string;
+  editorialLookId: string;
+  productId: string;
+  displayOrder: number;
+  createdAt: string;
+}
 
-  private constructor(props: EditorialLookProductProps) {
-    this.props = props;
+export class EditorialLookProduct {
+  private constructor(private props: EditorialLookProductProps) {
   }
 
   static create(params: {
@@ -83,12 +88,4 @@ export class EditorialLookProduct {
       createdAt: entity.props.createdAt.toISOString(),
     };
   }
-}
-
-export interface EditorialLookProductDTO {
-  id: string;
-  editorialLookId: string;
-  productId: string;
-  displayOrder: number;
-  createdAt: string;
 }

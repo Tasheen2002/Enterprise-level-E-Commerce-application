@@ -83,11 +83,8 @@ export interface StockDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Stock extends AggregateRoot {
-  private props: StockProps;
-
-  private constructor(props: StockProps) {
+  private constructor(private props: StockProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {

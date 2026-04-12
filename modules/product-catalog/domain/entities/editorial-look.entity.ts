@@ -40,14 +40,6 @@ export class EditorialLookDeletedEvent extends DomainEvent {
   getPayload(): Record<string, unknown> { return { lookId: this.lookId }; }
 }
 
-export interface CreateEditorialLookData {
-  title: string;
-  storyHtml?: string;
-  heroAssetId?: string;
-  publishedAt?: Date;
-  productIds?: string[];
-}
-
 export interface EditorialLookProps {
   id: EditorialLookId;
   title: string;
@@ -57,12 +49,18 @@ export interface EditorialLookProps {
   productIds: Set<ProductId>;
 }
 
-export class EditorialLook extends AggregateRoot {
-  private props: EditorialLookProps;
+export interface EditorialLookDTO {
+  id: string;
+  title: string;
+  storyHtml: string | null;
+  heroAssetId: string | null;
+  publishedAt: string | null;
+  productIds: string[];
+}
 
-  private constructor(props: EditorialLookProps) {
+export class EditorialLook extends AggregateRoot {
+  private constructor(private props: EditorialLookProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -247,11 +245,10 @@ export class EditorialLook extends AggregateRoot {
   }
 }
 
-export interface EditorialLookDTO {
-  id: string;
+export interface CreateEditorialLookData {
   title: string;
-  storyHtml: string | null;
-  heroAssetId: string | null;
-  publishedAt: string | null;
-  productIds: string[];
+  storyHtml?: string;
+  heroAssetId?: string;
+  publishedAt?: Date;
+  productIds?: string[];
 }

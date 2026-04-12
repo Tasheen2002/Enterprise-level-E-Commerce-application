@@ -1,7 +1,7 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductSearchService, SearchSuggestion } from "../services/product-search.service";
 
-export interface GetSearchSuggestionsInput extends IQuery {
+export interface GetSearchSuggestionsQuery extends IQuery {
   searchTerm: string;
   limit?: number;
   type?: "products" | "categories" | "brands" | "all";
@@ -14,10 +14,10 @@ export interface GetSearchSuggestionsResult {
   limit: number;
 }
 
-export class GetSearchSuggestionsHandler implements IQueryHandler<GetSearchSuggestionsInput, GetSearchSuggestionsResult> {
+export class GetSearchSuggestionsHandler implements IQueryHandler<GetSearchSuggestionsQuery, GetSearchSuggestionsResult> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(input: GetSearchSuggestionsInput): Promise<GetSearchSuggestionsResult> {
+  async handle(input: GetSearchSuggestionsQuery): Promise<GetSearchSuggestionsResult> {
     const limit = Math.min(50, Math.max(1, input.limit ?? 10));
     const type = input.type ?? "all";
     const searchTerm = input.searchTerm.trim();

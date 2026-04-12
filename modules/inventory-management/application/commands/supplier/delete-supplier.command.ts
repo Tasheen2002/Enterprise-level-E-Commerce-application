@@ -1,18 +1,18 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../../packages/core/src/application/cqrs";
 import { SupplierManagementService } from "../../services/supplier-management.service";
 
-export interface DeleteSupplierInput extends ICommand {
+export interface DeleteSupplierCommand extends ICommand {
   supplierId: string;
 }
 
 export class DeleteSupplierHandler implements ICommandHandler<
-  DeleteSupplierInput,
+  DeleteSupplierCommand,
   CommandResult<void>
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
-  async handle(input: DeleteSupplierInput): Promise<CommandResult<void>> {
-    await this.supplierService.deleteSupplier(input.supplierId);
+  async handle(command: DeleteSupplierCommand): Promise<CommandResult<void>> {
+    await this.supplierService.deleteSupplier(command.supplierId);
     return CommandResult.success();
   }
 }

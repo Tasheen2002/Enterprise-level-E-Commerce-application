@@ -43,10 +43,7 @@ export interface IProductTagRepository {
   findProductsByTagId(
     tagId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<{
-    products: any[];
-    total: number;
-  }>;
+  ): Promise<{ productIds: string[]; total: number }>;
 }
 
 export interface ProductTagQueryOptions {

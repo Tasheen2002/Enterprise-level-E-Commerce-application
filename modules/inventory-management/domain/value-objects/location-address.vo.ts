@@ -87,6 +87,21 @@ export class LocationAddress {
     );
   }
 
+  getValue(): LocationAddressProps {
+    return { ...this.props };
+  }
+
+  toString(): string {
+    const parts = [
+      this.props.addressLine1,
+      this.props.city,
+      this.props.state,
+      this.props.postalCode,
+      this.props.country,
+    ].filter(Boolean);
+    return parts.join(", ");
+  }
+
   toJSON(): LocationAddressProps {
     return { ...this.props };
   }

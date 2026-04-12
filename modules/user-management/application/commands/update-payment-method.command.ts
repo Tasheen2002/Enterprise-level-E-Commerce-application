@@ -1,12 +1,8 @@
 import { PaymentMethodService } from '../services/payment-method.service';
 import { PaymentMethodDTO } from '../../domain/entities/payment-method.entity';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface UpdatePaymentMethodInput extends ICommand {
+export interface UpdatePaymentMethodCommand extends ICommand {
   paymentMethodId: string;
   userId: string;
   billingAddressId?: string;
@@ -17,22 +13,22 @@ export interface UpdatePaymentMethodInput extends ICommand {
 }
 
 export class UpdatePaymentMethodHandler implements ICommandHandler<
-  UpdatePaymentMethodInput,
+  UpdatePaymentMethodCommand,
   CommandResult<PaymentMethodDTO>
 > {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 
   async handle(
-    input: UpdatePaymentMethodInput
+    command: UpdatePaymentMethodCommand
   ): Promise<CommandResult<PaymentMethodDTO>> {
     const result = await this.paymentMethodService.updatePaymentMethod({
-      paymentMethodId: input.paymentMethodId,
-      userId: input.userId,
-      billingAddressId: input.billingAddressId,
-      isDefault: input.isDefault,
-      expMonth: input.expMonth,
-      expYear: input.expYear,
-      providerRef: input.providerRef,
+      paymentMethodId: command.paymentMethodId,
+      userId: command.userId,
+      billingAddressId: command.billingAddressId,
+      isDefault: command.isDefault,
+      expMonth: command.expMonth,
+      expYear: command.expYear,
+      providerRef: command.providerRef,
     });
 
     return CommandResult.success(result);

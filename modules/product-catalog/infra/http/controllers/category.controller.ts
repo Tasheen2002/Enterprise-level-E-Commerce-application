@@ -42,7 +42,7 @@ export class CategoryController {
         "Categories retrieved successfully",
         result,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -60,7 +60,7 @@ export class CategoryController {
         "Category retrieved successfully",
         result,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -78,7 +78,7 @@ export class CategoryController {
         "Category retrieved successfully",
         result,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -97,7 +97,7 @@ export class CategoryController {
         "Category created successfully",
         201,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -120,7 +120,7 @@ export class CategoryController {
         result,
         "Category updated successfully",
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -140,7 +140,7 @@ export class CategoryController {
         undefined,
         204,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -156,7 +156,7 @@ export class CategoryController {
         "Category hierarchy retrieved successfully",
         result,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -176,7 +176,7 @@ export class CategoryController {
         undefined,
         204,
       );
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

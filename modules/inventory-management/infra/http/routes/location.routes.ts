@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
-import { RolePermissions } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { LocationController } from "../controllers/location.controller";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
@@ -12,15 +16,26 @@ import {
   locationResponseSchema,
 } from "../validation/location.schema";
 
-export async function registerLocationRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function locationRoutes(
   fastify: FastifyInstance,
   controller: LocationController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // List locations
   fastify.get(
     "/locations",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listLocationsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listLocationsSchema)],
       schema: {
         description: "List all locations (Staff/Admin only)",
         tags: ["Locations"],
@@ -31,6 +46,8 @@ export async function registerLocationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -51,7 +68,7 @@ export async function registerLocationRoutes(
     "/locations/:locationId",
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get location by ID (Staff/Admin only)",
         tags: ["Locations"],
@@ -67,6 +84,8 @@ export async function registerLocationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: locationResponseSchema,
             },
           },
@@ -80,7 +99,7 @@ export async function registerLocationRoutes(
   fastify.post(
     "/locations",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createLocationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(createLocationSchema)],
       schema: {
         description: "Create a new location",
         tags: ["Locations"],
@@ -91,6 +110,8 @@ export async function registerLocationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: locationResponseSchema,
             },
           },
@@ -101,11 +122,11 @@ export async function registerLocationRoutes(
   );
 
   // Update location
-  fastify.put(
+  fastify.patch(
     "/locations/:locationId",
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateLocationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(updateLocationSchema)],
       schema: {
         description: "Update location",
         tags: ["Locations"],
@@ -121,6 +142,8 @@ export async function registerLocationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: locationResponseSchema,
             },
           },
@@ -135,7 +158,7 @@ export async function registerLocationRoutes(
     "/locations/:locationId",
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete location",
         tags: ["Locations"],

@@ -1,24 +1,20 @@
 import { AuthenticationService } from '../services/authentication.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface ResetPasswordInput extends ICommand {
+export interface ResetPasswordCommand extends ICommand {
   email: string;
   newPassword: string;
 }
 
 export class ResetPasswordHandler
-  implements ICommandHandler<ResetPasswordInput, CommandResult<void>>
+  implements ICommandHandler<ResetPasswordCommand, CommandResult<void>>
 {
   constructor(private readonly authService: AuthenticationService) {}
 
   async handle(
-    input: ResetPasswordInput
+    command: ResetPasswordCommand
   ): Promise<CommandResult<void>> {
-    await this.authService.resetPassword(input.email, input.newPassword);
+    await this.authService.resetPassword(command.email, command.newPassword);
     return CommandResult.success();
   }
 }

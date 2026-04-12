@@ -229,7 +229,7 @@ export class Address extends AggregateRoot {
 }
 
 // ============================================================================
-// Supporting types
+// Supporting Types
 // ============================================================================
 
 export interface AddressLabel {
@@ -239,3 +239,4 @@ export interface AddressLabel {
   country: string;
   type: 'SHIPPING' | 'BILLING';
 }
+
