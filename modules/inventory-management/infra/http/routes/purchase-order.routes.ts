@@ -37,7 +37,8 @@ export async function purchaseOrderRoutes(
   fastify.get(
     "/purchase-orders",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listPurchaseOrdersSchema)],
+      preValidation: [validateQuery(listPurchaseOrdersSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all purchase orders (Staff/Admin only)",
         tags: ["Purchase Orders"],

@@ -34,7 +34,8 @@ export async function stockAlertRoutes(
   fastify.get(
     "/alerts",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listStockAlertsSchema)],
+      preValidation: [validateQuery(listStockAlertsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List stock alerts (Staff/Admin only)",
         tags: ["Stock Alerts"],

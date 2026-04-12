@@ -35,7 +35,8 @@ export async function locationRoutes(
   fastify.get(
     "/locations",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listLocationsSchema)],
+      preValidation: [validateQuery(listLocationsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all locations (Staff/Admin only)",
         tags: ["Locations"],

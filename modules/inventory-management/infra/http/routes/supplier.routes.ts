@@ -39,7 +39,8 @@ export async function supplierRoutes(
   fastify.get(
     "/suppliers",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listSuppliersSchema)],
+      preValidation: [validateQuery(listSuppliersSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all suppliers (Staff/Admin only)",
         tags: ["Suppliers"],

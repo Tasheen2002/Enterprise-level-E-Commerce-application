@@ -69,8 +69,8 @@ export async function inventoryTransactionRoutes(
   fastify.get(
     "/transactions/variant/:variantId",
     {
-      preValidation: [validateParams(transactionVariantParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY, validateQuery(transactionsByVariantSchema)],
+      preValidation: [validateParams(transactionVariantParamsSchema), validateQuery(transactionsByVariantSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get inventory transactions for a variant",
         tags: ["Inventory Transactions"],
@@ -111,7 +111,8 @@ export async function inventoryTransactionRoutes(
   fastify.get(
     "/transactions",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY, validateQuery(listTransactionsSchema)],
+      preValidation: [validateQuery(listTransactionsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all inventory transactions",
         tags: ["Inventory Transactions"],

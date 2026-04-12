@@ -36,7 +36,8 @@ export async function pickupReservationRoutes(
   fastify.get(
     "/pickup-reservations",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateQuery(listPickupReservationsSchema)],
+      preValidation: [validateQuery(listPickupReservationsSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "List pickup reservations",
         tags: ["Pickup Reservations"],

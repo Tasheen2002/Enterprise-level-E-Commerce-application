@@ -41,7 +41,8 @@ export async function stockRoutes(
   fastify.get(
     "/stocks",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL, validateQuery(listStocksSchema)],
+      preValidation: [validateQuery(listStocksSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all stocks with pagination (Staff/Admin only)",
         tags: ["Stock Management"],
