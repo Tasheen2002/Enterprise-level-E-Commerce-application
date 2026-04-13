@@ -13,11 +13,10 @@ export class DeleteOrderCommandHandler implements ICommandHandler<
   DeleteOrderCommand,
   CommandResult<void>
 > {
-  constructor(private orderService: OrderManagementService) {}
+  constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(command: DeleteOrderCommand): Promise<CommandResult<void>> {
     await this.orderService.deleteOrder(command.orderId);
-
     return CommandResult.success(undefined);
   }
 }

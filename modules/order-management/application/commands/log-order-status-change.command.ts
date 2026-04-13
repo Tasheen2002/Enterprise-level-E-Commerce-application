@@ -1,6 +1,6 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
-import { OrderStatusHistory, OrderStatusHistoryDTO } from "../../domain/entities/order-status-history.entity";
+import { OrderStatusHistoryDTO } from "../../domain/entities/order-status-history.entity";
 
 export interface LogOrderStatusChangeCommand extends ICommand {
   orderId: string;
@@ -9,23 +9,19 @@ export interface LogOrderStatusChangeCommand extends ICommand {
   changedBy?: string;
 }
 
-
 export class LogOrderStatusChangeCommandHandler implements ICommandHandler<
   LogOrderStatusChangeCommand,
   CommandResult<OrderStatusHistoryDTO>
 > {
-  constructor(private orderService: OrderManagementService) {}
+  constructor(private readonly orderService: OrderManagementService) {}
 
-  async handle(
-    command: LogOrderStatusChangeCommand,
-  ): Promise<CommandResult<OrderStatusHistoryDTO>> {
+  async handle(command: LogOrderStatusChangeCommand): Promise<CommandResult<OrderStatusHistoryDTO>> {
     const history = await this.orderService.logOrderStatusChange({
-        orderId: command.orderId,
-        fromStatus: command.fromStatus,
-        toStatus: command.toStatus,
-        changedBy: command.changedBy,
-      });
-
-      return CommandResult.success(OrderStatusHistory.toDTO(history));
+      orderId: command.orderId,
+      fromStatus: command.fromStatus,
+      toStatus: command.toStatus,
+      changedBy: command.changedBy,
+    });
+    return CommandResult.success(history);
   }
 }

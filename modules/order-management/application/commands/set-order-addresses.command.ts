@@ -1,6 +1,6 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
-import { OrderAddress, OrderAddressDTO } from "../../domain/entities/order-address.entity";
+import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 
 export interface SetOrderAddressesCommand extends ICommand {
   orderId: string;
@@ -35,7 +35,7 @@ export class SetOrderAddressesCommandHandler implements ICommandHandler<
   SetOrderAddressesCommand,
   CommandResult<OrderAddressDTO>
 > {
-  constructor(private orderService: OrderManagementService) {}
+  constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(
     command: SetOrderAddressesCommand,
@@ -45,6 +45,6 @@ export class SetOrderAddressesCommandHandler implements ICommandHandler<
       command.billingAddress,
       command.shippingAddress,
     );
-    return CommandResult.success(OrderAddress.toDTO(orderAddress));
+    return CommandResult.success(orderAddress);
   }
 }

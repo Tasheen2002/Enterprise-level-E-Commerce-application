@@ -4,10 +4,7 @@ import {
   CommandResult,
 } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
-import {
-  OrderAddress,
-  OrderAddressDTO,
-} from "../../domain/entities/order-address.entity";
+import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 
 export interface UpdateBillingAddressCommand extends ICommand {
   orderId: string;
@@ -29,16 +26,13 @@ export class UpdateBillingAddressCommandHandler implements ICommandHandler<
   UpdateBillingAddressCommand,
   CommandResult<OrderAddressDTO>
 > {
-  constructor(private orderService: OrderManagementService) {}
+  constructor(private readonly orderService: OrderManagementService) {}
 
-  async handle(
-    command: UpdateBillingAddressCommand,
-  ): Promise<CommandResult<OrderAddressDTO>> {
+  async handle(command: UpdateBillingAddressCommand): Promise<CommandResult<OrderAddressDTO>> {
     const orderAddress = await this.orderService.updateBillingAddress(
       command.orderId,
       command.billingAddress,
     );
-
-    return CommandResult.success(OrderAddress.toDTO(orderAddress));
+    return CommandResult.success(orderAddress);
   }
 }

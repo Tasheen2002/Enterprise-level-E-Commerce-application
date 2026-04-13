@@ -1,7 +1,8 @@
 import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { OrderManagementService } from "../services/order-management.service";
-import { Order, OrderDTO } from "../../domain/entities/order.entity";
+import { OrderDTO } from "../../domain/entities/order.entity";
+import { OrderStatus } from "../../domain/value-objects/order-status.vo";
 
 export interface ListOrdersQuery extends IQuery {
   readonly page?: number;
@@ -20,22 +21,27 @@ export class ListOrdersHandler implements IQueryHandler<ListOrdersQuery, QueryRe
   async handle(query: ListOrdersQuery): Promise<QueryResult<PaginatedResult<OrderDTO>>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const result = await this.orderService.getAllOrders({
-      page,
-      limit,
-      userId: query.userId,
-      status: query.status,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      sortBy: query.sortBy ?? "createdAt",
-      sortOrder: query.sortOrder ?? "desc",
-    });
+    const offset = (page - 1) * limit;
+    const result = await this.orderService.findOrders(
+      {
+        userId: query.userId,
+        status: query.status ? OrderStatus.fromString(query.status) : undefined,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      },
+      {
+        limit,
+        offset,
+        sortBy: query.sortBy ?? "createdAt",
+        sortOrder: query.sortOrder ?? "desc",
+      },
+    );
     return QueryResult.success<PaginatedResult<OrderDTO>>({
-      items: result.items.map(Order.toDTO),
-      total: result.totalCount,
+      items: result.items,
+      total: result.total,
       limit,
-      offset: (page - 1) * limit,
-      hasMore: (page - 1) * limit + result.items.length < result.totalCount,
+      offset,
+      hasMore: offset + result.items.length < result.total,
     });
   }
 }

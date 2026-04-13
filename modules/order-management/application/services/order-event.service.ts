@@ -2,7 +2,7 @@ import {
   IOrderEventRepository,
   OrderEventQueryOptions,
 } from "../../domain/repositories/order-event.repository";
-import { OrderEvent } from "../../domain/entities/order-event.entity";
+import { OrderEvent, OrderEventDTO } from "../../domain/entities/order-event.entity";
 import {
   OrderEventNotFoundError,
   DomainValidationError,
@@ -29,43 +29,40 @@ export enum OrderEventTypes {
   ORDER_ADMIN_ACTION = "order.admin_action",
 }
 
-export interface LogEventData {
+interface LogEventParams {
   orderId: string;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
 }
 
 export class OrderEventService {
   constructor(private readonly orderEventRepository: IOrderEventRepository) {}
 
-  async logEvent(data: LogEventData): Promise<OrderEvent> {
-    // Validate required fields
-    if (!data.orderId || data.orderId.trim().length === 0) {
+  async logEvent(params: LogEventParams): Promise<OrderEventDTO> {
+    if (!params.orderId || params.orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    if (!data.eventType || data.eventType.trim().length === 0) {
+    if (!params.eventType || params.eventType.trim().length === 0) {
       throw new DomainValidationError("Event type is required");
     }
 
-    // Create the order event entity
     const orderEvent = OrderEvent.create({
-      orderId: data.orderId,
-      eventType: data.eventType,
-      payload: data.payload || {},
+      orderId: params.orderId,
+      eventType: params.eventType,
+      payload: params.payload || {},
     });
 
-    // Save the event
     await this.orderEventRepository.save(orderEvent);
 
-    return orderEvent;
+    return OrderEvent.toDTO(orderEvent);
   }
 
   async logOrderCreated(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_CREATED,
       payload: payload || {},
@@ -74,9 +71,9 @@ export class OrderEventService {
 
   async logOrderUpdated(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_UPDATED,
       payload: payload || {},
@@ -87,9 +84,9 @@ export class OrderEventService {
     orderId: string,
     oldStatus: string,
     newStatus: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_STATUS_CHANGED,
       payload: {
@@ -102,9 +99,9 @@ export class OrderEventService {
 
   async logOrderPaid(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_PAID,
       payload: payload || {},
@@ -113,9 +110,9 @@ export class OrderEventService {
 
   async logOrderFulfilled(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_FULFILLED,
       payload: payload || {},
@@ -124,9 +121,9 @@ export class OrderEventService {
 
   async logOrderCancelled(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_CANCELLED,
       payload: payload || {},
@@ -135,9 +132,9 @@ export class OrderEventService {
 
   async logOrderRefunded(
     orderId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_REFUNDED,
       payload: payload || {},
@@ -147,9 +144,9 @@ export class OrderEventService {
   async logItemAdded(
     orderId: string,
     itemId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_ADDED,
       payload: {
@@ -162,9 +159,9 @@ export class OrderEventService {
   async logItemRemoved(
     orderId: string,
     itemId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_REMOVED,
       payload: {
@@ -177,9 +174,9 @@ export class OrderEventService {
   async logItemUpdated(
     orderId: string,
     itemId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_UPDATED,
       payload: {
@@ -192,9 +189,9 @@ export class OrderEventService {
   async logShipmentCreated(
     orderId: string,
     shipmentId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_CREATED,
       payload: {
@@ -207,9 +204,9 @@ export class OrderEventService {
   async logShipmentShipped(
     orderId: string,
     shipmentId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_SHIPPED,
       payload: {
@@ -222,9 +219,9 @@ export class OrderEventService {
   async logShipmentDelivered(
     orderId: string,
     shipmentId: string,
-    payload?: Record<string, any>,
-  ): Promise<OrderEvent> {
-    return await this.logEvent({
+    payload?: Record<string, unknown>,
+  ): Promise<OrderEventDTO> {
+    return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_DELIVERED,
       payload: {
@@ -234,47 +231,44 @@ export class OrderEventService {
     });
   }
 
-  async getEventById(eventId: number): Promise<OrderEvent> {
+  async getEventById(eventId: number): Promise<OrderEventDTO | null> {
     if (eventId === undefined || eventId === null || eventId < 0) {
       throw new DomainValidationError("Valid event ID is required");
     }
 
     const event = await this.orderEventRepository.findById(eventId);
-
-    if (!event) {
-      throw new OrderEventNotFoundError(eventId.toString());
-    }
-
-    return event;
+    return event ? OrderEvent.toDTO(event) : null;
   }
 
   async getEventsByOrderId(
     orderId: string,
     options?: OrderEventQueryOptions,
-  ): Promise<OrderEvent[]> {
+  ): Promise<OrderEventDTO[]> {
     if (!orderId || orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.orderEventRepository.findByOrderId(orderId, options);
+    const events = await this.orderEventRepository.findByOrderId(orderId, options);
+    return events.map((e) => OrderEvent.toDTO(e));
   }
 
   async getEventsByType(
     eventType: string,
     options?: OrderEventQueryOptions,
-  ): Promise<OrderEvent[]> {
+  ): Promise<OrderEventDTO[]> {
     if (!eventType || eventType.trim().length === 0) {
       throw new DomainValidationError("Event type is required");
     }
 
-    return await this.orderEventRepository.findByEventType(eventType, options);
+    const events = await this.orderEventRepository.findByEventType(eventType, options);
+    return events.map((e) => OrderEvent.toDTO(e));
   }
 
   async getEventsByOrderAndType(
     orderId: string,
     eventType: string,
     options?: OrderEventQueryOptions,
-  ): Promise<OrderEvent[]> {
+  ): Promise<OrderEventDTO[]> {
     if (!orderId || orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
@@ -283,29 +277,32 @@ export class OrderEventService {
       throw new DomainValidationError("Event type is required");
     }
 
-    return await this.orderEventRepository.findByOrderIdAndEventType(
+    const events = await this.orderEventRepository.findByOrderIdAndEventType(
       orderId,
       eventType,
       options,
     );
+    return events.map((e) => OrderEvent.toDTO(e));
   }
 
-  async getAllEvents(options?: OrderEventQueryOptions): Promise<OrderEvent[]> {
-    return await this.orderEventRepository.findAll(options);
+  async getAllEvents(options?: OrderEventQueryOptions): Promise<OrderEventDTO[]> {
+    const events = await this.orderEventRepository.findAll(options);
+    return events.map((e) => OrderEvent.toDTO(e));
   }
 
-  async getLatestEventForOrder(orderId: string): Promise<OrderEvent | null> {
+  async getLatestEventForOrder(orderId: string): Promise<OrderEventDTO | null> {
     if (!orderId || orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.orderEventRepository.getLatestByOrderId(orderId);
+    const event = await this.orderEventRepository.getLatestByOrderId(orderId);
+    return event ? OrderEvent.toDTO(event) : null;
   }
 
   async getOrderEventHistory(
     orderId: string,
     options?: OrderEventQueryOptions,
-  ): Promise<OrderEvent[]> {
+  ): Promise<OrderEventDTO[]> {
     if (!orderId || orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
@@ -316,10 +313,11 @@ export class OrderEventService {
       ...options,
     };
 
-    return await this.orderEventRepository.findByOrderId(
+    const events = await this.orderEventRepository.findByOrderId(
       orderId,
       defaultOptions,
     );
+    return events.map((e) => OrderEvent.toDTO(e));
   }
 
   async deleteEvent(eventId: number): Promise<void> {
@@ -327,7 +325,8 @@ export class OrderEventService {
       throw new DomainValidationError("Valid event ID is required");
     }
 
-    await this.getEventById(eventId);
+    const exists = await this.orderEventRepository.exists(eventId);
+    if (!exists) throw new OrderEventNotFoundError(eventId.toString());
 
     await this.orderEventRepository.delete(eventId);
   }
@@ -345,7 +344,7 @@ export class OrderEventService {
       throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.orderEventRepository.countByOrderId(orderId);
+    return this.orderEventRepository.countByOrderId(orderId);
   }
 
   async getEventCountByType(eventType: string): Promise<number> {
@@ -353,7 +352,7 @@ export class OrderEventService {
       throw new DomainValidationError("Event type is required");
     }
 
-    return await this.orderEventRepository.countByEventType(eventType);
+    return this.orderEventRepository.countByEventType(eventType);
   }
 
   async eventExists(eventId: number): Promise<boolean> {
@@ -361,6 +360,6 @@ export class OrderEventService {
       throw new DomainValidationError("Valid event ID is required");
     }
 
-    return await this.orderEventRepository.exists(eventId);
+    return this.orderEventRepository.exists(eventId);
   }
 }

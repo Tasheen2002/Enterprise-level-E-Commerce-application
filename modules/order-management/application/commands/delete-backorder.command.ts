@@ -13,11 +13,10 @@ export class DeleteBackorderCommandHandler implements ICommandHandler<
   DeleteBackorderCommand,
   CommandResult<void>
 > {
-  constructor(private backorderService: BackorderManagementService) {}
+  constructor(private readonly backorderService: BackorderManagementService) {}
 
   async handle(command: DeleteBackorderCommand): Promise<CommandResult<void>> {
     await this.backorderService.deleteBackorder(command.orderItemId);
-
     return CommandResult.success(undefined);
   }
 }

@@ -1,6 +1,7 @@
 import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
-import { Order, OrderDTO } from "../../domain/entities/order.entity";
+import { OrderDTO } from "../../domain/entities/order.entity";
+import { OrderNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface GetOrderQuery extends IQuery {
   readonly orderId?: string;
@@ -11,9 +12,10 @@ export class GetOrderHandler implements IQueryHandler<GetOrderQuery, QueryResult
   constructor(private readonly orderManagementService: OrderManagementService) {}
 
   async handle(query: GetOrderQuery): Promise<QueryResult<OrderDTO>> {
-    const order: Order = query.orderId
+    const order = query.orderId
       ? await this.orderManagementService.getOrderById(query.orderId)
-      : await this.orderManagementService.getOrderByOrderNumber(query.orderNumber!);
-    return QueryResult.success(Order.toDTO(order));
+      : await this.orderManagementService.getOrderByNumber(query.orderNumber!);
+    if (!order) throw new OrderNotFoundError(query.orderId ?? query.orderNumber ?? "");
+    return QueryResult.success(order);
   }
 }

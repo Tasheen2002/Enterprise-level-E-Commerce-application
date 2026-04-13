@@ -1,6 +1,6 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { OrderEventService } from "../services/order-event.service";
-import { OrderEvent, OrderEventDTO } from "../../domain/entities/order-event.entity";
+import { OrderEventDTO } from "../../domain/entities/order-event.entity";
 
 export interface LogOrderEventCommand extends ICommand {
   orderId: string;
@@ -8,22 +8,18 @@ export interface LogOrderEventCommand extends ICommand {
   payload?: Record<string, unknown>;
 }
 
-
 export class LogOrderEventCommandHandler implements ICommandHandler<
   LogOrderEventCommand,
   CommandResult<OrderEventDTO>
 > {
-  constructor(private orderEventService: OrderEventService) {}
+  constructor(private readonly orderEventService: OrderEventService) {}
 
-  async handle(
-    command: LogOrderEventCommand,
-  ): Promise<CommandResult<OrderEventDTO>> {
+  async handle(command: LogOrderEventCommand): Promise<CommandResult<OrderEventDTO>> {
     const event = await this.orderEventService.logEvent({
-        orderId: command.orderId,
-        eventType: command.eventType,
-        payload: command.payload || {},
-      });
-
-      return CommandResult.success(OrderEvent.toDTO(event));
+      orderId: command.orderId,
+      eventType: command.eventType,
+      payload: command.payload || {},
+    });
+    return CommandResult.success(event);
   }
 }

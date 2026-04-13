@@ -1,27 +1,23 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { PreorderManagementService } from "../services/preorder-management.service";
-import { Preorder, PreorderDTO } from "../../domain/entities/preorder.entity";
+import { PreorderDTO } from "../../domain/entities/preorder.entity";
 
 export interface CreatePreorderCommand extends ICommand {
   orderItemId: string;
   releaseDate?: Date;
 }
 
-
 export class CreatePreorderCommandHandler implements ICommandHandler<
   CreatePreorderCommand,
   CommandResult<PreorderDTO>
 > {
-  constructor(private preorderService: PreorderManagementService) {}
+  constructor(private readonly preorderService: PreorderManagementService) {}
 
-  async handle(
-    command: CreatePreorderCommand,
-  ): Promise<CommandResult<PreorderDTO>> {
+  async handle(command: CreatePreorderCommand): Promise<CommandResult<PreorderDTO>> {
     const preorder = await this.preorderService.createPreorder({
-        orderItemId: command.orderItemId,
-        releaseDate: command.releaseDate,
-      });
-
-      return CommandResult.success(Preorder.toDTO(preorder));
+      orderItemId: command.orderItemId,
+      releaseDate: command.releaseDate,
+    });
+    return CommandResult.success(preorder);
   }
 }
