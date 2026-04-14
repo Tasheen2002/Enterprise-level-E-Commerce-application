@@ -8,7 +8,7 @@ import {
   NotificationType,
   ChannelType,
   NotificationStatus,
-} from "../value-objects/index.js";
+} from "../value-objects";
 import { DomainValidationError } from "../errors/engagement.errors";
 
 // ============================================================================

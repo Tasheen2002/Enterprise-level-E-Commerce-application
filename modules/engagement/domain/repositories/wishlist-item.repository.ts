@@ -1,42 +1,61 @@
-import { WishlistItem } from "../entities/wishlist-item.entity.js";
+import { WishlistItem } from "../entities/wishlist-item.entity";
+import { WishlistId, WishlistItemId } from "../value-objects";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces";
 
-export interface WishlistItemQueryOptions {
-  limit?: number;
-  offset?: number;
-  sortBy?: "addedAt";
-  sortOrder?: "asc" | "desc";
+// ============================================================================
+// 2. Filters interface
+// ============================================================================
+export interface WishlistItemFilters {
+  wishlistId?: WishlistId;
+  variantId?: string;
 }
 
+// ============================================================================
+// 3. Repository Interface
+// ============================================================================
 export interface IWishlistItemRepository {
   // Basic CRUD
   save(item: WishlistItem): Promise<void>;
-  delete(wishlistId: string, variantId: string): Promise<void>;
+  delete(itemId: WishlistItemId): Promise<void>;
 
   // Finders
-  findById(
-    wishlistId: string,
-    variantId: string
-  ): Promise<WishlistItem | null>;
+  findById(itemId: WishlistItemId): Promise<WishlistItem | null>;
   findByWishlistId(
-    wishlistId: string,
-    options?: WishlistItemQueryOptions
-  ): Promise<WishlistItem[]>;
+    wishlistId: WishlistId,
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>>;
   findByVariantId(
     variantId: string,
-    options?: WishlistItemQueryOptions
-  ): Promise<WishlistItem[]>;
-  findAll(options?: WishlistItemQueryOptions): Promise<WishlistItem[]>;
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>>;
+  findAll(
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>>;
 
   // Batch operations
   saveMany(items: WishlistItem[]): Promise<void>;
-  deleteByWishlistId(wishlistId: string): Promise<void>;
-  deleteMany(items: Array<{ wishlistId: string; variantId: string }>): Promise<void>;
+  deleteByWishlistId(wishlistId: WishlistId): Promise<void>;
+  deleteMany(itemIds: WishlistItemId[]): Promise<void>;
 
   // Counts and statistics
-  countByWishlistId(wishlistId: string): Promise<number>;
+  countByWishlistId(wishlistId: WishlistId): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
 
   // Existence checks
-  exists(wishlistId: string, variantId: string): Promise<boolean>;
-  isVariantInWishlist(wishlistId: string, variantId: string): Promise<boolean>;
+  exists(itemId: WishlistItemId): Promise<boolean>;
+  isVariantInWishlist(
+    wishlistId: WishlistId,
+    variantId: string,
+  ): Promise<boolean>;
+}
+
+// ============================================================================
+// 4. Query Options interface
+// ============================================================================
+export interface WishlistItemQueryOptions extends PaginationOptions {
+  sortBy?: "addedAt" | "createdAt";
+  sortOrder?: "asc" | "desc";
 }

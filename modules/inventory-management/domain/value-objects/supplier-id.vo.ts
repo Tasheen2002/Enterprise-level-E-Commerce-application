@@ -13,8 +13,4 @@ export class SupplierId extends UuidId {
   static fromString(id: string): SupplierId {
     return new SupplierId(id);
   }
-
-  equals(other: SupplierId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

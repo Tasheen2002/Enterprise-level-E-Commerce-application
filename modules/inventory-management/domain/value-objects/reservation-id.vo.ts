@@ -13,8 +13,4 @@ export class ReservationId extends UuidId {
   static fromString(id: string): ReservationId {
     return new ReservationId(id);
   }
-
-  equals(other: ReservationId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

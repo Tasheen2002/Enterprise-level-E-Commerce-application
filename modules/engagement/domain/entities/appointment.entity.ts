@@ -3,7 +3,7 @@
 // ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
-import { AppointmentId, AppointmentType } from "../value-objects/index.js";
+import { AppointmentId, AppointmentType } from "../value-objects";
 import { DomainValidationError } from "../errors/engagement.errors";
 
 // ============================================================================

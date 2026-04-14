@@ -13,8 +13,4 @@ export class CheckoutId extends UuidId {
   static fromString(value: string): CheckoutId {
     return new CheckoutId(value);
   }
-
-  equals(other: CheckoutId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

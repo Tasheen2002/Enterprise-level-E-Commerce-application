@@ -3,7 +3,7 @@
 // ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
-import { WishlistId, WishlistItemId } from "../value-objects/index.js";
+import { WishlistId, WishlistItemId } from "../value-objects";
 import { DomainValidationError } from "../errors/engagement.errors";
 
 // ============================================================================

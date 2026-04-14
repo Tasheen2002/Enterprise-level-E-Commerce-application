@@ -3,7 +3,7 @@
 // ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
-import { ReviewId, Rating, ReviewStatus } from "../value-objects/index.js";
+import { ReviewId, Rating, ReviewStatus } from "../value-objects";
 import { DomainValidationError } from "../errors/engagement.errors";
 
 // ============================================================================
@@ -103,7 +103,7 @@ export class ProductReview extends AggregateRoot {
       id: ReviewId.create(),
       productId: params.productId,
       userId: params.userId,
-      rating: Rating.fromNumber(params.rating),
+      rating: params.rating,
       status: ReviewStatus.pending(),
       title: params.title,
       body: params.body,

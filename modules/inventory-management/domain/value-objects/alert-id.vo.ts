@@ -13,8 +13,4 @@ export class AlertId extends UuidId {
   static fromString(id: string): AlertId {
     return new AlertId(id);
   }
-
-  equals(other: AlertId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

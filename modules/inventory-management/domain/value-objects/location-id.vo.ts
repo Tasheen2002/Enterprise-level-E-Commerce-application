@@ -13,8 +13,4 @@ export class LocationId extends UuidId {
   static fromString(id: string): LocationId {
     return new LocationId(id);
   }
-
-  equals(other: LocationId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

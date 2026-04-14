@@ -1,129 +1,187 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IWishlistItemRepository,
   WishlistItemQueryOptions,
-} from "../../../domain/repositories/wishlist-item.repository.js";
-import { WishlistItem } from "../../../domain/entities/wishlist-item.entity.js";
+} from "../../../domain/repositories/wishlist-item.repository";
+import { WishlistItem } from "../../../domain/entities/wishlist-item.entity";
+import { WishlistId, WishlistItemId } from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-export class WishlistItemRepositoryImpl implements IWishlistItemRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ============================================================================
+// Database Row Interface
+// The WishlistItem table uses a composite PK (wishlistId, variantId) — no id column.
+// WishlistItemId is a transient in-memory identifier only.
+// ============================================================================
+interface WishlistItemDatabaseRow {
+  wishlistId: string;
+  variantId: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
 
-  private hydrate(record: any): WishlistItem {
-    return WishlistItem.fromDatabaseRow({
-      wishlist_id: record.wishlistId,
-      variant_id: record.variantId,
-    });
+// ============================================================================
+// Repository Implementation
+// ============================================================================
+export class WishlistItemRepositoryImpl
+  extends PrismaRepository<WishlistItem>
+  implements IWishlistItemRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
   }
 
-  private dehydrate(item: WishlistItem): any {
-    const row = item.toDatabaseRow();
-    return {
-      wishlistId: row.wishlist_id,
-      variantId: row.variant_id,
-    };
+  private toEntity(row: WishlistItemDatabaseRow): WishlistItem {
+    return WishlistItem.fromPersistence({
+      id: WishlistItemId.create(),
+      wishlistId: WishlistId.fromString(row.wishlistId),
+      variantId: row.variantId,
+      createdAt: row.createdAt ?? new Date(),
+      updatedAt: row.updatedAt ?? new Date(),
+    });
   }
 
   async save(item: WishlistItem): Promise<void> {
-    const data = this.dehydrate(item);
-    await this.prisma.wishlistItem.upsert({
-      where: {
-        wishlistId_variantId: {
-          wishlistId: data.wishlistId,
-          variantId: data.variantId,
-        },
+    await this.prisma.wishlistItem.create({
+      data: {
+        wishlistId: item.wishlistId.getValue(),
+        variantId: item.variantId,
       },
-      create: data,
-      update: {},
     });
+    await this.dispatchEvents(item);
   }
 
-  async delete(wishlistId: string, variantId: string): Promise<void> {
-    await this.prisma.wishlistItem.delete({
-      where: {
-        wishlistId_variantId: {
-          wishlistId,
-          variantId,
-        },
-      },
-    });
+  async delete(_itemId: WishlistItemId): Promise<void> {
+    // WishlistItem uses composite PK (wishlistId, variantId) — no standalone id column.
+    // Use deleteByWishlistId or isVariantInWishlist + deleteMany for targeted removal.
+    throw new Error(
+      "delete(WishlistItemId) is not supported: WishlistItem has composite PK. Use deleteByWishlistId or deleteMany.",
+    );
   }
 
-  async findById(
-    wishlistId: string,
-    variantId: string
-  ): Promise<WishlistItem | null> {
-    const record = await this.prisma.wishlistItem.findUnique({
-      where: {
-        wishlistId_variantId: {
-          wishlistId,
-          variantId,
-        },
-      },
-    });
-
-    return record ? this.hydrate(record) : null;
+  async findById(_itemId: WishlistItemId): Promise<WishlistItem | null> {
+    // WishlistItem uses composite PK (wishlistId, variantId) — no standalone id column.
+    // Use isVariantInWishlist for existence checks or findByWishlistId for retrieval.
+    return null;
   }
 
   async findByWishlistId(
-    wishlistId: string,
-    options?: WishlistItemQueryOptions
-  ): Promise<WishlistItem[]> {
-    const records = await this.prisma.wishlistItem.findMany({
-      where: { wishlistId },
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    wishlistId: WishlistId,
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { wishlistId: wishlistId.getValue() };
+
+    const [records, total] = await Promise.all([
+      this.prisma.wishlistItem.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { wishlistId: sortOrder } as any,
+      }),
+      this.prisma.wishlistItem.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistItemDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByVariantId(
     variantId: string,
-    options?: WishlistItemQueryOptions
-  ): Promise<WishlistItem[]> {
-    const records = await this.prisma.wishlistItem.findMany({
-      where: { variantId },
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { variantId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.wishlistItem.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { variantId: sortOrder } as any,
+      }),
+      this.prisma.wishlistItem.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistItemDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findAll(options?: WishlistItemQueryOptions): Promise<WishlistItem[]> {
-    const records = await this.prisma.wishlistItem.findMany({
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findAll(
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedResult<WishlistItem>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.wishlistItem.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { wishlistId: sortOrder } as any,
+      }),
+      this.prisma.wishlistItem.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistItemDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async saveMany(items: WishlistItem[]): Promise<void> {
-    const data = items.map((item) => this.dehydrate(item));
     await this.prisma.wishlistItem.createMany({
-      data,
+      data: items.map((item) => ({
+        wishlistId: item.wishlistId.getValue(),
+        variantId: item.variantId,
+      })),
       skipDuplicates: true,
     });
   }
 
-  async deleteByWishlistId(wishlistId: string): Promise<void> {
+  async deleteByWishlistId(wishlistId: WishlistId): Promise<void> {
     await this.prisma.wishlistItem.deleteMany({
-      where: { wishlistId },
+      where: { wishlistId: wishlistId.getValue() },
     });
   }
 
-  async deleteMany(
-    items: Array<{ wishlistId: string; variantId: string }>
-  ): Promise<void> {
-    await Promise.all(
-      items.map((item) => this.delete(item.wishlistId, item.variantId))
+  async deleteMany(_itemIds: WishlistItemId[]): Promise<void> {
+    // WishlistItem uses composite PK — WishlistItemId has no mapping to DB.
+    // This operation requires wishlistId+variantId pairs; use deleteByWishlistId instead.
+    throw new Error(
+      "deleteMany(WishlistItemId[]) is not supported: WishlistItem has composite PK. Use deleteByWishlistId.",
     );
   }
 
-  async countByWishlistId(wishlistId: string): Promise<number> {
+  async countByWishlistId(wishlistId: WishlistId): Promise<number> {
     return await this.prisma.wishlistItem.count({
-      where: { wishlistId },
+      where: { wishlistId: wishlistId.getValue() },
     });
   }
 
@@ -133,21 +191,22 @@ export class WishlistItemRepositoryImpl implements IWishlistItemRepository {
     });
   }
 
-  async exists(wishlistId: string, variantId: string): Promise<boolean> {
+  async exists(_itemId: WishlistItemId): Promise<boolean> {
+    // WishlistItem uses composite PK — use isVariantInWishlist for existence checks.
+    return false;
+  }
+
+  async isVariantInWishlist(
+    wishlistId: WishlistId,
+    variantId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.wishlistItem.count({
       where: {
-        wishlistId,
+        wishlistId: wishlistId.getValue(),
         variantId,
       },
     });
 
     return count > 0;
-  }
-
-  async isVariantInWishlist(
-    wishlistId: string,
-    variantId: string
-  ): Promise<boolean> {
-    return this.exists(wishlistId, variantId);
   }
 }
