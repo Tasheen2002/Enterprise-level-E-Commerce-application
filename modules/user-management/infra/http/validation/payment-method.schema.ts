@@ -25,7 +25,7 @@ export const updatePaymentMethodSchema = z.object({
 });
 
 export const paymentMethodIdParamsSchema = z.object({
-  paymentMethodId: z.string().uuid(),
+  paymentMethodId: z.uuid(),
 });
 
 // JSON Schema response objects (for Swagger docs)

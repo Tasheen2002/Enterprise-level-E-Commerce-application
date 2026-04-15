@@ -29,7 +29,7 @@ export const updateAddressSchema = z.object({
 });
 
 export const addressIdParamsSchema = z.object({
-  addressId: z.string().uuid(),
+  addressId: z.uuid(),
 });
 
 // JSON Schema response objects (for Swagger docs)

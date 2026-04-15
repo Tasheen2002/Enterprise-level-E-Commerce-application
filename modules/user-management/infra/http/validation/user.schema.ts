@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const userIdParamsSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
 });
 
 export const listUsersQuerySchema = z.object({
