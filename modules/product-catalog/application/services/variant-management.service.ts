@@ -110,7 +110,7 @@ export class VariantManagementService {
   async getVariantsByProduct(
     productId: string,
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariantDTO[]> {
+  ): Promise<{ variants: ProductVariantDTO[]; total: number }> {
     const {
       page = 1,
       limit = 20,
@@ -154,10 +154,12 @@ export class VariantManagementService {
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
+    const total = variants.length;
     const startIndex = (page - 1) * limit;
-    return variants
-      .slice(startIndex, startIndex + limit)
-      .map((v) => ProductVariant.toDTO(v));
+    return {
+      variants: variants.slice(startIndex, startIndex + limit).map((v) => ProductVariant.toDTO(v)),
+      total,
+    };
   }
 
   async getAllVariants(

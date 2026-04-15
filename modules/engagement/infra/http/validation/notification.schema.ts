@@ -27,6 +27,23 @@ export const scheduleNotificationSchema = z.object({
   scheduledAt: z.coerce.date(),
 });
 
+// ── JSON Schema for Swagger docs ─────────────────────────────────────────────
+
+export const notificationResponseSchema = {
+  type: "object",
+  properties: {
+    notificationId: { type: "string", format: "uuid" },
+    type: { type: "string" },
+    channel: { type: "string" },
+    status: { type: "string" },
+    templateId: { type: "string" },
+    payload: { type: "object", additionalProperties: true },
+    scheduledAt: { type: "string", format: "date-time" },
+    sentAt: { type: "string", format: "date-time" },
+    createdAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type NotificationIdParams = z.infer<typeof notificationIdParamsSchema>;

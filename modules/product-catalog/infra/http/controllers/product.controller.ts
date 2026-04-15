@@ -72,6 +72,7 @@ export class ProductController {
           total: result.totalCount,
           page: currentPage,
           limit: currentLimit,
+          totalPages: Math.ceil(result.totalCount / currentLimit),
         });
       }
 
@@ -86,10 +87,11 @@ export class ProductController {
         sortOrder,
       });
       return ResponseHelper.ok(reply, "Products retrieved successfully", {
-        products: result.items,
-        total: result.totalCount,
-        page: currentPage,
-        limit: currentLimit,
+        products: result.products,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

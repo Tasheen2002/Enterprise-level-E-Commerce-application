@@ -35,6 +35,23 @@ export const updateReviewStatusSchema = z.object({
   status: z.enum(["approved", "rejected", "flagged"]),
 });
 
+// ── JSON Schema for Swagger docs ─────────────────────────────────────────────
+
+export const productReviewResponseSchema = {
+  type: "object",
+  properties: {
+    reviewId: { type: "string", format: "uuid" },
+    productId: { type: "string", format: "uuid" },
+    userId: { type: "string", format: "uuid" },
+    rating: { type: "number" },
+    title: { type: "string" },
+    body: { type: "string" },
+    status: { type: "string" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type ReviewIdParams = z.infer<typeof reviewIdParamsSchema>;

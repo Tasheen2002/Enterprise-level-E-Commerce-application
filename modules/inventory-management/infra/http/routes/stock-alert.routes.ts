@@ -7,7 +7,11 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { StockAlertController } from "../controllers/stock-alert.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
 import {
   alertParamsSchema,
   listStockAlertsSchema,
@@ -68,7 +72,8 @@ export async function stockAlertRoutes(
         },
       },
     },
-    (request, reply) => controller.listAlerts(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.listAlerts(request as AuthenticatedRequest, reply),
   );
 
   // Get active alerts
@@ -94,7 +99,8 @@ export async function stockAlertRoutes(
         },
       },
     },
-    (request, reply) => controller.getActiveAlerts(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getActiveAlerts(request as AuthenticatedRequest, reply),
   );
 
   // Get alert
@@ -128,14 +134,18 @@ export async function stockAlertRoutes(
         },
       },
     },
-    (request, reply) => controller.getAlert(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getAlert(request as AuthenticatedRequest, reply),
   );
 
   // Create alert
   fastify.post(
     "/alerts",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(createStockAlertSchema)],
+      preHandler: [
+        validateBody(createStockAlertSchema),
+        RolePermissions.ADMIN_ONLY,
+      ],
       schema: {
         description: "Create stock alert",
         tags: ["Stock Alerts"],
@@ -162,7 +172,8 @@ export async function stockAlertRoutes(
         },
       },
     },
-    (request, reply) => controller.createAlert(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.createAlert(request as AuthenticatedRequest, reply),
   );
 
   // Resolve alert
@@ -196,6 +207,7 @@ export async function stockAlertRoutes(
         },
       },
     },
-    (request, reply) => controller.resolveAlert(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.resolveAlert(request as AuthenticatedRequest, reply),
   );
 }

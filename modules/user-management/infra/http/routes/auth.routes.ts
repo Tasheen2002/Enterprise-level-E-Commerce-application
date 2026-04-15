@@ -45,6 +45,18 @@ export async function authRoutes(
         summary: "Register a new user",
         description:
           "Register a new user account. Returns JWT tokens on success.",
+        body: {
+          type: "object",
+          required: ["email", "password"],
+          properties: {
+            email: { type: "string", format: "email" },
+            password: { type: "string", minLength: 8, maxLength: 128 },
+            phone: { type: "string" },
+            firstName: { type: "string", maxLength: 100 },
+            lastName: { type: "string", maxLength: 100 },
+            role: { type: "string", enum: ["CUSTOMER", "ADMIN", "VENDOR"] },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -71,6 +83,15 @@ export async function authRoutes(
         summary: "Login",
         description:
           "Authenticate with email and password. Returns JWT tokens on success.",
+        body: {
+          type: "object",
+          required: ["email", "password"],
+          properties: {
+            email: { type: "string", format: "email" },
+            password: { type: "string", minLength: 1 },
+            rememberMe: { type: "boolean" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -96,6 +117,13 @@ export async function authRoutes(
         tags: ["Authentication"],
         summary: "Refresh access token",
         description: "Exchange a valid refresh token for a new access token.",
+        body: {
+          type: "object",
+          required: ["refreshToken"],
+          properties: {
+            refreshToken: { type: "string", minLength: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -186,12 +214,20 @@ export async function authRoutes(
   fastify.post(
     "/auth/change-password",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(changePasswordSchema)],
+      preHandler: [validateBody(changePasswordSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Change password",
         description: "Change the authenticated user's account password.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["currentPassword", "newPassword"],
+          properties: {
+            currentPassword: { type: "string", minLength: 1 },
+            newPassword: { type: "string", minLength: 8, maxLength: 128 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -219,6 +255,13 @@ export async function authRoutes(
         summary: "Initiate password reset",
         description:
           "Send a password reset link to the given email. Always returns 200 to prevent email enumeration.",
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: { type: "string", format: "email" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -246,6 +289,15 @@ export async function authRoutes(
         summary: "Reset password",
         description:
           "Set a new password using the reset token received by email.",
+        body: {
+          type: "object",
+          required: ["token", "newPassword", "confirmPassword"],
+          properties: {
+            token: { type: "string", minLength: 1 },
+            newPassword: { type: "string", minLength: 8, maxLength: 128 },
+            confirmPassword: { type: "string", minLength: 8, maxLength: 128 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -272,6 +324,13 @@ export async function authRoutes(
         summary: "Verify email address",
         description:
           "Verify a user's email address using the token sent to their inbox.",
+        body: {
+          type: "object",
+          required: ["token"],
+          properties: {
+            token: { type: "string", minLength: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -298,6 +357,13 @@ export async function authRoutes(
         summary: "Resend verification email",
         description:
           "Resend the email verification link to the user's email address.",
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: { type: "string", format: "email" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -319,13 +385,21 @@ export async function authRoutes(
   fastify.post(
     "/auth/change-email",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(changeEmailSchema)],
+      preHandler: [validateBody(changeEmailSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Change email address",
         description:
           "Change the authenticated user's email. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["newEmail", "password"],
+          properties: {
+            newEmail: { type: "string", format: "email" },
+            password: { type: "string", minLength: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -347,13 +421,20 @@ export async function authRoutes(
   fastify.post(
     "/auth/delete-account",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(deleteAccountSchema)],
+      preHandler: [validateBody(deleteAccountSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Delete account",
         description:
           "Permanently delete the authenticated user's account. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["password"],
+          properties: {
+            password: { type: "string", minLength: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",

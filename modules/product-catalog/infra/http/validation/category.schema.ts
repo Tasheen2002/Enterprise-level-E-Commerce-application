@@ -12,7 +12,7 @@ export const categorySlugParamsSchema = z.object({
 
 export const listCategoriesSchema = z.object({
   page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("50").transform(Number),
+  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   parentId: z.uuid().optional(),
   includeChildren: z.string().optional().transform((v) => v === "true"),
   sortBy: z.enum(["name", "position"]).optional().default("position"),

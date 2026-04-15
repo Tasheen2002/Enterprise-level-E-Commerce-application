@@ -45,6 +45,20 @@ export async function productRoutes(
         description: "Get paginated list of products with filtering options",
         tags: ["Products"],
         summary: "List Products",
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            status: { type: "string", enum: ["draft", "published", "scheduled", "archived"] },
+            brand: { type: "string" },
+            categoryId: { type: "string", format: "uuid" },
+            search: { type: "string" },
+            includeDrafts: { type: "boolean", default: false },
+            sortBy: { type: "string", enum: ["title", "createdAt", "updatedAt", "publishAt"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -57,6 +71,9 @@ export async function productRoutes(
                 properties: {
                   products: { type: "array", items: productResponseSchema },
                   total: { type: "integer" },
+                  page: { type: "integer" },
+                  limit: { type: "integer" },
+                  totalPages: { type: "integer" },
                 },
               },
             },

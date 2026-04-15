@@ -63,12 +63,26 @@ export async function paymentMethodRoutes(
   fastify.post(
     "/users/me/payment-methods",
     {
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(addPaymentMethodSchema)],
+      preHandler: [validateBody(addPaymentMethodSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
         description: "Save a new payment method for the authenticated user.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["type"],
+          properties: {
+            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
+            provider: { type: "string", maxLength: 50 },
+            last4: { type: "string", pattern: "^\\d{4}$" },
+            brand: { type: "string", maxLength: 50 },
+            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expiryYear: { type: "integer" },
+            billingName: { type: "string", maxLength: 200 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -91,13 +105,33 @@ export async function paymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED, validateBody(updatePaymentMethodSchema)],
+      preHandler: [validateBody(updatePaymentMethodSchema), RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",
         description:
           "Partially update an existing payment method. All body fields are optional.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
+            provider: { type: "string", maxLength: 50 },
+            last4: { type: "string", pattern: "^\\d{4}$" },
+            brand: { type: "string", maxLength: 50 },
+            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expiryYear: { type: "integer" },
+            billingName: { type: "string", maxLength: 200 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -127,6 +161,13 @@ export async function paymentMethodRoutes(
         description:
           "Permanently delete a payment method belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
           204: {
             type: "null",
@@ -151,6 +192,13 @@ export async function paymentMethodRoutes(
         description:
           "Mark a payment method as the user's default for checkout.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
           200: {
             type: "object",

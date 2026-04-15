@@ -86,10 +86,10 @@ export class CategoryManagementService {
 
   async getCategories(
     options: CategoryQueryServiceOptions = {},
-  ): Promise<CategoryDTO[]> {
+  ): Promise<{ categories: CategoryDTO[]; total: number }> {
     const {
       page = 1,
-      limit = 50,
+      limit = 20,
       parentId,
       includeChildren = false,
       sortBy = "position",
@@ -125,7 +125,7 @@ export class CategoryManagementService {
       }
     }
 
-    return categories.map((c) => Category.toDTO(c));
+    return { categories: categories.map((c) => Category.toDTO(c)), total: categories.length };
   }
 
   async getAllCategories(

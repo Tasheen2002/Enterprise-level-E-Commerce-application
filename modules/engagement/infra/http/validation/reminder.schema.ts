@@ -35,6 +35,23 @@ export const updateReminderStatusSchema = z.object({
   status: z.literal("sent"),
 });
 
+// ── JSON Schema for Swagger docs ─────────────────────────────────────────────
+
+export const reminderResponseSchema = {
+  type: "object",
+  properties: {
+    reminderId: { type: "string", format: "uuid" },
+    userId: { type: "string", format: "uuid" },
+    variantId: { type: "string", format: "uuid" },
+    type: { type: "string" },
+    contactType: { type: "string" },
+    status: { type: "string" },
+    threshold: { type: "number" },
+    createdAt: { type: "string", format: "date-time" },
+    triggeredAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type ReminderIdParams = z.infer<typeof reminderIdParamsSchema>;

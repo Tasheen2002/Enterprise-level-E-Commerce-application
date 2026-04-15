@@ -44,6 +44,23 @@ export const addToWishlistSchema = z.object({
   guestToken: z.string().min(1).optional(),
 });
 
+// ── JSON Schema for Swagger docs ─────────────────────────────────────────────
+
+export const wishlistResponseSchema = {
+  type: "object",
+  properties: {
+    wishlistId: { type: "string", format: "uuid" },
+    userId: { type: "string", format: "uuid" },
+    guestToken: { type: "string" },
+    name: { type: "string" },
+    description: { type: "string" },
+    isPublic: { type: "boolean" },
+    isDefault: { type: "boolean" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type WishlistIdParams = z.infer<typeof wishlistIdParamsSchema>;

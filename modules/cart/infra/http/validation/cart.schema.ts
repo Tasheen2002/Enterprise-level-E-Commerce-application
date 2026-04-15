@@ -3,11 +3,11 @@ import { z } from "zod";
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
 export const cartIdParamsSchema = z.object({
-  cartId: z.string().uuid(),
+  cartId: z.uuid(),
 });
 
 export const userIdParamsSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
 });
 
 export const guestTokenParamsSchema = z.object({
@@ -15,8 +15,8 @@ export const guestTokenParamsSchema = z.object({
 });
 
 export const cartItemParamsSchema = z.object({
-  cartId: z.string().uuid(),
-  variantId: z.string().uuid(),
+  cartId: z.uuid(),
+  variantId: z.uuid(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────
@@ -32,8 +32,8 @@ export const createGuestCartSchema = z.object({
 });
 
 export const addToCartSchema = z.object({
-  cartId: z.string().uuid().optional(),
-  variantId: z.string().uuid(),
+  cartId: z.uuid().optional(),
+  variantId: z.uuid(),
   quantity: z.number().int().min(1),
   isGift: z.boolean().optional().default(false),
   giftMessage: z.string().optional(),
@@ -44,12 +44,12 @@ export const updateCartItemSchema = z.object({
 });
 
 export const transferCartSchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.uuid(),
   mergeWithExisting: z.boolean().optional().default(false),
 });
 
 export const updateCartEmailSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
 });
 
 export const updateCartShippingInfoSchema = z.object({

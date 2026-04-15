@@ -46,6 +46,17 @@ export async function categoryRoutes(
         description: "Get paginated list of categories",
         tags: ["Categories"],
         summary: "List Categories",
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            parentId: { type: "string", format: "uuid" },
+            includeChildren: { type: "boolean", default: false },
+            sortBy: { type: "string", enum: ["name", "position"], default: "position" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -57,7 +68,10 @@ export async function categoryRoutes(
                 type: "object",
                 properties: {
                   categories: { type: "array", items: categoryResponseSchema },
-                  meta: { type: "object" },
+                  total: { type: "integer" },
+                  page: { type: "integer" },
+                  limit: { type: "integer" },
+                  totalPages: { type: "integer" },
                 },
               },
             },

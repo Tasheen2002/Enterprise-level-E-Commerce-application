@@ -38,7 +38,13 @@ export class VariantController {
         productId: request.params.productId,
         ...request.query,
       });
-      return ResponseHelper.ok(reply, "Variants retrieved successfully", result);
+      return ResponseHelper.ok(reply, "Variants retrieved successfully", {
+        variants: result.variants,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

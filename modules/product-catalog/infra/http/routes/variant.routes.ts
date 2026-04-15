@@ -50,6 +50,17 @@ export async function variantRoutes(
           required: ["productId"],
           properties: { productId: { type: "string", format: "uuid" } },
         },
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            size: { type: "string" },
+            color: { type: "string" },
+            sortBy: { type: "string", enum: ["sku", "createdAt", "size", "color"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -61,7 +72,10 @@ export async function variantRoutes(
                 type: "object",
                 properties: {
                   variants: { type: "array", items: variantResponseSchema },
-                  meta: { type: "object" },
+                  total: { type: "integer" },
+                  page: { type: "integer" },
+                  limit: { type: "integer" },
+                  totalPages: { type: "integer" },
                 },
               },
             },

@@ -70,7 +70,7 @@ export async function purchaseOrderItemRoutes(
     "/purchase-orders/:poId/items",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL, validateBody(addPOItemSchema)],
+      preHandler: [validateBody(addPOItemSchema), RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Add item to purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -112,7 +112,7 @@ export async function purchaseOrderItemRoutes(
     "/purchase-orders/:poId/items/:variantId",
     {
       preValidation: [validateParams(poItemParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL, validateBody(updatePOItemSchema)],
+      preHandler: [validateBody(updatePOItemSchema), RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order item (Staff/Admin only)",
         tags: ["Purchase Orders"],

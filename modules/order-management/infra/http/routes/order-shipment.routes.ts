@@ -24,7 +24,7 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments",
     {
       preValidation: [validateParams(orderShipmentsParamsSchema)],
-      preHandler: [validateBody(createShipmentSchema), authenticateUser],
+      preHandler: [authenticateUser, validateBody(createShipmentSchema)],
       schema: {
         description: "Create a new shipment for an order",
         tags: ["Order Shipments"],
@@ -152,7 +152,7 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
       preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: [validateBody(markShippedSchema), authenticateUser],
+      preHandler: [authenticateUser, validateBody(markShippedSchema)],
       schema: {
         description:
           "Mark a shipment as shipped with carrier and tracking details",

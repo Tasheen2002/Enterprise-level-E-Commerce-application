@@ -3,13 +3,13 @@ import { z } from "zod";
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
 export const checkoutIdParamsSchema = z.object({
-  checkoutId: z.string().uuid(),
+  checkoutId: z.uuid(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
 export const initializeCheckoutSchema = z.object({
-  cartId: z.string().uuid(),
+  cartId: z.uuid(),
   expiresInMinutes: z.number().int().positive().optional().default(15),
 });
 

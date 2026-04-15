@@ -14,10 +14,11 @@ export interface ListProductsQuery extends IQuery {
 }
 
 export interface ListProductsResult {
-  items: ProductDTO[];
-  totalCount: number;
+  products: ProductDTO[];
+  total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 export class ListProductsHandler implements IQueryHandler<ListProductsQuery, ListProductsResult> {
@@ -27,6 +28,12 @@ export class ListProductsHandler implements IQueryHandler<ListProductsQuery, Lis
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
     const result = await this.productManagementService.getAllProducts({ page, limit, ...input });
-    return { items: result.items, totalCount: result.totalCount, page, limit };
+    return {
+      products: result.items,
+      total: result.totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(result.totalCount / limit),
+    };
   }
 }

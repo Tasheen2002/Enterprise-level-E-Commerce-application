@@ -25,6 +25,20 @@ export const unsubscribeViaLinkSchema = z.object({
   email: z.email(),
 });
 
+// ── JSON Schema for Swagger docs ─────────────────────────────────────────────
+
+export const newsletterSubscriptionResponseSchema = {
+  type: "object",
+  properties: {
+    subscriptionId: { type: "string", format: "uuid" },
+    email: { type: "string", format: "email" },
+    status: { type: "string" },
+    source: { type: "string" },
+    subscribedAt: { type: "string", format: "date-time" },
+    unsubscribedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;

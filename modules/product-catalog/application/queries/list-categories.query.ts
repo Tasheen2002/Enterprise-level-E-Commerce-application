@@ -13,14 +13,10 @@ export interface ListCategoriesQuery extends IQuery {
 
 export interface ListCategoriesResult {
   categories: CategoryDTO[];
-  meta: {
-    page: number;
-    limit: number;
-    parentId: string | null;
-    includeChildren: boolean;
-    sortBy: string;
-    sortOrder: string;
-  };
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 export class ListCategoriesHandler implements IQueryHandler<ListCategoriesQuery, ListCategoriesResult> {
@@ -28,18 +24,21 @@ export class ListCategoriesHandler implements IQueryHandler<ListCategoriesQuery,
 
   async handle(input: ListCategoriesQuery): Promise<ListCategoriesResult> {
     const page = Math.max(1, input.page ?? 1);
-    const limit = Math.min(100, Math.max(1, input.limit ?? 50));
+    const limit = Math.min(100, Math.max(1, input.limit ?? 20));
     const sortBy = input.sortBy ?? "position";
     const sortOrder = input.sortOrder ?? "asc";
     const includeChildren = input.includeChildren ?? false;
 
-    const categories = await this.categoryManagementService.getCategories({
+    const result = await this.categoryManagementService.getCategories({
       page, limit, parentId: input.parentId, includeChildren, sortBy, sortOrder,
     });
 
     return {
-      categories,
-      meta: { page, limit, parentId: input.parentId ?? null, includeChildren, sortBy, sortOrder },
+      categories: result.categories,
+      total: result.total,
+      page,
+      limit,
+      totalPages: Math.ceil(result.total / limit),
     };
   }
 }

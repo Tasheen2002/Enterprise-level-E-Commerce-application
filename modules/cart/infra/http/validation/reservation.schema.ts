@@ -3,24 +3,24 @@ import { z } from "zod";
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
 export const reservationIdParamsSchema = z.object({
-  reservationId: z.string().uuid(),
+  reservationId: z.uuid(),
 });
 
 export const cartIdParamsSchema = z.object({
-  cartId: z.string().uuid(),
+  cartId: z.uuid(),
 });
 
 export const variantIdParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 export const cartReservationParamsSchema = z.object({
-  cartId: z.string().uuid(),
-  variantId: z.string().uuid(),
+  cartId: z.uuid(),
+  variantId: z.uuid(),
 });
 
 export const variantAdminParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 // ── Query Schemas ─────────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ export const cartReservationsQuerySchema = z.object({
 });
 
 export const checkAvailabilityQuerySchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
   requestedQuantity: z.number().int().min(1),
 });
 
@@ -41,8 +41,8 @@ export const reservationsByStatusQuerySchema = z.object({
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
 export const createReservationSchema = z.object({
-  cartId: z.string().uuid(),
-  variantId: z.string().uuid(),
+  cartId: z.uuid(),
+  variantId: z.uuid(),
   quantity: z.number().int().min(1),
   durationMinutes: z.number().int().positive().optional(),
 });
@@ -60,11 +60,11 @@ export const adjustReservationSchema = z.object({
 });
 
 export const createBulkReservationsSchema = z.object({
-  cartId: z.string().uuid(),
+  cartId: z.uuid(),
   items: z
     .array(
       z.object({
-        variantId: z.string().uuid(),
+        variantId: z.uuid(),
         quantity: z.number().int().min(1),
       }),
     )
