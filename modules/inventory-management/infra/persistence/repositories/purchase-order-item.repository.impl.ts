@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PurchaseOrderItem } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { IPurchaseOrderItemRepository } from "../../../domain/repositories/purchase-order-item.repository";
@@ -10,8 +12,10 @@ interface PurchaseOrderItemDatabaseRow {
   receivedQty: number;
 }
 
-export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PurchaseOrderItemRepositoryImpl extends PrismaRepository<PurchaseOrderItem> implements IPurchaseOrderItemRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: PurchaseOrderItemDatabaseRow): PurchaseOrderItem {
     return PurchaseOrderItem.fromPersistence({
@@ -41,6 +45,8 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
         receivedQty: item.receivedQty,
       },
     });
+
+    await this.dispatchEvents(item);
   }
 
   async findByPoAndVariant(
@@ -133,9 +139,7 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
   async getTotalOrderedQty(poId: PurchaseOrderId): Promise<number> {
     const result = await (this.prisma as any).purchaseOrderItem.aggregate({
       where: { poId: poId.getValue() },
-      _sum: {
-        orderedQty: true,
-      },
+      _sum: { orderedQty: true },
     });
 
     return result._sum.orderedQty || 0;
@@ -144,9 +148,7 @@ export class PurchaseOrderItemRepositoryImpl implements IPurchaseOrderItemReposi
   async getTotalReceivedQty(poId: PurchaseOrderId): Promise<number> {
     const result = await (this.prisma as any).purchaseOrderItem.aggregate({
       where: { poId: poId.getValue() },
-      _sum: {
-        receivedQty: true,
-      },
+      _sum: { receivedQty: true },
     });
 
     return result._sum.receivedQty || 0;

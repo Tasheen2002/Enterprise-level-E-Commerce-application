@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { Location } from "../../../domain/entities/location.entity";
 import { LocationId } from "../../../domain/value-objects/location-id.vo";
 import {
@@ -15,8 +17,10 @@ interface LocationDatabaseRow {
   address?: any;
 }
 
-export class LocationRepositoryImpl implements ILocationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class LocationRepositoryImpl extends PrismaRepository<Location> implements ILocationRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: LocationDatabaseRow): Location {
     return Location.fromPersistence({
@@ -34,14 +38,16 @@ export class LocationRepositoryImpl implements ILocationRepository {
         id: location.locationId.getValue(),
         type: location.type.getValue() as any,
         name: location.name,
-        address: location.address?.toJSON() as any,
+        address: location.address?.getValue() as any,
       },
       update: {
         type: location.type.getValue() as any,
         name: location.name,
-        address: location.address?.toJSON() as any,
+        address: location.address?.getValue() as any,
       },
     });
+
+    await this.dispatchEvents(location);
   }
 
   async findById(locationId: LocationId): Promise<Location | null> {

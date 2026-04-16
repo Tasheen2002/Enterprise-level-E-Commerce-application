@@ -19,34 +19,34 @@ export interface ProductSnapshotData {
 }
 
 export class ProductSnapshot {
-  private readonly productId: string;
-  private readonly variantId: string;
-  private readonly sku: string;
-  private readonly name: string;
-  private readonly variantName?: string;
-  private readonly price: number;
-  private readonly imageUrl?: string;
-  private readonly images?: Array<{ storageKey: string; url?: string }>;
-  private readonly weight?: number;
-  private readonly dimensions?: {
+  private readonly _productId: string;
+  private readonly _variantId: string;
+  private readonly _sku: string;
+  private readonly _name: string;
+  private readonly _variantName?: string;
+  private readonly _price: number;
+  private readonly _imageUrl?: string;
+  private readonly _images?: Array<{ storageKey: string; url?: string }>;
+  private readonly _weight?: number;
+  private readonly _dimensions?: {
     length: number;
     width: number;
     height: number;
   };
-  private readonly attributes?: Record<string, unknown>;
+  private readonly _attributes?: Record<string, unknown>;
 
   private constructor(data: ProductSnapshotData) {
-    this.productId = data.productId;
-    this.variantId = data.variantId;
-    this.sku = data.sku;
-    this.name = data.name;
-    this.variantName = data.variantName;
-    this.price = data.price;
-    this.imageUrl = data.imageUrl;
-    this.images = data.images;
-    this.weight = data.weight;
-    this.dimensions = data.dimensions;
-    this.attributes = data.attributes;
+    this._productId = data.productId;
+    this._variantId = data.variantId;
+    this._sku = data.sku;
+    this._name = data.name;
+    this._variantName = data.variantName;
+    this._price = data.price;
+    this._imageUrl = data.imageUrl;
+    this._images = data.images;
+    this._weight = data.weight;
+    this._dimensions = data.dimensions;
+    this._attributes = data.attributes;
   }
 
   static create(data: ProductSnapshotData): ProductSnapshot {
@@ -77,69 +77,67 @@ export class ProductSnapshot {
     return new ProductSnapshot(data);
   }
 
-  getProductId(): string {
-    return this.productId;
+  get productId(): string {
+    return this._productId;
   }
 
-  getVariantId(): string {
-    return this.variantId;
+  get variantId(): string {
+    return this._variantId;
   }
 
-  getSku(): string {
-    return this.sku;
+  get sku(): string {
+    return this._sku;
   }
 
-  getName(): string {
-    return this.name;
+  get name(): string {
+    return this._name;
   }
 
-  getVariantName(): string | undefined {
-    return this.variantName;
+  get variantName(): string | undefined {
+    return this._variantName;
   }
 
-  getFullName(): string {
-    return this.variantName ? `${this.name} - ${this.variantName}` : this.name;
+  get fullName(): string {
+    return this._variantName ? `${this._name} - ${this._variantName}` : this._name;
   }
 
-  getPrice(): number {
-    return this.price;
+  get price(): number {
+    return this._price;
   }
 
-  getImageUrl(): string | undefined {
-    return this.imageUrl;
+  get imageUrl(): string | undefined {
+    return this._imageUrl;
   }
 
-  getImages(): Array<{ storageKey: string; url?: string }> | undefined {
-    return this.images;
+  get images(): Array<{ storageKey: string; url?: string }> | undefined {
+    return this._images;
   }
 
-  getWeight(): number | undefined {
-    return this.weight;
+  get weight(): number | undefined {
+    return this._weight;
   }
 
-  getDimensions():
-    | { length: number; width: number; height: number }
-    | undefined {
-    return this.dimensions;
+  get dimensions(): { length: number; width: number; height: number } | undefined {
+    return this._dimensions;
   }
 
-  getAttributes(): Record<string, unknown> | undefined {
-    return this.attributes;
+  get attributes(): Record<string, unknown> | undefined {
+    return this._attributes;
   }
 
   getValue(): ProductSnapshotData {
     return {
-      productId: this.productId,
-      variantId: this.variantId,
-      sku: this.sku,
-      name: this.name,
-      variantName: this.variantName,
-      price: this.price,
-      imageUrl: this.imageUrl,
-      images: this.images,
-      weight: this.weight,
-      dimensions: this.dimensions,
-      attributes: this.attributes,
+      productId: this._productId,
+      variantId: this._variantId,
+      sku: this._sku,
+      name: this._name,
+      variantName: this._variantName,
+      price: this._price,
+      imageUrl: this._imageUrl,
+      images: this._images,
+      weight: this._weight,
+      dimensions: this._dimensions,
+      attributes: this._attributes,
     };
   }
 
@@ -149,17 +147,17 @@ export class ProductSnapshot {
 
   equals(other: ProductSnapshot): boolean {
     return (
-      this.productId === other.productId &&
-      this.variantId === other.variantId &&
-      this.sku === other.sku &&
-      this.name === other.name &&
-      this.variantName === other.variantName &&
-      this.price === other.price &&
-      this.imageUrl === other.imageUrl &&
-      JSON.stringify(this.images) === JSON.stringify(other.images) &&
-      this.weight === other.weight &&
-      JSON.stringify(this.dimensions) === JSON.stringify(other.dimensions) &&
-      JSON.stringify(this.attributes) === JSON.stringify(other.attributes)
+      this._productId === other._productId &&
+      this._variantId === other._variantId &&
+      this._sku === other._sku &&
+      this._name === other._name &&
+      this._variantName === other._variantName &&
+      this._price === other._price &&
+      this._imageUrl === other._imageUrl &&
+      JSON.stringify(this._images) === JSON.stringify(other._images) &&
+      this._weight === other._weight &&
+      JSON.stringify(this._dimensions) === JSON.stringify(other._dimensions) &&
+      JSON.stringify(this._attributes) === JSON.stringify(other._attributes)
     );
   }
 }

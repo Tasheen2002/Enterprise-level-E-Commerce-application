@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PurchaseOrder } from "../../../domain/entities/purchase-order.entity";
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { SupplierId } from "../../../domain/value-objects/supplier-id.vo";
@@ -17,8 +19,11 @@ interface PurchaseOrderDatabaseRow {
   updatedAt: Date;
 }
 
-export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PurchaseOrderRepositoryImpl extends PrismaRepository<PurchaseOrder> implements IPurchaseOrderRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
   private toEntity(row: PurchaseOrderDatabaseRow): PurchaseOrder {
     return PurchaseOrder.fromPersistence({
       poId: PurchaseOrderId.fromString(row.poId),
@@ -47,6 +52,8 @@ export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
         updatedAt: purchaseOrder.updatedAt,
       },
     });
+
+    await this.dispatchEvents(purchaseOrder);
   }
 
   async findById(poId: PurchaseOrderId): Promise<PurchaseOrder | null> {
@@ -132,12 +139,8 @@ export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
     const now = new Date();
     const purchaseOrders = await (this.prisma as any).purchaseOrder.findMany({
       where: {
-        eta: {
-          lt: now,
-        },
-        status: {
-          in: ["sent", "part_received"],
-        },
+        eta: { lt: now },
+        status: { in: ["sent", "part_received"] },
       },
       orderBy: { eta: "asc" },
     });
@@ -150,9 +153,7 @@ export class PurchaseOrderRepositoryImpl implements IPurchaseOrderRepository {
   async findPendingReceival(): Promise<PurchaseOrder[]> {
     const purchaseOrders = await (this.prisma as any).purchaseOrder.findMany({
       where: {
-        status: {
-          in: ["sent", "part_received"],
-        },
+        status: { in: ["sent", "part_received"] },
       },
       orderBy: { eta: "asc" },
     });

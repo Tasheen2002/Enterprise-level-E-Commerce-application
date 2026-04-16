@@ -123,7 +123,7 @@ export async function registerOrderRoutes(
     "/orders/number/:orderNumber",
     {
       preValidation: [validateParams(orderNumberParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Get order by order number",
         tags: ["Orders"],
@@ -161,7 +161,7 @@ export async function registerOrderRoutes(
     "/orders/:orderId",
     {
       preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Get order by ID",
         tags: ["Orders"],
@@ -196,7 +196,7 @@ export async function registerOrderRoutes(
     "/orders",
     {
       preValidation: [validateQuery(listOrdersQuerySchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Get paginated list of orders with filtering options",
         tags: ["Orders"],
@@ -418,7 +418,7 @@ export async function registerOrderRoutes(
     "/orders/:orderId/cancel",
     {
       preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Cancel an order",
         tags: ["Orders"],

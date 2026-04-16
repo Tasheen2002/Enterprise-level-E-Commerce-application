@@ -127,7 +127,7 @@ export class OrderItem {
   }
 
   calculateSubtotal(): number {
-    return this.props.productSnapshot.getPrice() * this.props.quantity;
+    return this.props.productSnapshot.price * this.props.quantity;
   }
 
   equals(other: OrderItem): boolean {

@@ -59,7 +59,7 @@ export async function registerBackorderRoutes(
     "/backorders/:orderItemId",
     {
       preValidation: [validateParams(backorderParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Get backorder details for a specific order item",
         tags: ["Backorders"],
@@ -94,7 +94,7 @@ export async function registerBackorderRoutes(
     "/backorders",
     {
       preValidation: [validateQuery(listBackordersQuerySchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Get paginated list of backorders with filtering options (all, notified, unnotified, overdue)",

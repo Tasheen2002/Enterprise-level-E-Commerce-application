@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PickupReservation } from "../../../domain/entities/pickup-reservation.entity";
 import { ReservationId } from "../../../domain/value-objects/reservation-id.vo";
 import {
@@ -18,9 +20,12 @@ interface PickupReservationDatabaseRow {
 }
 
 export class PickupReservationRepositoryImpl
+  extends PrismaRepository<PickupReservation>
   implements IPickupReservationRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: PickupReservationDatabaseRow): PickupReservation {
     return PickupReservation.fromPersistence({
@@ -54,6 +59,8 @@ export class PickupReservationRepositoryImpl
         status: reservation.status.getValue(),
       },
     });
+
+    await this.dispatchEvents(reservation);
   }
 
   async findById(

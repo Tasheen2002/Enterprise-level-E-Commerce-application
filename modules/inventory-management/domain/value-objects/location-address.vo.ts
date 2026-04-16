@@ -47,31 +47,31 @@ export class LocationAddress {
     });
   }
 
-  getAddressLine1(): string | undefined {
+  get addressLine1(): string | undefined {
     return this.props.addressLine1;
   }
 
-  getAddressLine2(): string | undefined {
+  get addressLine2(): string | undefined {
     return this.props.addressLine2;
   }
 
-  getCity(): string | undefined {
+  get city(): string | undefined {
     return this.props.city;
   }
 
-  getState(): string | undefined {
+  get state(): string | undefined {
     return this.props.state;
   }
 
-  getPostalCode(): string | undefined {
+  get postalCode(): string | undefined {
     return this.props.postalCode;
   }
 
-  getCountry(): string | undefined {
+  get country(): string | undefined {
     return this.props.country;
   }
 
-  getPhone(): string | undefined {
+  get phone(): string | undefined {
     return this.props.phone;
   }
 
@@ -100,9 +100,5 @@ export class LocationAddress {
       this.props.country,
     ].filter(Boolean);
     return parts.join(", ");
-  }
-
-  toJSON(): LocationAddressProps {
-    return { ...this.props };
   }
 }

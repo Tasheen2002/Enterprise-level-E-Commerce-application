@@ -42,19 +42,19 @@ export class SupplierContact {
     });
   }
 
-  getName(): string | undefined {
+  get name(): string | undefined {
     return this.props.name;
   }
 
-  getEmail(): string | undefined {
+  get email(): string | undefined {
     return this.props.email;
   }
 
-  getPhone(): string | undefined {
+  get phone(): string | undefined {
     return this.props.phone;
   }
 
-  getRole(): string | undefined {
+  get role(): string | undefined {
     return this.props.role;
   }
 
@@ -78,9 +78,5 @@ export class SupplierContact {
     if (name) return name;
     if (email) return email;
     return "";
-  }
-
-  toJSON(): SupplierContactProps {
-    return { ...this.props };
   }
 }

@@ -1,6 +1,8 @@
-import { UserService, ListUsersResult } from '../services/user.service';
+import { UserService } from '../services/user.service';
 import { UserRole } from '../../domain/enums/user-role.enum';
 import { UserStatus } from '../../domain/enums/user-status.enum';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { UserListItem } from '../../domain/repositories/iuser.repository';
 import {
   IQuery,
   IQueryHandler,
@@ -18,10 +20,10 @@ export interface ListUsersQuery extends IQuery {
   readonly sortOrder?: 'asc' | 'desc';
 }
 
-export class ListUsersHandler implements IQueryHandler<ListUsersQuery, QueryResult<ListUsersResult>> {
+export class ListUsersHandler implements IQueryHandler<ListUsersQuery, QueryResult<PaginatedResult<UserListItem>>> {
   constructor(private readonly userService: UserService) {}
 
-  async handle(query: ListUsersQuery): Promise<QueryResult<ListUsersResult>> {
+  async handle(query: ListUsersQuery): Promise<QueryResult<PaginatedResult<UserListItem>>> {
     try {
       const data = await this.userService.listUsers({
         search: query.search,
@@ -39,5 +41,3 @@ export class ListUsersHandler implements IQueryHandler<ListUsersQuery, QueryResu
     }
   }
 }
-
-export { ListUsersResult };

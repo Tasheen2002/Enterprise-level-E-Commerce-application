@@ -2,26 +2,26 @@ import { DomainValidationError } from "../errors/inventory-management.errors";
 
 export class StockLevel {
   private constructor(
-    private readonly onHand: number,
-    private readonly reserved: number,
-    private readonly lowStockThreshold: number | null,
-    private readonly safetyStock: number | null,
+    private readonly _onHand: number,
+    private readonly _reserved: number,
+    private readonly _lowStockThreshold: number | null,
+    private readonly _safetyStock: number | null,
   ) {
-    if (onHand < 0) {
+    if (_onHand < 0) {
       throw new DomainValidationError("On-hand quantity cannot be negative");
     }
-    if (reserved < 0) {
+    if (_reserved < 0) {
       throw new DomainValidationError("Reserved quantity cannot be negative");
     }
-    if (reserved > onHand) {
+    if (_reserved > _onHand) {
       throw new DomainValidationError(
         "Reserved quantity cannot exceed on-hand quantity",
       );
     }
-    if (lowStockThreshold !== null && lowStockThreshold < 0) {
+    if (_lowStockThreshold !== null && _lowStockThreshold < 0) {
       throw new DomainValidationError("Low stock threshold cannot be negative");
     }
-    if (safetyStock !== null && safetyStock < 0) {
+    if (_safetyStock !== null && _safetyStock < 0) {
       throw new DomainValidationError("Safety stock cannot be negative");
     }
   }
@@ -40,42 +40,42 @@ export class StockLevel {
     );
   }
 
-  getOnHand(): number {
-    return this.onHand;
+  get onHand(): number {
+    return this._onHand;
   }
 
-  getReserved(): number {
-    return this.reserved;
+  get reserved(): number {
+    return this._reserved;
   }
 
-  getAvailable(): number {
-    return this.onHand - this.reserved;
+  get available(): number {
+    return this._onHand - this._reserved;
   }
 
-  getLowStockThreshold(): number | null {
-    return this.lowStockThreshold;
+  get lowStockThreshold(): number | null {
+    return this._lowStockThreshold;
   }
 
-  getSafetyStock(): number | null {
-    return this.safetyStock;
+  get safetyStock(): number | null {
+    return this._safetyStock;
   }
 
   isLowStock(): boolean {
-    if (this.lowStockThreshold === null) {
+    if (this._lowStockThreshold === null) {
       return false;
     }
-    return this.getAvailable() <= this.lowStockThreshold;
+    return this.available <= this._lowStockThreshold;
   }
 
   isOutOfStock(): boolean {
-    return this.getAvailable() <= 0;
+    return this.available <= 0;
   }
 
   isBelowSafetyStock(): boolean {
-    if (this.safetyStock === null) {
+    if (this._safetyStock === null) {
       return false;
     }
-    return this.getAvailable() <= this.safetyStock;
+    return this.available <= this._safetyStock;
   }
 
   addStock(quantity: number): StockLevel {
@@ -83,10 +83,10 @@ export class StockLevel {
       throw new DomainValidationError("Quantity to add must be positive");
     }
     return new StockLevel(
-      this.onHand + quantity,
-      this.reserved,
-      this.lowStockThreshold,
-      this.safetyStock,
+      this._onHand + quantity,
+      this._reserved,
+      this._lowStockThreshold,
+      this._safetyStock,
     );
   }
 
@@ -94,22 +94,22 @@ export class StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to remove must be positive");
     }
-    const newOnHand = this.onHand - quantity;
+    const newOnHand = this._onHand - quantity;
     if (newOnHand < 0) {
       throw new DomainValidationError(
         "Cannot remove more stock than available",
       );
     }
-    if (newOnHand < this.reserved) {
+    if (newOnHand < this._reserved) {
       throw new DomainValidationError(
         "Cannot remove stock below reserved quantity. Release reservations first.",
       );
     }
     return new StockLevel(
       newOnHand,
-      this.reserved,
-      this.lowStockThreshold,
-      this.safetyStock,
+      this._reserved,
+      this._lowStockThreshold,
+      this._safetyStock,
     );
   }
 
@@ -117,16 +117,16 @@ export class StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to reserve must be positive");
     }
-    if (this.getAvailable() < quantity) {
+    if (this.available < quantity) {
       throw new DomainValidationError(
         "Insufficient available stock to reserve",
       );
     }
     return new StockLevel(
-      this.onHand,
-      this.reserved + quantity,
-      this.lowStockThreshold,
-      this.safetyStock,
+      this._onHand,
+      this._reserved + quantity,
+      this._lowStockThreshold,
+      this._safetyStock,
     );
   }
 
@@ -134,16 +134,16 @@ export class StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to fulfill must be positive");
     }
-    if (this.reserved < quantity) {
+    if (this._reserved < quantity) {
       throw new DomainValidationError(
         "Cannot fulfill more than reserved quantity",
       );
     }
     return new StockLevel(
-      this.onHand - quantity,
-      this.reserved - quantity,
-      this.lowStockThreshold,
-      this.safetyStock,
+      this._onHand - quantity,
+      this._reserved - quantity,
+      this._lowStockThreshold,
+      this._safetyStock,
     );
   }
 
@@ -152,19 +152,19 @@ export class StockLevel {
     safetyStock?: number | null,
   ): StockLevel {
     return new StockLevel(
-      this.onHand,
-      this.reserved,
-      lowStockThreshold ?? this.lowStockThreshold,
-      safetyStock ?? this.safetyStock,
+      this._onHand,
+      this._reserved,
+      lowStockThreshold ?? this._lowStockThreshold,
+      safetyStock ?? this._safetyStock,
     );
   }
 
   equals(other: StockLevel): boolean {
     return (
-      this.onHand === other.onHand &&
-      this.reserved === other.reserved &&
-      this.lowStockThreshold === other.lowStockThreshold &&
-      this.safetyStock === other.safetyStock
+      this._onHand === other._onHand &&
+      this._reserved === other._reserved &&
+      this._lowStockThreshold === other._lowStockThreshold &&
+      this._safetyStock === other._safetyStock
     );
   }
 }

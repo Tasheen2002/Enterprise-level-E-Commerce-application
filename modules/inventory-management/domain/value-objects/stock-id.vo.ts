@@ -2,8 +2,8 @@ import { DomainValidationError } from "../errors/inventory-management.errors";
 
 export class StockId {
   private constructor(
-    private readonly variantId: string,
-    private readonly locationId: string,
+    private readonly _variantId: string,
+    private readonly _locationId: string,
   ) {}
 
   static create(variantId: string, locationId: string): StockId {
@@ -15,21 +15,21 @@ export class StockId {
     return new StockId(variantId, locationId);
   }
 
-  getVariantId(): string {
-    return this.variantId;
+  get variantId(): string {
+    return this._variantId;
   }
 
-  getLocationId(): string {
-    return this.locationId;
+  get locationId(): string {
+    return this._locationId;
   }
 
   equals(other: StockId): boolean {
     return (
-      this.variantId === other.variantId && this.locationId === other.locationId
+      this._variantId === other._variantId && this._locationId === other._locationId
     );
   }
 
   toString(): string {
-    return `${this.variantId}:${this.locationId}`;
+    return `${this._variantId}:${this._locationId}`;
   }
 }

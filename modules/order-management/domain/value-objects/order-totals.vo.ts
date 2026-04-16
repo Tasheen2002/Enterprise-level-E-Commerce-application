@@ -9,18 +9,18 @@ export interface OrderTotalsData {
 }
 
 export class OrderTotals {
-  private readonly subtotal: number;
-  private readonly tax: number;
-  private readonly shipping: number;
-  private readonly discount: number;
-  private readonly total: number;
+  private readonly _subtotal: number;
+  private readonly _tax: number;
+  private readonly _shipping: number;
+  private readonly _discount: number;
+  private readonly _total: number;
 
   private constructor(data: OrderTotalsData) {
-    this.subtotal = data.subtotal;
-    this.tax = data.tax;
-    this.shipping = data.shipping;
-    this.discount = data.discount;
-    this.total = data.total;
+    this._subtotal = data.subtotal;
+    this._tax = data.tax;
+    this._shipping = data.shipping;
+    this._discount = data.discount;
+    this._total = data.total;
   }
 
   static create(data: OrderTotalsData): OrderTotals {
@@ -63,33 +63,33 @@ export class OrderTotals {
     });
   }
 
-  getSubtotal(): number {
-    return this.subtotal;
+  get subtotal(): number {
+    return this._subtotal;
   }
 
-  getTax(): number {
-    return this.tax;
+  get tax(): number {
+    return this._tax;
   }
 
-  getShipping(): number {
-    return this.shipping;
+  get shipping(): number {
+    return this._shipping;
   }
 
-  getDiscount(): number {
-    return this.discount;
+  get discount(): number {
+    return this._discount;
   }
 
-  getTotal(): number {
-    return this.total;
+  get total(): number {
+    return this._total;
   }
 
   getValue(): OrderTotalsData {
     return {
-      subtotal: this.subtotal,
-      tax: this.tax,
-      shipping: this.shipping,
-      discount: this.discount,
-      total: this.total,
+      subtotal: this._subtotal,
+      tax: this._tax,
+      shipping: this._shipping,
+      discount: this._discount,
+      total: this._total,
     };
   }
 
@@ -99,11 +99,11 @@ export class OrderTotals {
 
   equals(other: OrderTotals): boolean {
     return (
-      this.subtotal === other.subtotal &&
-      this.tax === other.tax &&
-      this.shipping === other.shipping &&
-      this.discount === other.discount &&
-      this.total === other.total
+      this._subtotal === other._subtotal &&
+      this._tax === other._tax &&
+      this._shipping === other._shipping &&
+      this._discount === other._discount &&
+      this._total === other._total
     );
   }
 }

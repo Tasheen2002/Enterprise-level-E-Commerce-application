@@ -170,7 +170,7 @@ export class Order extends AggregateRoot {
       new OrderCreatedEvent(
         order.props.id.getValue(),
         order.props.orderNumber.getValue(),
-        order.props.totals.getTotal(),
+        order.props.totals.total,
       ),
     );
 

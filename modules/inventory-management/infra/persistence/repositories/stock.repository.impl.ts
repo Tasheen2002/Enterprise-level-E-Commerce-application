@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { Stock, StockProps } from "../../../domain/entities/stock.entity";
 import { StockLevel } from "../../../domain/value-objects/stock-level.vo";
 import { IStockRepository } from "../../../domain/repositories/stock.repository";
@@ -14,8 +16,10 @@ interface StockDatabaseRow {
   location?: any;
 }
 
-export class StockRepositoryImpl implements IStockRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class StockRepositoryImpl extends PrismaRepository<Stock> implements IStockRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: StockDatabaseRow): Stock {
     return Stock.fromPersistence({
@@ -43,18 +47,20 @@ export class StockRepositoryImpl implements IStockRepository {
       create: {
         variantId: stock.variantId,
         locationId: stock.locationId,
-        onHand: stockLevel.getOnHand(),
-        reserved: stockLevel.getReserved(),
-        lowStockThreshold: stockLevel.getLowStockThreshold(),
-        safetyStock: stockLevel.getSafetyStock(),
+        onHand: stockLevel.onHand,
+        reserved: stockLevel.reserved,
+        lowStockThreshold: stockLevel.lowStockThreshold,
+        safetyStock: stockLevel.safetyStock,
       },
       update: {
-        onHand: stockLevel.getOnHand(),
-        reserved: stockLevel.getReserved(),
-        lowStockThreshold: stockLevel.getLowStockThreshold(),
-        safetyStock: stockLevel.getSafetyStock(),
+        onHand: stockLevel.onHand,
+        reserved: stockLevel.reserved,
+        lowStockThreshold: stockLevel.lowStockThreshold,
+        safetyStock: stockLevel.safetyStock,
       },
     });
+
+    await this.dispatchEvents(stock);
   }
 
   async findByVariantAndLocation(
@@ -261,8 +267,8 @@ export class StockRepositoryImpl implements IStockRepository {
 
     if (sortBy === "available") {
       stockEntities.sort((a: Stock, b: Stock) => {
-        const availableA = a.stockLevel.getAvailable();
-        const availableB = b.stockLevel.getAvailable();
+        const availableA = a.stockLevel.available;
+        const availableB = b.stockLevel.available;
         return sortOrder === "asc"
           ? availableA - availableB
           : availableB - availableA;

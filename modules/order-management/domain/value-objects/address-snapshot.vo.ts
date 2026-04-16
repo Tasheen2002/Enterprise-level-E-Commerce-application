@@ -14,55 +14,49 @@ export interface AddressSnapshotData {
 }
 
 export class AddressSnapshot {
-  private readonly firstName: string;
-  private readonly lastName: string;
-  private readonly addressLine1: string;
-  private readonly addressLine2?: string;
-  private readonly city: string;
-  private readonly state: string;
-  private readonly postalCode: string;
-  private readonly country: string;
-  private readonly phone?: string;
-  private readonly email?: string;
+  private readonly _firstName: string;
+  private readonly _lastName: string;
+  private readonly _addressLine1: string;
+  private readonly _addressLine2: string | undefined;
+  private readonly _city: string;
+  private readonly _state: string;
+  private readonly _postalCode: string;
+  private readonly _country: string;
+  private readonly _phone: string | undefined;
+  private readonly _email: string | undefined;
 
   private constructor(data: AddressSnapshotData) {
-    this.firstName = data.firstName;
-    this.lastName = data.lastName;
-    this.addressLine1 = data.addressLine1;
-    this.addressLine2 = data.addressLine2;
-    this.city = data.city;
-    this.state = data.state;
-    this.postalCode = data.postalCode;
-    this.country = data.country;
-    this.phone = data.phone;
-    this.email = data.email;
+    this._firstName = data.firstName;
+    this._lastName = data.lastName;
+    this._addressLine1 = data.addressLine1;
+    this._addressLine2 = data.addressLine2;
+    this._city = data.city;
+    this._state = data.state;
+    this._postalCode = data.postalCode;
+    this._country = data.country;
+    this._phone = data.phone;
+    this._email = data.email;
   }
 
   static create(data: AddressSnapshotData): AddressSnapshot {
     if (!data.firstName || data.firstName.trim().length === 0) {
       throw new DomainValidationError("First name is required");
     }
-
     if (!data.lastName || data.lastName.trim().length === 0) {
       throw new DomainValidationError("Last name is required");
     }
-
     if (!data.addressLine1 || data.addressLine1.trim().length === 0) {
       throw new DomainValidationError("Address line 1 is required");
     }
-
     if (!data.city || data.city.trim().length === 0) {
       throw new DomainValidationError("City is required");
     }
-
     if (!data.state || data.state.trim().length === 0) {
       throw new DomainValidationError("State is required");
     }
-
     if (!data.postalCode || data.postalCode.trim().length === 0) {
       throw new DomainValidationError("Postal code is required");
     }
-
     if (!data.country || data.country.trim().length === 0) {
       throw new DomainValidationError("Country is required");
     }
@@ -70,62 +64,52 @@ export class AddressSnapshot {
     return new AddressSnapshot(data);
   }
 
-  getFirstName(): string {
-    return this.firstName;
+  get firstName(): string {
+    return this._firstName;
   }
-
-  getLastName(): string {
-    return this.lastName;
+  get lastName(): string {
+    return this._lastName;
   }
-
-  getFullName(): string {
-    return `${this.firstName} ${this.lastName}`;
+  get fullName(): string {
+    return `${this._firstName} ${this._lastName}`;
   }
-
-  getAddressLine1(): string {
-    return this.addressLine1;
+  get addressLine1(): string {
+    return this._addressLine1;
   }
-
-  getAddressLine2(): string | undefined {
-    return this.addressLine2;
+  get addressLine2(): string | undefined {
+    return this._addressLine2;
   }
-
-  getCity(): string {
-    return this.city;
+  get city(): string {
+    return this._city;
   }
-
-  getState(): string {
-    return this.state;
+  get state(): string {
+    return this._state;
   }
-
-  getPostalCode(): string {
-    return this.postalCode;
+  get postalCode(): string {
+    return this._postalCode;
   }
-
-  getCountry(): string {
-    return this.country;
+  get country(): string {
+    return this._country;
   }
-
-  getPhone(): string | undefined {
-    return this.phone;
+  get phone(): string | undefined {
+    return this._phone;
   }
-
-  getEmail(): string | undefined {
-    return this.email;
+  get email(): string | undefined {
+    return this._email;
   }
 
   getValue(): AddressSnapshotData {
     return {
-      firstName: this.firstName,
-      lastName: this.lastName,
-      addressLine1: this.addressLine1,
-      addressLine2: this.addressLine2,
-      city: this.city,
-      state: this.state,
-      postalCode: this.postalCode,
-      country: this.country,
-      phone: this.phone,
-      email: this.email,
+      firstName: this._firstName,
+      lastName: this._lastName,
+      addressLine1: this._addressLine1,
+      addressLine2: this._addressLine2,
+      city: this._city,
+      state: this._state,
+      postalCode: this._postalCode,
+      country: this._country,
+      phone: this._phone,
+      email: this._email,
     };
   }
 
@@ -135,16 +119,16 @@ export class AddressSnapshot {
 
   equals(other: AddressSnapshot): boolean {
     return (
-      this.firstName === other.firstName &&
-      this.lastName === other.lastName &&
-      this.addressLine1 === other.addressLine1 &&
-      this.addressLine2 === other.addressLine2 &&
-      this.city === other.city &&
-      this.state === other.state &&
-      this.postalCode === other.postalCode &&
-      this.country === other.country &&
-      this.phone === other.phone &&
-      this.email === other.email
+      this._firstName === other._firstName &&
+      this._lastName === other._lastName &&
+      this._addressLine1 === other._addressLine1 &&
+      this._addressLine2 === other._addressLine2 &&
+      this._city === other._city &&
+      this._state === other._state &&
+      this._postalCode === other._postalCode &&
+      this._country === other._country &&
+      this._phone === other._phone &&
+      this._email === other._email
     );
   }
 }

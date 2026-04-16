@@ -188,11 +188,11 @@ export class Stock extends AggregateRoot {
     return {
       variantId: entity.props.variantId,
       locationId: entity.props.locationId,
-      onHand: entity.props.stockLevel.getOnHand(),
-      reserved: entity.props.stockLevel.getReserved(),
-      available: entity.props.stockLevel.getAvailable(),
-      lowStockThreshold: entity.props.stockLevel.getLowStockThreshold(),
-      safetyStock: entity.props.stockLevel.getSafetyStock(),
+      onHand: entity.props.stockLevel.onHand,
+      reserved: entity.props.stockLevel.reserved,
+      available: entity.props.stockLevel.available,
+      lowStockThreshold: entity.props.stockLevel.lowStockThreshold,
+      safetyStock: entity.props.stockLevel.safetyStock,
       isLowStock: entity.props.stockLevel.isLowStock(),
       isOutOfStock: entity.props.stockLevel.isOutOfStock(),
     };
