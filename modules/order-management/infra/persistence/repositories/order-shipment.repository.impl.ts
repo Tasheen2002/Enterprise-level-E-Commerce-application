@@ -39,33 +39,20 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
   }
 
   async save(shipment: OrderShipment): Promise<void> {
-    await this.prisma.orderShipment.create({
-      data: {
-        id: shipment.shipmentId,
-        orderId: shipment.orderId,
-        carrier: shipment.carrier || null,
-        service: shipment.service || null,
-        trackingNo: shipment.trackingNumber || null,
-        giftReceipt: shipment.giftReceipt,
-        pickupLocationId: shipment.pickupLocationId || null,
-        shippedAt: shipment.shippedAt || null,
-        deliveredAt: shipment.deliveredAt || null,
-      },
-    });
-  }
-
-  async update(shipment: OrderShipment): Promise<void> {
-    await this.prisma.orderShipment.update({
+    const data = {
+      orderId: shipment.orderId,
+      carrier: shipment.carrier || null,
+      service: shipment.service || null,
+      trackingNo: shipment.trackingNumber || null,
+      giftReceipt: shipment.giftReceipt,
+      pickupLocationId: shipment.pickupLocationId || null,
+      shippedAt: shipment.shippedAt || null,
+      deliveredAt: shipment.deliveredAt || null,
+    };
+    await this.prisma.orderShipment.upsert({
       where: { id: shipment.shipmentId },
-      data: {
-        carrier: shipment.carrier || null,
-        service: shipment.service || null,
-        trackingNo: shipment.trackingNumber || null,
-        giftReceipt: shipment.giftReceipt,
-        pickupLocationId: shipment.pickupLocationId || null,
-        shippedAt: shipment.shippedAt || null,
-        deliveredAt: shipment.deliveredAt || null,
-      },
+      create: { id: shipment.shipmentId, ...data },
+      update: data,
     });
   }
 

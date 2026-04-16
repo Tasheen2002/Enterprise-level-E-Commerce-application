@@ -19,8 +19,8 @@ export async function registerOrderItemRoutes(
   fastify.post(
     "/orders/:orderId/items",
     {
-      preValidation: [validateParams(orderItemsParamsSchema)],
-      preHandler: [validateBody(addOrderItemSchema), authenticateUser],
+      preValidation: [validateParams(orderItemsParamsSchema), validateBody(addOrderItemSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Add an item to an existing order. Order must be in 'created' status.",
@@ -139,8 +139,8 @@ export async function registerOrderItemRoutes(
   fastify.patch(
     "/orders/:orderId/items/:itemId",
     {
-      preValidation: [validateParams(orderItemParamsSchema)],
-      preHandler: [validateBody(updateOrderItemSchema), authenticateUser],
+      preValidation: [validateParams(orderItemParamsSchema), validateBody(updateOrderItemSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Update an order item. Can update quantity and/or gift status. Order must be in 'created' status.",

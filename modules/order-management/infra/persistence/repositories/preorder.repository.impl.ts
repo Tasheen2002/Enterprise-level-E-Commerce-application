@@ -27,22 +27,14 @@ export class PreorderRepositoryImpl implements IPreorderRepository {
   }
 
   async save(preorder: Preorder): Promise<void> {
-    await this.prisma.preorder.create({
-      data: {
-        orderItemId: preorder.orderItemId,
-        releaseDate: preorder.releaseDate || null,
-        notifiedAt: preorder.notifiedAt || null,
-      },
-    });
-  }
-
-  async update(preorder: Preorder): Promise<void> {
-    await this.prisma.preorder.update({
+    const data = {
+      releaseDate: preorder.releaseDate || null,
+      notifiedAt: preorder.notifiedAt || null,
+    };
+    await this.prisma.preorder.upsert({
       where: { orderItemId: preorder.orderItemId },
-      data: {
-        releaseDate: preorder.releaseDate || null,
-        notifiedAt: preorder.notifiedAt || null,
-      },
+      create: { orderItemId: preorder.orderItemId, ...data },
+      update: data,
     });
   }
 

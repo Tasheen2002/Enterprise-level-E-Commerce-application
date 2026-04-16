@@ -20,8 +20,8 @@ export async function registerOrderStatusHistoryRoutes(
   fastify.post(
     "/orders/:orderId/status-history",
     {
-      preValidation: [validateParams(orderStatusHistoryParamsSchema)],
-      preHandler: [validateBody(logStatusChangeSchema), ...authenticateStaff],
+      preValidation: [validateParams(orderStatusHistoryParamsSchema), validateBody(logStatusChangeSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description:
           "Log a status change for an order (Staff/Admin only). Creates an audit trail entry.",

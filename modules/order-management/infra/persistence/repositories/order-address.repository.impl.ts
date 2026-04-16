@@ -25,24 +25,14 @@ export class OrderAddressRepositoryImpl implements IOrderAddressRepository {
   }
 
   async save(orderAddress: OrderAddress): Promise<void> {
-    await this.prisma.orderAddress.create({
-      data: {
-        orderId: orderAddress.orderId,
-        billingSnapshot: orderAddress.billingAddress.getValue() as any,
-        shippingSnapshot: orderAddress.shippingAddress.getValue() as any,
-      },
-    });
-  }
-
-  async update(orderAddress: OrderAddress): Promise<void> {
-    await this.prisma.orderAddress.update({
-      where: {
-        orderId: orderAddress.orderId,
-      },
-      data: {
-        billingSnapshot: orderAddress.billingAddress.getValue() as any,
-        shippingSnapshot: orderAddress.shippingAddress.getValue() as any,
-      },
+    const data = {
+      billingSnapshot: orderAddress.billingAddress.getValue() as any,
+      shippingSnapshot: orderAddress.shippingAddress.getValue() as any,
+    };
+    await this.prisma.orderAddress.upsert({
+      where: { orderId: orderAddress.orderId },
+      create: { orderId: orderAddress.orderId, ...data },
+      update: data,
     });
   }
 

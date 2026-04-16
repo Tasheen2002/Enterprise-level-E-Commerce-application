@@ -27,22 +27,14 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
   }
 
   async save(backorder: Backorder): Promise<void> {
-    await this.prisma.backorder.create({
-      data: {
-        orderItemId: backorder.orderItemId,
-        promisedEta: backorder.promisedEta || null,
-        notifiedAt: backorder.notifiedAt || null,
-      },
-    });
-  }
-
-  async update(backorder: Backorder): Promise<void> {
-    await this.prisma.backorder.update({
+    const data = {
+      promisedEta: backorder.promisedEta || null,
+      notifiedAt: backorder.notifiedAt || null,
+    };
+    await this.prisma.backorder.upsert({
       where: { orderItemId: backorder.orderItemId },
-      data: {
-        promisedEta: backorder.promisedEta || null,
-        notifiedAt: backorder.notifiedAt || null,
-      },
+      create: { orderItemId: backorder.orderItemId, ...data },
+      update: data,
     });
   }
 

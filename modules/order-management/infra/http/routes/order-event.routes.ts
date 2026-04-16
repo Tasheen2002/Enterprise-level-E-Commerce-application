@@ -21,8 +21,8 @@ export async function registerOrderEventRoutes(
   fastify.post(
     "/orders/:orderId/events",
     {
-      preValidation: [validateParams(orderEventsParamsSchema)],
-      preHandler: [validateBody(logOrderEventSchema), ...authenticateStaff],
+      preValidation: [validateParams(orderEventsParamsSchema), validateBody(logOrderEventSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description:
           "Log a custom event for an order (Staff/Admin only). Creates an audit trail entry.",

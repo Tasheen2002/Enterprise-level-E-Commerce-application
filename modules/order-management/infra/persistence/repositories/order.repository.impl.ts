@@ -135,102 +135,34 @@ export class OrderRepositoryImpl
     const address = order.address;
     const shipments = order.shipments;
 
-    await this.prisma.$transaction(async (tx) => {
-      // Create order
-      await tx.order.create({
-        data: {
-          id: orderId,
-          orderNo: order.orderNumber.getValue(),
-          userId: order.userId || null,
-          guestToken: order.guestToken || null,
-          totals: order.totals.getValue() as any,
-          status: order.status.getValue() as PrismaOrderStatusEnum,
-          source: order.source.getValue(),
-          currency: order.currency.getValue(),
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-        },
-      });
-
-      // Create order items
-      if (items.length > 0) {
-        await tx.orderItem.createMany({
-          data: items.map((item) => ({
-            id: item.orderItemId,
-            orderId: orderId,
-            variantId: item.variantId,
-            qty: item.quantity,
-            productSnapshot: item.productSnapshot.getValue() as any,
-            isGift: item.isGift,
-            giftMessage: item.giftMessage,
-          })),
-        });
-      }
-
-      // Create order address
-      if (address) {
-        await tx.orderAddress.create({
-          data: {
-            orderId: orderId,
-            billingSnapshot: address.billingAddress.getValue() as any,
-            shippingSnapshot: address.shippingAddress.getValue() as any,
-          },
-        });
-      }
-
-      // Create shipments
-      if (shipments.length > 0) {
-        await tx.orderShipment.createMany({
-          data: shipments.map((shipment) => ({
-            id: shipment.shipmentId,
-            orderId: orderId,
-            carrier: shipment.carrier,
-            service: shipment.service,
-            trackingNo: shipment.trackingNumber,
-            giftReceipt: shipment.giftReceipt,
-            pickupLocationId: shipment.pickupLocationId,
-            shippedAt: shipment.shippedAt,
-            deliveredAt: shipment.deliveredAt,
-          })),
-        });
-      }
-    });
-
-    await this.dispatchEvents(order);
-  }
-
-  async update(order: Order): Promise<void> {
-    const orderId = order.id.getValue();
-    const items = order.items;
-    const address = order.address;
-    const shipments = order.shipments;
+    const orderData = {
+      orderNo: order.orderNumber.getValue(),
+      userId: order.userId || null,
+      guestToken: order.guestToken || null,
+      totals: order.totals.getValue() as any,
+      status: order.status.getValue() as PrismaOrderStatusEnum,
+      source: order.source.getValue(),
+      currency: order.currency.getValue(),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
 
     await this.prisma.$transaction(async (tx) => {
-      // Update order
-      await tx.order.update({
+      // Upsert order
+      await tx.order.upsert({
         where: { id: orderId },
-        data: {
-          orderNo: order.orderNumber.getValue(),
-          userId: order.userId || null,
-          guestToken: order.guestToken || null,
-          totals: order.totals.getValue() as any,
-          status: order.status.getValue() as PrismaOrderStatusEnum,
-          source: order.source.getValue(),
-          currency: order.currency.getValue(),
-          updatedAt: order.updatedAt,
-        },
+        create: { id: orderId, ...orderData },
+        update: orderData,
       });
 
-      // Delete and recreate order items
-      await tx.orderItem.deleteMany({
-        where: { orderId: orderId },
-      });
+      // Sync order items: delete existing, recreate from entity state
+      await tx.orderItem.deleteMany({ where: { orderId } });
 
       if (items.length > 0) {
         await tx.orderItem.createMany({
           data: items.map((item) => ({
             id: item.orderItemId,
-            orderId: orderId,
+            orderId,
             variantId: item.variantId,
             qty: item.quantity,
             productSnapshot: item.productSnapshot.getValue() as any,
@@ -240,12 +172,12 @@ export class OrderRepositoryImpl
         });
       }
 
-      // Update or create order address
+      // Upsert or remove order address
       if (address) {
         await tx.orderAddress.upsert({
-          where: { orderId: orderId },
+          where: { orderId },
           create: {
-            orderId: orderId,
+            orderId,
             billingSnapshot: address.billingAddress.getValue() as any,
             shippingSnapshot: address.shippingAddress.getValue() as any,
           },
@@ -255,21 +187,17 @@ export class OrderRepositoryImpl
           },
         });
       } else {
-        await tx.orderAddress.deleteMany({
-          where: { orderId: orderId },
-        });
+        await tx.orderAddress.deleteMany({ where: { orderId } });
       }
 
-      // Delete and recreate shipments
-      await tx.orderShipment.deleteMany({
-        where: { orderId: orderId },
-      });
+      // Sync shipments: delete existing, recreate from entity state
+      await tx.orderShipment.deleteMany({ where: { orderId } });
 
       if (shipments.length > 0) {
         await tx.orderShipment.createMany({
           data: shipments.map((shipment) => ({
             id: shipment.shipmentId,
-            orderId: orderId,
+            orderId,
             carrier: shipment.carrier,
             service: shipment.service,
             trackingNo: shipment.trackingNumber,

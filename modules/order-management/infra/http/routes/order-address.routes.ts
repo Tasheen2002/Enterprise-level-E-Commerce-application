@@ -44,8 +44,8 @@ export async function registerOrderAddressRoutes(
   fastify.post(
     "/orders/:orderId/addresses",
     {
-      preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [validateBody(setOrderAddressesSchema), authenticateUser],
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(setOrderAddressesSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Set billing and shipping addresses for an order. Order must be in 'created' status.",
@@ -129,8 +129,8 @@ export async function registerOrderAddressRoutes(
   fastify.patch(
     "/orders/:orderId/addresses/billing",
     {
-      preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [validateBody(updateBillingAddressSchema), authenticateUser],
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateBillingAddressSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Update billing address for an order",
         tags: ["Order Addresses"],
@@ -168,8 +168,8 @@ export async function registerOrderAddressRoutes(
   fastify.patch(
     "/orders/:orderId/addresses/shipping",
     {
-      preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [validateBody(updateShippingAddressSchema), authenticateUser],
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateShippingAddressSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Update shipping address for an order",
         tags: ["Order Addresses"],

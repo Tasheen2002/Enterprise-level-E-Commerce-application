@@ -140,8 +140,8 @@ export async function registerPreorderRoutes(
   fastify.patch(
     "/preorders/:orderItemId/release-date",
     {
-      preValidation: [validateParams(preorderParamsSchema)],
-      preHandler: [validateBody(updatePreorderReleaseDateSchema), ...authenticateAdmin],
+      preValidation: [validateParams(preorderParamsSchema), validateBody(updatePreorderReleaseDateSchema)],
+      preHandler: [...authenticateAdmin],
       schema: {
         description: "Update the expected release date for a preorder (Admin only)",
         tags: ["Preorders"],

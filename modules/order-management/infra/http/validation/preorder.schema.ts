@@ -20,11 +20,11 @@ export const listPreordersQuerySchema = z.object({
 
 export const createPreorderSchema = z.object({
   orderItemId: z.uuid(),
-  releaseDate: z.iso.datetime().transform(v => new Date(v)).optional(),
+  releaseDate: z.string().datetime().transform(v => new Date(v)).optional(),
 });
 
 export const updatePreorderReleaseDateSchema = z.object({
-  releaseDate: z.iso.datetime().transform(v => new Date(v)),
+  releaseDate: z.string().datetime().transform(v => new Date(v)),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

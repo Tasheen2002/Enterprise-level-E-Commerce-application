@@ -252,8 +252,8 @@ export async function registerOrderRoutes(
   fastify.patch(
     "/orders/:orderId/status",
     {
-      preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: [validateBody(updateOrderStatusSchema), authenticateUser],
+      preValidation: [validateParams(orderIdParamsSchema), validateBody(updateOrderStatusSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Update order status",
         tags: ["Orders"],
@@ -294,8 +294,8 @@ export async function registerOrderRoutes(
   fastify.patch(
     "/orders/:orderId/totals",
     {
-      preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: [validateBody(updateOrderTotalsSchema), ...authenticateStaff],
+      preValidation: [validateParams(orderIdParamsSchema), validateBody(updateOrderTotalsSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description: "Update order totals (Staff/Admin only)",
         tags: ["Orders"],

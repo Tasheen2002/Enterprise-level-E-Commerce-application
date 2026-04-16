@@ -36,16 +36,18 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
   }
 
   async save(orderItem: OrderItem): Promise<void> {
-    await this.prisma.orderItem.create({
-      data: {
-        id: orderItem.orderItemId,
-        orderId: orderItem.orderId,
-        variantId: orderItem.variantId,
-        qty: orderItem.quantity,
-        productSnapshot: orderItem.productSnapshot.getValue() as any,
-        isGift: orderItem.isGift,
-        giftMessage: orderItem.giftMessage || null,
-      },
+    const data = {
+      orderId: orderItem.orderId,
+      variantId: orderItem.variantId,
+      qty: orderItem.quantity,
+      productSnapshot: orderItem.productSnapshot.getValue() as any,
+      isGift: orderItem.isGift,
+      giftMessage: orderItem.giftMessage || null,
+    };
+    await this.prisma.orderItem.upsert({
+      where: { id: orderItem.orderItemId },
+      create: { id: orderItem.orderItemId, ...data },
+      update: data,
     });
   }
 
@@ -64,19 +66,6 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
         isGift: item.isGift,
         giftMessage: item.giftMessage || null,
       })),
-    });
-  }
-
-  async update(orderItem: OrderItem): Promise<void> {
-    await this.prisma.orderItem.update({
-      where: { id: orderItem.orderItemId },
-      data: {
-        variantId: orderItem.variantId,
-        qty: orderItem.quantity,
-        productSnapshot: orderItem.productSnapshot.getValue() as any,
-        isGift: orderItem.isGift,
-        giftMessage: orderItem.giftMessage || null,
-      },
     });
   }
 

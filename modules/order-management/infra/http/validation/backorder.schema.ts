@@ -20,11 +20,11 @@ export const listBackordersQuerySchema = z.object({
 
 export const createBackorderSchema = z.object({
   orderItemId: z.uuid(),
-  promisedEta: z.iso.datetime().transform(v => new Date(v)).optional(),
+  promisedEta: z.string().datetime().transform(v => new Date(v)).optional(),
 });
 
 export const updateBackorderEtaSchema = z.object({
-  promisedEta: z.iso.datetime().transform(v => new Date(v)),
+  promisedEta: z.string().datetime().transform(v => new Date(v)),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

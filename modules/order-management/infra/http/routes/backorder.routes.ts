@@ -140,8 +140,8 @@ export async function registerBackorderRoutes(
   fastify.patch(
     "/backorders/:orderItemId/eta",
     {
-      preValidation: [validateParams(backorderParamsSchema)],
-      preHandler: [validateBody(updateBackorderEtaSchema), ...authenticateAdmin],
+      preValidation: [validateParams(backorderParamsSchema), validateBody(updateBackorderEtaSchema)],
+      preHandler: [...authenticateAdmin],
       schema: {
         description: "Update the promised ETA for a backorder (Admin only)",
         tags: ["Backorders"],

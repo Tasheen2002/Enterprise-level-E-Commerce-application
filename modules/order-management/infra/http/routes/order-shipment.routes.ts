@@ -23,8 +23,8 @@ export async function registerOrderShipmentRoutes(
   fastify.post(
     "/orders/:orderId/shipments",
     {
-      preValidation: [validateParams(orderShipmentsParamsSchema)],
-      preHandler: [validateBody(createShipmentSchema), authenticateUser],
+      preValidation: [validateParams(orderShipmentsParamsSchema), validateBody(createShipmentSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Create a new shipment for an order",
         tags: ["Order Shipments"],
@@ -151,8 +151,8 @@ export async function registerOrderShipmentRoutes(
   fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: [validateBody(markShippedSchema), authenticateUser],
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markShippedSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Mark a shipment as shipped with carrier and tracking details",
@@ -200,9 +200,8 @@ export async function registerOrderShipmentRoutes(
   fastify.patch(
     "/orders/:orderId/shipments/:shipmentId/tracking",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema)],
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(updateShipmentTrackingSchema)],
       preHandler: [
-        validateBody(updateShipmentTrackingSchema),
         ...authenticateStaff,
       ],
       schema: {
@@ -251,8 +250,8 @@ export async function registerOrderShipmentRoutes(
   fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-delivered",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: [validateBody(markDeliveredSchema), ...authenticateStaff],
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markDeliveredSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description: "Mark a shipment as delivered (Staff/Admin only)",
         tags: ["Order Shipments"],
