@@ -19,11 +19,16 @@ export class ReservationRepositoryImpl implements IReservationRepository {
   async save(reservation: Reservation): Promise<void> {
     const data = reservation.toSnapshot();
 
-    await this.prisma.reservation.create({
-      data: {
+    await this.prisma.reservation.upsert({
+      where: { id: data.reservationId },
+      create: {
         id: data.reservationId,
         cartId: data.cartId,
         variantId: data.variantId,
+        qty: data.quantity,
+        expiresAt: data.expiresAt,
+      },
+      update: {
         qty: data.quantity,
         expiresAt: data.expiresAt,
       },
@@ -40,18 +45,6 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     }
 
     return this.mapPrismaToEntity(reservationData);
-  }
-
-  async update(reservation: Reservation): Promise<void> {
-    const data = reservation.toSnapshot();
-
-    await this.prisma.reservation.update({
-      where: { id: data.reservationId },
-      data: {
-        qty: data.quantity,
-        expiresAt: data.expiresAt,
-      },
-    });
   }
 
   async delete(reservationId: string): Promise<void> {
@@ -979,7 +972,6 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       quantity: reservationData.qty,
       expiresAt: reservationData.expiresAt,
     };
-
     return Reservation.fromPersistence(entityData);
   }
 }

@@ -7,7 +7,6 @@ import { Currency } from "../value-objects/currency.vo";
 export interface ICartRepository {
   save(cart: ShoppingCart): Promise<void>;
   findById(cartId: CartId): Promise<ShoppingCart | null>;
-  update(cart: ShoppingCart): Promise<void>;
   delete(cartId: CartId): Promise<void>;
   findByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
   findActiveCartByCartOwnerId(

@@ -2,7 +2,7 @@ import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/c
 import { ReservationService } from "../services/reservation.service";
 
 export interface ReleaseReservationCommand extends ICommand {
-  reservationId: string;
+  readonly reservationId: string;
 }
 
 export class ReleaseReservationHandler implements ICommandHandler<ReleaseReservationCommand, CommandResult<void>> {

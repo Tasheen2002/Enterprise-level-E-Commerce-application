@@ -226,11 +226,8 @@ export async function cartRoutes(
   fastify.post(
     "/users/:userId/cart",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [
-        validateBody(createUserCartSchema),
-        requireRole(["ADMIN", "CUSTOMER"]),
-      ],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(createUserCartSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Create a new cart for a user",
         tags: ["Cart"],
@@ -271,12 +268,8 @@ export async function cartRoutes(
   fastify.post(
     "/guests/:guestToken/cart",
     {
-      preValidation: [validateParams(guestTokenParamsSchema)],
-      preHandler: [
-        validateBody(createGuestCartSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(guestTokenParamsSchema), validateBody(createGuestCartSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Create a new cart for a guest.",
         tags: ["Cart"],
@@ -316,12 +309,8 @@ export async function cartRoutes(
   fastify.post(
     "/cart/items",
     {
-      preHandler: [
-        validateBody(addToCartSchema),
-        optionalAuth,
-        extractGuestToken,
-        requireCartAuth,
-      ],
+      preValidation: [validateBody(addToCartSchema)],
+      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
         description: "Add an item to cart.",
         tags: ["Cart"],
@@ -359,12 +348,8 @@ export async function cartRoutes(
   fastify.patch(
     "/carts/:cartId/items/:variantId",
     {
-      preValidation: [validateParams(cartItemParamsSchema)],
-      preHandler: [
-        validateBody(updateCartItemSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(cartItemParamsSchema), validateBody(updateCartItemSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Update cart item quantity.",
         tags: ["Cart"],
@@ -496,12 +481,8 @@ export async function cartRoutes(
   fastify.post(
     "/guests/:guestToken/cart/transfer",
     {
-      preValidation: [validateParams(guestTokenParamsSchema)],
-      preHandler: [
-        validateBody(transferCartSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(guestTokenParamsSchema), validateBody(transferCartSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Transfer guest cart to authenticated user.",
         tags: ["Cart"],
@@ -608,12 +589,8 @@ export async function cartRoutes(
   fastify.patch(
     "/carts/:cartId/email",
     {
-      preValidation: [validateParams(cartIdParamsSchema)],
-      preHandler: [
-        validateBody(updateCartEmailSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartEmailSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Update cart email address.",
         tags: ["Cart"],
@@ -654,12 +631,8 @@ export async function cartRoutes(
   fastify.patch(
     "/carts/:cartId/shipping",
     {
-      preValidation: [validateParams(cartIdParamsSchema)],
-      preHandler: [
-        validateBody(updateCartShippingInfoSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartShippingInfoSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Update cart shipping information.",
         tags: ["Cart"],
@@ -704,12 +677,8 @@ export async function cartRoutes(
   fastify.patch(
     "/carts/:cartId/addresses",
     {
-      preValidation: [validateParams(cartIdParamsSchema)],
-      preHandler: [
-        validateBody(updateCartAddressesSchema),
-        optionalAuth,
-        extractGuestToken,
-      ],
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartAddressesSchema)],
+      preHandler: [optionalAuth, extractGuestToken],
       schema: {
         description: "Update cart shipping and billing addresses.",
         tags: ["Cart"],

@@ -144,10 +144,7 @@ export class CheckoutService {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (
-      dto.guestToken &&
-      checkout.guestToken?.toString() !== dto.guestToken
-    ) {
+    if (dto.guestToken && checkout.guestToken?.toString() !== dto.guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -163,7 +160,7 @@ export class CheckoutService {
     // Link payment intent and mark as completed
     checkout.markAsCompleted();
 
-    await this.checkoutRepository.update(checkout);
+    await this.checkoutRepository.save(checkout);
 
     return this.mapCheckoutToDto(checkout);
   }
@@ -190,7 +187,7 @@ export class CheckoutService {
     }
 
     checkout.markAsCancelled();
-    await this.checkoutRepository.update(checkout);
+    await this.checkoutRepository.save(checkout);
 
     return this.mapCheckoutToDto(checkout);
   }

@@ -2,9 +2,9 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { CheckoutOrderService, OrderResult } from "../services/checkout-order.service";
 
 export interface GetOrderByCheckoutQuery extends IQuery {
-  checkoutId: string;
-  userId?: string;
-  guestToken?: string;
+  readonly checkoutId: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
 }
 
 export class GetOrderByCheckoutHandler implements IQueryHandler<GetOrderByCheckoutQuery, QueryResult<OrderResult>> {

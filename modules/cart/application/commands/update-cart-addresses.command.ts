@@ -1,35 +1,47 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { CartManagementService, CartDto } from "../services/cart-management.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
+  CartManagementService,
+  CartDto,
+} from "../services/cart-management.service";
 
 export interface UpdateCartAddressesCommand extends ICommand {
-  cartId: string;
-  shippingFirstName?: string;
-  shippingLastName?: string;
-  shippingAddress1?: string;
-  shippingAddress2?: string;
-  shippingCity?: string;
-  shippingProvince?: string;
-  shippingPostalCode?: string;
-  shippingCountryCode?: string;
-  shippingPhone?: string;
-  billingFirstName?: string;
-  billingLastName?: string;
-  billingAddress1?: string;
-  billingAddress2?: string;
-  billingCity?: string;
-  billingProvince?: string;
-  billingPostalCode?: string;
-  billingCountryCode?: string;
-  billingPhone?: string;
-  sameAddressForBilling?: boolean;
-  userId?: string;
-  guestToken?: string;
+  readonly cartId: string;
+  readonly shippingFirstName?: string;
+  readonly shippingLastName?: string;
+  readonly shippingAddress1?: string;
+  readonly shippingAddress2?: string;
+  readonly shippingCity?: string;
+  readonly shippingProvince?: string;
+  readonly shippingPostalCode?: string;
+  readonly shippingCountryCode?: string;
+  readonly shippingPhone?: string;
+  readonly billingFirstName?: string;
+  readonly billingLastName?: string;
+  readonly billingAddress1?: string;
+  readonly billingAddress2?: string;
+  readonly billingCity?: string;
+  readonly billingProvince?: string;
+  readonly billingPostalCode?: string;
+  readonly billingCountryCode?: string;
+  readonly billingPhone?: string;
+  readonly sameAddressForBilling?: boolean;
+  readonly userId?: string;
+  readonly guestToken?: string;
 }
 
-export class UpdateCartAddressesHandler implements ICommandHandler<UpdateCartAddressesCommand, CommandResult<CartDto>> {
+export class UpdateCartAddressesHandler implements ICommandHandler<
+  UpdateCartAddressesCommand,
+  CommandResult<CartDto>
+> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(command: UpdateCartAddressesCommand): Promise<CommandResult<CartDto>> {
+  async handle(
+    command: UpdateCartAddressesCommand,
+  ): Promise<CommandResult<CartDto>> {
     await this.cartManagementService.updateCartAddresses(
       command.cartId,
       {

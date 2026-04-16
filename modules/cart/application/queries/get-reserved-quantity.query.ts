@@ -2,13 +2,13 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { ReservationService } from "../services/reservation.service";
 
 export interface GetReservedQuantityQuery extends IQuery {
-  variantId: string;
-  activeOnly: boolean;
+  readonly variantId: string;
+  readonly activeOnly: boolean;
 }
 
 export interface ReservedQuantityDto {
-  variantId: string;
-  quantity: number;
+  readonly variantId: string;
+  readonly quantity: number;
 }
 
 export class GetReservedQuantityHandler implements IQueryHandler<GetReservedQuantityQuery, QueryResult<ReservedQuantityDto>> {

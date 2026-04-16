@@ -2,9 +2,9 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { CartManagementService, CartDto } from "../services/cart-management.service";
 
 export interface GetCartQuery extends IQuery {
-  cartId: string;
-  userId?: string;
-  guestToken?: string;
+  readonly cartId: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
 }
 
 export class GetCartHandler implements IQueryHandler<GetCartQuery, QueryResult<CartDto | null>> {

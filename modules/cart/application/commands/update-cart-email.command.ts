@@ -1,17 +1,29 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { CartManagementService, CartDto } from "../services/cart-management.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
+  CartManagementService,
+  CartDto,
+} from "../services/cart-management.service";
 
 export interface UpdateCartEmailCommand extends ICommand {
-  cartId: string;
-  email: string;
-  userId?: string;
-  guestToken?: string;
+  readonly cartId: string;
+  readonly email: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
 }
 
-export class UpdateCartEmailHandler implements ICommandHandler<UpdateCartEmailCommand, CommandResult<CartDto>> {
+export class UpdateCartEmailHandler implements ICommandHandler<
+  UpdateCartEmailCommand,
+  CommandResult<CartDto>
+> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(command: UpdateCartEmailCommand): Promise<CommandResult<CartDto>> {
+  async handle(
+    command: UpdateCartEmailCommand,
+  ): Promise<CommandResult<CartDto>> {
     await this.cartManagementService.updateCartEmail(
       command.cartId,
       command.email,

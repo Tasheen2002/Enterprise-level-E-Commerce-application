@@ -2,7 +2,7 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { ReservationService, ReservationDto } from "../services/reservation.service";
 
 export interface GetReservationsByStatusQuery extends IQuery {
-  status: "active" | "expiring_soon" | "expired" | "recently_expired";
+  readonly status: "active" | "expiring_soon" | "expired" | "recently_expired";
 }
 
 export class GetReservationsByStatusHandler implements IQueryHandler<GetReservationsByStatusQuery, QueryResult<ReservationDto[]>> {

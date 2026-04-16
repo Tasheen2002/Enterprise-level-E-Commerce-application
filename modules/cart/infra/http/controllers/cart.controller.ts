@@ -132,7 +132,7 @@ export class CartController {
       const cartData = request.body || {};
       const result = await this.createUserCartHandler.handle({
         userId,
-        currency: cartData.currency || "USD",
+        currency: cartData.currency,
         reservationDurationMinutes: cartData.reservationDurationMinutes,
       });
       return ResponseHelper.fromCommand(
@@ -165,7 +165,7 @@ export class CartController {
       const cartData = request.body || {};
       const result = await this.createGuestCartHandler.handle({
         guestToken,
-        currency: cartData.currency || "USD",
+        currency: cartData.currency,
         reservationDurationMinutes: cartData.reservationDurationMinutes,
       });
       return ResponseHelper.fromCommand(
@@ -191,7 +191,7 @@ export class CartController {
           type: "percentage" | "fixed_amount" | "free_shipping" | "buy_x_get_y";
           value: number;
           description?: string;
-          appliedAt: string;
+          appliedAt: Date;
         }>;
         isGift?: boolean;
         giftMessage?: string;
@@ -204,23 +204,13 @@ export class CartController {
       const userId = request.user?.userId;
       const guestToken = request.guestToken;
 
-      const appliedPromos: PromoData[] | undefined =
-        itemData.appliedPromos?.map((promo) => ({
-          id: promo.id,
-          code: promo.code,
-          type: promo.type,
-          value: promo.value,
-          description: promo.description,
-          appliedAt: new Date(promo.appliedAt),
-        }));
-
       const result = await this.addToCartHandler.handle({
         cartId: itemData.cartId,
         userId,
         guestToken,
         variantId: itemData.variantId,
         quantity: itemData.quantity,
-        appliedPromos,
+        appliedPromos: itemData.appliedPromos as PromoData[] | undefined,
         isGift: itemData.isGift,
         giftMessage: itemData.giftMessage,
       });
@@ -572,9 +562,27 @@ export class CartController {
 
       const result = await this.updateCartAddressesHandler.handle({
         cartId,
-        ...data,
         userId,
         guestToken,
+        shippingFirstName: data.shippingFirstName,
+        shippingLastName: data.shippingLastName,
+        shippingAddress1: data.shippingAddress1,
+        shippingAddress2: data.shippingAddress2,
+        shippingCity: data.shippingCity,
+        shippingProvince: data.shippingProvince,
+        shippingPostalCode: data.shippingPostalCode,
+        shippingCountryCode: data.shippingCountryCode,
+        shippingPhone: data.shippingPhone,
+        billingFirstName: data.billingFirstName,
+        billingLastName: data.billingLastName,
+        billingAddress1: data.billingAddress1,
+        billingAddress2: data.billingAddress2,
+        billingCity: data.billingCity,
+        billingProvince: data.billingProvince,
+        billingPostalCode: data.billingPostalCode,
+        billingCountryCode: data.billingCountryCode,
+        billingPhone: data.billingPhone,
+        sameAddressForBilling: data.sameAddressForBilling,
       });
       return ResponseHelper.fromCommand(
         reply,

@@ -2,8 +2,8 @@ import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/c
 import { ReservationService, ReservationDto } from "../services/reservation.service";
 
 export interface ExtendReservationCommand extends ICommand {
-  reservationId: string;
-  additionalMinutes: number;
+  readonly reservationId: string;
+  readonly additionalMinutes: number;
 }
 
 export class ExtendReservationHandler implements ICommandHandler<ExtendReservationCommand, CommandResult<ReservationDto>> {
@@ -16,4 +16,4 @@ export class ExtendReservationHandler implements ICommandHandler<ExtendReservati
     });
     return CommandResult.success<ReservationDto>(reservation);
   }
-}
+}

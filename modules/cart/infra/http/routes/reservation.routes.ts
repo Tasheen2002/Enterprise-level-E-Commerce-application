@@ -52,7 +52,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations",
     {
-      preHandler: [validateBody(createReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateBody(createReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Create a new reservation",
         tags: ["Reservations"],
@@ -198,8 +199,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/:reservationId/extend",
     {
-      preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [validateBody(extendReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(reservationIdParamsSchema), validateBody(extendReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Extend reservation duration",
         tags: ["Reservations"],
@@ -367,8 +368,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/:reservationId/renew",
     {
-      preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [validateBody(renewReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(reservationIdParamsSchema), validateBody(renewReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Renew an expired or expiring reservation",
         tags: ["Reservations"],
@@ -408,8 +409,8 @@ export async function reservationRoutes(
   fastify.patch(
     "/carts/:cartId/reservations/:variantId",
     {
-      preValidation: [validateParams(cartReservationParamsSchema)],
-      preHandler: [validateBody(adjustReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(cartReservationParamsSchema), validateBody(adjustReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Adjust reservation quantity for a variant in a cart",
         tags: ["Reservations"],
@@ -529,7 +530,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/bulk",
     {
-      preHandler: [validateBody(createBulkReservationsSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateBody(createBulkReservationsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Create reservations for multiple items at once",
         tags: ["Reservations"],
@@ -632,7 +634,7 @@ export async function reservationRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object", additionalProperties: true },
+              data: { type: "array", items: reservationResponseSchema },
             },
           },
         },
@@ -641,5 +643,4 @@ export async function reservationRoutes(
     (request, reply) =>
       reservationController.resolveReservationConflicts(request as AuthenticatedRequest, reply),
   );
-
 }

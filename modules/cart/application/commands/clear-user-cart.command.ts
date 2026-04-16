@@ -2,7 +2,7 @@ import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/c
 import { CartManagementService, CartDto } from "../services/cart-management.service";
 
 export interface ClearUserCartCommand extends ICommand {
-  userId: string;
+  readonly userId: string;
 }
 
 export class ClearUserCartHandler implements ICommandHandler<ClearUserCartCommand, CommandResult<CartDto>> {

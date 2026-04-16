@@ -2,12 +2,12 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { CartManagementService } from "../services/cart-management.service";
 
 export interface CartStatisticsDto {
-  totalCarts: number;
-  userCarts: number;
-  guestCarts: number;
-  emptyCarts: number;
-  averageItemsPerCart: number;
-  averageCartValue: number;
+  readonly totalCarts: number;
+  readonly userCarts: number;
+  readonly guestCarts: number;
+  readonly emptyCarts: number;
+  readonly averageItemsPerCart: number;
+  readonly averageCartValue: number;
 }
 
 export interface GetCartStatisticsQuery extends IQuery {}

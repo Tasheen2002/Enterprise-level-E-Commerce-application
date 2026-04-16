@@ -2,7 +2,7 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { ReservationService, ReservationDto } from "../services/reservation.service";
 
 export interface GetReservationQuery extends IQuery {
-  reservationId: string;
+  readonly reservationId: string;
 }
 
 export class GetReservationHandler implements IQueryHandler<GetReservationQuery, QueryResult<ReservationDto>> {

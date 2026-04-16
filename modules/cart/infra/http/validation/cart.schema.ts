@@ -35,6 +35,26 @@ export const addToCartSchema = z.object({
   cartId: z.uuid().optional(),
   variantId: z.uuid(),
   quantity: z.number().int().min(1),
+  appliedPromos: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        code: z.string(),
+        type: z.enum([
+          "percentage",
+          "fixed_amount",
+          "free_shipping",
+          "buy_x_get_y",
+        ]),
+        value: z.number(),
+        description: z.string().optional(),
+        appliedAt: z
+          .string()
+          .datetime()
+          .transform((v) => new Date(v)),
+      }),
+    )
+    .optional(),
   isGift: z.boolean().optional().default(false),
   giftMessage: z.string().optional(),
 });
@@ -92,7 +112,9 @@ export type AddToCartBody = z.infer<typeof addToCartSchema>;
 export type UpdateCartItemBody = z.infer<typeof updateCartItemSchema>;
 export type TransferCartBody = z.infer<typeof transferCartSchema>;
 export type UpdateCartEmailBody = z.infer<typeof updateCartEmailSchema>;
-export type UpdateCartShippingInfoBody = z.infer<typeof updateCartShippingInfoSchema>;
+export type UpdateCartShippingInfoBody = z.infer<
+  typeof updateCartShippingInfoSchema
+>;
 export type UpdateCartAddressesBody = z.infer<typeof updateCartAddressesSchema>;
 
 // ── JSON Schema for Swagger docs ──────────────────────────────────────────────

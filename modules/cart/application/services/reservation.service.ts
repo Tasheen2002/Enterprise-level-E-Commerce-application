@@ -128,7 +128,7 @@ export class ReservationService {
       const newQuantity =
         existingReservation.quantity.getValue() + dto.quantity;
       existingReservation.updateQuantity(newQuantity);
-      await this.reservationRepository.update(existingReservation);
+      await this.reservationRepository.save(existingReservation);
       return this.mapReservationToDto(existingReservation);
     }
 

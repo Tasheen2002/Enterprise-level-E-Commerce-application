@@ -1,19 +1,29 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { PromoData } from "../../domain/value-objects/applied-promos.vo";
-import { CartManagementService, CartDto } from "../services/cart-management.service";
+import {
+  CartManagementService,
+  CartDto,
+} from "../services/cart-management.service";
 
 export interface AddToCartCommand extends ICommand {
-  cartId?: string;
-  userId?: string;
-  guestToken?: string;
-  variantId: string;
-  quantity: number;
-  appliedPromos?: PromoData[];
-  isGift?: boolean;
-  giftMessage?: string;
+  readonly cartId?: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
+  readonly variantId: string;
+  readonly quantity: number;
+  readonly appliedPromos?: PromoData[];
+  readonly isGift?: boolean;
+  readonly giftMessage?: string;
 }
 
-export class AddToCartHandler implements ICommandHandler<AddToCartCommand, CommandResult<CartDto>> {
+export class AddToCartHandler implements ICommandHandler<
+  AddToCartCommand,
+  CommandResult<CartDto>
+> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
   async handle(command: AddToCartCommand): Promise<CommandResult<CartDto>> {

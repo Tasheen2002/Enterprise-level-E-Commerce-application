@@ -2,8 +2,8 @@ import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/sr
 import { ReservationService, AvailabilityDto } from "../services/reservation.service";
 
 export interface CheckAvailabilityQuery extends IQuery {
-  variantId: string;
-  requestedQuantity: number;
+  readonly variantId: string;
+  readonly requestedQuantity: number;
 }
 
 export class CheckAvailabilityHandler implements IQueryHandler<CheckAvailabilityQuery, QueryResult<AvailabilityDto>> {

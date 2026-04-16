@@ -2,7 +2,7 @@ import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/c
 import { ReservationService, ReservationConflictResolutionDto } from "../services/reservation.service";
 
 export interface ResolveReservationConflictsCommand extends ICommand {
-  variantId: string;
+  readonly variantId: string;
 }
 
 export class ResolveReservationConflictsHandler implements ICommandHandler<ResolveReservationConflictsCommand, CommandResult<ReservationConflictResolutionDto>> {

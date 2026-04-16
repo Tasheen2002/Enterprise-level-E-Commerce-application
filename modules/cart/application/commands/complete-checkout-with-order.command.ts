@@ -1,39 +1,51 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { CheckoutOrderService, OrderResult } from "../services/checkout-order.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
+  CheckoutOrderService,
+  OrderResult,
+} from "../services/checkout-order.service";
 
 export interface CompleteCheckoutWithOrderCommand extends ICommand {
-  checkoutId: string;
-  paymentIntentId: string;
-  userId?: string;
-  guestToken?: string;
-  shippingAddress: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state?: string;
-    postalCode?: string;
-    country: string;
-    phone?: string;
+  readonly checkoutId: string;
+  readonly paymentIntentId: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
+  readonly shippingAddress: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly addressLine1: string;
+    readonly addressLine2?: string;
+    readonly city: string;
+    readonly state?: string;
+    readonly postalCode?: string;
+    readonly country: string;
+    readonly phone?: string;
   };
-  billingAddress?: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state?: string;
-    postalCode?: string;
-    country: string;
-    phone?: string;
+  readonly billingAddress?: {
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly addressLine1: string;
+    readonly addressLine2?: string;
+    readonly city: string;
+    readonly state?: string;
+    readonly postalCode?: string;
+    readonly country: string;
+    readonly phone?: string;
   };
 }
 
-export class CompleteCheckoutWithOrderHandler implements ICommandHandler<CompleteCheckoutWithOrderCommand, CommandResult<OrderResult>> {
+export class CompleteCheckoutWithOrderHandler implements ICommandHandler<
+  CompleteCheckoutWithOrderCommand,
+  CommandResult<OrderResult>
+> {
   constructor(private readonly checkoutOrderService: CheckoutOrderService) {}
 
-  async handle(command: CompleteCheckoutWithOrderCommand): Promise<CommandResult<OrderResult>> {
+  async handle(
+    command: CompleteCheckoutWithOrderCommand,
+  ): Promise<CommandResult<OrderResult>> {
     const result = await this.checkoutOrderService.completeCheckoutWithOrder({
       checkoutId: command.checkoutId,
       paymentIntentId: command.paymentIntentId,

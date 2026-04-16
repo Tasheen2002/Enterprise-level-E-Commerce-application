@@ -20,51 +20,19 @@ export class CartRepositoryImpl implements ICartRepository {
   async save(cart: ShoppingCart): Promise<void> {
     const data = cart.toSnapshot();
 
-    await this.prisma.shoppingCart.create({
-      data: {
-        id: data.cartId,
-        userId: data.userId ?? null,
-        guestToken: data.guestToken ?? null,
-        currency: data.currency,
-        reservationExpiresAt: data.reservationExpiresAt,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        items: {
-          create:
-            data.items?.map((item) => ({
-              id: item.id,
-              variantId: item.variantId,
-              qty: item.quantity,
-              unitPriceSnapshot: item.unitPriceSnapshot,
-              appliedPromos: item.appliedPromos as any,
-              isGift: item.isGift,
-              giftMessage: item.giftMessage,
-            })) || [],
-        },
-      },
-    });
-  }
-
-  async findById(cartId: CartId): Promise<ShoppingCart | null> {
-    const cartData = await this.prisma.shoppingCart.findUnique({
-      where: { id: cartId.getValue() },
-      include: { items: true },
-    });
-
-    if (!cartData) {
-      return null;
-    }
-
-    return this.mapPrismaToEntity(cartData);
-  }
-
-  async update(cart: ShoppingCart): Promise<void> {
-    const data = cart.toSnapshot();
-
     await this.prisma.$transaction(async (tx) => {
-      await tx.shoppingCart.update({
+      await tx.shoppingCart.upsert({
         where: { id: data.cartId },
-        data: {
+        create: {
+          id: data.cartId,
+          userId: data.userId ?? null,
+          guestToken: data.guestToken ?? null,
+          currency: data.currency,
+          reservationExpiresAt: data.reservationExpiresAt,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        },
+        update: {
           userId: data.userId ?? null,
           guestToken: data.guestToken ?? null,
           currency: data.currency,
@@ -93,6 +61,19 @@ export class CartRepositoryImpl implements ICartRepository {
         });
       }
     });
+  }
+
+  async findById(cartId: CartId): Promise<ShoppingCart | null> {
+    const cartData = await this.prisma.shoppingCart.findUnique({
+      where: { id: cartId.getValue() },
+      include: { items: true },
+    });
+
+    if (!cartData) {
+      return null;
+    }
+
+    return this.mapPrismaToEntity(cartData);
   }
 
   async delete(cartId: CartId): Promise<void> {
@@ -258,7 +239,7 @@ export class CartRepositoryImpl implements ICartRepository {
     }
 
     // Save updated user cart and delete guest cart
-    await this.update(userCart);
+    await this.save(userCart);
     await this.delete(guestCart.cartId);
 
     return userCart;
@@ -911,28 +892,24 @@ export class CartRepositoryImpl implements ICartRepository {
   private mapPrismaToEntity(cartData: any): ShoppingCart {
     const entityData: ShoppingCartEntityData = {
       cartId: cartData.id,
-      userId: cartData.userId,
+      userId: cartData.userId ?? undefined,
       // If both userId and guestToken exist (invalid state), prioritize userId
-      guestToken: cartData.userId ? null : cartData.guestToken,
+      guestToken: cartData.userId ? undefined : (cartData.guestToken ?? undefined),
       currency: cartData.currency,
-      reservationExpiresAt: cartData.reservationExpiresAt,
+      reservationExpiresAt: cartData.reservationExpiresAt ?? undefined,
       createdAt: cartData.createdAt,
       updatedAt: cartData.updatedAt,
-      items:
-        cartData.items?.map(
-          (item: any): CartItemEntityData => ({
-            id: item.id,
-            cartId: item.cartId,
-            variantId: item.variantId,
-            quantity: item.qty,
-            unitPriceSnapshot: item.unitPriceSnapshot.toNumber(),
-            appliedPromos: item.appliedPromos,
-            isGift: item.isGift,
-            giftMessage: item.giftMessage,
-          }),
-        ) || [],
+      items: (cartData.items ?? []).map((item: any): CartItemEntityData => ({
+        id: item.id,
+        cartId: item.cartId,
+        variantId: item.variantId,
+        quantity: item.qty,
+        unitPriceSnapshot: item.unitPriceSnapshot,
+        appliedPromos: item.appliedPromos ?? [],
+        isGift: item.isGift,
+        giftMessage: item.giftMessage ?? undefined,
+      })),
     };
-
     return ShoppingCart.fromPersistence(entityData);
   }
 }

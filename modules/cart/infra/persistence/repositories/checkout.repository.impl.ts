@@ -15,8 +15,9 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
   async save(checkout: Checkout): Promise<void> {
     const data = checkout.toSnapshot();
 
-    await this.prisma.checkout.create({
-      data: {
+    await this.prisma.checkout.upsert({
+      where: { id: data.checkoutId },
+      create: {
         id: data.checkoutId,
         userId: data.userId || null,
         guestToken: data.guestToken || null,
@@ -27,6 +28,12 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
         expiresAt: data.expiresAt,
         completedAt: data.completedAt || null,
         createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      },
+      update: {
+        cartId: data.cartId,
+        status: data.status as CheckoutStatusEnum,
+        completedAt: data.completedAt || null,
         updatedAt: data.updatedAt,
       },
     });
@@ -60,19 +67,6 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     }
 
     return this.mapPrismaToEntity(checkoutData);
-  }
-
-  async update(checkout: Checkout): Promise<void> {
-    const data = checkout.toSnapshot();
-    await this.prisma.checkout.update({
-      where: { id: data.checkoutId },
-      data: {
-        cartId: data.cartId, // Allow updating cartId (for archiving)
-        status: data.status as CheckoutStatusEnum,
-        completedAt: data.completedAt,
-        updatedAt: data.updatedAt,
-      },
-    });
   }
 
   async delete(checkoutId: CheckoutId): Promise<void> {
@@ -175,18 +169,17 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     const entityData: CheckoutEntityData = {
       checkoutId: prismaData.id,
       cartId: prismaData.cartId,
-      userId: prismaData.userId,
+      userId: prismaData.userId ?? undefined,
       // If both userId and guestToken exist (invalid state), prioritize userId
-      guestToken: prismaData.userId ? null : prismaData.guestToken,
+      guestToken: prismaData.userId ? undefined : (prismaData.guestToken ?? undefined),
       status: prismaData.status,
-      totalAmount: parseFloat(prismaData.totalAmount.toString()),
+      totalAmount: prismaData.totalAmount,
       currency: prismaData.currency,
       expiresAt: prismaData.expiresAt,
-      completedAt: prismaData.completedAt,
+      completedAt: prismaData.completedAt ?? undefined,
       createdAt: prismaData.createdAt,
       updatedAt: prismaData.updatedAt,
     };
-
     return Checkout.fromPersistence(entityData);
   }
 }
