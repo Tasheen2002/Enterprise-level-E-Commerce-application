@@ -13,3 +13,4 @@ export { GetBackorderQuery, GetBackorderHandler } from "./get-backorder.query";
 export { ListBackordersQuery, ListBackordersHandler } from "./list-backorders.query";
 export { GetPreorderQuery, GetPreorderHandler } from "./get-preorder.query";
 export { ListPreordersQuery, ListPreordersHandler } from "./list-preorders.query";
+export { TrackOrderQuery, TrackOrderHandler, TrackOrderResult } from "./track-order.query";

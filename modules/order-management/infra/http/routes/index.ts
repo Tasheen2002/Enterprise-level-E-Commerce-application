@@ -25,7 +25,7 @@ import {
   // Order queries
   GetOrderHandler,
   ListOrdersHandler,
-  GetOrderAddressHandler,
+  TrackOrderHandler,
   // Address commands
   SetOrderAddressesCommandHandler,
   UpdateBillingAddressCommandHandler,
@@ -45,7 +45,6 @@ import {
   // Shipment queries
   ListOrderShipmentsHandler,
   GetShipmentHandler,
-  GetShipmentByTrackingNumberHandler,
   // Status history
   LogOrderStatusChangeCommandHandler,
   GetOrderStatusHistoryHandler,
@@ -102,9 +101,7 @@ export async function registerOrderManagementRoutes(
     new MarkOrderFulfilledCommandHandler(orderService),
     new CancelOrderCommandHandler(orderService),
     new DeleteOrderCommandHandler(orderService),
-    new GetOrderAddressHandler(orderService),
-    new ListOrderShipmentsHandler(shipmentService),
-    new GetShipmentByTrackingNumberHandler(shipmentService),
+    new TrackOrderHandler(orderService, shipmentService),
   );
 
   const orderAddressController = new OrderAddressController(

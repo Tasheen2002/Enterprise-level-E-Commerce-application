@@ -21,7 +21,7 @@ export async function registerOrderStatusHistoryRoutes(
     "/orders/:orderId/status-history",
     {
       preValidation: [validateParams(orderStatusHistoryParamsSchema)],
-      preHandler: [...authenticateStaff, validateBody(logStatusChangeSchema)],
+      preHandler: [validateBody(logStatusChangeSchema), ...authenticateStaff],
       schema: {
         description:
           "Log a status change for an order (Staff/Admin only). Creates an audit trail entry.",

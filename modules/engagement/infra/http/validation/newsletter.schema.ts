@@ -25,6 +25,13 @@ export const unsubscribeViaLinkSchema = z.object({
   email: z.email(),
 });
 
+export const getSubscriptionQuerySchema = z.object({
+  subscriptionId: z.uuid().optional(),
+  email: z.email().optional(),
+}).refine((data) => data.subscriptionId || data.email, {
+  message: "Either subscriptionId or email is required",
+});
+
 // ── JSON Schema for Swagger docs ─────────────────────────────────────────────
 
 export const newsletterSubscriptionResponseSchema = {
@@ -45,3 +52,4 @@ export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type SubscribeNewsletterBody = z.infer<typeof subscribeNewsletterSchema>;
 export type UnsubscribeNewsletterBody = z.infer<typeof unsubscribeNewsletterSchema>;
 export type UnsubscribeViaLinkQuery = z.infer<typeof unsubscribeViaLinkSchema>;
+export type GetSubscriptionQuery = z.infer<typeof getSubscriptionQuerySchema>;

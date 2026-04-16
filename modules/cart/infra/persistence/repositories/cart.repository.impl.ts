@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { ICartRepository } from "../../../domain/repositories/cart.repository";
+import { ICartRepository, CartWithCheckoutInfo } from "../../../domain/repositories/cart.repository";
 import {
   ShoppingCart,
   ShoppingCartEntityData,
@@ -901,7 +901,7 @@ export class CartRepositoryImpl implements ICartRepository {
     });
   }
 
-  async getCartWithCheckoutInfo(cartId: string): Promise<any> {
+  async getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null> {
     return await this.prisma.shoppingCart.findUnique({
       where: { id: cartId },
       include: { items: true },

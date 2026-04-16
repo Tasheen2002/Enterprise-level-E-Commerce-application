@@ -46,6 +46,13 @@ export async function supplierRoutes(
         tags: ["Suppliers"],
         summary: "List Suppliers",
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+          },
+        },
         response: {
           200: {
             type: "object",

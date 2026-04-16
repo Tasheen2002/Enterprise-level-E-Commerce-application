@@ -24,7 +24,7 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments",
     {
       preValidation: [validateParams(orderShipmentsParamsSchema)],
-      preHandler: [authenticateUser, validateBody(createShipmentSchema)],
+      preHandler: [validateBody(createShipmentSchema), authenticateUser],
       schema: {
         description: "Create a new shipment for an order",
         tags: ["Order Shipments"],
@@ -152,7 +152,7 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
       preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: [authenticateUser, validateBody(markShippedSchema)],
+      preHandler: [validateBody(markShippedSchema), authenticateUser],
       schema: {
         description:
           "Mark a shipment as shipped with carrier and tracking details",
@@ -202,8 +202,8 @@ export async function registerOrderShipmentRoutes(
     {
       preValidation: [validateParams(orderShipmentParamsSchema)],
       preHandler: [
-        ...authenticateStaff,
         validateBody(updateShipmentTrackingSchema),
+        ...authenticateStaff,
       ],
       schema: {
         description: "Update shipment tracking information (Staff/Admin only)",
@@ -252,7 +252,7 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments/:shipmentId/mark-delivered",
     {
       preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: [...authenticateStaff, validateBody(markDeliveredSchema)],
+      preHandler: [validateBody(markDeliveredSchema), ...authenticateStaff],
       schema: {
         description: "Mark a shipment as delivered (Staff/Admin only)",
         tags: ["Order Shipments"],

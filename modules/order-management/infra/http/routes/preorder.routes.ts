@@ -21,7 +21,7 @@ export async function registerPreorderRoutes(
   fastify.post(
     "/preorders",
     {
-      preHandler: [...authenticateAdmin, validateBody(createPreorderSchema)],
+      preHandler: [validateBody(createPreorderSchema), ...authenticateAdmin],
       schema: {
         description:
           "Create a new preorder for an order item. Used for items that will be available in the future.",
@@ -140,7 +140,7 @@ export async function registerPreorderRoutes(
     "/preorders/:orderItemId/release-date",
     {
       preValidation: [validateParams(preorderParamsSchema)],
-      preHandler: [...authenticateAdmin, validateBody(updatePreorderReleaseDateSchema)],
+      preHandler: [validateBody(updatePreorderReleaseDateSchema), ...authenticateAdmin],
       schema: {
         description: "Update the expected release date for a preorder (Admin only)",
         tags: ["Preorders"],

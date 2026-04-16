@@ -6,6 +6,8 @@ import {
   UpdateCartItemHandler,
   RemoveFromCartHandler,
   ClearCartHandler,
+  ClearUserCartHandler,
+  ClearGuestCartHandler,
   CreateUserCartHandler,
   CreateGuestCartHandler,
   TransferCartHandler,
@@ -29,6 +31,8 @@ export class CartController {
     private readonly updateCartItemHandler: UpdateCartItemHandler,
     private readonly removeFromCartHandler: RemoveFromCartHandler,
     private readonly clearCartHandler: ClearCartHandler,
+    private readonly clearUserCartHandler: ClearUserCartHandler,
+    private readonly clearGuestCartHandler: ClearGuestCartHandler,
     private readonly createUserCartHandler: CreateUserCartHandler,
     private readonly createGuestCartHandler: CreateGuestCartHandler,
     private readonly transferCartHandler: TransferCartHandler,
@@ -430,21 +434,7 @@ export class CartController {
   ) {
     try {
       const { userId } = request.params;
-
-      const activeCartResult = await this.getActiveCartByUserHandler.handle({
-        userId,
-      });
-      if (!activeCartResult.data) {
-        return ResponseHelper.notFound(
-          reply,
-          "No active cart found for this user",
-        );
-      }
-
-      const result = await this.clearCartHandler.handle({
-        cartId: activeCartResult.data.cartId,
-        userId,
-      });
+      const result = await this.clearUserCartHandler.handle({ userId });
       return ResponseHelper.fromCommand(
         reply,
         result,
@@ -462,8 +452,6 @@ export class CartController {
     reply: FastifyReply,
   ) {
     try {
-      const { guestToken } = request.params;
-
       if (request.user?.userId) {
         return ResponseHelper.badRequest(
           reply,
@@ -471,19 +459,8 @@ export class CartController {
         );
       }
 
-      const activeCartResult =
-        await this.getActiveCartByGuestTokenHandler.handle({ guestToken });
-      if (!activeCartResult.data) {
-        return ResponseHelper.notFound(
-          reply,
-          "No active cart found for this guest",
-        );
-      }
-
-      const result = await this.clearCartHandler.handle({
-        cartId: activeCartResult.data.cartId,
-        guestToken,
-      });
+      const { guestToken } = request.params;
+      const result = await this.clearGuestCartHandler.handle({ guestToken });
       return ResponseHelper.fromCommand(
         reply,
         result,

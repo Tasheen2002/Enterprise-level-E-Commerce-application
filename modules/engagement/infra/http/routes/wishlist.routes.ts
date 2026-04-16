@@ -43,7 +43,7 @@ export async function wishlistRoutes(
   fastify.post(
     "/engagement/wishlists",
     {
-      preHandler: [optionalAuth, validateBody(createWishlistSchema)],
+      preHandler: [validateBody(createWishlistSchema), optionalAuth],
       schema: {
         description: "Create a new wishlist",
         summary: "Create Wishlist",
@@ -190,7 +190,7 @@ export async function wishlistRoutes(
     "/engagement/wishlists/:wishlistId/items",
     {
       preValidation: [validateParams(wishlistIdParamsSchema)],
-      preHandler: [optionalAuth, validateBody(addToWishlistSchema)],
+      preHandler: [validateBody(addToWishlistSchema), optionalAuth],
       schema: {
         description: "Add an item to a wishlist",
         summary: "Add To Wishlist",
@@ -231,7 +231,7 @@ export async function wishlistRoutes(
     "/engagement/wishlists/:wishlistId",
     {
       preValidation: [validateParams(wishlistIdParamsSchema)],
-      preHandler: [optionalAuth, validateBody(updateWishlistSchema)],
+      preHandler: [validateBody(updateWishlistSchema), optionalAuth],
       schema: {
         description: "Update wishlist details",
         summary: "Update Wishlist",

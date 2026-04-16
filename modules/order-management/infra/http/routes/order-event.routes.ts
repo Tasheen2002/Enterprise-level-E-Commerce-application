@@ -22,7 +22,7 @@ export async function registerOrderEventRoutes(
     "/orders/:orderId/events",
     {
       preValidation: [validateParams(orderEventsParamsSchema)],
-      preHandler: [...authenticateStaff, validateBody(logOrderEventSchema)],
+      preHandler: [validateBody(logOrderEventSchema), ...authenticateStaff],
       schema: {
         description:
           "Log a custom event for an order (Staff/Admin only). Creates an audit trail entry.",

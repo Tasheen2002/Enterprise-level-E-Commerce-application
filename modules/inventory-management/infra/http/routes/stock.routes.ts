@@ -48,6 +48,18 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "List Stocks",
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+            search: { type: "string" },
+            status: { type: "string", enum: ["low_stock", "out_of_stock", "in_stock"] },
+            locationId: { type: "string", format: "uuid" },
+            sortBy: { type: "string", enum: ["available", "onHand", "location", "product"], default: "product" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -257,6 +269,16 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "Add Stock",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["variantId", "locationId", "quantity", "reason"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            locationId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
+            reason: { type: "string", enum: ["return", "adjustment", "po", "order", "damage", "theft"] },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -283,6 +305,16 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "Adjust Stock",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["variantId", "locationId", "quantityDelta", "reason"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            locationId: { type: "string", format: "uuid" },
+            quantityDelta: { type: "integer" },
+            reason: { type: "string", enum: ["return", "adjustment", "po", "order", "damage", "theft"] },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -309,6 +341,16 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "Transfer Stock",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["variantId", "fromLocationId", "toLocationId", "quantity"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            fromLocationId: { type: "string", format: "uuid" },
+            toLocationId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -335,6 +377,15 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "Reserve Stock",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["variantId", "locationId", "quantity"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            locationId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -361,6 +412,15 @@ export async function stockRoutes(
         tags: ["Stock Management"],
         summary: "Fulfill Reservation",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["variantId", "locationId", "quantity"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            locationId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -390,11 +450,18 @@ export async function stockRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["variantId", "locationId"],
           properties: {
             variantId: { type: "string", format: "uuid" },
             locationId: { type: "string", format: "uuid" },
           },
-          required: ["variantId", "locationId"],
+        },
+        body: {
+          type: "object",
+          properties: {
+            lowStockThreshold: { type: "integer", minimum: 0 },
+            safetyStock: { type: "integer", minimum: 0 },
+          },
         },
         response: {
           200: {

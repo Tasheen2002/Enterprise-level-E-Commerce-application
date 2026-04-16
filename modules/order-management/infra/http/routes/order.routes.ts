@@ -6,7 +6,11 @@ import {
   authenticateUser,
   RolePermissions,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
 import {
   orderIdParamsSchema,
   orderNumberParamsSchema,
@@ -65,7 +69,7 @@ export async function registerOrderRoutes(
   fastify.post(
     "/orders",
     {
-      preHandler: [optionalAuth, validateBody(createOrderSchema)],
+      preHandler: [validateBody(createOrderSchema), optionalAuth],
       schema: {
         description:
           "Create a new order. For authenticated users, userId is extracted from the auth token. For guest checkout, provide guestToken.",
@@ -145,7 +149,10 @@ export async function registerOrderRoutes(
       },
     },
     (request, reply) =>
-      orderController.getOrderByOrderNumber(request as AuthenticatedRequest, reply),
+      orderController.getOrderByOrderNumber(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Get order by ID
@@ -207,7 +214,11 @@ export async function registerOrderRoutes(
               enum: ["createdAt", "updatedAt", "orderNumber"],
               default: "createdAt",
             },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
+            sortOrder: {
+              type: "string",
+              enum: ["asc", "desc"],
+              default: "desc",
+            },
           },
         },
         response: {
@@ -241,7 +252,7 @@ export async function registerOrderRoutes(
     "/orders/:orderId/status",
     {
       preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: [authenticateUser, validateBody(updateOrderStatusSchema)],
+      preHandler: [validateBody(updateOrderStatusSchema), authenticateUser],
       schema: {
         description: "Update order status",
         tags: ["Orders"],
@@ -283,7 +294,7 @@ export async function registerOrderRoutes(
     "/orders/:orderId/totals",
     {
       preValidation: [validateParams(orderIdParamsSchema)],
-      preHandler: [...authenticateStaff, validateBody(updateOrderTotalsSchema)],
+      preHandler: [validateBody(updateOrderTotalsSchema), ...authenticateStaff],
       schema: {
         description: "Update order totals (Staff/Admin only)",
         tags: ["Orders"],
@@ -395,7 +406,10 @@ export async function registerOrderRoutes(
       },
     },
     (request, reply) =>
-      orderController.markOrderAsFulfilled(request as AuthenticatedRequest, reply),
+      orderController.markOrderAsFulfilled(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Cancel order

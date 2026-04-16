@@ -42,6 +42,14 @@ export async function locationRoutes(
         tags: ["Locations"],
         summary: "List Locations",
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -106,6 +114,24 @@ export async function locationRoutes(
         tags: ["Locations"],
         summary: "Create Location",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["type", "name"],
+          properties: {
+            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
+            name: { type: "string", minLength: 1, maxLength: 255 },
+            address: {
+              type: "object",
+              properties: {
+                street: { type: "string" },
+                city: { type: "string" },
+                state: { type: "string" },
+                postalCode: { type: "string" },
+                country: { type: "string" },
+              },
+            },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -135,8 +161,24 @@ export async function locationRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: { locationId: { type: "string", format: "uuid" } },
           required: ["locationId"],
+          properties: { locationId: { type: "string", format: "uuid" } },
+        },
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string", minLength: 1, maxLength: 255 },
+            address: {
+              type: "object",
+              properties: {
+                street: { type: "string" },
+                city: { type: "string" },
+                state: { type: "string" },
+                postalCode: { type: "string" },
+                country: { type: "string" },
+              },
+            },
+          },
         },
         response: {
           200: {

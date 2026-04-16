@@ -135,6 +135,34 @@ export interface ICartRepository {
     cartId: CartId,
     data: CartAddressData,
   ): Promise<void>;
+  getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null>;
+}
+
+export interface CartWithCheckoutInfo {
+  id: string;
+  email?: string | null;
+  shippingMethod?: string | null;
+  shippingOption?: string | null;
+  isGift?: boolean | null;
+  shippingFirstName?: string | null;
+  shippingLastName?: string | null;
+  shippingAddress1?: string | null;
+  shippingAddress2?: string | null;
+  shippingCity?: string | null;
+  shippingProvince?: string | null;
+  shippingPostalCode?: string | null;
+  shippingCountryCode?: string | null;
+  shippingPhone?: string | null;
+  billingFirstName?: string | null;
+  billingLastName?: string | null;
+  billingAddress1?: string | null;
+  billingAddress2?: string | null;
+  billingCity?: string | null;
+  billingProvince?: string | null;
+  billingPostalCode?: string | null;
+  billingCountryCode?: string | null;
+  billingPhone?: string | null;
+  sameAddressForBilling?: boolean | null;
 }
 
 export interface CartSearchCriteria {

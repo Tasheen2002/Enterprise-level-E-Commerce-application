@@ -18,13 +18,25 @@ import { OrderNumber } from "../../domain/value-objects/order-number.vo";
 import { OrderStatus } from "../../domain/value-objects/order-status.vo";
 import { Currency } from "../../domain/value-objects/currency.vo";
 import { OrderSource } from "../../domain/value-objects/order-source.vo";
-import { OrderAddress, OrderAddressDTO } from "../../domain/entities/order-address.entity";
+import {
+  OrderAddress,
+  OrderAddressDTO,
+} from "../../domain/entities/order-address.entity";
 import { OrderItem } from "../../domain/entities/order-item.entity";
-import { OrderShipment, OrderShipmentDTO } from "../../domain/entities/order-shipment.entity";
-import { OrderStatusHistory, OrderStatusHistoryDTO } from "../../domain/entities/order-status-history.entity";
+import {
+  OrderShipment,
+  OrderShipmentDTO,
+} from "../../domain/entities/order-shipment.entity";
+import {
+  OrderStatusHistory,
+  OrderStatusHistoryDTO,
+} from "../../domain/entities/order-status-history.entity";
 import { OrderTotals } from "../../domain/value-objects/order-totals.vo";
 import { ProductSnapshot } from "../../domain/value-objects/product-snapshot.vo";
-import { AddressSnapshot, AddressSnapshotData } from "../../domain/value-objects";
+import {
+  AddressSnapshot,
+  AddressSnapshotData,
+} from "../../domain/value-objects";
 import {
   OrderNotFoundError,
   OrderItemNotFoundError,
@@ -94,7 +106,9 @@ export class OrderManagementService {
         );
       }
 
-      const variant = await this.variantManagementService.getVariantById(itemData.variantId);
+      const variant = await this.variantManagementService.getVariantById(
+        itemData.variantId,
+      );
       if (!variant) throw new OrderItemNotFoundError(itemData.variantId);
 
       const product = await this.productManagementService.getProductById(
@@ -124,7 +138,13 @@ export class OrderManagementService {
       items.push(orderItem);
     }
 
-    const totals = OrderTotals.create({ subtotal, tax: 0, shipping: 0, discount: 0, total: subtotal });
+    const totals = OrderTotals.create({
+      subtotal,
+      tax: 0,
+      shipping: 0,
+      discount: 0,
+      total: subtotal,
+    });
 
     const order = Order.create({
       userId: params.userId,
@@ -136,7 +156,9 @@ export class OrderManagementService {
       currency: Currency.fromString(params.currency),
     });
 
-    const billingSnap = AddressSnapshot.create(params.billingAddress ?? params.shippingAddress);
+    const billingSnap = AddressSnapshot.create(
+      params.billingAddress ?? params.shippingAddress,
+    );
     const shippingSnap = AddressSnapshot.create(params.shippingAddress);
 
     const address = OrderAddress.create({
@@ -185,7 +207,10 @@ export class OrderManagementService {
     return { items: items.map(Order.toDTO), total };
   }
 
-  async findOrders(filters: OrderFilterOptions, options?: OrderQueryOptions): Promise<ListOrdersResult> {
+  async findOrders(
+    filters: OrderFilterOptions,
+    options?: OrderQueryOptions,
+  ): Promise<ListOrdersResult> {
     const items = await this.orderRepository.findWithFilters(filters, options);
     const total = await this.orderRepository.count(filters);
     return { items: items.map(Order.toDTO), total };
@@ -199,7 +224,7 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async markOrderPaid(id: string): Promise<OrderDTO> {
+  async markOrderAsPaid(id: string): Promise<OrderDTO> {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
     if (!order) throw new OrderNotFoundError(id);
     order.markAsPaid();
@@ -207,11 +232,7 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async markOrderAsPaid(id: string): Promise<OrderDTO> {
-    return this.markOrderPaid(id);
-  }
-
-  async markOrderFulfilled(id: string): Promise<OrderDTO> {
+  async markOrderAsFulfilled(id: string): Promise<OrderDTO> {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
     if (!order) throw new OrderNotFoundError(id);
     order.markAsFulfilled();
@@ -219,28 +240,39 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async markOrderAsFulfilled(id: string): Promise<OrderDTO> {
-    return this.markOrderFulfilled(id);
-  }
-
   async updateOrderStatus(orderId: string, status: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(orderId),
+    );
     if (!order) throw new OrderNotFoundError(orderId);
     order.updateStatus(OrderStatus.fromString(status));
     await this.orderRepository.update(order);
     return Order.toDTO(order);
   }
 
-  async updateOrderTotals(orderId: string, totals: { tax: number; shipping: number; discount: number }): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(orderId));
+  async updateOrderTotals(
+    orderId: string,
+    totals: { tax: number; shipping: number; discount: number },
+  ): Promise<OrderDTO> {
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(orderId),
+    );
     if (!order) throw new OrderNotFoundError(orderId);
     order.updateTotals(totals.tax, totals.shipping, totals.discount);
     await this.orderRepository.update(order);
     return Order.toDTO(order);
   }
 
-  async updateOrderItem(params: { orderId: string; itemId: string; quantity?: number; isGift?: boolean; giftMessage?: string }): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(params.orderId));
+  async updateOrderItem(params: {
+    orderId: string;
+    itemId: string;
+    quantity?: number;
+    isGift?: boolean;
+    giftMessage?: string;
+  }): Promise<OrderDTO> {
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(params.orderId),
+    );
     if (!order) throw new OrderNotFoundError(params.orderId);
     if (params.quantity !== undefined) {
       order.updateItemQuantity(params.itemId, params.quantity);
@@ -249,19 +281,35 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async markShipmentShipped(data: { orderId: string; shipmentId: string; carrier: string; service: string; trackingNumber: string }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(data.shipmentId);
+  async markShipmentShipped(data: {
+    orderId: string;
+    shipmentId: string;
+    carrier: string;
+    service: string;
+    trackingNumber: string;
+  }): Promise<OrderShipmentDTO> {
+    const shipment = await this.orderShipmentRepository.findById(
+      data.shipmentId,
+    );
     if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
-    if (shipment.orderId !== data.orderId) throw new InvalidOperationError("Shipment does not belong to this order");
+    if (shipment.orderId !== data.orderId)
+      throw new InvalidOperationError("Shipment does not belong to this order");
     shipment.markAsShipped(data.carrier, data.service, data.trackingNumber);
     await this.orderShipmentRepository.update(shipment);
     return OrderShipment.toDTO(shipment);
   }
 
-  async markShipmentDelivered(data: { orderId: string; shipmentId: string; deliveredAt?: Date }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(data.shipmentId);
+  async markShipmentDelivered(data: {
+    orderId: string;
+    shipmentId: string;
+    deliveredAt?: Date;
+  }): Promise<OrderShipmentDTO> {
+    const shipment = await this.orderShipmentRepository.findById(
+      data.shipmentId,
+    );
     if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
-    if (shipment.orderId !== data.orderId) throw new InvalidOperationError("Shipment does not belong to this order");
+    if (shipment.orderId !== data.orderId)
+      throw new InvalidOperationError("Shipment does not belong to this order");
     shipment.markAsDelivered();
     await this.orderShipmentRepository.update(shipment);
     return OrderShipment.toDTO(shipment);
@@ -282,7 +330,10 @@ export class OrderManagementService {
     return address ? OrderAddress.toDTO(address) : null;
   }
 
-  async updateShippingAddress(orderId: string, params: AddressParams): Promise<OrderAddressDTO> {
+  async updateShippingAddress(
+    orderId: string,
+    params: AddressParams,
+  ): Promise<OrderAddressDTO> {
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
     if (!existing) throw new OrderNotFoundError(orderId);
     existing.updateShippingAddress(AddressSnapshot.create(params));
@@ -290,7 +341,10 @@ export class OrderManagementService {
     return OrderAddress.toDTO(existing);
   }
 
-  async updateBillingAddress(orderId: string, params: AddressParams): Promise<OrderAddressDTO> {
+  async updateBillingAddress(
+    orderId: string,
+    params: AddressParams,
+  ): Promise<OrderAddressDTO> {
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
     if (!existing) throw new OrderNotFoundError(orderId);
     existing.updateBillingAddress(AddressSnapshot.create(params));
@@ -303,15 +357,19 @@ export class OrderManagementService {
     billingAddress: AddressSnapshotData,
     shippingAddress: AddressSnapshotData,
   ): Promise<OrderAddressDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(orderId),
+    );
     if (!order) throw new OrderNotFoundError(orderId);
 
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
-    const address = existing ?? OrderAddress.create({
-      orderId,
-      billingAddress: AddressSnapshot.create(billingAddress),
-      shippingAddress: AddressSnapshot.create(shippingAddress),
-    });
+    const address =
+      existing ??
+      OrderAddress.create({
+        orderId,
+        billingAddress: AddressSnapshot.create(billingAddress),
+        shippingAddress: AddressSnapshot.create(shippingAddress),
+      });
 
     if (existing) {
       existing.updateBillingAddress(AddressSnapshot.create(billingAddress));
@@ -330,18 +388,32 @@ export class OrderManagementService {
 
   async addOrderItem(
     orderId: string,
-    data: { variantId: string; quantity: number; isGift?: boolean; giftMessage?: string },
+    data: {
+      variantId: string;
+      quantity: number;
+      isGift?: boolean;
+      giftMessage?: string;
+    },
   ): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(orderId),
+    );
     if (!order) throw new OrderNotFoundError(orderId);
 
     const defaultLocationId = this.getDefaultWarehouseId();
-    const stock = await this.stockManagementService.getStock(data.variantId, defaultLocationId);
+    const stock = await this.stockManagementService.getStock(
+      data.variantId,
+      defaultLocationId,
+    );
     if (!stock || stock.getStockLevel().getAvailable() < data.quantity) {
-      throw new DomainValidationError(`Insufficient stock for variant ${data.variantId}`);
+      throw new DomainValidationError(
+        `Insufficient stock for variant ${data.variantId}`,
+      );
     }
 
-    const variant = await this.variantManagementService.getVariantById(data.variantId);
+    const variant = await this.variantManagementService.getVariantById(
+      data.variantId,
+    );
     if (!variant) throw new OrderItemNotFoundError(data.variantId);
 
     const product = await this.productManagementService.getProductById(
@@ -370,14 +442,20 @@ export class OrderManagementService {
     await this.orderRepository.update(order);
 
     await this.stockManagementService.adjustStock(
-      data.variantId, defaultLocationId, -data.quantity, "order-add", orderId,
+      data.variantId,
+      defaultLocationId,
+      -data.quantity,
+      "order-add",
+      orderId,
     );
 
     return Order.toDTO(order);
   }
 
   async removeOrderItem(orderId: string, itemId: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(orderId),
+    );
     if (!order) throw new OrderNotFoundError(orderId);
     order.removeItem(itemId);
     await this.orderRepository.update(order);
@@ -396,7 +474,9 @@ export class OrderManagementService {
     giftReceipt?: boolean;
     pickupLocationId?: string;
   }): Promise<OrderShipmentDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(data.orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(data.orderId),
+    );
     if (!order) throw new OrderNotFoundError(data.orderId);
 
     const shipment = OrderShipment.create({
@@ -419,7 +499,9 @@ export class OrderManagementService {
     carrier?: string;
     service?: string;
   }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(data.shipmentId);
+    const shipment = await this.orderShipmentRepository.findById(
+      data.shipmentId,
+    );
     if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
 
     if (shipment.orderId !== data.orderId) {
@@ -449,19 +531,16 @@ export class OrderManagementService {
     toStatus: string;
     changedBy?: string;
   }): Promise<OrderStatusHistoryDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(data.orderId));
+    const order = await this.orderRepository.findById(
+      OrderId.fromString(data.orderId),
+    );
     if (!order) throw new OrderNotFoundError(data.orderId);
 
     const currentStatus = order.status.getValue();
     const fromStatus = data.fromStatus ?? currentStatus;
 
     if (currentStatus !== data.toStatus) {
-      const target = data.toStatus.toLowerCase();
-      if (target === "paid") order.markAsPaid();
-      else if (target === "fulfilled") order.markAsFulfilled();
-      else if (target === "cancelled") order.cancel();
-      else if (target === "refunded") order.refund();
-      else throw new InvalidOperationError(`Invalid status transition to ${data.toStatus}`);
+      order.updateStatus(OrderStatus.fromString(data.toStatus));
       await this.orderRepository.update(order);
     }
 
@@ -480,7 +559,10 @@ export class OrderManagementService {
     orderId: string,
     options?: StatusHistoryQueryOptions,
   ): Promise<OrderStatusHistoryDTO[]> {
-    const history = await this.orderStatusHistoryRepository.findByOrderId(orderId, options);
+    const history = await this.orderStatusHistoryRepository.findByOrderId(
+      orderId,
+      options,
+    );
     return history.map(OrderStatusHistory.toDTO);
   }
 

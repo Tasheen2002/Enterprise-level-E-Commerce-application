@@ -1,5 +1,7 @@
 export { AddToCartHandler } from "./add-to-cart.command";
 export { ClearCartHandler } from "./clear-cart.command";
+export { ClearUserCartHandler } from "./clear-user-cart.command";
+export { ClearGuestCartHandler } from "./clear-guest-cart.command";
 export { CreateGuestCartHandler } from "./create-guest-cart.command";
 export { CreateUserCartHandler } from "./create-user-cart.command";
 export { RemoveFromCartHandler } from "./remove-from-cart.command";

@@ -11,6 +11,7 @@ import {
   subscribeNewsletterSchema,
   unsubscribeNewsletterSchema,
   unsubscribeViaLinkSchema,
+  getSubscriptionQuerySchema,
   newsletterSubscriptionResponseSchema,
 } from "../validation/newsletter.schema";
 
@@ -60,6 +61,7 @@ export async function newsletterRoutes(
   fastify.get(
     "/engagement/newsletter/subscription",
     {
+      preValidation: [validateQuery(getSubscriptionQuerySchema)],
       schema: {
         description: "Get newsletter subscription by ID or email",
         summary: "Get Newsletter Subscription",

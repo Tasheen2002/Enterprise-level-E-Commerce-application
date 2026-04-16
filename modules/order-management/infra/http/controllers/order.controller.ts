@@ -2,29 +2,16 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  CreateOrderCommand,
   CreateOrderHandler,
-  UpdateOrderStatusCommand,
   UpdateOrderStatusCommandHandler,
-  UpdateOrderTotalsCommand,
   UpdateOrderTotalsCommandHandler,
-  MarkOrderPaidCommand,
   MarkOrderPaidCommandHandler,
-  MarkOrderFulfilledCommand,
   MarkOrderFulfilledCommandHandler,
-  CancelOrderCommand,
   CancelOrderCommandHandler,
-  DeleteOrderCommand,
   DeleteOrderCommandHandler,
-  GetOrderQuery,
   GetOrderHandler,
-  ListOrdersQuery,
   ListOrdersHandler,
-  GetOrderAddressQuery,
-  GetOrderAddressHandler,
-  ListOrderShipmentsQuery,
-  ListOrderShipmentsHandler,
-  GetShipmentByTrackingNumberHandler,
+  TrackOrderHandler,
 } from "../../../application";
 
 export interface AddressInput {
@@ -61,8 +48,8 @@ export interface TrackOrderQuerystring {
 }
 
 export interface ListOrdersQuerystring {
-  page?: number;
   limit?: number;
+  offset?: number;
   status?: string;
   startDate?: string;
   endDate?: string;
@@ -95,9 +82,7 @@ export class OrderController {
     private readonly markOrderFulfilledHandler: MarkOrderFulfilledCommandHandler,
     private readonly cancelOrderHandler: CancelOrderCommandHandler,
     private readonly deleteOrderHandler: DeleteOrderCommandHandler,
-    private readonly getOrderAddressHandler: GetOrderAddressHandler,
-    private readonly listOrderShipmentsHandler: ListOrderShipmentsHandler,
-    private readonly getShipmentByTrackingNumberHandler: GetShipmentByTrackingNumberHandler,
+    private readonly trackOrderHandler: TrackOrderHandler,
   ) {}
 
   async getOrder(
@@ -105,8 +90,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const query: GetOrderQuery = { orderId: request.params.orderId };
-      const result = await this.getOrderHandler.handle(query);
+      const result = await this.getOrderHandler.handle({ orderId: request.params.orderId });
 
       if (!result.success || !result.data) {
         return ResponseHelper.notFound(reply, "Order not found");
@@ -130,8 +114,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const query: GetOrderQuery = { orderNumber: request.params.orderNumber };
-      const result = await this.getOrderHandler.handle(query);
+      const result = await this.getOrderHandler.handle({ orderNumber: request.params.orderNumber });
 
       if (!result.success || !result.data) {
         return ResponseHelper.notFound(reply, "Order not found");
@@ -166,7 +149,7 @@ export class OrderController {
         return ResponseHelper.badRequest(reply, "Authenticated users cannot use guest checkout");
       }
 
-      const command: CreateOrderCommand = {
+      const result = await this.createOrderHandler.handle({
         userId: authenticatedUserId,
         guestToken,
         items,
@@ -174,9 +157,8 @@ export class OrderController {
         billingAddress,
         source: source || "web",
         currency: currency || "USD",
-      };
+      });
 
-      const result = await this.createOrderHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Order created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -188,24 +170,23 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const { page = 1, limit = 20, status, startDate, endDate, sortBy = "createdAt", sortOrder = "desc" } = request.query;
+      const { limit = 20, offset = 0, status, startDate, endDate, sortBy = "createdAt", sortOrder = "desc" } = request.query;
 
       const { userId: authenticatedUserId, role: userRole } = request.user;
       const isAdminOrStaff = STAFF_ROLES.includes(userRole ?? "");
       const filterUserId = isAdminOrStaff ? undefined : authenticatedUserId;
 
-      const query: ListOrdersQuery = {
-        page,
+      const result = await this.listOrdersHandler.handle({
         limit,
+        offset,
         userId: filterUserId,
         status,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         sortBy,
         sortOrder,
-      };
+      });
 
-      const result = await this.listOrdersHandler.handle(query);
       return ResponseHelper.ok(reply, "Orders retrieved successfully", result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -217,11 +198,10 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: UpdateOrderStatusCommand = {
+      const result = await this.updateOrderStatusHandler.handle({
         orderId: request.params.orderId,
         status: request.body.status,
-      };
-      const result = await this.updateOrderStatusHandler.handle(command);
+      });
       return ResponseHelper.fromCommand(reply, result, "Order status updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -233,11 +213,10 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: UpdateOrderTotalsCommand = {
+      const result = await this.updateOrderTotalsHandler.handle({
         orderId: request.params.orderId,
         totals: request.body.totals,
-      };
-      const result = await this.updateOrderTotalsHandler.handle(command);
+      });
       return ResponseHelper.fromCommand(reply, result, "Order totals updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -249,8 +228,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: MarkOrderPaidCommand = { orderId: request.params.orderId };
-      const result = await this.markOrderPaidHandler.handle(command);
+      const result = await this.markOrderPaidHandler.handle({ orderId: request.params.orderId });
       return ResponseHelper.fromCommand(reply, result, "Order marked as paid successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -262,8 +240,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: MarkOrderFulfilledCommand = { orderId: request.params.orderId };
-      const result = await this.markOrderFulfilledHandler.handle(command);
+      const result = await this.markOrderFulfilledHandler.handle({ orderId: request.params.orderId });
       return ResponseHelper.fromCommand(reply, result, "Order marked as fulfilled successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -275,8 +252,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: CancelOrderCommand = { orderId: request.params.orderId };
-      const result = await this.cancelOrderHandler.handle(command);
+      const result = await this.cancelOrderHandler.handle({ orderId: request.params.orderId });
       return ResponseHelper.fromCommand(reply, result, "Order cancelled successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -288,8 +264,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const command: DeleteOrderCommand = { orderId: request.params.orderId };
-      const result = await this.deleteOrderHandler.handle(command);
+      const result = await this.deleteOrderHandler.handle({ orderId: request.params.orderId });
       return ResponseHelper.fromCommand(reply, result, "Order deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -311,69 +286,17 @@ export class OrderController {
         return ResponseHelper.badRequest(reply, "Email or phone number is required when tracking by order number");
       }
 
-      if (orderNumber && contact) {
-        const result = await this.getOrderHandler.handle({ orderNumber });
+      const result = await this.trackOrderHandler.handle({ orderNumber, contact, trackingNumber });
 
-        if (!result.success || !result.data) {
-          return ResponseHelper.notFound(reply, `No order found with order number: ${orderNumber}`);
-        }
-
-        const order = result.data;
-        const addressQuery: GetOrderAddressQuery = { orderId: order.id };
-        const addressResult = await this.getOrderAddressHandler.handle(addressQuery);
-        const orderAddress = addressResult.success ? addressResult.data : null;
-
-        const contactLower = contact.toLowerCase().trim();
-        const billing = orderAddress?.billingAddress;
-        const shipping = orderAddress?.shippingAddress;
-
-        const contactMatches =
-          contactLower === (billing?.email as string | undefined)?.toLowerCase().trim() ||
-          contactLower === (shipping?.email as string | undefined)?.toLowerCase().trim() ||
-          contact === (billing?.phone as string | undefined)?.trim() ||
-          contact === (shipping?.phone as string | undefined)?.trim();
-
-        if (!contactMatches) {
-          return ResponseHelper.forbidden(reply, "The email or phone number does not match our records for this order.");
-        }
-
-        const shipmentsQuery: ListOrderShipmentsQuery = { orderId: order.id };
-        const shipmentsResult = await this.listOrderShipmentsHandler.handle(shipmentsQuery);
-
-        return ResponseHelper.ok(reply, "Order tracking retrieved successfully", {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          items: order.items,
-          totals: order.totals,
-          shipments: shipmentsResult.success ? shipmentsResult.data : [],
-          billingAddress: billing || {},
-          shippingAddress: shipping || {},
-          createdAt: order.createdAt,
-          updatedAt: order.updatedAt,
-        });
+      if (!result.success || !result.data) {
+        return ResponseHelper.notFound(reply, "Order not found");
       }
 
-      if (trackingNumber) {
-        const shipment = await this.getShipmentByTrackingNumberHandler.handle({ trackingNumber });
-
-        if (!shipment) {
-          return ResponseHelper.notFound(reply, "No shipment found for the given tracking number");
-        }
-
-        return ResponseHelper.ok(reply, "Shipment tracking retrieved successfully", {
-          shipmentId: shipment.shipmentId,
-          orderId: shipment.orderId,
-          carrier: shipment.carrier,
-          service: shipment.service,
-          trackingNumber: shipment.trackingNumber,
-          shippedAt: shipment.shippedAt,
-          deliveredAt: shipment.deliveredAt,
-        });
-      }
-
-      return ResponseHelper.badRequest(reply, "Invalid tracking request");
+      return ResponseHelper.ok(reply, "Order tracking retrieved successfully", result.data);
     } catch (error: unknown) {
+      if (error instanceof Error && error.message === "CONTACT_MISMATCH") {
+        return ResponseHelper.forbidden(reply, "The email or phone number does not match our records for this order.");
+      }
       return ResponseHelper.error(reply, error);
     }
   }

@@ -5,8 +5,8 @@ import { OrderDTO } from "../../domain/entities/order.entity";
 import { OrderStatus } from "../../domain/value-objects/order-status.vo";
 
 export interface ListOrdersQuery extends IQuery {
-  readonly page?: number;
   readonly limit?: number;
+  readonly offset?: number;
   readonly userId?: string;
   readonly status?: string;
   readonly startDate?: Date;
@@ -19,9 +19,8 @@ export class ListOrdersHandler implements IQueryHandler<ListOrdersQuery, QueryRe
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(query: ListOrdersQuery): Promise<QueryResult<PaginatedResult<OrderDTO>>> {
-    const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-    const offset = (page - 1) * limit;
+    const offset = query.offset ?? 0;
     const result = await this.orderService.findOrders(
       {
         userId: query.userId,

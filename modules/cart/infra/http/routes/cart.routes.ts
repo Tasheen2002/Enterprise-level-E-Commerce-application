@@ -228,8 +228,8 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(userIdParamsSchema)],
       preHandler: [
-        requireRole(["ADMIN", "CUSTOMER"]),
         validateBody(createUserCartSchema),
+        requireRole(["ADMIN", "CUSTOMER"]),
       ],
       schema: {
         description: "Create a new cart for a user",
@@ -273,9 +273,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(guestTokenParamsSchema)],
       preHandler: [
+        validateBody(createGuestCartSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(createGuestCartSchema),
       ],
       schema: {
         description: "Create a new cart for a guest.",
@@ -317,10 +317,10 @@ export async function cartRoutes(
     "/cart/items",
     {
       preHandler: [
+        validateBody(addToCartSchema),
         optionalAuth,
         extractGuestToken,
         requireCartAuth,
-        validateBody(addToCartSchema),
       ],
       schema: {
         description: "Add an item to cart.",
@@ -361,9 +361,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(cartItemParamsSchema)],
       preHandler: [
+        validateBody(updateCartItemSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(updateCartItemSchema),
       ],
       schema: {
         description: "Update cart item quantity.",
@@ -498,9 +498,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(guestTokenParamsSchema)],
       preHandler: [
+        validateBody(transferCartSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(transferCartSchema),
       ],
       schema: {
         description: "Transfer guest cart to authenticated user.",
@@ -610,9 +610,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(cartIdParamsSchema)],
       preHandler: [
+        validateBody(updateCartEmailSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(updateCartEmailSchema),
       ],
       schema: {
         description: "Update cart email address.",
@@ -656,9 +656,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(cartIdParamsSchema)],
       preHandler: [
+        validateBody(updateCartShippingInfoSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(updateCartShippingInfoSchema),
       ],
       schema: {
         description: "Update cart shipping information.",
@@ -706,9 +706,9 @@ export async function cartRoutes(
     {
       preValidation: [validateParams(cartIdParamsSchema)],
       preHandler: [
+        validateBody(updateCartAddressesSchema),
         optionalAuth,
         extractGuestToken,
-        validateBody(updateCartAddressesSchema),
       ],
       schema: {
         description: "Update cart shipping and billing addresses.",

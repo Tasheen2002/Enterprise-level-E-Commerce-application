@@ -45,7 +45,7 @@ export async function registerOrderAddressRoutes(
     "/orders/:orderId/addresses",
     {
       preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [authenticateUser, validateBody(setOrderAddressesSchema)],
+      preHandler: [validateBody(setOrderAddressesSchema), authenticateUser],
       schema: {
         description:
           "Set billing and shipping addresses for an order. Order must be in 'created' status.",
@@ -130,7 +130,7 @@ export async function registerOrderAddressRoutes(
     "/orders/:orderId/addresses/billing",
     {
       preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [authenticateUser, validateBody(updateBillingAddressSchema)],
+      preHandler: [validateBody(updateBillingAddressSchema), authenticateUser],
       schema: {
         description: "Update billing address for an order",
         tags: ["Order Addresses"],
@@ -169,7 +169,7 @@ export async function registerOrderAddressRoutes(
     "/orders/:orderId/addresses/shipping",
     {
       preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [authenticateUser, validateBody(updateShippingAddressSchema)],
+      preHandler: [validateBody(updateShippingAddressSchema), authenticateUser],
       schema: {
         description: "Update shipping address for an order",
         tags: ["Order Addresses"],

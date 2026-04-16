@@ -20,7 +20,7 @@ export async function registerOrderItemRoutes(
     "/orders/:orderId/items",
     {
       preValidation: [validateParams(orderItemsParamsSchema)],
-      preHandler: [authenticateUser, validateBody(addOrderItemSchema)],
+      preHandler: [validateBody(addOrderItemSchema), authenticateUser],
       schema: {
         description:
           "Add an item to an existing order. Order must be in 'created' status.",
@@ -140,7 +140,7 @@ export async function registerOrderItemRoutes(
     "/orders/:orderId/items/:itemId",
     {
       preValidation: [validateParams(orderItemParamsSchema)],
-      preHandler: [authenticateUser, validateBody(updateOrderItemSchema)],
+      preHandler: [validateBody(updateOrderItemSchema), authenticateUser],
       schema: {
         description:
           "Update an order item. Can update quantity and/or gift status. Order must be in 'created' status.",
