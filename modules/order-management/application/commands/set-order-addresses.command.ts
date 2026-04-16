@@ -1,35 +1,38 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 
 export interface SetOrderAddressesCommand extends ICommand {
   readonly orderId: string;
   readonly billingAddress: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-    phone?: string;
-    email?: string;
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly addressLine1: string;
+    readonly addressLine2?: string;
+    readonly city: string;
+    readonly state: string;
+    readonly postalCode: string;
+    readonly country: string;
+    readonly phone?: string;
+    readonly email?: string;
   };
   readonly shippingAddress: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-    phone?: string;
-    email?: string;
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly addressLine1: string;
+    readonly addressLine2?: string;
+    readonly city: string;
+    readonly state: string;
+    readonly postalCode: string;
+    readonly country: string;
+    readonly phone?: string;
+    readonly email?: string;
   };
 }
-
 
 export class SetOrderAddressesCommandHandler implements ICommandHandler<
   SetOrderAddressesCommand,

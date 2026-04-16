@@ -9,16 +9,16 @@ import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 export interface UpdateBillingAddressCommand extends ICommand {
   readonly orderId: string;
   readonly billingAddress: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-    phone?: string;
-    email?: string;
+    readonly firstName: string;
+    readonly lastName: string;
+    readonly addressLine1: string;
+    readonly addressLine2?: string;
+    readonly city: string;
+    readonly state: string;
+    readonly postalCode: string;
+    readonly country: string;
+    readonly phone?: string;
+    readonly email?: string;
   };
 }
 
@@ -28,7 +28,9 @@ export class UpdateBillingAddressCommandHandler implements ICommandHandler<
 > {
   constructor(private readonly orderService: OrderManagementService) {}
 
-  async handle(command: UpdateBillingAddressCommand): Promise<CommandResult<OrderAddressDTO>> {
+  async handle(
+    command: UpdateBillingAddressCommand,
+  ): Promise<CommandResult<OrderAddressDTO>> {
     const orderAddress = await this.orderService.updateBillingAddress(
       command.orderId,
       command.billingAddress,

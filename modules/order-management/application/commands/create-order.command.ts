@@ -23,10 +23,10 @@ export interface CreateOrderCommand extends ICommand {
   readonly userId?: string;
   readonly guestToken?: string;
   readonly items: Array<{
-    variantId: string;
-    quantity: number;
-    isGift?: boolean;
-    giftMessage?: string;
+    readonly variantId: string;
+    readonly quantity: number;
+    readonly isGift?: boolean;
+    readonly giftMessage?: string;
   }>;
   readonly shippingAddress: AddressInput;
   readonly billingAddress?: AddressInput;
