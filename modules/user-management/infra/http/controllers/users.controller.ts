@@ -26,7 +26,7 @@ export class UsersController {
     try {
       const query = { userId: request.params.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
-      return ResponseHelper.ok(reply, 'User retrieved', result);
+      return ResponseHelper.ok(reply, 'User retrieved', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -39,7 +39,7 @@ export class UsersController {
     try {
       const query = { userId: request.user.userId, timestamp: new Date() };
       const result = await this.getUserDetailsHandler.handle(query);
-      return ResponseHelper.ok(reply, 'User retrieved', result);
+      return ResponseHelper.ok(reply, 'User retrieved', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -51,9 +51,9 @@ export class UsersController {
         search?: string;
         role?: string;
         status?: string;
-        emailVerified?: string;
-        page?: string;
-        limit?: string;
+        emailVerified?: boolean;
+        page?: number;
+        limit?: number;
         sortBy?: string;
         sortOrder?: string;
       };
@@ -67,16 +67,16 @@ export class UsersController {
         search,
         role: role as UserRole | undefined,
         status: status as UserStatus | undefined,
-        emailVerified: emailVerified !== undefined ? emailVerified === 'true' : undefined,
-        page: page ? parseInt(page, 10) : 1,
-        limit: limit ? parseInt(limit, 10) : 20,
-        sortBy: (sortBy as 'createdAt' | 'email') || 'createdAt',
-        sortOrder: (sortOrder as 'asc' | 'desc') || 'desc',
+        emailVerified,
+        page,
+        limit,
+        sortBy: sortBy as 'createdAt' | 'email' | undefined,
+        sortOrder: sortOrder as 'asc' | 'desc' | undefined,
         timestamp: new Date(),
       };
 
       const result = await this.listUsersHandler.handle(query);
-      return ResponseHelper.ok(reply, 'Users retrieved', result);
+      return ResponseHelper.ok(reply, 'Users retrieved', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

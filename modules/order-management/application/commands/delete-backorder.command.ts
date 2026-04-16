@@ -6,7 +6,7 @@ import {
 import { BackorderManagementService } from "../services/backorder-management.service";
 
 export interface DeleteBackorderCommand extends ICommand {
-  orderItemId: string;
+  readonly orderItemId: string;
 }
 
 export class DeleteBackorderCommandHandler implements ICommandHandler<

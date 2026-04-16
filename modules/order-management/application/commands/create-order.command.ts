@@ -7,31 +7,31 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 interface AddressInput {
-  firstName: string;
-  lastName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  phone?: string;
-  email?: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly addressLine1: string;
+  readonly addressLine2?: string;
+  readonly city: string;
+  readonly state: string;
+  readonly postalCode: string;
+  readonly country: string;
+  readonly phone?: string;
+  readonly email?: string;
 }
 
 export interface CreateOrderCommand extends ICommand {
-  userId?: string;
-  guestToken?: string;
-  items: Array<{
+  readonly userId?: string;
+  readonly guestToken?: string;
+  readonly items: Array<{
     variantId: string;
     quantity: number;
     isGift?: boolean;
     giftMessage?: string;
   }>;
-  shippingAddress: AddressInput;
-  billingAddress?: AddressInput;
-  source?: string;
-  currency: string;
+  readonly shippingAddress: AddressInput;
+  readonly billingAddress?: AddressInput;
+  readonly source?: string;
+  readonly currency: string;
 }
 
 export class CreateOrderCommandHandler implements ICommandHandler<

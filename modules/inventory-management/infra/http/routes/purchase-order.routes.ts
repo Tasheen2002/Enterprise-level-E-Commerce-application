@@ -170,7 +170,8 @@ export async function purchaseOrderRoutes(
   fastify.post(
     "/purchase-orders/full",
     {
-      preHandler: [validateBody(createPurchaseOrderWithItemsSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateBody(createPurchaseOrderWithItemsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Create a new purchase order with items (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -217,8 +218,8 @@ export async function purchaseOrderRoutes(
   fastify.patch(
     "/purchase-orders/:poId/status",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [validateBody(updatePOStatusSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema), validateBody(updatePOStatusSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order status (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -267,8 +268,8 @@ export async function purchaseOrderRoutes(
   fastify.patch(
     "/purchase-orders/:poId/eta",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [validateBody(updatePOEtaSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema), validateBody(updatePOEtaSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order estimated arrival (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -315,8 +316,8 @@ export async function purchaseOrderRoutes(
   fastify.post(
     "/purchase-orders/:poId/receive",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [validateBody(receivePOItemsSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema), validateBody(receivePOItemsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Receive items from purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],

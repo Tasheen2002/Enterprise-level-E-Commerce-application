@@ -108,7 +108,8 @@ export async function locationRoutes(
   fastify.post(
     "/locations",
     {
-      preHandler: [validateBody(createLocationSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(createLocationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new location",
         tags: ["Locations"],
@@ -152,8 +153,8 @@ export async function locationRoutes(
   fastify.patch(
     "/locations/:locationId",
     {
-      preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [validateBody(updateLocationSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(locationParamsSchema), validateBody(updateLocationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update location",
         tags: ["Locations"],

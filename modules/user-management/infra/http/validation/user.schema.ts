@@ -5,12 +5,12 @@ export const userIdParamsSchema = z.object({
 });
 
 export const listUsersQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  page: z.string().regex(/^\d+$/).transform(Number).optional(),
+  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
   role: z.string().optional(),
   status: z.string().optional(),
   search: z.string().optional(),
-  emailVerified: z.enum(["true", "false"]).optional(),
+  emailVerified: z.enum(["true", "false"]).transform(v => v === "true").optional(),
   sortBy: z.enum(["createdAt", "email"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });

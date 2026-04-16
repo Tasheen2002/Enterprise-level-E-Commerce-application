@@ -3,9 +3,9 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderShipmentDTO } from "../../domain/entities/order-shipment.entity";
 
 export interface MarkShipmentDeliveredCommand extends ICommand {
-  orderId: string;
-  shipmentId: string;
-  deliveredAt?: Date;
+  readonly orderId: string;
+  readonly shipmentId: string;
+  readonly deliveredAt?: Date;
 }
 
 export class MarkShipmentDeliveredCommandHandler implements ICommandHandler<

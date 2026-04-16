@@ -48,7 +48,7 @@ export interface UpdateTrackingRequest {
 export interface MarkDeliveredRequest {
   Params: { orderId: string; shipmentId: string };
   Body: {
-    deliveredAt?: string;
+    deliveredAt?: Date;
   };
 }
 
@@ -165,7 +165,7 @@ export class OrderShipmentController {
       const command: MarkShipmentDeliveredCommand = {
         orderId: request.params.orderId,
         shipmentId: request.params.shipmentId,
-        deliveredAt: request.body.deliveredAt ? new Date(request.body.deliveredAt) : new Date(),
+        deliveredAt: request.body.deliveredAt,
       };
       const result = await this.markDeliveredHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Shipment marked as delivered successfully");

@@ -51,8 +51,8 @@ export interface ListOrdersQuerystring {
   limit?: number;
   offset?: number;
   status?: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date;
+  endDate?: Date;
   sortBy?: "createdAt" | "updatedAt" | "orderNumber";
   sortOrder?: "asc" | "desc";
 }
@@ -155,8 +155,8 @@ export class OrderController {
         items,
         shippingAddress,
         billingAddress,
-        source: source || "web",
-        currency: currency || "USD",
+        source,
+        currency,
       });
 
       return ResponseHelper.fromCommand(reply, result, "Order created successfully", 201);
@@ -170,7 +170,7 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const { limit = 20, offset = 0, status, startDate, endDate, sortBy = "createdAt", sortOrder = "desc" } = request.query;
+      const { limit, offset, status, startDate, endDate, sortBy, sortOrder } = request.query;
 
       const { userId: authenticatedUserId, role: userRole } = request.user;
       const isAdminOrStaff = STAFF_ROLES.includes(userRole ?? "");
@@ -181,8 +181,8 @@ export class OrderController {
         offset,
         userId: filterUserId,
         status,
-        startDate: startDate ? new Date(startDate) : undefined,
-        endDate: endDate ? new Date(endDate) : undefined,
+        startDate,
+        endDate,
         sortBy,
         sortOrder,
       });

@@ -3,10 +3,10 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderStatusHistoryDTO } from "../../domain/entities/order-status-history.entity";
 
 export interface LogOrderStatusChangeCommand extends ICommand {
-  orderId: string;
-  fromStatus?: string;
-  toStatus: string;
-  changedBy?: string;
+  readonly orderId: string;
+  readonly fromStatus?: string;
+  readonly toStatus: string;
+  readonly changedBy?: string;
 }
 
 export class LogOrderStatusChangeCommandHandler implements ICommandHandler<

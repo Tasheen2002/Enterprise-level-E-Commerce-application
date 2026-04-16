@@ -18,10 +18,23 @@ export class LoginUserHandler
   async handle(
     command: LoginUserCommand
   ): Promise<CommandResult<AuthResult>> {
-    const authResult = await this.authService.login({
-      email: command.email,
-      password: command.password,
-    });
-    return CommandResult.success(authResult);
+    if (this.authService.isAccountLocked(command.email)) {
+      return CommandResult.failure(
+        'Account temporarily locked due to multiple failed login attempts',
+        429,
+      );
+    }
+
+    try {
+      const authResult = await this.authService.login({
+        email: command.email,
+        password: command.password,
+      });
+      this.authService.clearFailedAttempts(command.email);
+      return CommandResult.success(authResult);
+    } catch (error) {
+      this.authService.recordFailedAttempt(command.email);
+      throw error;
+    }
   }
 }

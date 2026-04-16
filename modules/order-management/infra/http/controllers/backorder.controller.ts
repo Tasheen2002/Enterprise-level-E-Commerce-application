@@ -19,14 +19,14 @@ import {
 export interface CreateBackorderRequest {
   Body: {
     orderItemId: string;
-    promisedEta?: string;
+    promisedEta?: Date;
   };
 }
 
 export interface UpdateBackorderEtaRequest {
   Params: { orderItemId: string };
   Body: {
-    promisedEta: string;
+    promisedEta: Date;
   };
 }
 
@@ -69,7 +69,7 @@ export class BackorderController {
     try {
       const command: CreateBackorderCommand = {
         orderItemId: request.body.orderItemId,
-        promisedEta: request.body.promisedEta ? new Date(request.body.promisedEta) : undefined,
+        promisedEta: request.body.promisedEta,
       };
       const result = await this.createHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Backorder created successfully", 201);
@@ -117,7 +117,7 @@ export class BackorderController {
     try {
       const command: UpdateBackorderEtaCommand = {
         orderItemId: request.params.orderItemId,
-        promisedEta: new Date(request.body.promisedEta),
+        promisedEta: request.body.promisedEta,
       };
       const result = await this.updateEtaHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Backorder promised ETA updated successfully");

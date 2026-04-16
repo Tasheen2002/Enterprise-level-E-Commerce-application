@@ -3,7 +3,7 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface MarkOrderPaidCommand extends ICommand {
-  orderId: string;
+  readonly orderId: string;
 }
 
 export class MarkOrderPaidCommandHandler implements ICommandHandler<
@@ -13,7 +13,7 @@ export class MarkOrderPaidCommandHandler implements ICommandHandler<
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(command: MarkOrderPaidCommand): Promise<CommandResult<OrderDTO>> {
-    const order = await this.orderService.markOrderPaid(command.orderId);
+    const order = await this.orderService.markOrderAsPaid(command.orderId);
     return CommandResult.success(order);
   }
 }

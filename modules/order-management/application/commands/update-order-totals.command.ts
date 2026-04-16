@@ -3,8 +3,8 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface UpdateOrderTotalsCommand extends ICommand {
-  orderId: string;
-  totals: {
+  readonly orderId: string;
+  readonly totals: {
     tax: number;
     shipping: number;
     discount: number;

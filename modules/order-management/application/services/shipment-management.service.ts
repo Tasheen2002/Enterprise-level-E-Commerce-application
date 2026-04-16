@@ -128,7 +128,7 @@ export class ShipmentManagementService {
     if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.markAsShipped(carrier, service, trackingNumber);
-    await this.shipmentRepository.update(shipment);
+    await this.shipmentRepository.save(shipment);
 
     return OrderShipment.toDTO(shipment);
   }
@@ -138,7 +138,7 @@ export class ShipmentManagementService {
     if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.markAsDelivered();
-    await this.shipmentRepository.update(shipment);
+    await this.shipmentRepository.save(shipment);
 
     return OrderShipment.toDTO(shipment);
   }
@@ -155,7 +155,7 @@ export class ShipmentManagementService {
     if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.updateTrackingNumber(trackingNumber);
-    await this.shipmentRepository.update(shipment);
+    await this.shipmentRepository.save(shipment);
 
     return OrderShipment.toDTO(shipment);
   }

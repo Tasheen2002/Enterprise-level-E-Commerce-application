@@ -3,11 +3,11 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface UpdateOrderItemCommand extends ICommand {
-  orderId: string;
-  itemId: string;
-  quantity?: number;
-  isGift?: boolean;
-  giftMessage?: string;
+  readonly orderId: string;
+  readonly itemId: string;
+  readonly quantity?: number;
+  readonly isGift?: boolean;
+  readonly giftMessage?: string;
 }
 
 export class UpdateOrderItemCommandHandler implements ICommandHandler<

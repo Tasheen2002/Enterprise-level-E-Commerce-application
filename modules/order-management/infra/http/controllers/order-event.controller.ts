@@ -32,7 +32,7 @@ export interface GetEventsRequest {
 export interface GetEventRequest {
   Params: {
     orderId: string;
-    eventId: string;
+    eventId: number;
   };
 }
 
@@ -85,13 +85,7 @@ export class OrderEventController {
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const eventId = parseInt(request.params.eventId, 10);
-
-      if (isNaN(eventId)) {
-        return ResponseHelper.badRequest(reply, "Invalid event ID");
-      }
-
-      const query: GetOrderEventQuery = { eventId };
+      const query: GetOrderEventQuery = { eventId: request.params.eventId };
       const result = await this.getOrderEventHandler.handle(query);
       return ResponseHelper.ok(reply, "Order event retrieved successfully", result.data);
     } catch (error: unknown) {

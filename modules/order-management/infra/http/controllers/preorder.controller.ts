@@ -19,14 +19,14 @@ import {
 export interface CreatePreorderRequest {
   Body: {
     orderItemId: string;
-    releaseDate?: string;
+    releaseDate?: Date;
   };
 }
 
 export interface UpdatePreorderReleaseDateRequest {
   Params: { orderItemId: string };
   Body: {
-    releaseDate: string;
+    releaseDate: Date;
   };
 }
 
@@ -69,7 +69,7 @@ export class PreorderController {
     try {
       const command: CreatePreorderCommand = {
         orderItemId: request.body.orderItemId,
-        releaseDate: request.body.releaseDate ? new Date(request.body.releaseDate) : undefined,
+        releaseDate: request.body.releaseDate,
       };
       const result = await this.createHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Preorder created successfully", 201);
@@ -117,7 +117,7 @@ export class PreorderController {
     try {
       const command: UpdatePreorderReleaseDateCommand = {
         orderItemId: request.params.orderItemId,
-        releaseDate: new Date(request.body.releaseDate),
+        releaseDate: request.body.releaseDate,
       };
       const result = await this.updateReleaseDateHandler.handle(command);
       return ResponseHelper.fromCommand(reply, result, "Preorder release date updated successfully");

@@ -3,8 +3,8 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface RemoveOrderItemCommand extends ICommand {
-  orderId: string;
-  itemId: string;
+  readonly orderId: string;
+  readonly itemId: string;
 }
 
 export class RemoveOrderItemCommandHandler implements ICommandHandler<

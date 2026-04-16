@@ -3,8 +3,8 @@ import { BackorderManagementService } from "../services/backorder-management.ser
 import { BackorderDTO } from "../../domain/entities/backorder.entity";
 
 export interface UpdateBackorderEtaCommand extends ICommand {
-  orderItemId: string;
-  promisedEta: Date;
+  readonly orderItemId: string;
+  readonly promisedEta: Date;
 }
 
 export class UpdateBackorderEtaCommandHandler implements ICommandHandler<

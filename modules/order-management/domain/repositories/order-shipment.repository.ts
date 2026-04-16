@@ -10,7 +10,6 @@ export interface ShipmentQueryOptions {
 export interface IOrderShipmentRepository {
   // Basic CRUD
   save(shipment: OrderShipment): Promise<void>;
-  update(shipment: OrderShipment): Promise<void>;
   delete(shipmentId: string): Promise<void>;
   deleteByOrderId(orderId: string): Promise<void>;
 

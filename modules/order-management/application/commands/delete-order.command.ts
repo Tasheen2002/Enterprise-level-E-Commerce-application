@@ -6,7 +6,7 @@ import {
 import { OrderManagementService } from "../services/order-management.service";
 
 export interface DeleteOrderCommand extends ICommand {
-  orderId: string;
+  readonly orderId: string;
 }
 
 export class DeleteOrderCommandHandler implements ICommandHandler<

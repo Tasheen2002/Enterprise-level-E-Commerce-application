@@ -146,8 +146,8 @@ export async function userRoutes(
   fastify.patch(
     "/users/:userId/status",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [validateBody(updateUserStatusSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(updateUserStatusSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Update user status",
@@ -196,8 +196,8 @@ export async function userRoutes(
   fastify.patch(
     "/users/:userId/role",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [validateBody(updateUserRoleSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(updateUserRoleSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Update user role",
@@ -248,8 +248,8 @@ export async function userRoutes(
   fastify.patch(
     "/users/:userId/email-verified",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [validateBody(toggleEmailVerifiedSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(toggleEmailVerifiedSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Toggle email verification",

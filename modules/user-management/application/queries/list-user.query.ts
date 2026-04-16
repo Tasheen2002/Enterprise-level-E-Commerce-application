@@ -4,6 +4,7 @@ import { UserStatus } from '../../domain/enums/user-status.enum';
 import {
   IQuery,
   IQueryHandler,
+  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 
 export interface ListUsersQuery extends IQuery {
@@ -17,20 +18,25 @@ export interface ListUsersQuery extends IQuery {
   readonly sortOrder?: 'asc' | 'desc';
 }
 
-export class ListUsersHandler implements IQueryHandler<ListUsersQuery, ListUsersResult> {
+export class ListUsersHandler implements IQueryHandler<ListUsersQuery, QueryResult<ListUsersResult>> {
   constructor(private readonly userService: UserService) {}
 
-  async handle(query: ListUsersQuery): Promise<ListUsersResult> {
-    return this.userService.listUsers({
-      search: query.search,
-      role: query.role,
-      status: query.status,
-      emailVerified: query.emailVerified,
-      page: query.page,
-      limit: query.limit,
-      sortBy: query.sortBy,
-      sortOrder: query.sortOrder,
-    });
+  async handle(query: ListUsersQuery): Promise<QueryResult<ListUsersResult>> {
+    try {
+      const data = await this.userService.listUsers({
+        search: query.search,
+        role: query.role,
+        status: query.status,
+        emailVerified: query.emailVerified,
+        page: query.page,
+        limit: query.limit,
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+      });
+      return QueryResult.success(data);
+    } catch (error) {
+      return QueryResult.fromError(error);
+    }
   }
 }
 

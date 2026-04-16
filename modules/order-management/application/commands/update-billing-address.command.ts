@@ -7,8 +7,8 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 
 export interface UpdateBillingAddressCommand extends ICommand {
-  orderId: string;
-  billingAddress: {
+  readonly orderId: string;
+  readonly billingAddress: {
     firstName: string;
     lastName: string;
     addressLine1: string;

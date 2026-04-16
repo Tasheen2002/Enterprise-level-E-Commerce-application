@@ -3,7 +3,7 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface CancelOrderCommand extends ICommand {
-  orderId: string;
+  readonly orderId: string;
 }
 
 export class CancelOrderCommandHandler implements ICommandHandler<

@@ -8,7 +8,7 @@ export const orderEventsParamsSchema = z.object({
 
 export const orderEventParamsSchema = z.object({
   orderId: z.uuid(),
-  eventId: z.string().min(1),
+  eventId: z.string().regex(/^\d+$/).transform(v => parseInt(v, 10)),
 });
 
 // ── Query Schemas ─────────────────────────────────────────────────────────────

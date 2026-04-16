@@ -3,8 +3,8 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface UpdateOrderStatusCommand extends ICommand {
-  orderId: string;
-  status: string;
+  readonly orderId: string;
+  readonly status: string;
 }
 
 export class UpdateOrderStatusCommandHandler implements ICommandHandler<

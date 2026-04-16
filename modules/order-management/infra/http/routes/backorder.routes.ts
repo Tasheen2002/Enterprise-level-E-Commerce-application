@@ -21,7 +21,8 @@ export async function registerBackorderRoutes(
   fastify.post(
     "/backorders",
     {
-      preHandler: [validateBody(createBackorderSchema), ...authenticateAdmin],
+      preValidation: [validateBody(createBackorderSchema)],
+      preHandler: authenticateAdmin,
       schema: {
         description:
           "Create a new backorder for an order item. Used for items that are temporarily out of stock.",

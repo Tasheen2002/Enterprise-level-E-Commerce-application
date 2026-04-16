@@ -3,9 +3,9 @@ import { OrderEventService } from "../services/order-event.service";
 import { OrderEventDTO } from "../../domain/entities/order-event.entity";
 
 export interface LogOrderEventCommand extends ICommand {
-  orderId: string;
-  eventType: string;
-  payload?: Record<string, unknown>;
+  readonly orderId: string;
+  readonly eventType: string;
+  readonly payload?: Record<string, unknown>;
 }
 
 export class LogOrderEventCommandHandler implements ICommandHandler<

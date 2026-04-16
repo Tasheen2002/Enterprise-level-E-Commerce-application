@@ -3,7 +3,7 @@ import { PreorderManagementService } from "../services/preorder-management.servi
 import { PreorderDTO } from "../../domain/entities/preorder.entity";
 
 export interface MarkPreorderNotifiedCommand extends ICommand {
-  orderItemId: string;
+  readonly orderItemId: string;
 }
 
 export class MarkPreorderNotifiedCommandHandler implements ICommandHandler<

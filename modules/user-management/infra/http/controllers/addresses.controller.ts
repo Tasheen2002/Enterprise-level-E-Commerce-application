@@ -61,7 +61,7 @@ export class AddressesController {
 
       const result = await this.listAddressesHandler.handle({ userId });
 
-      return ResponseHelper.ok(reply, 'Addresses retrieved successfully', result);
+      return ResponseHelper.ok(reply, 'Addresses retrieved successfully', result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

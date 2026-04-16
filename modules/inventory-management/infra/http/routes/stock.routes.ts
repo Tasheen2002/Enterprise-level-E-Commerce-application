@@ -263,7 +263,8 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/add",
     {
-      preHandler: [validateBody(addStockSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(addStockSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Add stock to inventory",
         tags: ["Stock Management"],
@@ -299,7 +300,8 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/adjust",
     {
-      preHandler: [validateBody(adjustStockSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(adjustStockSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Adjust stock quantity (positive or negative)",
         tags: ["Stock Management"],
@@ -335,7 +337,8 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/transfer",
     {
-      preHandler: [validateBody(transferStockSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(transferStockSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Transfer stock between locations",
         tags: ["Stock Management"],
@@ -371,7 +374,8 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/reserve",
     {
-      preHandler: [validateBody(reserveStockSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(reserveStockSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Reserve stock for an order",
         tags: ["Stock Management"],
@@ -406,7 +410,8 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/fulfill",
     {
-      preHandler: [validateBody(fulfillReservationSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(fulfillReservationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Fulfill stock reservation (removes from inventory)",
         tags: ["Stock Management"],
@@ -441,8 +446,8 @@ export async function stockRoutes(
   fastify.patch(
     "/stocks/:variantId/:locationId/thresholds",
     {
-      preValidation: [validateParams(stockParamsSchema)],
-      preHandler: [validateBody(setStockThresholdsSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(stockParamsSchema), validateBody(setStockThresholdsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Set low stock and safety stock thresholds",
         tags: ["Stock Management"],

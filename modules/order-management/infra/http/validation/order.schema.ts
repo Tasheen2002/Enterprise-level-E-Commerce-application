@@ -22,8 +22,8 @@ export const listOrdersQuerySchema = z.object({
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   offset: z.string().regex(/^\d+$/).optional().default("0").transform(Number),
   status: z.string().optional(),
-  startDate: z.iso.datetime().optional(),
-  endDate: z.iso.datetime().optional(),
+  startDate: z.iso.datetime().transform(v => new Date(v)).optional(),
+  endDate: z.iso.datetime().transform(v => new Date(v)).optional(),
   sortBy: z.enum(["createdAt", "updatedAt", "orderNumber"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });

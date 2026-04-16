@@ -13,10 +13,8 @@ import {
   VerifyEmailHandler,
   DeleteAccountHandler,
   GetUserByEmailHandler,
-  ITokenBlacklistService,
 } from '../../../application';
 import { UserRole } from '../../../domain/enums/user-role.enum';
-import { DomainValidationError } from '../../../domain/errors/user-management.errors';
 
 export class AuthController {
   constructor(
@@ -31,7 +29,6 @@ export class AuthController {
     private readonly verifyEmailHandler: VerifyEmailHandler,
     private readonly getUserByEmailHandler: GetUserByEmailHandler,
     private readonly deleteAccountHandler: DeleteAccountHandler,
-    private readonly tokenBlacklistService: ITokenBlacklistService,
   ) {}
 
   async register(
@@ -80,18 +77,9 @@ export class AuthController {
     try {
       const { email, password, rememberMe } = request.body;
 
-      if (this.tokenBlacklistService.isAccountLocked(email)) {
-        return reply.status(429).send({
-          success: false,
-          statusCode: 429,
-          message: 'Account temporarily locked due to multiple failed login attempts',
-        });
-      }
-
       const result = await this.loginHandler.handle({ email, password, rememberMe });
 
       if (result.success && result.data) {
-        this.tokenBlacklistService.clearFailedAttempts(email);
         const auth = result.data;
         return ResponseHelper.ok(reply, 'Login successful', {
           accessToken: auth.accessToken,
@@ -102,7 +90,6 @@ export class AuthController {
         });
       }
 
-      this.tokenBlacklistService.recordFailedAttempt(email);
       return ResponseHelper.fromCommand(reply, result, 'Login failed');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -184,15 +171,7 @@ export class AuthController {
     try {
       const { token, newPassword } = request.body;
 
-      const tokenData = this.tokenBlacklistService.getPasswordResetToken(token);
-      if (!tokenData) {
-        throw new DomainValidationError('Invalid or expired reset token');
-      }
-
-      const result = await this.resetPasswordHandler.handle({
-        email: tokenData.email,
-        newPassword,
-      });
+      const result = await this.resetPasswordHandler.handle({ token, newPassword });
 
       if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, '');
@@ -215,12 +194,7 @@ export class AuthController {
     try {
       const { token } = request.body;
 
-      const tokenData = this.tokenBlacklistService.getVerificationToken(token);
-      if (!tokenData) {
-        throw new DomainValidationError('Invalid or expired verification token');
-      }
-
-      const result = await this.verifyEmailHandler.handle({ userId: tokenData.userId });
+      const result = await this.verifyEmailHandler.handle({ token });
 
       if (result.success) {
         return ResponseHelper.ok(reply, 'Email has been verified successfully.', {
@@ -241,14 +215,17 @@ export class AuthController {
     try {
       const { email } = request.body;
 
-      let userInfo: { userId: string; emailVerified: boolean } | null = null;
+      let isAlreadyVerified = false;
       try {
-        userInfo = await this.getUserByEmailHandler.handle({ email });
+        const queryResult = await this.getUserByEmailHandler.handle({ email });
+        if (queryResult.data?.emailVerified) {
+          isAlreadyVerified = true;
+        }
       } catch {
         // Do not reveal whether the email exists
       }
 
-      if (!userInfo || userInfo.emailVerified) {
+      if (isAlreadyVerified) {
         return ResponseHelper.ok(
           reply,
           'If an account with that email exists, verification email has been sent.',
@@ -256,8 +233,6 @@ export class AuthController {
         );
       }
 
-      // Token storage is handled inside InitiatePasswordResetHandler pattern.
-      // For resend, we call the same initiate flow which stores internally.
       await this.initiatePasswordResetHandler.handle({ email });
 
       return ResponseHelper.ok(reply, 'Verification email has been sent.', {
@@ -352,27 +327,6 @@ export class AuthController {
         userId: request.user.userId,
         email: request.user.email,
         role: request.user.role,
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  // Development/testing helper — disabled in production
-  async generateTestVerificationToken(
-    request: FastifyRequest<{ Body: { email: string; userId: string } }>,
-    reply: FastifyReply,
-  ) {
-    if (process.env.NODE_ENV === 'production') {
-      return reply.status(404).send({ success: false, statusCode: 404, message: 'Not found' });
-    }
-
-    try {
-      const { email, userId } = request.body;
-      const token = require('crypto').randomBytes(32).toString('hex');
-      this.tokenBlacklistService.storeVerificationToken(token, userId, email);
-      return ResponseHelper.ok(reply, 'Test verification token generated', {
-        verificationToken: token,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

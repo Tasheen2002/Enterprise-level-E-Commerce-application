@@ -78,6 +78,19 @@ export interface ListOrdersResult {
   total: number;
 }
 
+export interface TrackOrderResult {
+  orderId: string;
+  orderNumber: string;
+  status: string;
+  items: unknown[];
+  totals: unknown;
+  shipments: unknown[];
+  billingAddress: unknown;
+  shippingAddress: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class OrderManagementService {
   constructor(
     private readonly orderRepository: IOrderRepository,
@@ -220,7 +233,7 @@ export class OrderManagementService {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
     if (!order) throw new OrderNotFoundError(id);
     order.cancel();
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -228,7 +241,7 @@ export class OrderManagementService {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
     if (!order) throw new OrderNotFoundError(id);
     order.markAsPaid();
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -236,7 +249,7 @@ export class OrderManagementService {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
     if (!order) throw new OrderNotFoundError(id);
     order.markAsFulfilled();
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -246,7 +259,7 @@ export class OrderManagementService {
     );
     if (!order) throw new OrderNotFoundError(orderId);
     order.updateStatus(OrderStatus.fromString(status));
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -259,7 +272,7 @@ export class OrderManagementService {
     );
     if (!order) throw new OrderNotFoundError(orderId);
     order.updateTotals(totals.tax, totals.shipping, totals.discount);
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -277,7 +290,7 @@ export class OrderManagementService {
     if (params.quantity !== undefined) {
       order.updateItemQuantity(params.itemId, params.quantity);
     }
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -295,7 +308,7 @@ export class OrderManagementService {
     if (shipment.orderId !== data.orderId)
       throw new InvalidOperationError("Shipment does not belong to this order");
     shipment.markAsShipped(data.carrier, data.service, data.trackingNumber);
-    await this.orderShipmentRepository.update(shipment);
+    await this.orderShipmentRepository.save(shipment);
     return OrderShipment.toDTO(shipment);
   }
 
@@ -311,7 +324,7 @@ export class OrderManagementService {
     if (shipment.orderId !== data.orderId)
       throw new InvalidOperationError("Shipment does not belong to this order");
     shipment.markAsDelivered();
-    await this.orderShipmentRepository.update(shipment);
+    await this.orderShipmentRepository.save(shipment);
     return OrderShipment.toDTO(shipment);
   }
 
@@ -337,7 +350,7 @@ export class OrderManagementService {
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
     if (!existing) throw new OrderNotFoundError(orderId);
     existing.updateShippingAddress(AddressSnapshot.create(params));
-    await this.orderAddressRepository.update(existing);
+    await this.orderAddressRepository.save(existing);
     return OrderAddress.toDTO(existing);
   }
 
@@ -348,7 +361,7 @@ export class OrderManagementService {
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
     if (!existing) throw new OrderNotFoundError(orderId);
     existing.updateBillingAddress(AddressSnapshot.create(params));
-    await this.orderAddressRepository.update(existing);
+    await this.orderAddressRepository.save(existing);
     return OrderAddress.toDTO(existing);
   }
 
@@ -374,7 +387,7 @@ export class OrderManagementService {
     if (existing) {
       existing.updateBillingAddress(AddressSnapshot.create(billingAddress));
       existing.updateShippingAddress(AddressSnapshot.create(shippingAddress));
-      await this.orderAddressRepository.update(existing);
+      await this.orderAddressRepository.save(existing);
       return OrderAddress.toDTO(existing);
     }
 
@@ -439,7 +452,7 @@ export class OrderManagementService {
     });
 
     order.addItem(orderItem);
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
 
     await this.stockManagementService.adjustStock(
       data.variantId,
@@ -458,7 +471,7 @@ export class OrderManagementService {
     );
     if (!order) throw new OrderNotFoundError(orderId);
     order.removeItem(itemId);
-    await this.orderRepository.update(order);
+    await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
@@ -512,7 +525,7 @@ export class OrderManagementService {
     if (data.carrier) shipment.updateCarrier(data.carrier);
     if (data.service) shipment.updateService(data.service);
 
-    await this.orderShipmentRepository.update(shipment);
+    await this.orderShipmentRepository.save(shipment);
     return OrderShipment.toDTO(shipment);
   }
 
@@ -541,7 +554,7 @@ export class OrderManagementService {
 
     if (currentStatus !== data.toStatus) {
       order.updateStatus(OrderStatus.fromString(data.toStatus));
-      await this.orderRepository.update(order);
+      await this.orderRepository.save(order);
     }
 
     const history = OrderStatusHistory.create({
@@ -564,6 +577,72 @@ export class OrderManagementService {
       options,
     );
     return history.map(OrderStatusHistory.toDTO);
+  }
+
+  async getShipmentByTrackingNumber(trackingNumber: string): Promise<OrderShipmentDTO | null> {
+    const shipment = await this.orderShipmentRepository.findByTrackingNumber(trackingNumber);
+    return shipment ? OrderShipment.toDTO(shipment) : null;
+  }
+
+  async trackOrder(query: {
+    orderNumber?: string;
+    contact?: string;
+    trackingNumber?: string;
+  }): Promise<TrackOrderResult> {
+    if (query.orderNumber && query.contact) {
+      const order = await this.getOrderByNumber(query.orderNumber);
+      if (!order) throw new OrderNotFoundError(query.orderNumber);
+
+      const orderAddress = await this.getOrderAddress(order.id);
+      const billing = orderAddress?.billingAddress;
+      const shipping = orderAddress?.shippingAddress;
+
+      const contactLower = query.contact.toLowerCase().trim();
+      const contactMatches =
+        contactLower === (billing?.email as string | undefined)?.toLowerCase().trim() ||
+        contactLower === (shipping?.email as string | undefined)?.toLowerCase().trim() ||
+        query.contact === (billing?.phone as string | undefined)?.trim() ||
+        query.contact === (shipping?.phone as string | undefined)?.trim();
+
+      if (!contactMatches) {
+        throw new Error("CONTACT_MISMATCH");
+      }
+
+      const shipments = await this.getOrderShipments(order.id);
+
+      return {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        items: order.items,
+        totals: order.totals,
+        shipments,
+        billingAddress: billing ?? {},
+        shippingAddress: shipping ?? {},
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      };
+    }
+
+    if (query.trackingNumber) {
+      const shipmentDTO = await this.getShipmentByTrackingNumber(query.trackingNumber);
+      if (!shipmentDTO) throw new OrderShipmentNotFoundError(query.trackingNumber);
+
+      return {
+        orderId: shipmentDTO.orderId,
+        orderNumber: "",
+        status: "",
+        items: [],
+        totals: {},
+        shipments: [shipmentDTO],
+        billingAddress: {},
+        shippingAddress: {},
+        createdAt: "",
+        updatedAt: "",
+      };
+    }
+
+    throw new Error("INVALID_TRACK_REQUEST");
   }
 
   private getDefaultWarehouseId(): string {

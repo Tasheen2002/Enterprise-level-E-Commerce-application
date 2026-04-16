@@ -115,7 +115,8 @@ export async function supplierRoutes(
   fastify.post(
     "/suppliers",
     {
-      preHandler: [validateBody(createSupplierSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(createSupplierSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new supplier",
         tags: ["Suppliers"],
@@ -161,8 +162,8 @@ export async function supplierRoutes(
   fastify.patch(
     "/suppliers/:supplierId",
     {
-      preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [validateBody(updateSupplierSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(supplierParamsSchema), validateBody(updateSupplierSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update supplier",
         tags: ["Suppliers"],

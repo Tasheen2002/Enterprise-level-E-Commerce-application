@@ -1,8 +1,9 @@
 import { AuthenticationService } from '../services/authentication.service';
+import { DomainValidationError } from '../../domain/errors/user-management.errors';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface ResetPasswordCommand extends ICommand {
-  readonly email: string;
+  readonly token: string;
   readonly newPassword: string;
 }
 
@@ -14,7 +15,12 @@ export class ResetPasswordHandler
   async handle(
     command: ResetPasswordCommand
   ): Promise<CommandResult<void>> {
-    await this.authService.resetPassword(command.email, command.newPassword);
+    const tokenData = this.authService.getPasswordResetToken(command.token);
+    if (!tokenData) {
+      throw new DomainValidationError('Invalid or expired reset token');
+    }
+
+    await this.authService.resetPassword(tokenData.email, command.newPassword);
     return CommandResult.success();
   }
 }

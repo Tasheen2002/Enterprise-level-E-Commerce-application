@@ -112,7 +112,7 @@ export class PreorderManagementService {
     if (!preorder) throw new PreorderNotFoundError(orderItemId);
 
     preorder.updateReleaseDate(releaseDate);
-    await this.preorderRepository.update(preorder);
+    await this.preorderRepository.save(preorder);
 
     return Preorder.toDTO(preorder);
   }
@@ -122,7 +122,7 @@ export class PreorderManagementService {
     if (!preorder) throw new PreorderNotFoundError(orderItemId);
 
     preorder.markAsNotified();
-    await this.preorderRepository.update(preorder);
+    await this.preorderRepository.save(preorder);
 
     return Preorder.toDTO(preorder);
   }
@@ -139,7 +139,7 @@ export class PreorderManagementService {
 
       if (preorder && !preorder.isCustomerNotified()) {
         preorder.markAsNotified();
-        await this.preorderRepository.update(preorder);
+        await this.preorderRepository.save(preorder);
         notifiedPreorders.push(preorder);
       }
     }
@@ -154,7 +154,7 @@ export class PreorderManagementService {
     for (const preorder of releasedPreorders) {
       if (!preorder.isCustomerNotified()) {
         preorder.markAsNotified();
-        await this.preorderRepository.update(preorder);
+        await this.preorderRepository.save(preorder);
         notifiedPreorders.push(preorder);
       }
     }

@@ -97,7 +97,7 @@ export class OrderItemManagementService {
     if (!orderItem) throw new OrderItemNotFoundError(id);
 
     orderItem.updateQuantity(newQuantity);
-    await this.orderItemRepository.update(orderItem);
+    await this.orderItemRepository.save(orderItem);
 
     return OrderItem.toDTO(orderItem);
   }
@@ -110,7 +110,7 @@ export class OrderItemManagementService {
     if (!orderItem) throw new OrderItemNotFoundError(id);
 
     orderItem.setAsGift(giftMessage);
-    await this.orderItemRepository.update(orderItem);
+    await this.orderItemRepository.save(orderItem);
 
     return OrderItem.toDTO(orderItem);
   }
@@ -120,7 +120,7 @@ export class OrderItemManagementService {
     if (!orderItem) throw new OrderItemNotFoundError(id);
 
     orderItem.removeGift();
-    await this.orderItemRepository.update(orderItem);
+    await this.orderItemRepository.save(orderItem);
 
     return OrderItem.toDTO(orderItem);
   }

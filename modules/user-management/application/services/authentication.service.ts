@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { IUserRepository } from '../../domain/repositories/iuser.repository';
 import { IPasswordHasherService } from './password-hasher.service';
 import { IJwtService } from './ijwt.service';
+import { ITokenBlacklistService } from './itoken-blacklist.service';
 import { Email } from '../../domain/value-objects/email.vo';
 import { UserId } from '../../domain/value-objects/user-id.vo';
 import { User } from '../../domain/entities/user.entity';
@@ -71,7 +72,48 @@ export class AuthenticationService {
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasherService,
     private readonly jwtService: IJwtService,
+    private readonly tokenBlacklistService?: ITokenBlacklistService,
   ) {}
+
+  // ============================================================================
+  // Token blacklist delegation — keeps command handlers to a single service dep
+  // ============================================================================
+
+  blacklistToken(token: string, ttlMs?: number): void {
+    this.tokenBlacklistService?.blacklistToken(token, ttlMs);
+  }
+
+  isTokenBlacklisted(token: string): boolean {
+    return this.tokenBlacklistService?.isTokenBlacklisted(token) ?? false;
+  }
+
+  isAccountLocked(identifier: string): boolean {
+    return this.tokenBlacklistService?.isAccountLocked(identifier) ?? false;
+  }
+
+  clearFailedAttempts(identifier: string): void {
+    this.tokenBlacklistService?.clearFailedAttempts(identifier);
+  }
+
+  recordFailedAttempt(identifier: string): void {
+    this.tokenBlacklistService?.recordFailedAttempt(identifier);
+  }
+
+  storePasswordResetToken(token: string, userId: string, email: string): void {
+    this.tokenBlacklistService?.storePasswordResetToken(token, userId, email);
+  }
+
+  getPasswordResetToken(token: string): { userId: string; email: string } | null {
+    return this.tokenBlacklistService?.getPasswordResetToken(token) ?? null;
+  }
+
+  storeVerificationToken(token: string, userId: string, email: string): void {
+    this.tokenBlacklistService?.storeVerificationToken(token, userId, email);
+  }
+
+  getVerificationToken(token: string): { userId: string; email: string } | null {
+    return this.tokenBlacklistService?.getVerificationToken(token) ?? null;
+  }
 
   async login(credentials: LoginCredentials): Promise<LoginResult> {
     const email = Email.create(credentials.email);

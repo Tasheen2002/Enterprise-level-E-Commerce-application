@@ -39,7 +39,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/register",
     {
-      preHandler: [validateBody(registerSchema)],
+      preValidation: [validateBody(registerSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Register a new user",
@@ -77,7 +77,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/login",
     {
-      preHandler: [validateBody(loginSchema)],
+      preValidation: [validateBody(loginSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Login",
@@ -112,7 +112,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/refresh",
     {
-      preHandler: [validateBody(refreshTokenSchema)],
+      preValidation: [validateBody(refreshTokenSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Refresh access token",
@@ -214,7 +214,8 @@ export async function authRoutes(
   fastify.post(
     "/auth/change-password",
     {
-      preHandler: [validateBody(changePasswordSchema), RolePermissions.AUTHENTICATED],
+      preValidation: [validateBody(changePasswordSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Change password",
@@ -249,7 +250,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/forgot-password",
     {
-      preHandler: [validateBody(forgotPasswordSchema)],
+      preValidation: [validateBody(forgotPasswordSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Initiate password reset",
@@ -283,7 +284,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/reset-password",
     {
-      preHandler: [validateBody(resetPasswordSchema)],
+      preValidation: [validateBody(resetPasswordSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Reset password",
@@ -318,7 +319,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/verify-email",
     {
-      preHandler: [validateBody(verifyEmailSchema)],
+      preValidation: [validateBody(verifyEmailSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Verify email address",
@@ -351,7 +352,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/resend-verification",
     {
-      preHandler: [validateBody(resendVerificationSchema)],
+      preValidation: [validateBody(resendVerificationSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Resend verification email",
@@ -385,7 +386,8 @@ export async function authRoutes(
   fastify.post(
     "/auth/change-email",
     {
-      preHandler: [validateBody(changeEmailSchema), RolePermissions.AUTHENTICATED],
+      preValidation: [validateBody(changeEmailSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Change email address",
@@ -421,7 +423,8 @@ export async function authRoutes(
   fastify.post(
     "/auth/delete-account",
     {
-      preHandler: [validateBody(deleteAccountSchema), RolePermissions.AUTHENTICATED],
+      preValidation: [validateBody(deleteAccountSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Authentication"],
         summary: "Delete account",

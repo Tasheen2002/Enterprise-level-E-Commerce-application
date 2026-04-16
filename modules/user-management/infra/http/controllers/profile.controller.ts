@@ -20,7 +20,7 @@ export class ProfileController {
         timestamp: new Date(),
       };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.ok(reply, "Profile retrieved", result);
+      return ResponseHelper.ok(reply, "Profile retrieved", result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -99,7 +99,7 @@ export class ProfileController {
       const { userId } = request.params;
       const query = { userId, timestamp: new Date() };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.ok(reply, "Profile retrieved", result);
+      return ResponseHelper.ok(reply, "Profile retrieved", result.data);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

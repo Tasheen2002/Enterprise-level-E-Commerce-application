@@ -3,7 +3,7 @@ import { BackorderManagementService } from "../services/backorder-management.ser
 import { BackorderDTO } from "../../domain/entities/backorder.entity";
 
 export interface MarkBackorderNotifiedCommand extends ICommand {
-  orderItemId: string;
+  readonly orderItemId: string;
 }
 
 export class MarkBackorderNotifiedCommandHandler implements ICommandHandler<

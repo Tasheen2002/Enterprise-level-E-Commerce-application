@@ -10,7 +10,6 @@ export interface BackorderQueryOptions {
 export interface IBackorderRepository {
   // Basic CRUD
   save(backorder: Backorder): Promise<void>;
-  update(backorder: Backorder): Promise<void>;
   delete(orderItemId: string): Promise<void>;
 
   // Finders

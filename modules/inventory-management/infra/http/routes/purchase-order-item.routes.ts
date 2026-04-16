@@ -69,8 +69,8 @@ export async function purchaseOrderItemRoutes(
   fastify.post(
     "/purchase-orders/:poId/items",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [validateBody(addPOItemSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema), validateBody(addPOItemSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Add item to purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -111,8 +111,8 @@ export async function purchaseOrderItemRoutes(
   fastify.patch(
     "/purchase-orders/:poId/items/:variantId",
     {
-      preValidation: [validateParams(poItemParamsSchema)],
-      preHandler: [validateBody(updatePOItemSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poItemParamsSchema), validateBody(updatePOItemSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order item (Staff/Admin only)",
         tags: ["Purchase Orders"],

@@ -120,7 +120,7 @@ export class BackorderManagementService {
     if (!backorder) throw new BackorderNotFoundError(orderItemId);
 
     backorder.updatePromisedEta(eta);
-    await this.backorderRepository.update(backorder);
+    await this.backorderRepository.save(backorder);
 
     return Backorder.toDTO(backorder);
   }
@@ -131,7 +131,7 @@ export class BackorderManagementService {
     if (!backorder) throw new BackorderNotFoundError(orderItemId);
 
     backorder.markAsNotified();
-    await this.backorderRepository.update(backorder);
+    await this.backorderRepository.save(backorder);
 
     return Backorder.toDTO(backorder);
   }
@@ -151,7 +151,7 @@ export class BackorderManagementService {
 
       if (backorder && !backorder.isCustomerNotified()) {
         backorder.markAsNotified();
-        await this.backorderRepository.update(backorder);
+        await this.backorderRepository.save(backorder);
         notifiedBackorders.push(backorder);
       }
     }

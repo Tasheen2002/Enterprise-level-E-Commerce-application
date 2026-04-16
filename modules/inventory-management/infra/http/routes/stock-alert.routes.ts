@@ -142,10 +142,8 @@ export async function stockAlertRoutes(
   fastify.post(
     "/alerts",
     {
-      preHandler: [
-        validateBody(createStockAlertSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(createStockAlertSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create stock alert",
         tags: ["Stock Alerts"],

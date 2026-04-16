@@ -11,7 +11,6 @@ export interface IOrderItemRepository {
   // Basic CRUD
   save(orderItem: OrderItem): Promise<void>;
   saveAll(orderItems: OrderItem[]): Promise<void>;
-  update(orderItem: OrderItem): Promise<void>;
   delete(orderItemId: string): Promise<void>;
   deleteByOrderId(orderId: string): Promise<void>;
 

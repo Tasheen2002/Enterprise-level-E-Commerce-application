@@ -3,8 +3,8 @@ import { OrderManagementService } from "../services/order-management.service";
 import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
 
 export interface SetOrderAddressesCommand extends ICommand {
-  orderId: string;
-  billingAddress: {
+  readonly orderId: string;
+  readonly billingAddress: {
     firstName: string;
     lastName: string;
     addressLine1: string;
@@ -16,7 +16,7 @@ export interface SetOrderAddressesCommand extends ICommand {
     phone?: string;
     email?: string;
   };
-  shippingAddress: {
+  readonly shippingAddress: {
     firstName: string;
     lastName: string;
     addressLine1: string;

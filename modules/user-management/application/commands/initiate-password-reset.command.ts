@@ -1,5 +1,4 @@
 import { AuthenticationService } from '../services/authentication.service';
-import { ITokenBlacklistService } from '../services/itoken-blacklist.service';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface InitiatePasswordResetCommand extends ICommand {
@@ -9,10 +8,7 @@ export interface InitiatePasswordResetCommand extends ICommand {
 export class InitiatePasswordResetHandler
   implements ICommandHandler<InitiatePasswordResetCommand, CommandResult<{ exists: boolean }>>
 {
-  constructor(
-    private readonly authService: AuthenticationService,
-    private readonly tokenBlacklistService: ITokenBlacklistService,
-  ) {}
+  constructor(private readonly authService: AuthenticationService) {}
 
   async handle(
     command: InitiatePasswordResetCommand,
@@ -21,7 +17,7 @@ export class InitiatePasswordResetHandler
 
     // Store the reset token internally — the token must NOT be returned via CommandResult
     if (result.exists && result.resetToken && result.userId) {
-      this.tokenBlacklistService.storePasswordResetToken(
+      this.authService.storePasswordResetToken(
         result.resetToken,
         result.userId,
         command.email,

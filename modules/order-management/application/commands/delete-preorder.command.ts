@@ -6,7 +6,7 @@ import {
 import { PreorderManagementService } from "../services/preorder-management.service";
 
 export interface DeletePreorderCommand extends ICommand {
-  orderItemId: string;
+  readonly orderItemId: string;
 }
 
 export class DeletePreorderCommandHandler implements ICommandHandler<

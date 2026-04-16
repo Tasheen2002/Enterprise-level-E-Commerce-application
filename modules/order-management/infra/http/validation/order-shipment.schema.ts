@@ -34,7 +34,7 @@ export const updateShipmentTrackingSchema = z.object({
 });
 
 export const markDeliveredSchema = z.object({
-  deliveredAt: z.iso.datetime().optional(),
+  deliveredAt: z.iso.datetime().transform(v => new Date(v)).optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────
