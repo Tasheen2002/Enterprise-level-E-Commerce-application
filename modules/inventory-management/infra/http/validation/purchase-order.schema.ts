@@ -22,7 +22,7 @@ export const listPurchaseOrdersSchema = z.object({
 
 export const createPurchaseOrderWithItemsSchema = z.object({
   supplierId: z.uuid(),
-  eta: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  eta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
   items: z.array(
     z.object({
       variantId: z.uuid(),
@@ -36,7 +36,7 @@ export const updatePOStatusSchema = z.object({
 });
 
 export const updatePOEtaSchema = z.object({
-  eta: z.iso.datetime().transform((v) => new Date(v)),
+  eta: z.string().datetime().transform((v) => new Date(v)),
 });
 
 export const receivePOItemsSchema = z.object({
