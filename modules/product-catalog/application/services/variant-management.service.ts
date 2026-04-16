@@ -95,7 +95,7 @@ export class VariantManagementService {
   }
 
   async getVariantById(id: string): Promise<ProductVariantDTO> {
-    return ProductVariant.toDTO(await this._getVariant(id));
+    return ProductVariant.toDTO(await this.getVariant(id));
   }
 
   async getVariantBySku(sku: string): Promise<ProductVariantDTO> {
@@ -356,7 +356,7 @@ export class VariantManagementService {
   }
 
   async duplicateVariant(id: string, newSku: string): Promise<ProductVariantDTO> {
-    const originalVariant = await this._getVariant(id);
+    const originalVariant = await this.getVariant(id);
 
     const existingVariant = await this.productVariantRepository.findBySku(
       SKU.fromString(newSku),
@@ -413,7 +413,7 @@ export class VariantManagementService {
     return { isValid: issues.length === 0, issues };
   }
 
-  private async _getVariant(id: string): Promise<ProductVariant> {
+  private async getVariant(id: string): Promise<ProductVariant> {
     const variantId = VariantId.fromString(id);
     const variant = await this.productVariantRepository.findById(variantId);
     if (!variant) {

@@ -17,10 +17,10 @@ export interface ListSizeGuidesQuery extends IQuery {
 export interface ListSizeGuidesResult {
   readonly sizeGuides: SizeGuideDTO[];
   readonly pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly total_pages: number;
   };
 }
 

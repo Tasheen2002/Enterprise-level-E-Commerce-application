@@ -14,10 +14,10 @@ export interface ListProductTagsQuery extends IQuery {
 export interface ListProductTagsResult {
   readonly tags: ProductTagDTO[];
   readonly pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly total_pages: number;
   };
 }
 

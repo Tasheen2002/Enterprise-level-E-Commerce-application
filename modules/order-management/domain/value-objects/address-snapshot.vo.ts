@@ -14,28 +14,10 @@ export interface AddressSnapshotData {
 }
 
 export class AddressSnapshot {
-  private readonly _firstName: string;
-  private readonly _lastName: string;
-  private readonly _addressLine1: string;
-  private readonly _addressLine2: string | undefined;
-  private readonly _city: string;
-  private readonly _state: string;
-  private readonly _postalCode: string;
-  private readonly _country: string;
-  private readonly _phone: string | undefined;
-  private readonly _email: string | undefined;
+  private readonly props: AddressSnapshotData;
 
   private constructor(data: AddressSnapshotData) {
-    this._firstName = data.firstName;
-    this._lastName = data.lastName;
-    this._addressLine1 = data.addressLine1;
-    this._addressLine2 = data.addressLine2;
-    this._city = data.city;
-    this._state = data.state;
-    this._postalCode = data.postalCode;
-    this._country = data.country;
-    this._phone = data.phone;
-    this._email = data.email;
+    this.props = { ...data };
   }
 
   static create(data: AddressSnapshotData): AddressSnapshot {
@@ -64,53 +46,20 @@ export class AddressSnapshot {
     return new AddressSnapshot(data);
   }
 
-  get firstName(): string {
-    return this._firstName;
-  }
-  get lastName(): string {
-    return this._lastName;
-  }
-  get fullName(): string {
-    return `${this._firstName} ${this._lastName}`;
-  }
-  get addressLine1(): string {
-    return this._addressLine1;
-  }
-  get addressLine2(): string | undefined {
-    return this._addressLine2;
-  }
-  get city(): string {
-    return this._city;
-  }
-  get state(): string {
-    return this._state;
-  }
-  get postalCode(): string {
-    return this._postalCode;
-  }
-  get country(): string {
-    return this._country;
-  }
-  get phone(): string | undefined {
-    return this._phone;
-  }
-  get email(): string | undefined {
-    return this._email;
-  }
+  get firstName(): string { return this.props.firstName; }
+  get lastName(): string { return this.props.lastName; }
+  get fullName(): string { return `${this.props.firstName} ${this.props.lastName}`; }
+  get addressLine1(): string { return this.props.addressLine1; }
+  get addressLine2(): string | undefined { return this.props.addressLine2; }
+  get city(): string { return this.props.city; }
+  get state(): string { return this.props.state; }
+  get postalCode(): string { return this.props.postalCode; }
+  get country(): string { return this.props.country; }
+  get phone(): string | undefined { return this.props.phone; }
+  get email(): string | undefined { return this.props.email; }
 
   getValue(): AddressSnapshotData {
-    return {
-      firstName: this._firstName,
-      lastName: this._lastName,
-      addressLine1: this._addressLine1,
-      addressLine2: this._addressLine2,
-      city: this._city,
-      state: this._state,
-      postalCode: this._postalCode,
-      country: this._country,
-      phone: this._phone,
-      email: this._email,
-    };
+    return { ...this.props };
   }
 
   toString(): string {
@@ -119,16 +68,16 @@ export class AddressSnapshot {
 
   equals(other: AddressSnapshot): boolean {
     return (
-      this._firstName === other._firstName &&
-      this._lastName === other._lastName &&
-      this._addressLine1 === other._addressLine1 &&
-      this._addressLine2 === other._addressLine2 &&
-      this._city === other._city &&
-      this._state === other._state &&
-      this._postalCode === other._postalCode &&
-      this._country === other._country &&
-      this._phone === other._phone &&
-      this._email === other._email
+      this.props.firstName === other.props.firstName &&
+      this.props.lastName === other.props.lastName &&
+      this.props.addressLine1 === other.props.addressLine1 &&
+      this.props.addressLine2 === other.props.addressLine2 &&
+      this.props.city === other.props.city &&
+      this.props.state === other.props.state &&
+      this.props.postalCode === other.props.postalCode &&
+      this.props.country === other.props.country &&
+      this.props.phone === other.props.phone &&
+      this.props.email === other.props.email
     );
   }
 }

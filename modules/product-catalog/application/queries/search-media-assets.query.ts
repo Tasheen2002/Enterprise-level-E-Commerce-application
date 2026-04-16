@@ -23,11 +23,11 @@ export interface SearchMediaAssetsQuery extends IQuery {
 export interface SearchMediaAssetsResult {
   readonly assets: MediaAssetDTO[];
   readonly meta: {
-    page: number;
-    limit: number;
-    sortBy: string;
-    sortOrder: string;
-    filters: MediaAssetFilters;
+    readonly page: number;
+    readonly limit: number;
+    readonly sortBy: string;
+    readonly sortOrder: string;
+    readonly filters: MediaAssetFilters;
   };
 }
 

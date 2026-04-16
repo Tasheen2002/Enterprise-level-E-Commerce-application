@@ -102,7 +102,7 @@ export class MediaManagementService {
   }
 
   async getAssetById(id: string): Promise<MediaAssetDTO> {
-    return MediaAsset.toDTO(await this._getAsset(id));
+    return MediaAsset.toDTO(await this.getAsset(id));
   }
 
   async getAssetByStorageKey(storageKey: string): Promise<MediaAssetDTO> {
@@ -255,14 +255,14 @@ export class MediaManagementService {
     id: string,
     updateData: Partial<CreateMediaAssetInput>,
   ): Promise<MediaAssetDTO> {
-    const asset = await this._getAsset(id);
+    const asset = await this.getAsset(id);
     asset.updateFields(updateData);
     await this.mediaAssetRepository.save(asset);
     return MediaAsset.toDTO(asset);
   }
 
   async deleteAsset(id: string): Promise<void> {
-    const asset = await this._getAsset(id);
+    const asset = await this.getAsset(id);
     await this.mediaAssetRepository.delete(asset.id);
   }
 
@@ -271,7 +271,7 @@ export class MediaManagementService {
     name: string,
     renditionData: any,
   ): Promise<MediaAssetDTO> {
-    const asset = await this._getAsset(id);
+    const asset = await this.getAsset(id);
 
     if (!name || name.trim().length === 0) {
       throw new DomainValidationError("Rendition name cannot be empty");
@@ -286,7 +286,7 @@ export class MediaManagementService {
     id: string,
     renditionName: string,
   ): Promise<MediaAssetDTO> {
-    const asset = await this._getAsset(id);
+    const asset = await this.getAsset(id);
     asset.removeRendition(renditionName);
     await this.mediaAssetRepository.save(asset);
     return MediaAsset.toDTO(asset);
@@ -404,7 +404,7 @@ export class MediaManagementService {
   }
 
   async duplicateAsset(id: string, newStorageKey: string): Promise<MediaAssetDTO> {
-    const originalAsset = await this._getAsset(id);
+    const originalAsset = await this.getAsset(id);
 
     const existingAsset = await this.mediaAssetRepository.findByStorageKey(newStorageKey);
     if (existingAsset) {
@@ -432,7 +432,7 @@ export class MediaManagementService {
     id: string,
     newStorageKey: string,
   ): Promise<MediaAssetDTO> {
-    const asset = await this._getAsset(id);
+    const asset = await this.getAsset(id);
     const assetId = MediaAssetId.fromString(id);
 
     const existingAsset = await this.mediaAssetRepository.findByStorageKey(newStorageKey);
@@ -447,7 +447,7 @@ export class MediaManagementService {
     return MediaAsset.toDTO(asset);
   }
 
-  private async _getAsset(id: string): Promise<MediaAsset> {
+  private async getAsset(id: string): Promise<MediaAsset> {
     const assetId = MediaAssetId.fromString(id);
     const asset = await this.mediaAssetRepository.findById(assetId);
     if (!asset) {

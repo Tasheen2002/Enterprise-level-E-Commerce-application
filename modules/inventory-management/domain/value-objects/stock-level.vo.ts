@@ -1,29 +1,34 @@
 import { DomainValidationError } from "../errors/inventory-management.errors";
 
+interface StockLevelProps {
+  onHand: number;
+  reserved: number;
+  lowStockThreshold: number | null;
+  safetyStock: number | null;
+}
+
 export class StockLevel {
-  private constructor(
-    private readonly _onHand: number,
-    private readonly _reserved: number,
-    private readonly _lowStockThreshold: number | null,
-    private readonly _safetyStock: number | null,
-  ) {
-    if (_onHand < 0) {
+  private readonly props: StockLevelProps;
+
+  private constructor(props: StockLevelProps) {
+    if (props.onHand < 0) {
       throw new DomainValidationError("On-hand quantity cannot be negative");
     }
-    if (_reserved < 0) {
+    if (props.reserved < 0) {
       throw new DomainValidationError("Reserved quantity cannot be negative");
     }
-    if (_reserved > _onHand) {
+    if (props.reserved > props.onHand) {
       throw new DomainValidationError(
         "Reserved quantity cannot exceed on-hand quantity",
       );
     }
-    if (_lowStockThreshold !== null && _lowStockThreshold < 0) {
+    if (props.lowStockThreshold !== null && props.lowStockThreshold < 0) {
       throw new DomainValidationError("Low stock threshold cannot be negative");
     }
-    if (_safetyStock !== null && _safetyStock < 0) {
+    if (props.safetyStock !== null && props.safetyStock < 0) {
       throw new DomainValidationError("Safety stock cannot be negative");
     }
+    this.props = props;
   }
 
   static create(
@@ -32,39 +37,39 @@ export class StockLevel {
     lowStockThreshold?: number | null,
     safetyStock?: number | null,
   ): StockLevel {
-    return new StockLevel(
+    return new StockLevel({
       onHand,
       reserved,
-      lowStockThreshold ?? null,
-      safetyStock ?? null,
-    );
+      lowStockThreshold: lowStockThreshold ?? null,
+      safetyStock: safetyStock ?? null,
+    });
   }
 
   get onHand(): number {
-    return this._onHand;
+    return this.props.onHand;
   }
 
   get reserved(): number {
-    return this._reserved;
+    return this.props.reserved;
   }
 
   get available(): number {
-    return this._onHand - this._reserved;
+    return this.props.onHand - this.props.reserved;
   }
 
   get lowStockThreshold(): number | null {
-    return this._lowStockThreshold;
+    return this.props.lowStockThreshold;
   }
 
   get safetyStock(): number | null {
-    return this._safetyStock;
+    return this.props.safetyStock;
   }
 
   isLowStock(): boolean {
-    if (this._lowStockThreshold === null) {
+    if (this.props.lowStockThreshold === null) {
       return false;
     }
-    return this.available <= this._lowStockThreshold;
+    return this.available <= this.props.lowStockThreshold;
   }
 
   isOutOfStock(): boolean {
@@ -72,45 +77,35 @@ export class StockLevel {
   }
 
   isBelowSafetyStock(): boolean {
-    if (this._safetyStock === null) {
+    if (this.props.safetyStock === null) {
       return false;
     }
-    return this.available <= this._safetyStock;
+    return this.available <= this.props.safetyStock;
   }
 
   addStock(quantity: number): StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to add must be positive");
     }
-    return new StockLevel(
-      this._onHand + quantity,
-      this._reserved,
-      this._lowStockThreshold,
-      this._safetyStock,
-    );
+    return new StockLevel({ ...this.props, onHand: this.props.onHand + quantity });
   }
 
   removeStock(quantity: number): StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to remove must be positive");
     }
-    const newOnHand = this._onHand - quantity;
+    const newOnHand = this.props.onHand - quantity;
     if (newOnHand < 0) {
       throw new DomainValidationError(
         "Cannot remove more stock than available",
       );
     }
-    if (newOnHand < this._reserved) {
+    if (newOnHand < this.props.reserved) {
       throw new DomainValidationError(
         "Cannot remove stock below reserved quantity. Release reservations first.",
       );
     }
-    return new StockLevel(
-      newOnHand,
-      this._reserved,
-      this._lowStockThreshold,
-      this._safetyStock,
-    );
+    return new StockLevel({ ...this.props, onHand: newOnHand });
   }
 
   reserveStock(quantity: number): StockLevel {
@@ -122,49 +117,42 @@ export class StockLevel {
         "Insufficient available stock to reserve",
       );
     }
-    return new StockLevel(
-      this._onHand,
-      this._reserved + quantity,
-      this._lowStockThreshold,
-      this._safetyStock,
-    );
+    return new StockLevel({ ...this.props, reserved: this.props.reserved + quantity });
   }
 
   fulfillReservation(quantity: number): StockLevel {
     if (quantity <= 0) {
       throw new DomainValidationError("Quantity to fulfill must be positive");
     }
-    if (this._reserved < quantity) {
+    if (this.props.reserved < quantity) {
       throw new DomainValidationError(
         "Cannot fulfill more than reserved quantity",
       );
     }
-    return new StockLevel(
-      this._onHand - quantity,
-      this._reserved - quantity,
-      this._lowStockThreshold,
-      this._safetyStock,
-    );
+    return new StockLevel({
+      ...this.props,
+      onHand: this.props.onHand - quantity,
+      reserved: this.props.reserved - quantity,
+    });
   }
 
   updateThresholds(
     lowStockThreshold?: number | null,
     safetyStock?: number | null,
   ): StockLevel {
-    return new StockLevel(
-      this._onHand,
-      this._reserved,
-      lowStockThreshold ?? this._lowStockThreshold,
-      safetyStock ?? this._safetyStock,
-    );
+    return new StockLevel({
+      ...this.props,
+      lowStockThreshold: lowStockThreshold ?? this.props.lowStockThreshold,
+      safetyStock: safetyStock ?? this.props.safetyStock,
+    });
   }
 
   equals(other: StockLevel): boolean {
     return (
-      this._onHand === other._onHand &&
-      this._reserved === other._reserved &&
-      this._lowStockThreshold === other._lowStockThreshold &&
-      this._safetyStock === other._safetyStock
+      this.props.onHand === other.props.onHand &&
+      this.props.reserved === other.props.reserved &&
+      this.props.lowStockThreshold === other.props.lowStockThreshold &&
+      this.props.safetyStock === other.props.safetyStock
     );
   }
 }

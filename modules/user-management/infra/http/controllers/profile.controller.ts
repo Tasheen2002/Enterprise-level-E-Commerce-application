@@ -17,7 +17,6 @@ export class ProfileController {
     try {
       const query = {
         userId: request.user.userId,
-        timestamp: new Date(),
       };
       const result = await this.getProfileHandler.handle(query);
       return ResponseHelper.ok(reply, "Profile retrieved", result.data);
@@ -81,7 +80,6 @@ export class ProfileController {
         dateOfBirth,
         residentOf,
         nationality,
-        timestamp: new Date(),
       };
 
       const result = await this.updateProfileHandler.handle(command);
@@ -97,7 +95,7 @@ export class ProfileController {
   ): Promise<void> {
     try {
       const { userId } = request.params;
-      const query = { userId, timestamp: new Date() };
+      const query = { userId };
       const result = await this.getProfileHandler.handle(query);
       return ResponseHelper.ok(reply, "Profile retrieved", result.data);
     } catch (error: unknown) {
@@ -161,14 +159,4 @@ export class ProfileController {
         title,
         dateOfBirth,
         residentOf,
-        nationality,
-        timestamp: new Date(),
-      };
-
-      const result = await this.updateProfileHandler.handle(command);
-      return ResponseHelper.fromCommand(reply, result, "Profile updated");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-}
+        national

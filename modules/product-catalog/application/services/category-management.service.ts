@@ -72,7 +72,7 @@ export class CategoryManagementService {
   }
 
   async getCategoryById(id: string): Promise<CategoryDTO> {
-    return Category.toDTO(await this._getCategory(id));
+    return Category.toDTO(await this.getCategory(id));
   }
 
   async getCategoryBySlug(slug: string): Promise<CategoryDTO> {
@@ -210,7 +210,7 @@ export class CategoryManagementService {
     updateData: Partial<CreateCategoryData>,
   ): Promise<CategoryDTO> {
     const categoryId = CategoryId.fromString(id);
-    const category = await this._getCategory(id);
+    const category = await this.getCategory(id);
 
     if (updateData.name !== undefined) {
       const newSlug = Slug.create(updateData.name);
@@ -260,7 +260,7 @@ export class CategoryManagementService {
 
   async deleteCategory(id: string): Promise<void> {
     const categoryId = CategoryId.fromString(id);
-    await this._getCategory(id);
+    await this.getCategory(id);
 
     const children = await this.categoryRepository.findChildren(categoryId);
     if (children.length > 0) {
@@ -352,7 +352,7 @@ export class CategoryManagementService {
     return !wouldCreateCircularRef;
   }
 
-  private async _getCategory(id: string): Promise<Category> {
+  private async getCategory(id: string): Promise<Category> {
     const categoryId = CategoryId.fromString(id);
     const category = await this.categoryRepository.findById(categoryId);
     if (!category) {

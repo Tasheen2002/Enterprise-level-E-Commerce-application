@@ -28,7 +28,7 @@ export class EditorialLookManagementService {
     private readonly productRepository: IProductRepository,
   ) {}
 
-  private async _getLook(id: string): Promise<EditorialLook> {
+  private async getLook(id: string): Promise<EditorialLook> {
     const lookId = EntityEditorialLookId.fromString(id);
     const look = await this.editorialLookRepository.findById(lookId);
     if (!look) {
@@ -96,7 +96,7 @@ export class EditorialLookManagementService {
   }
 
   async getEditorialLookById(id: string): Promise<EditorialLookDTO> {
-    return EditorialLook.toDTO(await this._getLook(id));
+    return EditorialLook.toDTO(await this.getLook(id));
   }
 
   async getAllEditorialLooks(
@@ -136,7 +136,7 @@ export class EditorialLookManagementService {
       publishedAt?: Date | null;
     },
   ): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (updates.title !== undefined) {
       this.validateTitle(updates.title);
@@ -200,7 +200,7 @@ export class EditorialLookManagementService {
 
   // Publishing workflow
   async publishLook(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -215,7 +215,7 @@ export class EditorialLookManagementService {
   }
 
   async unpublishLook(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     look.unpublish();
     await this.editorialLookRepository.save(look);
 
@@ -230,7 +230,7 @@ export class EditorialLookManagementService {
       throw new DomainValidationError("Publication date must be in the future");
     }
 
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -276,7 +276,7 @@ export class EditorialLookManagementService {
 
   // Hero image management
   async setHeroImage(id: string, assetId: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     // Validate hero asset exists
     const heroAssetIdEntity = EntityMediaAssetId.fromString(assetId);
@@ -298,7 +298,7 @@ export class EditorialLookManagementService {
   }
 
   async removeHeroImage(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     look.setHeroAsset(null);
     await this.editorialLookRepository.save(look);
 
@@ -320,7 +320,7 @@ export class EditorialLookManagementService {
       throw new ProductNotFoundError(productId);
     }
 
-    const look = await this._getLook(lookId);
+    const look = await this.getLook(lookId);
 
     if (look.includesProduct(productId)) {
       throw new InvalidOperationError(
@@ -336,7 +336,7 @@ export class EditorialLookManagementService {
     lookId: string,
     productId: string,
   ): Promise<void> {
-    const look = await this._getLook(lookId);
+    const look = await this.getLook(lookId);
 
     if (!look.includesProduct(productId)) {
       throw new InvalidOperationError(
@@ -361,7 +361,7 @@ export class EditorialLookManagementService {
       }
     }
 
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     look.setProducts(productIds);
     await this.editorialLookRepository.save(look);
 
@@ -369,7 +369,7 @@ export class EditorialLookManagementService {
   }
 
   async getLookProducts(id: string): Promise<string[]> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     return look.productIds.map((pid) => pid.getValue());
   }
 
@@ -555,7 +555,7 @@ export class EditorialLookManagementService {
   async validateLookForPublication(
     id: string,
   ): Promise<{ isValid: boolean; errors: string[] }> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     const errors: string[] = [];
 
     if (!look.title.trim()) {

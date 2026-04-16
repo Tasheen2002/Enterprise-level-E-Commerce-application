@@ -71,7 +71,7 @@ export class ProductManagementService {
   }
 
   async getProductById(id: string): Promise<ProductDTO> {
-    return Product.toDTO(await this._getProduct(id));
+    return Product.toDTO(await this.getProduct(id));
   }
 
   async getProductBySlug(slug: string): Promise<ProductDTO> {
@@ -197,7 +197,7 @@ export class ProductManagementService {
     id: string,
     data: Partial<CreateProductInput>,
   ): Promise<ProductDTO> {
-    const product = await this._getProduct(id);
+    const product = await this.getProduct(id);
 
     if (data.title !== undefined) {
       product.updateTitle(data.title);
@@ -261,7 +261,7 @@ export class ProductManagementService {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await this._getProduct(id);
+    await this.getProduct(id);
     const productId = ProductId.fromString(id);
     await this.productRepository.delete(productId);
   }
@@ -284,7 +284,7 @@ export class ProductManagementService {
     return this.productRepository.findMediaEnrichment(productId);
   }
 
-  private async _getProduct(id: string): Promise<Product> {
+  private async getProduct(id: string): Promise<Product> {
     if (!id || id.trim().length === 0) {
       throw new DomainValidationError("Product ID is required");
     }

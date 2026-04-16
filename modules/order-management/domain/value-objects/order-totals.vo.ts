@@ -9,37 +9,25 @@ export interface OrderTotalsData {
 }
 
 export class OrderTotals {
-  private readonly _subtotal: number;
-  private readonly _tax: number;
-  private readonly _shipping: number;
-  private readonly _discount: number;
-  private readonly _total: number;
+  private readonly props: OrderTotalsData;
 
   private constructor(data: OrderTotalsData) {
-    this._subtotal = data.subtotal;
-    this._tax = data.tax;
-    this._shipping = data.shipping;
-    this._discount = data.discount;
-    this._total = data.total;
+    this.props = { ...data };
   }
 
   static create(data: OrderTotalsData): OrderTotals {
     if (data.subtotal < 0) {
       throw new DomainValidationError("Subtotal cannot be negative");
     }
-
     if (data.tax < 0) {
       throw new DomainValidationError("Tax cannot be negative");
     }
-
     if (data.shipping < 0) {
       throw new DomainValidationError("Shipping cannot be negative");
     }
-
     if (data.discount < 0) {
       throw new DomainValidationError("Discount cannot be negative");
     }
-
     if (data.total < 0) {
       throw new DomainValidationError("Total cannot be negative");
     }
@@ -54,43 +42,17 @@ export class OrderTotals {
   }
 
   static zero(): OrderTotals {
-    return new OrderTotals({
-      subtotal: 0,
-      tax: 0,
-      shipping: 0,
-      discount: 0,
-      total: 0,
-    });
+    return new OrderTotals({ subtotal: 0, tax: 0, shipping: 0, discount: 0, total: 0 });
   }
 
-  get subtotal(): number {
-    return this._subtotal;
-  }
-
-  get tax(): number {
-    return this._tax;
-  }
-
-  get shipping(): number {
-    return this._shipping;
-  }
-
-  get discount(): number {
-    return this._discount;
-  }
-
-  get total(): number {
-    return this._total;
-  }
+  get subtotal(): number { return this.props.subtotal; }
+  get tax(): number { return this.props.tax; }
+  get shipping(): number { return this.props.shipping; }
+  get discount(): number { return this.props.discount; }
+  get total(): number { return this.props.total; }
 
   getValue(): OrderTotalsData {
-    return {
-      subtotal: this._subtotal,
-      tax: this._tax,
-      shipping: this._shipping,
-      discount: this._discount,
-      total: this._total,
-    };
+    return { ...this.props };
   }
 
   toString(): string {
@@ -99,11 +61,11 @@ export class OrderTotals {
 
   equals(other: OrderTotals): boolean {
     return (
-      this._subtotal === other._subtotal &&
-      this._tax === other._tax &&
-      this._shipping === other._shipping &&
-      this._discount === other._discount &&
-      this._total === other._total
+      this.props.subtotal === other.props.subtotal &&
+      this.props.tax === other.props.tax &&
+      this.props.shipping === other.props.shipping &&
+      this.props.discount === other.props.discount &&
+      this.props.total === other.props.total
     );
   }
 }

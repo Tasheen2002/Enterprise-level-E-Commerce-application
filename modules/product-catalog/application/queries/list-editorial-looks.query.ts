@@ -17,10 +17,10 @@ export interface ListEditorialLooksQuery extends IQuery {
 export interface ListEditorialLooksResult {
   readonly looks: EditorialLookDTO[];
   readonly meta: {
-    page: number;
-    limit: number;
-    sortBy: string;
-    sortOrder: string;
+    readonly page: number;
+    readonly limit: number;
+    readonly sortBy: string;
+    readonly sortOrder: string;
   };
 }
 

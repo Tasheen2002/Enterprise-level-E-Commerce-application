@@ -17,10 +17,10 @@ export interface GetRegionalSizeGuidesQuery extends IQuery {
 export interface RegionalSizeGuidesResult {
   readonly sizeGuides: SizeGuideDTO[];
   readonly pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly total_pages: number;
   };
   readonly meta: { region: Region; page: number; limit: number };
 }

@@ -10,10 +10,10 @@ export interface GetTagProductsQuery extends IQuery {
 export interface GetTagProductsResult {
   readonly products: unknown[];
   readonly pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
+    readonly page: number;
+    readonly limit: number;
+    readonly total: number;
+    readonly total_pages: number;
   };
 }
 

@@ -55,7 +55,6 @@ export class PaymentMethodsController {
         billingAddressId,
         providerRef,
         isDefault,
-        timestamp: new Date(),
       };
 
       const result = await this.addPaymentMethodHandler.handle(command);
@@ -76,7 +75,7 @@ export class PaymentMethodsController {
   ) {
     try {
       const { userId } = request.params;
-      const query = { userId, timestamp: new Date() };
+      const query = { userId };
       const result = await this.listPaymentMethodsHandler.handle(query);
       return ResponseHelper.ok(reply, "Payment methods retrieved", result.data);
     } catch (error: unknown) {
@@ -103,7 +102,6 @@ export class PaymentMethodsController {
         userId,
         billingAddressId,
         isDefault,
-        timestamp: new Date(),
       };
 
       const result = await this.updatePaymentMethodHandler.handle(command);
@@ -129,7 +127,6 @@ export class PaymentMethodsController {
       const command = {
         paymentMethodId,
         userId,
-        timestamp: new Date(),
       };
 
       const result = await this.deletePaymentMethodHandler.handle(command);
@@ -171,7 +168,6 @@ export class PaymentMethodsController {
         billingAddressId: request.body.billingAddressId,
         providerRef: request.body.providerRef,
         isDefault: request.body.isDefault,
-        timestamp: new Date(),
       };
 
       const result = await this.addPaymentMethodHandler.handle(command);
@@ -193,7 +189,6 @@ export class PaymentMethodsController {
     try {
       const query = {
         userId: request.user.userId,
-        timestamp: new Date(),
       };
       const result = await this.listPaymentMethodsHandler.handle(query);
       return ResponseHelper.ok(reply, "Payment methods retrieved", result.data);
@@ -221,7 +216,6 @@ export class PaymentMethodsController {
         userId: request.user.userId,
         billingAddressId,
         isDefault,
-        timestamp: new Date(),
       };
 
       const result = await this.updatePaymentMethodHandler.handle(command);
@@ -245,7 +239,6 @@ export class PaymentMethodsController {
       const command = {
         paymentMethodId,
         userId: request.user.userId,
-        timestamp: new Date(),
       };
 
       const result = await this.deletePaymentMethodHandler.handle(command);
@@ -262,26 +255,4 @@ export class PaymentMethodsController {
   }
 
   async setDefaultPaymentMethod(
-    request: AuthenticatedRequest<{ Params: { paymentMethodId: string } }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { paymentMethodId } = request.params;
-
-      const command = {
-        paymentMethodId,
-        userId: request.user.userId,
-        timestamp: new Date(),
-      };
-
-      const result = await this.setDefaultPaymentMethodHandler.handle(command);
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Default payment method updated",
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-}
+    request: AuthenticatedRequest<{ Params: { paymentMe

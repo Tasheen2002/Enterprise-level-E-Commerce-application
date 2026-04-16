@@ -15,10 +15,10 @@ export interface GetEditorialLooksByProductQuery extends IQuery {
 export interface EditorialLooksByProductResult {
   readonly looks: EditorialLookDTO[];
   readonly meta: {
-    productId: string;
-    page: number;
-    limit: number;
-    includeUnpublished: boolean;
+    readonly productId: string;
+    readonly page: number;
+    readonly limit: number;
+    readonly includeUnpublished: boolean;
   };
 }
 
