@@ -41,7 +41,7 @@ export class MediaController {
   ) {
     try {
       const result = await this.searchMediaAssetsHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Media assets retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Media assets retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -53,7 +53,7 @@ export class MediaController {
   ) {
     try {
       const asset = await this.getMediaAssetHandler.handle({ id: request.params.id });
-      return ResponseHelper.ok(reply, "Media asset retrieved successfully", asset.data);
+      return ResponseHelper.ok(reply, "Media asset retrieved successfully", asset);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

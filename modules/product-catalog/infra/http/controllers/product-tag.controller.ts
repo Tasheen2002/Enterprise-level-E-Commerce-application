@@ -52,7 +52,7 @@ export class ProductTagController {
   ) {
     try {
       const result = await this.listProductTagsHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Tags retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Tags retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -64,7 +64,7 @@ export class ProductTagController {
   ) {
     try {
       const tag = await this.getProductTagHandler.handle({ id: request.params.id });
-      return ResponseHelper.ok(reply, "Tag retrieved successfully", tag.data);
+      return ResponseHelper.ok(reply, "Tag retrieved successfully", tag);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -76,7 +76,7 @@ export class ProductTagController {
   ) {
     try {
       const tag = await this.getProductTagHandler.handle({ name: decodeURIComponent(request.params.name) });
-      return ResponseHelper.ok(reply, "Tag retrieved successfully", tag.data);
+      return ResponseHelper.ok(reply, "Tag retrieved successfully", tag);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -124,7 +124,7 @@ export class ProductTagController {
   ) {
     try {
       const suggestions = await this.getProductTagSuggestionsHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Tag suggestions retrieved successfully", suggestions.data);
+      return ResponseHelper.ok(reply, "Tag suggestions retrieved successfully", suggestions);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -133,7 +133,7 @@ export class ProductTagController {
   async getTagStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const stats = await this.getProductTagStatsHandler.handle({});
-      return ResponseHelper.ok(reply, "Tag statistics retrieved successfully", stats.data);
+      return ResponseHelper.ok(reply, "Tag statistics retrieved successfully", stats);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -145,7 +145,7 @@ export class ProductTagController {
   ) {
     try {
       const mostUsed = await this.getMostUsedProductTagsHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Most used tags retrieved successfully", mostUsed.data);
+      return ResponseHelper.ok(reply, "Most used tags retrieved successfully", mostUsed);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -181,7 +181,7 @@ export class ProductTagController {
   ) {
     try {
       const validation = await this.validateProductTagHandler.handle({ name: request.params.name });
-      return ResponseHelper.ok(reply, "Tag validation completed", validation.data);
+      return ResponseHelper.ok(reply, "Tag validation completed", validation);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -193,7 +193,7 @@ export class ProductTagController {
   ) {
     try {
       const tags = await this.getProductTagsHandler.handle({ productId: request.params.productId });
-      return ResponseHelper.ok(reply, "Product tags retrieved successfully", tags.data);
+      return ResponseHelper.ok(reply, "Product tags retrieved successfully", tags);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -241,7 +241,7 @@ export class ProductTagController {
         tagId: request.params.tagId,
         ...request.query,
       });
-      return ResponseHelper.ok(reply, "Tag products retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Tag products retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

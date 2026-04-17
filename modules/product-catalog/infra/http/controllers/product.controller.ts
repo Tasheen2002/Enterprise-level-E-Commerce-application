@@ -45,11 +45,11 @@ export class ProductController {
           searchTerm: search,
           ...queryRest,
         });
-        return ResponseHelper.ok(reply, "Products retrieved successfully", result.data);
+        return ResponseHelper.ok(reply, "Products retrieved successfully", result);
       }
 
       const result = await this.listProductsHandler.handle(queryRest);
-      return ResponseHelper.ok(reply, "Products retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Products retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -62,7 +62,7 @@ export class ProductController {
     try {
       const { productId } = request.params;
       const result = await this.getProductHandler.handle({ productId });
-      return ResponseHelper.ok(reply, "Product retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -75,7 +75,7 @@ export class ProductController {
     try {
       const { slug } = request.params;
       const result = await this.getProductHandler.handle({ slug });
-      return ResponseHelper.ok(reply, "Product retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

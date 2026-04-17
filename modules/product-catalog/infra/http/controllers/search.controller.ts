@@ -51,7 +51,7 @@ export class SearchController {
         sortBy,
         sortOrder,
       });
-      return ResponseHelper.ok(reply, "Search completed successfully", result.data);
+      return ResponseHelper.ok(reply, "Search completed successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -70,7 +70,7 @@ export class SearchController {
     try {
       const { q, limit, type } = request.query;
       const result = await this.getSearchSuggestionsHandler.handle({ searchTerm: q, limit, type });
-      return ResponseHelper.ok(reply, "Suggestions retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Suggestions retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -79,7 +79,7 @@ export class SearchController {
   async getPopularSearches(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const result = await this.getPopularSearchesHandler.handle({});
-      return ResponseHelper.ok(reply, "Popular searches retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Popular searches retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -94,7 +94,7 @@ export class SearchController {
     try {
       const { q, category } = request.query;
       const result = await this.getSearchFiltersHandler.handle({ query: q, category });
-      return ResponseHelper.ok(reply, "Search filters retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Search filters retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -103,7 +103,7 @@ export class SearchController {
   async getSearchStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const result = await this.getSearchStatsHandler.handle({});
-      return ResponseHelper.ok(reply, "Search statistics retrieved successfully", result.data);
+      return ResponseHelper.ok(reply, "Search statistics retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
