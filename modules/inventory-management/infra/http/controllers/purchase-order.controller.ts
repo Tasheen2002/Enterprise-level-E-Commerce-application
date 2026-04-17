@@ -43,7 +43,7 @@ export class PurchaseOrderController {
     try {
       const { poId } = request.params;
       const result = await this.getPurchaseOrderHandler.handle({ poId });
-      return ResponseHelper.fromQuery(reply, result, "Purchase order retrieved", "Purchase order not found");
+      return ResponseHelper.ok(reply, "Purchase order retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -96,7 +96,7 @@ export class PurchaseOrderController {
   ) {
     try {
       const result = await this.listPurchaseOrdersHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Purchase orders retrieved");
+      return ResponseHelper.ok(reply, "Purchase orders retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -109,7 +109,7 @@ export class PurchaseOrderController {
     try {
       const { poId } = request.params;
       const result = await this.getPOItemsHandler.handle({ poId });
-      return ResponseHelper.fromQuery(reply, result, "Purchase order items retrieved");
+      return ResponseHelper.ok(reply, "Purchase order items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -200,8 +200,8 @@ export class PurchaseOrderController {
 
   async getOverduePurchaseOrders(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getOverduePurchaseOrdersHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Overdue purchase orders retrieved");
+      const result = await this.getOverduePurchaseOrdersHandler.handle();
+      return ResponseHelper.ok(reply, "Overdue purchase orders retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -209,8 +209,8 @@ export class PurchaseOrderController {
 
   async getPendingReceival(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getPendingReceivalHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Pending receival purchase orders retrieved");
+      const result = await this.getPendingReceivalHandler.handle();
+      return ResponseHelper.ok(reply, "Pending receival purchase orders retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

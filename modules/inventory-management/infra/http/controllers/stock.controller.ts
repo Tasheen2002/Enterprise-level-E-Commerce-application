@@ -36,8 +36,8 @@ export class StockController {
 
   async getStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getStockStatsHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Stock stats retrieved");
+      const result = await this.getStockStatsHandler.handle();
+      return ResponseHelper.ok(reply, "Stock stats retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -52,7 +52,7 @@ export class StockController {
     try {
       const { variantId, locationId } = request.params;
       const result = await this.getStockHandler.handle({ variantId, locationId });
-      return ResponseHelper.fromQuery(reply, result, "Stock retrieved", "Stock not found");
+      return ResponseHelper.ok(reply, "Stock retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -67,7 +67,7 @@ export class StockController {
     try {
       const { variantId } = request.params;
       const result = await this.getStockByVariantHandler.handle({ variantId });
-      return ResponseHelper.fromQuery(reply, result, "Stock by variant retrieved");
+      return ResponseHelper.ok(reply, "Stock by variant retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -82,7 +82,7 @@ export class StockController {
     try {
       const { variantId } = request.params;
       const result = await this.getTotalAvailableStockHandler.handle({ variantId });
-      return ResponseHelper.fromQuery(reply, result, "Total available stock retrieved");
+      return ResponseHelper.ok(reply, "Total available stock retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -104,7 +104,7 @@ export class StockController {
   ) {
     try {
       const result = await this.listStocksHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Stocks retrieved");
+      return ResponseHelper.ok(reply, "Stocks retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -112,8 +112,8 @@ export class StockController {
 
   async getLowStockItems(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getLowStockItemsHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Low stock items retrieved");
+      const result = await this.getLowStockItemsHandler.handle();
+      return ResponseHelper.ok(reply, "Low stock items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -121,8 +121,8 @@ export class StockController {
 
   async getOutOfStockItems(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getOutOfStockItemsHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Out of stock items retrieved");
+      const result = await this.getOutOfStockItemsHandler.handle();
+      return ResponseHelper.ok(reply, "Out of stock items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

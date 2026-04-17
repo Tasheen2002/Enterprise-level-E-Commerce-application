@@ -23,7 +23,7 @@ export class PickupReservationController {
     try {
       const { reservationId } = request.params;
       const result = await this.getReservationHandler.handle({ reservationId });
-      return ResponseHelper.fromQuery(reply, result, "Reservation retrieved", "Reservation not found");
+      return ResponseHelper.ok(reply, "Reservation retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -37,7 +37,7 @@ export class PickupReservationController {
   ) {
     try {
       const result = await this.listReservationsHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Reservations retrieved");
+      return ResponseHelper.ok(reply, "Reservations retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

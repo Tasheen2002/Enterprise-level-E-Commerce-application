@@ -23,7 +23,7 @@ export class PurchaseOrderItemController {
     try {
       const { poId } = request.params;
       const result = await this.getPOItemsHandler.handle({ poId });
-      return ResponseHelper.fromQuery(reply, result, "Purchase order items retrieved");
+      return ResponseHelper.ok(reply, "Purchase order items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

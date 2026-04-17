@@ -25,7 +25,7 @@ export class SupplierController {
     try {
       const { supplierId } = request.params;
       const result = await this.getSupplierHandler.handle({ supplierId });
-      return ResponseHelper.fromQuery(reply, result, "Supplier retrieved", "Supplier not found");
+      return ResponseHelper.ok(reply, "Supplier retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -39,7 +39,7 @@ export class SupplierController {
   ) {
     try {
       const result = await this.listSuppliersHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Suppliers retrieved");
+      return ResponseHelper.ok(reply, "Suppliers retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

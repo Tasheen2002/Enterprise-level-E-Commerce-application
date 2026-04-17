@@ -25,7 +25,7 @@ export class StockAlertController {
     try {
       const { alertId } = request.params;
       const result = await this.getAlertHandler.handle({ alertId });
-      return ResponseHelper.fromQuery(reply, result, "Alert retrieved", "Alert not found");
+      return ResponseHelper.ok(reply, "Alert retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -33,8 +33,8 @@ export class StockAlertController {
 
   async getActiveAlerts(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getActiveAlertsHandler.handle({});
-      return ResponseHelper.fromQuery(reply, result, "Active alerts retrieved");
+      const result = await this.getActiveAlertsHandler.handle();
+      return ResponseHelper.ok(reply, "Active alerts retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -48,7 +48,7 @@ export class StockAlertController {
   ) {
     try {
       const result = await this.listAlertsHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Alerts retrieved");
+      return ResponseHelper.ok(reply, "Alerts retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

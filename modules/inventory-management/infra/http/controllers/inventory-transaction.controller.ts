@@ -21,7 +21,7 @@ export class InventoryTransactionController {
     try {
       const { transactionId } = request.params;
       const result = await this.getTransactionHandler.handle({ transactionId });
-      return ResponseHelper.fromQuery(reply, result, "Transaction retrieved", "Transaction not found");
+      return ResponseHelper.ok(reply, "Transaction retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -40,7 +40,7 @@ export class InventoryTransactionController {
         variantId,
         ...request.query,
       });
-      return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
+      return ResponseHelper.ok(reply, "Transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -54,7 +54,7 @@ export class InventoryTransactionController {
   ) {
     try {
       const result = await this.listTransactionsHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Transactions retrieved");
+      return ResponseHelper.ok(reply, "Transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

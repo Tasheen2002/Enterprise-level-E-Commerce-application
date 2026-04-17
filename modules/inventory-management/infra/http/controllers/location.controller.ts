@@ -25,7 +25,7 @@ export class LocationController {
     try {
       const { locationId } = request.params;
       const result = await this.getLocationHandler.handle({ locationId });
-      return ResponseHelper.fromQuery(reply, result, "Location retrieved", "Location not found");
+      return ResponseHelper.ok(reply, "Location retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -39,7 +39,7 @@ export class LocationController {
   ) {
     try {
       const result = await this.listLocationsHandler.handle(request.query);
-      return ResponseHelper.fromQuery(reply, result, "Locations retrieved");
+      return ResponseHelper.ok(reply, "Locations retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
