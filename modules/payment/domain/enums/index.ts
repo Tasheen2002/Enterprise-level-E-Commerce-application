@@ -1,1 +1,1 @@
-export * from "./payment-loyalty.enums";
+export * from "./payment.enums";
