@@ -1,185 +1,146 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { LoyaltyService } from '../../../application/services/loyalty.service';
-import { TransactionReason } from '../../../domain/entities/loyalty-transaction.entity';
+import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import {
+  CreateLoyaltyProgramHandler,
+  AwardLoyaltyPointsHandler,
+  RedeemLoyaltyPointsHandler,
+} from "../../../application/commands";
+import {
+  GetLoyaltyProgramsHandler,
+  GetLoyaltyAccountHandler,
+  GetLoyaltyTransactionsHandler,
+} from "../../../application/queries";
+import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  EarnRule,
+  BurnRule,
+  LoyaltyTierConfig,
+} from "../../../domain/entities/loyalty-program.entity";
+import { LoyaltyTransactionReason } from "../../../domain/enums/loyalty.enums";
+
+export interface CreateLoyaltyProgramRequest {
+  name: string;
+  earnRules: EarnRule[];
+  burnRules: BurnRule[];
+  tiers: LoyaltyTierConfig[];
+}
+
+export interface GetLoyaltyAccountQuerystring {
+  userId: string;
+}
+
+export interface AwardPointsRequest {
+  userId: string;
+  points: number;
+  reason: LoyaltyTransactionReason;
+  orderId?: string;
+  description?: string;
+}
+
+export interface RedeemPointsRequest {
+  userId: string;
+  points: number;
+  orderId: string;
+  reason?: LoyaltyTransactionReason;
+}
+
+export interface ListLoyaltyTransactionsQuerystring {
+  accountId?: string;
+  orderId?: string;
+}
 
 export class LoyaltyController {
-  constructor(private readonly loyaltyService: LoyaltyService) {}
+  constructor(
+    private readonly createProgramHandler: CreateLoyaltyProgramHandler,
+    private readonly listProgramsHandler: GetLoyaltyProgramsHandler,
+    private readonly getAccountHandler: GetLoyaltyAccountHandler,
+    private readonly awardPointsHandler: AwardLoyaltyPointsHandler,
+    private readonly redeemPointsHandler: RedeemLoyaltyPointsHandler,
+    private readonly listTransactionsHandler: GetLoyaltyTransactionsHandler,
+  ) {}
 
-  async getAccount(request: FastifyRequest, reply: FastifyReply) {
+  async createProgram(
+    request: FastifyRequest<{ Body: CreateLoyaltyProgramRequest }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.params as { userId: string };
-
-      const account = await this.loyaltyService.getAccountDetails(userId);
-
-      return reply.status(200).send({
-        success: true,
-        data: account
+      const result = await this.createProgramHandler.handle({
+        ...request.body,
+        timestamp: new Date(),
       });
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error'
-      });
+      return ResponseHelper.fromCommand(reply, result, "Loyalty program created", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  async getTransactions(request: FastifyRequest, reply: FastifyReply) {
+  async listPrograms(_request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { userId } = request.params as { userId: string };
-      const { limit, offset } = request.query as { limit?: string; offset?: string };
-
-      const transactions = await this.loyaltyService.getTransactionHistory(
-        userId,
-        limit ? parseInt(limit) : 50,
-        offset ? parseInt(offset) : 0
-      );
-
-      return reply.status(200).send({
-        success: true,
-        data: {
-          transactions,
-          limit: limit ? parseInt(limit) : 50,
-          offset: offset ? parseInt(offset) : 0
-        }
-      });
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(500).send({
-        success: false,
-        error: error instanceof Error ? error.message : 'Internal server error'
-      });
+      const result = await this.listProgramsHandler.handle();
+      return ResponseHelper.ok(reply, "Loyalty programs retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  async earnPoints(request: FastifyRequest, reply: FastifyReply) {
+  async getAccount(
+    request: AuthenticatedRequest<{ Querystring: GetLoyaltyAccountQuerystring }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.params as { userId: string };
-      const { points, reason, description, referenceId, orderId } = request.body as {
-        points: number;
-        reason: TransactionReason;
-        description?: string;
-        referenceId?: string;
-        orderId?: string;
-      };
-
-      const transaction = await this.loyaltyService.earnPoints({
-        userId,
-        points,
-        reason,
-        description,
-        referenceId,
-        orderId
+      const result = await this.getAccountHandler.handle({
+        userId: request.query.userId,
+        timestamp: new Date(),
       });
-
-      return reply.status(201).send({
-        success: true,
-        data: {
-          transactionId: transaction.transactionId,
-          type: transaction.type,
-          points: transaction.points.value,
-          reason: transaction.reason,
-          description: transaction.description,
-          balanceAfter: transaction.balanceAfter,
-          expiresAt: transaction.expiresAt,
-          createdAt: transaction.createdAt
-        }
-      });
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(400).send({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to earn points'
-      });
+      return ResponseHelper.ok(reply, "Loyalty account retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  async redeemPoints(request: FastifyRequest, reply: FastifyReply) {
+  async awardPoints(
+    request: FastifyRequest<{ Body: AwardPointsRequest }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.params as { userId: string };
-      const { points, reason, description, referenceId } = request.body as {
-        points: number;
-        reason: TransactionReason;
-        description?: string;
-        referenceId?: string;
-      };
-
-      const transaction = await this.loyaltyService.redeemPoints({
-        userId,
-        points,
-        reason,
-        description,
-        referenceId
+      const result = await this.awardPointsHandler.handle({
+        ...request.body,
+        timestamp: new Date(),
       });
-
-      return reply.status(201).send({
-        success: true,
-        data: {
-          transactionId: transaction.transactionId,
-          type: transaction.type,
-          points: transaction.points.value,
-          reason: transaction.reason,
-          description: transaction.description,
-          balanceAfter: transaction.balanceAfter,
-          expiresAt: transaction.expiresAt,
-          createdAt: transaction.createdAt
-        }
-      });
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(400).send({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to redeem points'
-      });
+      return ResponseHelper.fromCommand(reply, result, "Loyalty points awarded", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 
-  async adjustPoints(request: FastifyRequest, reply: FastifyReply) {
+  async redeemPoints(
+    request: FastifyRequest<{ Body: RedeemPointsRequest }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const { userId } = request.params as { userId: string };
-      const { points, isAddition, reason } = request.body as {
-        points: number;
-        isAddition: boolean;
-        reason: string;
-      };
-
-      // Get admin user from request (assumes auth middleware sets this)
-      const adminUserId = (request as any).user?.userId;
-
-      if (!adminUserId) {
-        return reply.status(401).send({
-          success: false,
-          error: 'Unauthorized'
-        });
-      }
-
-      const transaction = await this.loyaltyService.adjustPoints({
-        userId,
-        points,
-        isAddition,
-        reason,
-        createdBy: adminUserId
+      const result = await this.redeemPointsHandler.handle({
+        ...request.body,
+        timestamp: new Date(),
       });
+      return ResponseHelper.fromCommand(reply, result, "Loyalty points redeemed", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
 
-      return reply.status(201).send({
-        success: true,
-        data: {
-          transactionId: transaction.transactionId,
-          type: transaction.type,
-          points: transaction.points.value,
-          reason: transaction.reason,
-          description: transaction.description,
-          balanceAfter: transaction.balanceAfter,
-          expiresAt: transaction.expiresAt,
-          createdAt: transaction.createdAt
-        }
+  async listTransactions(
+    request: AuthenticatedRequest<{ Querystring: ListLoyaltyTransactionsQuerystring }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        accountId: request.query.accountId,
+        orderId: request.query.orderId,
+        timestamp: new Date(),
       });
-    } catch (error) {
-      request.log.error(error);
-      return reply.status(400).send({
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to adjust points'
-      });
+      return ResponseHelper.ok(reply, "Loyalty transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
   }
 }
