@@ -19,7 +19,6 @@ export interface IProductVariantRepository {
   ): Promise<ProductVariant[]>;
   findAvailableForBackorder(): Promise<ProductVariant[]>;
   findAvailableForPreorder(): Promise<ProductVariant[]>;
-  update(variant: ProductVariant): Promise<void>;
   delete(id: VariantId): Promise<void>;
   deleteByProductId(productId: ProductId): Promise<void>;
   exists(id: VariantId): Promise<boolean>;

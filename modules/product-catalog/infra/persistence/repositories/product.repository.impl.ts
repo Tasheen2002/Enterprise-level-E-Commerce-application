@@ -12,49 +12,58 @@ import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
 import { Price } from "../../../domain/value-objects/price.vo";
 
-function mapRow(row: any): Product {
-  const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
-  return Product.fromPersistence({
-    id: ProductId.fromString(row.id),
-    title: row.title,
-    slug,
-    brand: row.brand,
-    shortDesc: row.shortDesc,
-    longDescHtml: row.longDescHtml,
-    status: row.status as any,
-    publishAt: row.publishAt,
-    countryOfOrigin: row.countryOfOrigin,
-    seoTitle: row.seoTitle,
-    seoDescription: row.seoDescription,
-    price: Price.create(parseFloat(row.price?.toString() ?? "0")),
-    priceSgd: row.priceSgd ? Price.create(parseFloat(row.priceSgd.toString())) : null,
-    priceUsd: row.priceUsd ? Price.create(parseFloat(row.priceUsd.toString())) : null,
-    compareAtPrice: row.compareAtPrice ? Price.create(parseFloat(row.compareAtPrice.toString())) : null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
-}
-
-export class ProductRepository implements IProductRepository {
+export class ProductRepositoryImpl implements IProductRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  private mapRow(row: any): Product {
+    const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
+    return Product.fromPersistence({
+      id: ProductId.fromString(row.id),
+      title: row.title,
+      slug,
+      brand: row.brand,
+      shortDesc: row.shortDesc,
+      longDescHtml: row.longDescHtml,
+      status: row.status as any,
+      publishAt: row.publishAt,
+      countryOfOrigin: row.countryOfOrigin,
+      seoTitle: row.seoTitle,
+      seoDescription: row.seoDescription,
+      price: Price.create(parseFloat(row.price?.toString() ?? "0")),
+      priceSgd: row.priceSgd ? Price.create(parseFloat(row.priceSgd.toString())) : null,
+      priceUsd: row.priceUsd ? Price.create(parseFloat(row.priceUsd.toString())) : null,
+      compareAtPrice: row.compareAtPrice ? Price.create(parseFloat(row.compareAtPrice.toString())) : null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  }
+
   async save(product: Product): Promise<void> {
-    await this.prisma.product.create({
-      data: {
+    const updateData = {
+      title: product.title,
+      slug: product.slug.getValue(),
+      brand: product.brand,
+      shortDesc: product.shortDesc,
+      longDescHtml: product.longDescHtml,
+      status: product.status as any,
+      publishAt: product.publishAt,
+      countryOfOrigin: product.countryOfOrigin,
+      seoTitle: product.seoTitle,
+      seoDescription: product.seoDescription,
+      updatedAt: product.updatedAt,
+    };
+    await this.prisma.product.upsert({
+      where: { id: product.id.getValue() },
+      create: {
         id: product.id.getValue(),
-        title: product.title,
-        slug: product.slug.getValue(),
-        brand: product.brand,
-        shortDesc: product.shortDesc,
-        longDescHtml: product.longDescHtml,
-        status: product.status as any,
-        publishAt: product.publishAt,
-        countryOfOrigin: product.countryOfOrigin,
-        seoTitle: product.seoTitle,
-        seoDescription: product.seoDescription,
+        price: product.price.getValue(),
+        priceSgd: product.priceSgd?.getValue() ?? null,
+        priceUsd: product.priceUsd?.getValue() ?? null,
+        compareAtPrice: product.compareAtPrice?.getValue() ?? null,
         createdAt: product.createdAt,
-        updatedAt: product.updatedAt,
+        ...updateData,
       },
+      update: updateData,
     });
   }
 
@@ -80,6 +89,10 @@ export class ProductRepository implements IProductRepository {
           countryOfOrigin: product.countryOfOrigin,
           seoTitle: product.seoTitle,
           seoDescription: product.seoDescription,
+          price: product.price.getValue(),
+          priceSgd: product.priceSgd?.getValue() ?? null,
+          priceUsd: product.priceUsd?.getValue() ?? null,
+          compareAtPrice: product.compareAtPrice?.getValue() ?? null,
           createdAt: product.createdAt,
           updatedAt: product.updatedAt,
         },
@@ -106,7 +119,7 @@ export class ProductRepository implements IProductRepository {
       return null;
     }
 
-    return mapRow(productData);
+    return this.mapRow(productData);
   }
 
   async findBySlug(slug: Slug): Promise<Product | null> {
@@ -118,7 +131,7 @@ export class ProductRepository implements IProductRepository {
       return null;
     }
 
-    return mapRow(productData);
+    return this.mapRow(productData);
   }
 
   async findAll(options?: ProductQueryOptions): Promise<Product[]> {
@@ -170,7 +183,7 @@ export class ProductRepository implements IProductRepository {
       },
     });
 
-    return products.map((p) => mapRow(p));
+    return products.map((p) => this.mapRow(p));
   }
 
   async findByStatus(
@@ -191,7 +204,7 @@ export class ProductRepository implements IProductRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => mapRow(p));
+    return products.map((p) => this.mapRow(p));
   }
 
   async findByBrand(
@@ -218,7 +231,7 @@ export class ProductRepository implements IProductRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => mapRow(p));
+    return products.map((p) => this.mapRow(p));
   }
 
   async findByCategory(
@@ -248,7 +261,7 @@ export class ProductRepository implements IProductRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => mapRow(p));
+    return products.map((p) => this.mapRow(p));
   }
 
   async search(
@@ -330,27 +343,9 @@ export class ProductRepository implements IProductRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => mapRow(p));
+    return products.map((p) => this.mapRow(p));
   }
 
-  async update(product: Product): Promise<void> {
-    await this.prisma.product.update({
-      where: { id: product.id.getValue() },
-      data: {
-        title: product.title,
-        slug: product.slug.getValue(),
-        brand: product.brand,
-        shortDesc: product.shortDesc,
-        longDescHtml: product.longDescHtml,
-        status: product.status as any,
-        publishAt: product.publishAt,
-        countryOfOrigin: product.countryOfOrigin,
-        seoTitle: product.seoTitle,
-        seoDescription: product.seoDescription,
-        updatedAt: product.updatedAt,
-      },
-    });
-  }
 
   async delete(id: ProductId): Promise<void> {
     await this.prisma.product.update({

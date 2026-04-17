@@ -64,6 +64,10 @@ export class VerificationAuditLog {
   get userAgent(): string | null { return this.props.userAgent; }
   get createdAt(): Date { return this.props.createdAt; }
 
+  equals(other: VerificationAuditLog): boolean {
+    return this.props.logId === other.props.logId;
+  }
+
   static toDTO(log: VerificationAuditLog): VerificationAuditLogDTO {
     return {
       logId: log.logId,

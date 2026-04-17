@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const categoryParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const categorySlugParamsSchema = z.object({
@@ -12,8 +12,8 @@ export const categorySlugParamsSchema = z.object({
 
 export const listCategoriesSchema = z.object({
   page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("50").transform(Number),
-  parentId: z.string().uuid().optional(),
+  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
+  parentId: z.uuid().optional(),
   includeChildren: z.string().optional().transform((v) => v === "true"),
   sortBy: z.enum(["name", "position"]).optional().default("position"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
@@ -22,21 +22,21 @@ export const listCategoriesSchema = z.object({
 export const createCategorySchema = z.object({
   name: z.string().min(1),
   slug: z.string().optional(),
-  parentId: z.string().uuid().optional(),
+  parentId: z.uuid().optional(),
   position: z.number().int().min(0).optional(),
 });
 
 export const updateCategorySchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().optional(),
-  parentId: z.string().uuid().nullable().optional(),
+  parentId: z.uuid().nullable().optional(),
   position: z.number().int().min(0).optional(),
 });
 
 export const reorderCategoriesSchema = z.object({
   categoryOrders: z.array(
     z.object({
-      id: z.string().uuid(),
+      id: z.uuid(),
       position: z.number().int().min(0),
     }),
   ).min(1),

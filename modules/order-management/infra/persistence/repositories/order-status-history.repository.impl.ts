@@ -11,43 +11,41 @@ interface OrderStatusHistoryDatabaseRow {
   orderId: string;
   fromStatus: string | null;
   toStatus: string;
-  changedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
   changedBy: string | null;
 }
 
 export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Hydration: Database row → Entity
   private toEntity(row: OrderStatusHistoryDatabaseRow): OrderStatusHistory {
-    return OrderStatusHistory.reconstitute({
+    return OrderStatusHistory.fromPersistence({
       historyId: Number(row.id),
       orderId: row.orderId,
       fromStatus: row.fromStatus
         ? OrderStatus.fromString(row.fromStatus)
         : undefined,
       toStatus: OrderStatus.fromString(row.toStatus),
-      changedAt: row.changedAt,
       changedBy: row.changedBy || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
-  async save(statusHistory: OrderStatusHistory): Promise<OrderStatusHistory> {
-    const created = await this.prisma.orderStatusHistory.create({
+  async save(statusHistory: OrderStatusHistory): Promise<void> {
+    await this.prisma.orderStatusHistory.create({
       data: {
-        orderId: statusHistory.getOrderId(),
-        fromStatus: (statusHistory.getFromStatus()?.getValue() || null) as any,
-        toStatus: statusHistory.getToStatus().getValue() as any,
-        changedAt: statusHistory.getChangedAt(),
-        changedBy: statusHistory.getChangedBy() || null,
+        orderId: statusHistory.orderId,
+        fromStatus: (statusHistory.fromStatus?.getValue() || null) as any,
+        toStatus: statusHistory.toStatus.getValue() as any,
+        changedBy: statusHistory.changedBy || null,
       },
     });
-
-    // Return the entity with the actual database ID
-    return this.toEntity(created as any);
   }
 
-  async delete(historyId: number): Promise<void> {
+  async delete(historyId: number | null): Promise<void> {
+    if (historyId === null) return;
     await this.prisma.orderStatusHistory.delete({
       where: { id: BigInt(historyId) },
     });
@@ -59,7 +57,8 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
     });
   }
 
-  async findById(historyId: number): Promise<OrderStatusHistory | null> {
+  async findById(historyId: number | null): Promise<OrderStatusHistory | null> {
+    if (historyId === null) return null;
     const history = await this.prisma.orderStatusHistory.findUnique({
       where: { id: BigInt(historyId) },
     });
@@ -81,7 +80,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       where: { orderId },
       take: limit,
       skip: offset,
-      orderBy: { changedAt: sortOrder },
+      orderBy: { createdAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -94,10 +93,10 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
     const { limit, offset, sortOrder = "desc" } = options || {};
 
     const histories = await this.prisma.orderStatusHistory.findMany({
-      where: { toStatus: status.getValue() as any }, // Prisma enum type cast
+      where: { toStatus: status.getValue() as any },
       take: limit,
       skip: offset,
-      orderBy: { changedAt: sortOrder },
+      orderBy: { createdAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -113,7 +112,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       where: { changedBy },
       take: limit,
       skip: offset,
-      orderBy: { changedAt: sortOrder },
+      orderBy: { createdAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -130,7 +129,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
   ): Promise<OrderStatusHistory | null> {
     const history = await this.prisma.orderStatusHistory.findFirst({
       where: { orderId },
-      orderBy: { changedAt: "desc" },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!history) {
@@ -140,7 +139,8 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
     return this.toEntity(history as any);
   }
 
-  async exists(historyId: number): Promise<boolean> {
+  async exists(historyId: number | null): Promise<boolean> {
+    if (historyId === null) return false;
     const count = await this.prisma.orderStatusHistory.count({
       where: { id: BigInt(historyId) },
     });

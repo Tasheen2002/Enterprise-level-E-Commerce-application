@@ -1,8 +1,17 @@
 import { FastifyInstance } from "fastify";
 import { UsersController } from "../controllers/users.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate, RolePermissions } from "@/api/src/shared/middleware";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
 import {
   userIdParamsSchema,
   listUsersQuerySchema,
@@ -14,15 +23,26 @@ import {
 } from "../validation/user.schema";
 import { profileResponseSchema } from "../validation/profile.schema";
 
-export async function registerUserRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function userRoutes(
   fastify: FastifyInstance,
   controller: UsersController,
 ) {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /users/me — authenticated user's full profile
   fastify.get(
     "/users/me",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Users"],
         summary: "Get current user",
@@ -33,6 +53,8 @@ export async function registerUserRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: profileResponseSchema,
             },
           },
@@ -54,11 +76,26 @@ export async function registerUserRoutes(
         summary: "List all users",
         description: "Admin only. Retrieve a paginated list of all users.",
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100 },
+            role: { type: "string" },
+            status: { type: "string" },
+            search: { type: "string" },
+            emailVerified: { type: "string", enum: ["true", "false"] },
+            sortBy: { type: "string", enum: ["createdAt", "email"] },
+            sortOrder: { type: "string", enum: ["asc", "desc"] },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: userListResponseSchema,
             },
           },
@@ -81,11 +118,20 @@ export async function registerUserRoutes(
         description:
           "Admin only. Retrieve any user's full details by their UUID.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["userId"],
+          properties: {
+            userId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: profileResponseSchema,
             },
           },
@@ -100,19 +146,36 @@ export async function registerUserRoutes(
   fastify.patch(
     "/users/:userId/status",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(updateUserStatusSchema)],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(updateUserStatusSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Update user status",
         description:
           "Admin only. Activate, deactivate, or block a user account.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["userId"],
+          properties: {
+            userId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["status"],
+          properties: {
+            status: { type: "string", enum: ["active", "inactive", "blocked"] },
+            notes: { type: "string" },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -133,18 +196,38 @@ export async function registerUserRoutes(
   fastify.patch(
     "/users/:userId/role",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(updateUserRoleSchema)],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(updateUserRoleSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Update user role",
         description: "Admin only. Change a user's role.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["userId"],
+          properties: {
+            userId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["role"],
+          properties: {
+            role: {
+              type: "string",
+              enum: ["GUEST", "CUSTOMER", "ADMIN", "INVENTORY_STAFF", "CUSTOMER_SERVICE", "ANALYST", "VENDOR"],
+            },
+            reason: { type: "string" },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -165,18 +248,35 @@ export async function registerUserRoutes(
   fastify.patch(
     "/users/:userId/email-verified",
     {
-      preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY, validateBody(toggleEmailVerifiedSchema)],
+      preValidation: [validateParams(userIdParamsSchema), validateBody(toggleEmailVerifiedSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         tags: ["Users"],
         summary: "Toggle email verification",
         description: "Admin only. Manually verify or unverify a user's email.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["userId"],
+          properties: {
+            userId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["isVerified"],
+          properties: {
+            isVerified: { type: "boolean" },
+            reason: { type: "string" },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "object" },
             },
           },
@@ -184,7 +284,10 @@ export async function registerUserRoutes(
       },
     },
     (request, reply) =>
-      controller.toggleEmailVerification(request as AuthenticatedRequest, reply),
+      controller.toggleEmailVerification(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // DELETE /users/:userId — Admin only
@@ -198,13 +301,17 @@ export async function registerUserRoutes(
         summary: "Delete a user",
         description: "Admin only. Permanently delete a user account.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["userId"],
+          properties: {
+            userId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
+          204: {
+            type: "null",
+            description: "User deleted successfully",
           },
         },
       },

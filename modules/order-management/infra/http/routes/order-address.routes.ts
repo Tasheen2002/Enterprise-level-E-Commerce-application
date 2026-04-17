@@ -1,59 +1,27 @@
 import { FastifyInstance } from "fastify";
-import {
-  OrderAddressController,
-  SetAddressesRequest,
-  GetAddressesRequest,
-  UpdateBillingAddressRequest,
-  UpdateShippingAddressRequest,
-} from "../controllers/order-address.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { OrderAddressController } from "../controllers/order-address.controller";
 import { authenticateUser } from "@/api/src/shared/middleware";
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  orderAddressParamsSchema,
+  setOrderAddressesSchema,
+  updateBillingAddressSchema,
+  updateShippingAddressSchema,
+  orderAddressResponseSchema,
+} from "../validation/order-address.schema";
 
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
-
-const addressSchema = {
+const addressBodySchema = {
   type: "object",
+  required: [
+    "firstName",
+    "lastName",
+    "addressLine1",
+    "city",
+    "state",
+    "postalCode",
+    "country",
+  ],
   properties: {
     firstName: { type: "string" },
     lastName: { type: "string" },
@@ -68,25 +36,16 @@ const addressSchema = {
   },
 };
 
-const addressResponseSchema = {
-  type: "object",
-  properties: {
-    orderId: { type: "string", format: "uuid" },
-    billingAddress: addressSchema,
-    shippingAddress: addressSchema,
-    isSameAddress: { type: "boolean" },
-  },
-};
-
 export async function registerOrderAddressRoutes(
   fastify: FastifyInstance,
   orderAddressController: OrderAddressController,
 ): Promise<void> {
   // Set order addresses (billing & shipping)
-  fastify.post<SetAddressesRequest>(
+  fastify.post(
     "/orders/:orderId/addresses",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(setOrderAddressesSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Set billing and shipping addresses for an order. Order must be in 'created' status.",
@@ -95,67 +54,44 @@ export async function registerOrderAddressRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         body: {
           type: "object",
           required: ["billingAddress", "shippingAddress"],
           properties: {
-            billingAddress: {
-              type: "object",
-              required: [
-                "firstName",
-                "lastName",
-                "addressLine1",
-                "city",
-                "state",
-                "postalCode",
-                "country",
-              ],
-              properties: addressSchema.properties,
-            },
-            shippingAddress: {
-              type: "object",
-              required: [
-                "firstName",
-                "lastName",
-                "addressLine1",
-                "city",
-                "state",
-                "postalCode",
-                "country",
-              ],
-              properties: addressSchema.properties,
-            },
+            billingAddress: addressBodySchema,
+            shippingAddress: addressBodySchema,
           },
         },
         response: {
           201: {
-            description: "Order addresses set successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: addressResponseSchema,
-              message: {
-                type: "string",
-                example: "Order addresses set successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderAddressResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderAddressController.setAddresses.bind(orderAddressController),
+    (request, reply) =>
+      orderAddressController.setAddresses(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Get order addresses
-  fastify.get<GetAddressesRequest>(
+  fastify.get(
     "/orders/:orderId/addresses",
     {
+      preValidation: [validateParams(orderAddressParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get billing and shipping addresses for an order",
@@ -164,32 +100,37 @@ export async function registerOrderAddressRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         response: {
           200: {
-            description: "Order addresses retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: addressResponseSchema,
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderAddressResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderAddressController.getAddresses.bind(orderAddressController),
+    (request, reply) =>
+      orderAddressController.getAddresses(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Update billing address
-  fastify.patch<UpdateBillingAddressRequest>(
+  fastify.patch(
     "/orders/:orderId/addresses/billing",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateBillingAddressSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Update billing address for an order",
         tags: ["Order Addresses"],
@@ -197,49 +138,38 @@ export async function registerOrderAddressRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
-        body: {
-          type: "object",
-          required: [
-            "firstName",
-            "lastName",
-            "addressLine1",
-            "city",
-            "state",
-            "postalCode",
-            "country",
-          ],
-          properties: addressSchema.properties,
-        },
+        body: addressBodySchema,
         response: {
           200: {
-            description: "Billing address updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: addressResponseSchema,
-              message: {
-                type: "string",
-                example: "Billing address updated successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderAddressResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderAddressController.updateBillingAddress.bind(orderAddressController),
+    (request, reply) =>
+      orderAddressController.updateBillingAddress(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Update shipping address
-  fastify.patch<UpdateShippingAddressRequest>(
+  fastify.patch(
     "/orders/:orderId/addresses/shipping",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateShippingAddressSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Update shipping address for an order",
         tags: ["Order Addresses"],
@@ -247,41 +177,29 @@ export async function registerOrderAddressRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
-        body: {
-          type: "object",
-          required: [
-            "firstName",
-            "lastName",
-            "addressLine1",
-            "city",
-            "state",
-            "postalCode",
-            "country",
-          ],
-          properties: addressSchema.properties,
-        },
+        body: addressBodySchema,
         response: {
           200: {
-            description: "Shipping address updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: addressResponseSchema,
-              message: {
-                type: "string",
-                example: "Shipping address updated successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderAddressResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderAddressController.updateShippingAddress.bind(orderAddressController),
+    (request, reply) =>
+      orderAddressController.updateShippingAddress(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 }

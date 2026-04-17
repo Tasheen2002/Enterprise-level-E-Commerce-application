@@ -15,54 +15,28 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
   async save(checkout: Checkout): Promise<void> {
     const data = checkout.toSnapshot();
 
-    try {
-      // Check if checkout already exists for this cart
-      // Check if there is an active (pending) checkout for this cart
-      const existing = await this.prisma.checkout.findFirst({
-        where: {
-          cartId: data.cartId,
-          status: CheckoutStatusEnum.pending,
-        },
-      });
-
-      if (existing) {
-        // Update existing checkout
-        await this.prisma.checkout.update({
-          where: { id: existing.id }, // Use ID instead of cartId because cartId is no longer unique
-          data: {
-            userId: data.userId || null,
-            guestToken: data.guestToken || null,
-            status: data.status as CheckoutStatusEnum,
-            totalAmount: data.totalAmount,
-            currency: data.currency,
-            expiresAt: data.expiresAt,
-            completedAt: data.completedAt || null,
-            updatedAt: data.updatedAt,
-          },
-        });
-      } else {
-        // Create new checkout
-        await this.prisma.checkout.create({
-          data: {
-            id: data.checkoutId,
-            userId: data.userId || null,
-            guestToken: data.guestToken || null,
-            cartId: data.cartId,
-            status: data.status as CheckoutStatusEnum,
-            totalAmount: data.totalAmount,
-            currency: data.currency,
-            expiresAt: data.expiresAt,
-            completedAt: data.completedAt || null,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
-          },
-        });
-      }
-    } catch (error: any) {
-      console.error("Failed to save checkout:", error);
-      console.error("Checkout data:", JSON.stringify(data, null, 2));
-      throw error;
-    }
+    await this.prisma.checkout.upsert({
+      where: { id: data.checkoutId },
+      create: {
+        id: data.checkoutId,
+        userId: data.userId || null,
+        guestToken: data.guestToken || null,
+        cartId: data.cartId,
+        status: data.status as CheckoutStatusEnum,
+        totalAmount: data.totalAmount,
+        currency: data.currency,
+        expiresAt: data.expiresAt,
+        completedAt: data.completedAt || null,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      },
+      update: {
+        cartId: data.cartId,
+        status: data.status as CheckoutStatusEnum,
+        completedAt: data.completedAt || null,
+        updatedAt: data.updatedAt,
+      },
+    });
   }
 
   async findById(checkoutId: CheckoutId): Promise<Checkout | null> {
@@ -93,19 +67,6 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     }
 
     return this.mapPrismaToEntity(checkoutData);
-  }
-
-  async update(checkout: Checkout): Promise<void> {
-    const data = checkout.toSnapshot();
-    await this.prisma.checkout.update({
-      where: { id: data.checkoutId },
-      data: {
-        cartId: data.cartId, // Allow updating cartId (for archiving)
-        status: data.status as CheckoutStatusEnum,
-        completedAt: data.completedAt,
-        updatedAt: data.updatedAt,
-      },
-    });
   }
 
   async delete(checkoutId: CheckoutId): Promise<void> {
@@ -208,18 +169,17 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     const entityData: CheckoutEntityData = {
       checkoutId: prismaData.id,
       cartId: prismaData.cartId,
-      userId: prismaData.userId,
+      userId: prismaData.userId ?? undefined,
       // If both userId and guestToken exist (invalid state), prioritize userId
-      guestToken: prismaData.userId ? null : prismaData.guestToken,
+      guestToken: prismaData.userId ? undefined : (prismaData.guestToken ?? undefined),
       status: prismaData.status,
-      totalAmount: parseFloat(prismaData.totalAmount.toString()),
+      totalAmount: prismaData.totalAmount,
       currency: prismaData.currency,
       expiresAt: prismaData.expiresAt,
-      completedAt: prismaData.completedAt,
+      completedAt: prismaData.completedAt ?? undefined,
       createdAt: prismaData.createdAt,
       updatedAt: prismaData.updatedAt,
     };
-
-    return Checkout.reconstitute(entityData);
+    return Checkout.fromPersistence(entityData);
   }
 }

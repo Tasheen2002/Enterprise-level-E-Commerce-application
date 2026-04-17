@@ -1,6 +1,11 @@
-import { User, UserRole, UserStatus } from "../entities/user.entity";
-import { UserId } from "../value-objects/user-id.vo";
-import { Email } from "../value-objects/email.vo";
+import { User } from '../entities/user.entity';
+import { UserRole } from '../enums/user-role.enum';
+import { UserStatus } from '../enums/user-status.enum';
+import { UserId } from '../value-objects/user-id.vo';
+import { Email } from '../value-objects/email.vo';
+import {
+  PaginatedResult,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 
 export interface FindAllWithFiltersOptions {
   search?: string;
@@ -9,12 +14,12 @@ export interface FindAllWithFiltersOptions {
   emailVerified?: boolean;
   page: number;
   limit: number;
-  sortBy: "createdAt" | "email";
-  sortOrder: "asc" | "desc";
+  sortBy: 'createdAt' | 'email';
+  sortOrder: 'asc' | 'desc';
 }
 
-/** Plain DTO returned by the read-side query — no domain entity hydration. */
-export interface UserListItemDTO {
+/** Projection returned by the read-side list query — avoids full entity hydration. */
+export interface UserListItem {
   userId: string;
   email: string;
   phone: string | null;
@@ -39,10 +44,10 @@ export interface IUserRepository {
   // Query operations
   findByPhone(phone: string): Promise<User | null>;
 
-  /** Read-side: returns plain DTOs directly — no entity hydration. */
-  findAllWithFilters(options: FindAllWithFiltersOptions): Promise<{ users: UserListItemDTO[]; total: number }>;
+  /** Read-side list projection — no full entity hydration. */
+  findAllWithFilters(options: FindAllWithFiltersOptions): Promise<PaginatedResult<UserListItem>>;
 
-  // Business operations
+  // Existence checks
   existsByEmail(email: Email): Promise<boolean>;
   existsByPhone(phone: string): Promise<boolean>;
 

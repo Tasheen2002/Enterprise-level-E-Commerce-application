@@ -9,8 +9,9 @@ import { IEventBus } from '../../../../../packages/core/src/domain/events/domain
 import {
   IUserRepository,
   FindAllWithFiltersOptions,
-  UserListItemDTO,
+  UserListItem,
 } from '../../../domain/repositories/iuser.repository';
+import { PaginatedResult } from '../../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { User } from '../../../domain/entities/user.entity';
 import { UserId } from '../../../domain/value-objects/user-id.vo';
 import { Email } from '../../../domain/value-objects/email.vo';
@@ -88,7 +89,7 @@ export class UserRepository
 
   async findAllWithFilters(
     options: FindAllWithFiltersOptions
-  ): Promise<{ users: UserListItemDTO[]; total: number }> {
+  ): Promise<PaginatedResult<UserListItem>> {
     const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = options;
 
     const where: any = {};
@@ -105,13 +106,13 @@ export class UserRepository
     if (status) where.status = this.mapStatusToPrisma(status);
     if (emailVerified !== undefined) where.emailVerified = emailVerified;
 
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
     const [rows, total] = await Promise.all([
       (this.prisma.user as any).findMany({
         where,
         orderBy: { [sortBy]: sortOrder },
-        skip,
+        skip: offset,
         take: limit,
         select: {
           id: true,
@@ -131,24 +132,27 @@ export class UserRepository
       this.prisma.user.count({ where }),
     ]);
 
+    const items: UserListItem[] = rows.map((r: any) => ({
+      userId: r.id,
+      email: r.email,
+      phone: r.phone ?? null,
+      firstName: r.firstName ?? null,
+      lastName: r.lastName ?? null,
+      role: this.mapRoleFromPrisma(r.role),
+      status: this.mapStatusFromPrisma(r.status),
+      emailVerified: r.emailVerified,
+      phoneVerified: r.phoneVerified,
+      isGuest: r.isGuest,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+
     return {
-      users: rows.map(
-        (r: any): UserListItemDTO => ({
-          userId: r.id,
-          email: r.email,
-          phone: r.phone ?? null,
-          firstName: r.firstName ?? null,
-          lastName: r.lastName ?? null,
-          role: this.mapRoleFromPrisma(r.role),
-          status: this.mapStatusFromPrisma(r.status),
-          emailVerified: r.emailVerified,
-          phoneVerified: r.phoneVerified,
-          isGuest: r.isGuest,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
-        })
-      ),
+      items,
       total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
     };
   }
 

@@ -7,7 +7,6 @@ import { Currency } from "../value-objects/currency.vo";
 export interface ICartRepository {
   save(cart: ShoppingCart): Promise<void>;
   findById(cartId: CartId): Promise<ShoppingCart | null>;
-  update(cart: ShoppingCart): Promise<void>;
   delete(cartId: CartId): Promise<void>;
   findByCartOwnerId(userId: CartOwnerId): Promise<ShoppingCart | null>;
   findActiveCartByCartOwnerId(
@@ -99,21 +98,7 @@ export interface ICartRepository {
     cartId: CartId,
     additionalHours: number,
   ): Promise<void>;
-  searchCarts(criteria: {
-    userId?: string;
-    guestToken?: string;
-    currency?: string;
-    minValue?: number;
-    maxValue?: number;
-    hasGiftItems?: boolean;
-    isEmpty?: boolean;
-    createdAfter?: Date;
-    createdBefore?: Date;
-    updatedAfter?: Date;
-    updatedBefore?: Date;
-    limit?: number;
-    offset?: number;
-  }): Promise<ShoppingCart[]>;
+  searchCarts(criteria: CartSearchCriteria): Promise<ShoppingCart[]>;
   validateCartOwnership(
     cartId: CartId,
     userId?: CartOwnerId,
@@ -136,14 +121,6 @@ export interface ICartRepository {
     isExpired: boolean;
     updatedAt: Date;
   } | null>;
-  saveWithTransaction(
-    cart: ShoppingCart,
-    transactionContext?: any,
-  ): Promise<void>;
-  deleteWithTransaction(
-    cartId: CartId,
-    transactionContext?: any,
-  ): Promise<void>;
   updateEmail(cartId: CartId, email: string): Promise<void>;
   updateShippingInfo(
     cartId: CartId,
@@ -155,27 +132,72 @@ export interface ICartRepository {
   ): Promise<void>;
   updateAddresses(
     cartId: CartId,
-    data: {
-      shippingFirstName?: string;
-      shippingLastName?: string;
-      shippingAddress1?: string;
-      shippingAddress2?: string;
-      shippingCity?: string;
-      shippingProvince?: string;
-      shippingPostalCode?: string;
-      shippingCountryCode?: string;
-      shippingPhone?: string;
-      billingFirstName?: string;
-      billingLastName?: string;
-      billingAddress1?: string;
-      billingAddress2?: string;
-      billingCity?: string;
-      billingProvince?: string;
-      billingPostalCode?: string;
-      billingCountryCode?: string;
-      billingPhone?: string;
-      sameAddressForBilling?: boolean;
-    },
+    data: CartAddressData,
   ): Promise<void>;
-  getCartWithCheckoutInfo(cartId: string): Promise<any>;
+  getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null>;
+}
+
+export interface CartWithCheckoutInfo {
+  id: string;
+  email?: string | null;
+  shippingMethod?: string | null;
+  shippingOption?: string | null;
+  isGift?: boolean | null;
+  shippingFirstName?: string | null;
+  shippingLastName?: string | null;
+  shippingAddress1?: string | null;
+  shippingAddress2?: string | null;
+  shippingCity?: string | null;
+  shippingProvince?: string | null;
+  shippingPostalCode?: string | null;
+  shippingCountryCode?: string | null;
+  shippingPhone?: string | null;
+  billingFirstName?: string | null;
+  billingLastName?: string | null;
+  billingAddress1?: string | null;
+  billingAddress2?: string | null;
+  billingCity?: string | null;
+  billingProvince?: string | null;
+  billingPostalCode?: string | null;
+  billingCountryCode?: string | null;
+  billingPhone?: string | null;
+  sameAddressForBilling?: boolean | null;
+}
+
+export interface CartSearchCriteria {
+  userId?: string;
+  guestToken?: string;
+  currency?: string;
+  minValue?: number;
+  maxValue?: number;
+  hasGiftItems?: boolean;
+  isEmpty?: boolean;
+  createdAfter?: Date;
+  createdBefore?: Date;
+  updatedAfter?: Date;
+  updatedBefore?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CartAddressData {
+  shippingFirstName?: string;
+  shippingLastName?: string;
+  shippingAddress1?: string;
+  shippingAddress2?: string;
+  shippingCity?: string;
+  shippingProvince?: string;
+  shippingPostalCode?: string;
+  shippingCountryCode?: string;
+  shippingPhone?: string;
+  billingFirstName?: string;
+  billingLastName?: string;
+  billingAddress1?: string;
+  billingAddress2?: string;
+  billingCity?: string;
+  billingProvince?: string;
+  billingPostalCode?: string;
+  billingCountryCode?: string;
+  billingPhone?: string;
+  sameAddressForBilling?: boolean;
 }

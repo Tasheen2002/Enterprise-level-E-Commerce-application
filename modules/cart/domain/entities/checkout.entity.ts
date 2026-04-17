@@ -160,18 +160,32 @@ export interface CheckoutDTO {
 export class Checkout extends AggregateRoot {
   private constructor(private props: CheckoutProps) {
     super();
-    if (props.userId && props.guestToken) {
+  }
+
+  private static validateOwnership(
+    userId: CartOwnerId | null,
+    guestToken: GuestToken | null,
+  ): void {
+    if (userId && guestToken) {
       throw new DomainValidationError("Checkout cannot belong to both user and guest");
     }
-    if (!props.userId && !props.guestToken) {
+    if (!userId && !guestToken) {
       throw new DomainValidationError("Checkout must belong to either user or guest");
     }
-    if (props.totalAmount < 0) {
+  }
+
+  private static validateTotalAmount(totalAmount: number): void {
+    if (totalAmount < 0) {
       throw new DomainValidationError("Total amount cannot be negative");
     }
   }
 
   static create(data: CreateCheckoutData): Checkout {
+    const userId = data.userId ? CartOwnerId.fromString(data.userId) : null;
+    const guestToken = data.guestToken ? GuestToken.fromString(data.guestToken) : null;
+    Checkout.validateOwnership(userId, guestToken);
+    Checkout.validateTotalAmount(data.totalAmount);
+
     const checkoutId = CheckoutId.create();
     const now = new Date();
     const expiresInMinutes = data.expiresInMinutes || CHECKOUT_DEFAULT_EXPIRY_MINUTES;
@@ -180,8 +194,8 @@ export class Checkout extends AggregateRoot {
     const checkout = new Checkout({
       checkoutId,
       cartId: CartId.fromString(data.cartId),
-      userId: data.userId ? CartOwnerId.fromString(data.userId) : null,
-      guestToken: data.guestToken ? GuestToken.fromString(data.guestToken) : null,
+      userId,
+      guestToken,
       status: CheckoutStatus.pending(),
       totalAmount: data.totalAmount,
       currency: Currency.fromString(data.currency),
@@ -203,7 +217,7 @@ export class Checkout extends AggregateRoot {
     return checkout;
   }
 
-  static reconstitute(data: CheckoutEntityData): Checkout {
+  static fromPersistence(data: CheckoutEntityData): Checkout {
     return new Checkout({
       checkoutId: CheckoutId.fromString(data.checkoutId),
       cartId: CartId.fromString(data.cartId),
@@ -217,25 +231,6 @@ export class Checkout extends AggregateRoot {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
-  }
-
-  static toDTO(checkout: Checkout): CheckoutDTO {
-    return {
-      checkoutId: checkout.props.checkoutId.getValue(),
-      cartId: checkout.props.cartId.getValue(),
-      userId: checkout.props.userId?.getValue(),
-      guestToken: checkout.props.guestToken?.getValue(),
-      status: checkout.props.status.getValue(),
-      totalAmount: checkout.props.totalAmount,
-      currency: checkout.props.currency.getValue(),
-      expiresAt: checkout.props.expiresAt.toISOString(),
-      completedAt: checkout.props.completedAt?.toISOString(),
-      createdAt: checkout.props.createdAt.toISOString(),
-      updatedAt: checkout.props.updatedAt.toISOString(),
-      isExpired: checkout.isExpired,
-      isPending: checkout.isPending,
-      isCompleted: checkout.isCompleted,
-    };
   }
 
   // Business methods
@@ -377,6 +372,25 @@ export class Checkout extends AggregateRoot {
       completedAt: this.props.completedAt || undefined,
       createdAt: this.props.createdAt,
       updatedAt: this.props.updatedAt,
+    };
+  }
+
+  static toDTO(checkout: Checkout): CheckoutDTO {
+    return {
+      checkoutId: checkout.props.checkoutId.getValue(),
+      cartId: checkout.props.cartId.getValue(),
+      userId: checkout.props.userId?.getValue(),
+      guestToken: checkout.props.guestToken?.getValue(),
+      status: checkout.props.status.getValue(),
+      totalAmount: checkout.props.totalAmount,
+      currency: checkout.props.currency.getValue(),
+      expiresAt: checkout.props.expiresAt.toISOString(),
+      completedAt: checkout.props.completedAt?.toISOString(),
+      createdAt: checkout.props.createdAt.toISOString(),
+      updatedAt: checkout.props.updatedAt.toISOString(),
+      isExpired: checkout.isExpired,
+      isPending: checkout.isPending,
+      isCompleted: checkout.isCompleted,
     };
   }
 }

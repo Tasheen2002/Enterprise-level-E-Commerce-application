@@ -1,73 +1,69 @@
 import { AddressManagementService } from '../services/address-management.service';
 import { AddressDTO } from '../../domain/entities/address.entity';
 import { AddressType, AddressData } from '../../domain/value-objects/address.vo';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface UpdateAddressInput extends ICommand {
-  addressId: string;
-  userId: string;
-  type?: 'billing' | 'shipping';
-  isDefault?: boolean;
-  firstName?: string;
-  lastName?: string;
-  company?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-  phone?: string;
+export interface UpdateAddressCommand extends ICommand {
+  readonly addressId: string;
+  readonly userId: string;
+  readonly type?: 'billing' | 'shipping';
+  readonly isDefault?: boolean;
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly company?: string;
+  readonly addressLine1?: string;
+  readonly addressLine2?: string;
+  readonly city?: string;
+  readonly state?: string;
+  readonly postalCode?: string;
+  readonly country?: string;
+  readonly phone?: string;
 }
 
 export class UpdateAddressHandler implements ICommandHandler<
-  UpdateAddressInput,
+  UpdateAddressCommand,
   CommandResult<AddressDTO>
 > {
   constructor(private readonly addressService: AddressManagementService) {}
 
   async handle(
-    input: UpdateAddressInput
+    command: UpdateAddressCommand
   ): Promise<CommandResult<AddressDTO>> {
     const hasAddressFields =
-      input.firstName !== undefined ||
-      input.lastName !== undefined ||
-      input.company !== undefined ||
-      input.addressLine1 !== undefined ||
-      input.addressLine2 !== undefined ||
-      input.city !== undefined ||
-      input.state !== undefined ||
-      input.postalCode !== undefined ||
-      input.country !== undefined ||
-      input.phone !== undefined;
+      command.firstName !== undefined ||
+      command.lastName !== undefined ||
+      command.company !== undefined ||
+      command.addressLine1 !== undefined ||
+      command.addressLine2 !== undefined ||
+      command.city !== undefined ||
+      command.state !== undefined ||
+      command.postalCode !== undefined ||
+      command.country !== undefined ||
+      command.phone !== undefined;
 
     const addressData: AddressData | undefined = hasAddressFields
       ? {
-          firstName: input.firstName,
-          lastName: input.lastName,
-          company: input.company,
-          addressLine1: input.addressLine1!,
-          addressLine2: input.addressLine2,
-          city: input.city!,
-          state: input.state,
-          postalCode: input.postalCode,
-          country: input.country!,
-          phone: input.phone,
+          firstName: command.firstName,
+          lastName: command.lastName,
+          company: command.company,
+          addressLine1: command.addressLine1!,
+          addressLine2: command.addressLine2,
+          city: command.city!,
+          state: command.state,
+          postalCode: command.postalCode,
+          country: command.country!,
+          phone: command.phone,
         }
       : undefined;
 
-    const type = input.type ? AddressType.fromString(input.type) : undefined;
+    const type = command.type ? AddressType.fromString(command.type) : undefined;
 
     const result = await this.addressService.updateAddress({
-      addressId: input.addressId,
-      userId: input.userId,
+      addressId: command.addressId,
+      userId: command.userId,
       addressData,
       type,
-      isDefault: input.isDefault,
+      isDefault: command.isDefault,
     });
 
     return CommandResult.success(result);

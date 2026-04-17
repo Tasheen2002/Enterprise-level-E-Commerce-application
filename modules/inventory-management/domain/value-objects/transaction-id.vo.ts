@@ -13,8 +13,4 @@ export class TransactionId extends UuidId {
   static fromString(id: string): TransactionId {
     return new TransactionId(id);
   }
-
-  equals(other: TransactionId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

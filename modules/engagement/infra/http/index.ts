@@ -1,3 +1,3 @@
 // Barrel for HTTP layer (controllers and routes)
-export * from "./routes.js";
-export * from "./controllers/index.js";
+export * from "./routes/index";
+export * from "./controllers/index";

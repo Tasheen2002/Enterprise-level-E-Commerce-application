@@ -1,17 +1,20 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import {
-  LogOrderEventCommandHandler,
-  GetOrderEventsHandler,
-  GetOrderEventHandler,
-  OrderEventService,
-} from "../../../application";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  LogOrderEventCommand,
+  LogOrderEventCommandHandler,
+  ListOrderEventsQuery,
+  ListOrderEventsHandler,
+  GetOrderEventQuery,
+  GetOrderEventHandler,
+} from "../../../application";
 
 export interface LogEventRequest {
   Params: { orderId: string };
   Body: {
     eventType: string;
-    payload?: Record<string, any>;
+    payload?: Record<string, unknown>;
   };
 }
 
@@ -29,92 +32,63 @@ export interface GetEventsRequest {
 export interface GetEventRequest {
   Params: {
     orderId: string;
-    eventId: string;
+    eventId: number;
   };
 }
 
 export class OrderEventController {
-  private logEventHandler: LogOrderEventCommandHandler;
-  private getOrderEventsHandler: GetOrderEventsHandler;
-  private getOrderEventHandler: GetOrderEventHandler;
-
-  constructor(orderEventService: OrderEventService) {
-    this.logEventHandler = new LogOrderEventCommandHandler(orderEventService);
-    this.getOrderEventsHandler = new GetOrderEventsHandler(orderEventService);
-    this.getOrderEventHandler = new GetOrderEventHandler(orderEventService);
-  }
+  constructor(
+    private readonly logEventHandler: LogOrderEventCommandHandler,
+    private readonly listOrderEventsHandler: ListOrderEventsHandler,
+    private readonly getOrderEventHandler: GetOrderEventHandler,
+  ) {}
 
   async logEvent(
-    request: FastifyRequest<LogEventRequest>,
+    request: AuthenticatedRequest<LogEventRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { eventType, payload } = request.body;
-
-      const result = await this.logEventHandler.handle({
-        orderId,
-        eventType,
-        payload,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Event logged successfully",
-        201,
-      );
-    } catch (error) {
+      const command: LogOrderEventCommand = {
+        orderId: request.params.orderId,
+        eventType: request.body.eventType,
+        payload: request.body.payload,
+      };
+      const result = await this.logEventHandler.handle(command);
+      return ResponseHelper.fromCommand(reply, result, "Event logged successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getEvents(
-    request: FastifyRequest<GetEventsRequest>,
+    request: AuthenticatedRequest<GetEventsRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { eventType, limit, offset, sortBy, sortOrder } = request.query;
-
-      const result = await this.getOrderEventsHandler.handle({
-        orderId,
-        eventType,
-        limit,
-        offset,
-        sortBy,
-        sortOrder,
-      });
-
-      return ResponseHelper.fromQuery(reply, result, "Order events retrieved");
-    } catch (error) {
+      const query: ListOrderEventsQuery = {
+        orderId: request.params.orderId,
+        eventType: request.query.eventType,
+        limit: request.query.limit,
+        offset: request.query.offset,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
+      };
+      const result = await this.listOrderEventsHandler.handle(query);
+      return ResponseHelper.ok(reply, "Order events retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getEvent(
-    request: FastifyRequest<GetEventRequest>,
+    request: AuthenticatedRequest<GetEventRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { eventId } = request.params;
-      const eventIdNum = parseInt(eventId, 10);
-
-      if (isNaN(eventIdNum)) {
-        return ResponseHelper.badRequest(reply, "Invalid event ID");
-      }
-
-      const result = await this.getOrderEventHandler.handle({
-        eventId: eventIdNum,
-      });
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Order event retrieved",
-        "Event not found",
-      );
-    } catch (error) {
+      const query: GetOrderEventQuery = { eventId: request.params.eventId };
+      const result = await this.getOrderEventHandler.handle(query);
+      return ResponseHelper.ok(reply, "Order event retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

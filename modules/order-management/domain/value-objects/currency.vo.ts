@@ -29,6 +29,10 @@ export class Currency {
     return new Currency(normalizedValue);
   }
 
+  static fromString(value: string): Currency {
+    return new Currency(value);
+  }
+
   static USD(): Currency {
     return new Currency("USD");
   }

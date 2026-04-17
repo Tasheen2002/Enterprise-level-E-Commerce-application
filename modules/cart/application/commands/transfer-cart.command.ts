@@ -1,13 +1,23 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { CartManagementService, CartDto } from "../services/cart-management.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
+  CartManagementService,
+  CartDto,
+} from "../services/cart-management.service";
 
 export interface TransferCartCommand extends ICommand {
-  guestToken: string;
-  userId: string;
-  mergeWithExisting?: boolean;
+  readonly guestToken: string;
+  readonly userId: string;
+  readonly mergeWithExisting?: boolean;
 }
 
-export class TransferCartHandler implements ICommandHandler<TransferCartCommand, CommandResult<CartDto>> {
+export class TransferCartHandler implements ICommandHandler<
+  TransferCartCommand,
+  CommandResult<CartDto>
+> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
   async handle(command: TransferCartCommand): Promise<CommandResult<CartDto>> {

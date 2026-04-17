@@ -1,71 +1,88 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   INotificationRepository,
   NotificationQueryOptions,
-  NotificationFilterOptions,
-} from "../../../domain/repositories/notification.repository.js";
-import { Notification } from "../../../domain/entities/notification.entity.js";
+  NotificationFilters,
+} from "../../../domain/repositories/notification.repository";
+import { Notification } from "../../../domain/entities/notification.entity";
 import {
   NotificationId,
   NotificationType,
   NotificationStatus,
   ChannelType,
-} from "../../../domain/value-objects/index.js";
+} from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-export class NotificationRepositoryImpl implements INotificationRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ============================================================================
+// Database Row Interface
+// ============================================================================
+interface NotificationDatabaseRow {
+  id: string;
+  type: string;
+  channel: string | null;
+  templateId: string | null;
+  payload: Record<string, any>;
+  status: string;
+  scheduledAt: Date | null;
+  sentAt: Date | null;
+  error: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  private hydrate(record: any): Notification {
-    return Notification.fromDatabaseRow({
-      notification_id: record.id,
-      type: record.type,
-      channel: record.channel,
-      template_id: record.templateId,
-      payload: record.payload,
-      status: record.status,
-      scheduled_at: record.scheduledAt,
-      sent_at: record.sentAt,
-      error: record.error,
+// ============================================================================
+// Repository Implementation
+// ============================================================================
+export class NotificationRepositoryImpl
+  extends PrismaRepository<Notification>
+  implements INotificationRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  private toEntity(row: NotificationDatabaseRow): Notification {
+    return Notification.fromPersistence({
+      id: NotificationId.fromString(row.id),
+      type: NotificationType.fromString(row.type),
+      channel: row.channel ? ChannelType.fromString(row.channel) : undefined,
+      templateId: row.templateId || undefined,
+      payload: row.payload || {},
+      status: NotificationStatus.fromString(row.status || "pending"),
+      scheduledAt: row.scheduledAt || undefined,
+      sentAt: row.sentAt || undefined,
+      error: row.error || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
-  }
-
-  private dehydrate(notification: Notification): any {
-    const row = notification.toDatabaseRow();
-    return {
-      id: row.notification_id,
-      type: row.type,
-      channel: row.channel,
-      templateId: row.template_id,
-      payload: row.payload,
-      status: row.status,
-      scheduledAt: row.scheduled_at,
-      sentAt: row.sent_at,
-      error: row.error,
-    };
-  }
-
-  private buildOrderBy(options?: NotificationQueryOptions): any {
-    if (!options?.sortBy) {
-      return { scheduledAt: "desc" };
-    }
-
-    return {
-      [options.sortBy]: options.sortOrder || "asc",
-    };
   }
 
   async save(notification: Notification): Promise<void> {
-    const data = this.dehydrate(notification);
-    await this.prisma.notification.create({ data });
-  }
-
-  async update(notification: Notification): Promise<void> {
-    const data = this.dehydrate(notification);
-    const { id, ...updateData } = data;
-    await this.prisma.notification.update({
-      where: { id },
-      data: updateData,
+    await this.prisma.notification.upsert({
+      where: { id: notification.id.getValue() },
+      create: {
+        id: notification.id.getValue(),
+        type: notification.type.getValue() as any,
+        channel: notification.channel?.getValue() as any,
+        templateId: notification.templateId,
+        payload: notification.payload || {},
+        status: notification.status.getValue(),
+        scheduledAt: notification.scheduledAt,
+        sentAt: notification.sentAt,
+        error: notification.error,
+        createdAt: notification.createdAt,
+        updatedAt: notification.updatedAt,
+      },
+      update: {
+        status: notification.status.getValue(),
+        sentAt: notification.sentAt,
+        error: notification.error,
+        updatedAt: notification.updatedAt,
+      },
     });
+    await this.dispatchEvents(notification);
   }
 
   async delete(notificationId: NotificationId): Promise<void> {
@@ -79,154 +96,302 @@ export class NotificationRepositoryImpl implements INotificationRepository {
       where: { id: notificationId.getValue() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as NotificationDatabaseRow) : null;
   }
 
   async findByType(
     type: NotificationType,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { type: type.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { type: type.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByChannel(
     channel: ChannelType,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { channel: channel.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { channel: channel.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByStatus(
     status: NotificationStatus,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { status: status.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: status.getValue() };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findAll(options?: NotificationQueryOptions): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findAll(
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findWithFilters(
-    filters: NotificationFilterOptions,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
+    filters: NotificationFilters,
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
+
     const where: any = {};
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
-    if (filters.channel) {
-      where.channel = filters.channel.getValue() as any;
-    }
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
-
+    if (filters.type) where.type = filters.type.getValue() as any;
+    if (filters.channel) where.channel = filters.channel.getValue() as any;
+    if (filters.status) where.status = filters.status.getValue();
     if (filters.startDate || filters.endDate) {
-      where.scheduledAt = {};
-      if (filters.startDate) {
-        where.scheduledAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.scheduledAt.lte = filters.endDate;
-      }
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = filters.startDate;
+      if (filters.endDate) where.createdAt.lte = filters.endDate;
     }
 
-    const records = await this.prisma.notification.findMany({
-      where,
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
 
-    return records.map((record) => this.hydrate(record));
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findPendingNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { status: "pending" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "pending" };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findScheduledNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { status: "scheduled" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "scheduledAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = {
+      status: "scheduled",
+      scheduledAt: { not: null },
+    };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findDueNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: {
-        status: "scheduled",
-        scheduledAt: {
-          lte: new Date(),
-        },
-      },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "scheduledAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const now = new Date();
+    const where = {
+      status: "scheduled",
+      scheduledAt: { lte: now },
+    };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findFailedNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    const records = await this.prisma.notification.findMany({
-      where: { status: "failed" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedResult<Notification>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "updatedAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "failed" };
+
+    const [records, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NotificationDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async countByType(type: NotificationType): Promise<number> {
@@ -243,37 +408,19 @@ export class NotificationRepositoryImpl implements INotificationRepository {
 
   async countByStatus(status: NotificationStatus): Promise<number> {
     return await this.prisma.notification.count({
-      where: { status: status.getValue() as any },
+      where: { status: status.getValue() },
     });
   }
 
-  async count(filters?: NotificationFilterOptions): Promise<number> {
-    if (!filters) {
-      return await this.prisma.notification.count();
-    }
-
+  async count(filters?: NotificationFilters): Promise<number> {
     const where: any = {};
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
-    if (filters.channel) {
-      where.channel = filters.channel.getValue() as any;
-    }
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
-
-    if (filters.startDate || filters.endDate) {
-      where.scheduledAt = {};
-      if (filters.startDate) {
-        where.scheduledAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.scheduledAt.lte = filters.endDate;
-      }
+    if (filters?.type) where.type = filters.type.getValue() as any;
+    if (filters?.channel) where.channel = filters.channel.getValue() as any;
+    if (filters?.status) where.status = filters.status.getValue();
+    if (filters?.startDate || filters?.endDate) {
+      where.createdAt = {};
+      if (filters.startDate) where.createdAt.gte = filters.startDate;
+      if (filters.endDate) where.createdAt.lte = filters.endDate;
     }
 
     return await this.prisma.notification.count({ where });

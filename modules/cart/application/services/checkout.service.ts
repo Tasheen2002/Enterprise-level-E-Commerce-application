@@ -6,7 +6,7 @@ import {
 } from "../../domain/entities/checkout.entity";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
-import { IExternalSettingsService } from "../../domain/external-services";
+import { IExternalSettingsService } from "../../domain/ports/external-services";
 import { CHECKOUT_DEFAULT_EXPIRY_MINUTES } from "../../domain/constants";
 import {
   CartNotFoundError,
@@ -16,14 +16,14 @@ import {
   InvalidOperationError,
 } from "../../domain/errors/cart.errors";
 
-export interface InitializeCheckoutDto {
+interface InitializeCheckoutDto {
   cartId: string;
   userId?: string;
   guestToken?: string;
   expiresInMinutes?: number;
 }
 
-export interface CompleteCheckoutDto {
+interface CompleteCheckoutDto {
   checkoutId: string;
   userId?: string;
   guestToken?: string;
@@ -144,10 +144,7 @@ export class CheckoutService {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (
-      dto.guestToken &&
-      checkout.guestToken?.toString() !== dto.guestToken
-    ) {
+    if (dto.guestToken && checkout.guestToken?.toString() !== dto.guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -163,7 +160,7 @@ export class CheckoutService {
     // Link payment intent and mark as completed
     checkout.markAsCompleted();
 
-    await this.checkoutRepository.update(checkout);
+    await this.checkoutRepository.save(checkout);
 
     return this.mapCheckoutToDto(checkout);
   }
@@ -190,7 +187,7 @@ export class CheckoutService {
     }
 
     checkout.markAsCancelled();
-    await this.checkoutRepository.update(checkout);
+    await this.checkoutRepository.save(checkout);
 
     return this.mapCheckoutToDto(checkout);
   }

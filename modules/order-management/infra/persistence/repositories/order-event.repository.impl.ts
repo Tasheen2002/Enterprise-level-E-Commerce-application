@@ -11,34 +11,36 @@ interface OrderEventDatabaseRow {
   eventType: string;
   payload: any;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export class OrderEventRepositoryImpl implements IOrderEventRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Hydration: Database row � Entity
   private toEntity(row: OrderEventDatabaseRow): OrderEvent {
-    return OrderEvent.reconstitute({
+    return OrderEvent.fromPersistence({
       eventId: Number(row.id),
       orderId: row.orderId,
       eventType: row.eventType,
       payload: row.payload || {},
       createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
   async save(orderEvent: OrderEvent): Promise<void> {
     await this.prisma.orderEvent.create({
       data: {
-        orderId: orderEvent.getOrderId(),
-        eventType: orderEvent.getEventType(),
-        payload: orderEvent.getPayload(),
-        createdAt: orderEvent.getCreatedAt(),
+        orderId: orderEvent.orderId,
+        eventType: orderEvent.eventType,
+        payload: orderEvent.payload as any,
+        createdAt: orderEvent.createdAt,
       },
     });
   }
 
-  async delete(eventId: number): Promise<void> {
+  async delete(eventId: number | null): Promise<void> {
+    if (eventId === null) return;
     await this.prisma.orderEvent.delete({
       where: { id: BigInt(eventId) },
     });
@@ -50,7 +52,8 @@ export class OrderEventRepositoryImpl implements IOrderEventRepository {
     });
   }
 
-  async findById(eventId: number): Promise<OrderEvent | null> {
+  async findById(eventId: number | null): Promise<OrderEvent | null> {
+    if (eventId === null) return null;
     const event = await this.prisma.orderEvent.findUnique({
       where: { id: BigInt(eventId) },
     });
@@ -179,7 +182,8 @@ export class OrderEventRepositoryImpl implements IOrderEventRepository {
     return this.toEntity(event as any);
   }
 
-  async exists(eventId: number): Promise<boolean> {
+  async exists(eventId: number | null): Promise<boolean> {
+    if (eventId === null) return false;
     const count = await this.prisma.orderEvent.count({
       where: { id: BigInt(eventId) },
     });

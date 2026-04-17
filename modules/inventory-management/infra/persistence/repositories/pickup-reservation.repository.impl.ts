@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PickupReservation } from "../../../domain/entities/pickup-reservation.entity";
 import { ReservationId } from "../../../domain/value-objects/reservation-id.vo";
 import {
@@ -18,9 +20,12 @@ interface PickupReservationDatabaseRow {
 }
 
 export class PickupReservationRepositoryImpl
+  extends PrismaRepository<PickupReservation>
   implements IPickupReservationRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: PickupReservationDatabaseRow): PickupReservation {
     return PickupReservation.fromPersistence({
@@ -54,6 +59,8 @@ export class PickupReservationRepositoryImpl
         status: reservation.status.getValue(),
       },
     });
+
+    await this.dispatchEvents(reservation);
   }
 
   async findById(
@@ -126,23 +133,30 @@ export class PickupReservationRepositoryImpl
   }
 
   async findExpiredReservations(): Promise<PickupReservation[]> {
+    const now = new Date();
     const reservations = await (this.prisma as any).pickupReservation.findMany({
+      where: { expiresAt: { lt: now } },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations
-      .map((r: PickupReservationDatabaseRow) => this.toEntity(r))
-      .filter((r: PickupReservation) => r.isExpired());
+    return reservations.map((r: PickupReservationDatabaseRow) =>
+      this.toEntity(r),
+    );
   }
 
   async findActiveReservations(): Promise<PickupReservation[]> {
+    const now = new Date();
     const reservations = await (this.prisma as any).pickupReservation.findMany({
+      where: {
+        status: ReservationStatus.ACTIVE,
+        expiresAt: { gte: now },
+      },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations
-      .map((r: PickupReservationDatabaseRow) => this.toEntity(r))
-      .filter((r: PickupReservation) => r.isActive());
+    return reservations.map((r: PickupReservationDatabaseRow) =>
+      this.toEntity(r),
+    );
   }
 
   async findAllReservations(): Promise<PickupReservation[]> {
@@ -179,14 +193,18 @@ export class PickupReservationRepositoryImpl
     variantId: string,
     locationId: string,
   ): Promise<number> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
-      where: { variantId, locationId },
+    const now = new Date();
+    const result = await (this.prisma as any).pickupReservation.aggregate({
+      where: {
+        variantId,
+        locationId,
+        status: ReservationStatus.ACTIVE,
+        expiresAt: { gte: now },
+      },
+      _sum: { qty: true },
     });
 
-    return reservations
-      .map((r: PickupReservationDatabaseRow) => this.toEntity(r))
-      .filter((r: PickupReservation) => r.isActive())
-      .reduce((total: number, r: PickupReservation) => total + r.qty, 0);
+    return result._sum?.qty ?? 0;
   }
 
   async exists(reservationId: ReservationId): Promise<boolean> {

@@ -1,16 +1,22 @@
+import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
+
 export class Rating {
   private readonly value: number;
 
-  constructor(value: number) {
-    if (!Number.isInteger(value)) {
-      throw new Error("Rating must be an integer");
-    }
-
-    if (value < 1 || value > 5) {
-      throw new Error("Rating must be between 1 and 5");
+  private constructor(value: number) {
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+      throw new InvalidFormatError("Rating", "integer between 1 and 5");
     }
 
     this.value = value;
+  }
+
+  static create(value: number): Rating {
+    return new Rating(value);
+  }
+
+  static fromNumber(value: number): Rating {
+    return new Rating(value);
   }
 
   getValue(): number {
@@ -25,11 +31,6 @@ export class Rating {
     return this.value.toString();
   }
 
-  static fromNumber(value: number): Rating {
-    return new Rating(value);
-  }
-
-  // Helper methods
   isPositive(): boolean {
     return this.value >= 4;
   }
@@ -43,6 +44,6 @@ export class Rating {
   }
 
   toStars(): string {
-    return "".repeat(this.value) + "".repeat(5 - this.value);
+    return "★".repeat(this.value) + "☆".repeat(5 - this.value);
   }
 }

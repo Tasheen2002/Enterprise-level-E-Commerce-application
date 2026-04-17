@@ -1,15 +1,15 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { VariantManagementService } from "../services/variant-management.service";
 
-export interface DeleteProductVariantInput extends ICommand {
-  variantId: string;
+export interface DeleteProductVariantCommand extends ICommand {
+  readonly variantId: string;
 }
 
-export class DeleteProductVariantHandler implements ICommandHandler<DeleteProductVariantInput, CommandResult<void>> {
+export class DeleteProductVariantHandler implements ICommandHandler<DeleteProductVariantCommand, CommandResult<void>> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: DeleteProductVariantInput): Promise<CommandResult<void>> {
-    await this.variantManagementService.deleteVariant(input.variantId);
+  async handle(command: DeleteProductVariantCommand): Promise<CommandResult<void>> {
+    await this.variantManagementService.deleteVariant(command.variantId);
     return CommandResult.success(undefined);
   }
 }

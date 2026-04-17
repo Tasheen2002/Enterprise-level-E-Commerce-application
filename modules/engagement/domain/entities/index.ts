@@ -7,51 +7,20 @@ export { ProductReview } from "./product-review.entity";
 export { Appointment } from "./appointment.entity";
 export { NewsletterSubscription } from "./newsletter-subscription.entity";
 
-// Wishlist interfaces
-export type {
-  CreateWishlistData,
-  WishlistEntityData,
-  WishlistDatabaseRow,
-} from "./wishlist.entity";
+// Props interfaces
+export type { WishlistProps, WishlistDTO, CreateWishlistData } from "./wishlist.entity";
+export type { WishlistItemProps, WishlistItemDTO, CreateWishlistItemData } from "./wishlist-item.entity";
+export type { ReminderProps, ReminderDTO, CreateReminderData } from "./reminder.entity";
+export type { NotificationProps, NotificationDTO, CreateNotificationData } from "./notification.entity";
+export type { ReviewProps, ReviewDTO, CreateProductReviewData } from "./product-review.entity";
+export type { AppointmentProps, AppointmentDTO, CreateAppointmentData } from "./appointment.entity";
+export type { SubscriptionProps, SubscriptionDTO, CreateNewsletterSubscriptionData } from "./newsletter-subscription.entity";
 
-// Wishlist Item interfaces
-export type {
-  CreateWishlistItemData,
-  WishlistItemEntityData,
-  WishlistItemDatabaseRow,
-} from "./wishlist-item.entity";
-
-// Reminder interfaces
-export type {
-  CreateReminderData,
-  ReminderEntityData,
-  ReminderDatabaseRow,
-} from "./reminder.entity";
-
-// Notification interfaces
-export type {
-  CreateNotificationData,
-  NotificationEntityData,
-  NotificationDatabaseRow,
-} from "./notification.entity";
-
-// Product Review interfaces
-export type {
-  CreateProductReviewData,
-  ProductReviewEntityData,
-  ProductReviewDatabaseRow,
-} from "./product-review.entity";
-
-// Appointment interfaces
-export type {
-  CreateAppointmentData,
-  AppointmentEntityData,
-  AppointmentDatabaseRow,
-} from "./appointment.entity";
-
-// Newsletter Subscription interfaces
-export type {
-  CreateNewsletterSubscriptionData,
-  NewsletterSubscriptionEntityData,
-  NewsletterSubscriptionDatabaseRow,
-} from "./newsletter-subscription.entity";
+// Domain Events
+export { WishlistCreatedEvent, WishlistOwnershipTransferredEvent } from "./wishlist.entity";
+export { WishlistItemAddedEvent } from "./wishlist-item.entity";
+export { ReminderCreatedEvent, ReminderStatusChangedEvent } from "./reminder.entity";
+export { NotificationCreatedEvent, NotificationStatusChangedEvent } from "./notification.entity";
+export { ReviewSubmittedEvent, ReviewStatusChangedEvent } from "./product-review.entity";
+export { AppointmentCreatedEvent, AppointmentRescheduledEvent } from "./appointment.entity";
+export { SubscriptionCreatedEvent, SubscriptionStatusChangedEvent } from "./newsletter-subscription.entity";

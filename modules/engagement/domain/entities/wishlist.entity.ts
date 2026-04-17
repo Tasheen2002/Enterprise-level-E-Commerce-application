@@ -1,16 +1,63 @@
-import { WishlistId } from "../value-objects/index.js";
+// ============================================================================
+// 1. Imports
+// ============================================================================
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { WishlistId } from "../value-objects";
+import { DomainValidationError } from "../errors/engagement.errors";
 
-export interface CreateWishlistData {
-  userId?: string;
-  guestToken?: string;
-  name?: string;
-  isDefault?: boolean;
-  isPublic?: boolean;
-  description?: string;
+// ============================================================================
+// 2. Domain Events
+// ============================================================================
+export class WishlistCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly wishlistId: string,
+    public readonly userId?: string,
+    public readonly guestToken?: string
+  ) {
+    super(wishlistId, "Wishlist");
+  }
+
+  get eventType(): string {
+    return "wishlist.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      wishlistId: this.wishlistId,
+      userId: this.userId,
+      guestToken: this.guestToken,
+    };
+  }
 }
 
-export interface WishlistEntityData {
-  wishlistId: string;
+export class WishlistOwnershipTransferredEvent extends DomainEvent {
+  constructor(
+    public readonly wishlistId: string,
+    public readonly fromGuestToken: string,
+    public readonly toUserId: string
+  ) {
+    super(wishlistId, "Wishlist");
+  }
+
+  get eventType(): string {
+    return "wishlist.ownership_transferred";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      wishlistId: this.wishlistId,
+      fromGuestToken: this.fromGuestToken,
+      toUserId: this.toUserId,
+    };
+  }
+}
+
+// ============================================================================
+// 3. Props Interface
+// ============================================================================
+export interface WishlistProps {
+  id: WishlistId;
   userId?: string;
   guestToken?: string;
   name?: string;
@@ -21,211 +68,186 @@ export interface WishlistEntityData {
   updatedAt: Date;
 }
 
-export interface WishlistDatabaseRow {
-  wishlist_id: string;
-  user_id: string | null;
-  guest_token: string | null;
-  name: string | null;
-  is_default: boolean;
-  is_public: boolean;
-  description: string | null;
-  created_at: Date;
-  updated_at: Date;
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+export interface WishlistDTO {
+  id: string;
+  userId?: string;
+  guestToken?: string;
+  name?: string;
+  isDefault: boolean;
+  isPublic: boolean;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export class Wishlist {
-  private constructor(
-    private readonly wishlistId: WishlistId,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
-    private userId?: string,
-    private guestToken?: string,
-    private name?: string,
-    private isDefault: boolean = false,
-    private isPublic: boolean = false,
-    private description?: string
-  ) {}
-
-  // Factory methods
-  static create(data: CreateWishlistData): Wishlist {
-    const wishlistId = WishlistId.create();
-
-    // Validation: must have either userId or guestToken
-    if (!data.userId && !data.guestToken) {
-      throw new Error("Wishlist must belong to either a user or a guest");
-    }
-
-    // Validation: cannot have both userId and guestToken
-    if (data.userId && data.guestToken) {
-      throw new Error("Wishlist cannot belong to both a user and a guest");
-    }
-
-    const now = new Date();
-
-    return new Wishlist(
-      wishlistId,
-      now,
-      now,
-      data.userId,
-      data.guestToken,
-      data.name,
-      data.isDefault || false,
-      data.isPublic || false,
-      data.description
-    );
+// ============================================================================
+// 5. Entity Class
+// ============================================================================
+export class Wishlist extends AggregateRoot {
+  private constructor(private props: WishlistProps) {
+    super();
   }
 
-  static reconstitute(data: WishlistEntityData): Wishlist {
-    const wishlistId = WishlistId.fromString(data.wishlistId);
+  static create(params: Omit<WishlistProps, "id" | "createdAt" | "updatedAt">): Wishlist {
+    Wishlist.validateOwnership(params.userId, params.guestToken);
 
-    return new Wishlist(
-      wishlistId,
-      data.createdAt,
-      data.updatedAt,
-      data.userId,
-      data.guestToken,
-      data.name,
-      data.isDefault,
-      data.isPublic,
-      data.description
+    const entity = new Wishlist({
+      ...params,
+      id: WishlistId.create(),
+      isDefault: params.isDefault || false,
+      isPublic: params.isPublic || false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    entity.addDomainEvent(
+      new WishlistCreatedEvent(
+        entity.props.id.getValue(),
+        entity.props.userId,
+        entity.props.guestToken
+      )
     );
+
+    return entity;
   }
 
-  static fromDatabaseRow(row: WishlistDatabaseRow): Wishlist {
-    return new Wishlist(
-      WishlistId.fromString(row.wishlist_id),
-      row.created_at,
-      row.updated_at,
-      row.user_id || undefined,
-      row.guest_token || undefined,
-      row.name || undefined,
-      row.is_default,
-      row.is_public,
-      row.description || undefined
-    );
+  static fromPersistence(props: WishlistProps): Wishlist {
+    return new Wishlist(props);
+  }
+
+  private static validateOwnership(userId?: string, guestToken?: string): void {
+    if (!userId && !guestToken) {
+      throw new DomainValidationError(
+        "Wishlist must belong to either a user or a guest"
+      );
+    }
+    if (userId && guestToken) {
+      throw new DomainValidationError(
+        "Wishlist cannot belong to both a user and a guest simultaneously"
+      );
+    }
   }
 
   // Getters
-  getWishlistId(): WishlistId {
-    return this.wishlistId;
+  get id(): WishlistId {
+    return this.props.id;
   }
-
-  getUserId(): string | undefined {
-    return this.userId;
+  get userId(): string | undefined {
+    return this.props.userId;
   }
-
-  getGuestToken(): string | undefined {
-    return this.guestToken;
+  get guestToken(): string | undefined {
+    return this.props.guestToken;
   }
-
-  getName(): string | undefined {
-    return this.name;
+  get name(): string | undefined {
+    return this.props.name;
   }
-
-  getIsDefault(): boolean {
-    return this.isDefault;
+  get isDefault(): boolean {
+    return this.props.isDefault;
   }
-
-  getIsPublic(): boolean {
-    return this.isPublic;
+  get isPublic(): boolean {
+    return this.props.isPublic;
   }
-
-  getDescription(): string | undefined {
-    return this.description;
+  get description(): string | undefined {
+    return this.props.description;
   }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
   }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Business methods
   updateName(name: string): void {
-    this.name = name.trim();
-    this.touch();
+    this.props.name = name.trim();
+    this.props.updatedAt = new Date();
   }
 
   updateDescription(description?: string): void {
-    this.description = description?.trim();
-    this.touch();
+    this.props.description = description?.trim();
+    this.props.updatedAt = new Date();
   }
 
   makeDefault(): void {
-    this.isDefault = true;
-    this.touch();
+    this.props.isDefault = true;
+    this.props.updatedAt = new Date();
   }
 
   removeDefault(): void {
-    this.isDefault = false;
-    this.touch();
+    this.props.isDefault = false;
+    this.props.updatedAt = new Date();
   }
 
   makePublic(): void {
-    this.isPublic = true;
-    this.touch();
+    this.props.isPublic = true;
+    this.props.updatedAt = new Date();
   }
 
   makePrivate(): void {
-    this.isPublic = false;
-    this.touch();
+    this.props.isPublic = false;
+    this.props.updatedAt = new Date();
   }
 
   transferToUser(userId: string): void {
     if (!userId) {
-      throw new Error("User ID cannot be empty");
+      throw new DomainValidationError("User ID cannot be empty");
     }
 
-    this.userId = userId;
-    this.guestToken = undefined;
-    this.touch();
+    const oldGuestToken = this.props.guestToken;
+    this.props.userId = userId;
+    this.props.guestToken = undefined;
+    this.props.updatedAt = new Date();
+
+    if (oldGuestToken) {
+      this.addDomainEvent(
+        new WishlistOwnershipTransferredEvent(
+          this.props.id.getValue(),
+          oldGuestToken,
+          userId
+        )
+      );
+    }
   }
 
   // Helper methods
   isUserWishlist(): boolean {
-    return !!this.userId;
+    return !!this.props.userId;
   }
 
   isGuestWishlist(): boolean {
-    return !!this.guestToken;
-  }
-
-  private touch(): void {
-    this.updatedAt = new Date();
-  }
-
-  // Convert to data for persistence
-  toData(): WishlistEntityData {
-    return {
-      wishlistId: this.wishlistId.getValue(),
-      userId: this.userId,
-      guestToken: this.guestToken,
-      name: this.name,
-      isDefault: this.isDefault,
-      isPublic: this.isPublic,
-      description: this.description,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
-    };
-  }
-
-  toDatabaseRow(): WishlistDatabaseRow {
-    return {
-      wishlist_id: this.wishlistId.getValue(),
-      user_id: this.userId || null,
-      guest_token: this.guestToken || null,
-      name: this.name || null,
-      is_default: this.isDefault,
-      is_public: this.isPublic,
-      description: this.description || null,
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
-    };
+    return !!this.props.guestToken;
   }
 
   equals(other: Wishlist): boolean {
-    return this.wishlistId.equals(other.wishlistId);
+    return this.props.id.equals(other.props.id);
   }
+
+  static toDTO(entity: Wishlist): WishlistDTO {
+    return {
+      id: entity.props.id.getValue(),
+      userId: entity.props.userId,
+      guestToken: entity.props.guestToken,
+      name: entity.props.name,
+      isDefault: entity.props.isDefault,
+      isPublic: entity.props.isPublic,
+      description: entity.props.description,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// 6. Supporting input types
+// ============================================================================
+export interface CreateWishlistData {
+  userId?: string;
+  guestToken?: string;
+  name?: string;
+  isDefault?: boolean;
+  isPublic?: boolean;
+  description?: string;
 }

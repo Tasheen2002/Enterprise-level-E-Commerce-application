@@ -125,7 +125,9 @@ export class AddressesController {
       return ResponseHelper.fromCommand(
         reply,
         result,
-        'Address deleted successfully'
+        'Address deleted successfully',
+        undefined,
+        204
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,36 +1,37 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { ChannelTypeEnum } from "../enums/engagement.enums";
+
 export class ChannelType {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: ChannelTypeEnum) {}
 
-  static email(): ChannelType {
-    return new ChannelType("email");
-  }
-
-  static sms(): ChannelType {
-    return new ChannelType("sms");
-  }
-
-  static whatsapp(): ChannelType {
-    return new ChannelType("whatsapp");
-  }
-
-  static push(): ChannelType {
-    return new ChannelType("push");
+  static create(value: string): ChannelType {
+    return ChannelType.fromString(value);
   }
 
   static fromString(value: string): ChannelType {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "email":
-        return ChannelType.email();
-      case "sms":
-        return ChannelType.sms();
-      case "whatsapp":
-        return ChannelType.whatsapp();
-      case "push":
-        return ChannelType.push();
-      default:
-        throw new Error(`Invalid channel type: ${value}`);
+
+    if (!Object.values(ChannelTypeEnum).includes(normalized as ChannelTypeEnum)) {
+      throw new DomainValidationError(`Invalid channel type: ${value}`);
     }
+
+    return new ChannelType(normalized as ChannelTypeEnum);
+  }
+
+  static email(): ChannelType {
+    return new ChannelType(ChannelTypeEnum.EMAIL);
+  }
+
+  static sms(): ChannelType {
+    return new ChannelType(ChannelTypeEnum.SMS);
+  }
+
+  static whatsapp(): ChannelType {
+    return new ChannelType(ChannelTypeEnum.WHATSAPP);
+  }
+
+  static push(): ChannelType {
+    return new ChannelType(ChannelTypeEnum.PUSH);
   }
 
   getValue(): string {
@@ -38,19 +39,19 @@ export class ChannelType {
   }
 
   isEmail(): boolean {
-    return this.value === "email";
+    return this.value === ChannelTypeEnum.EMAIL;
   }
 
   isSms(): boolean {
-    return this.value === "sms";
+    return this.value === ChannelTypeEnum.SMS;
   }
 
   isWhatsapp(): boolean {
-    return this.value === "whatsapp";
+    return this.value === ChannelTypeEnum.WHATSAPP;
   }
 
   isPush(): boolean {
-    return this.value === "push";
+    return this.value === ChannelTypeEnum.PUSH;
   }
 
   equals(other: ChannelType): boolean {

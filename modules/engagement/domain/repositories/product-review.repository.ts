@@ -1,17 +1,14 @@
-import { ProductReview } from "../entities/product-review.entity.js";
+import { ProductReview } from "../entities/product-review.entity";
+import { ReviewId, ReviewStatus } from "../value-objects";
 import {
-  ReviewId,
-  ReviewStatus,
-} from "../value-objects/index.js";
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces";
 
-export interface ProductReviewQueryOptions {
-  limit?: number;
-  offset?: number;
-  sortBy?: "rating" | "createdAt";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface ProductReviewFilterOptions {
+// ============================================================================
+// 2. Filters interface
+// ============================================================================
+export interface ProductReviewFilters {
   productId?: string;
   userId?: string;
   status?: ReviewStatus;
@@ -21,54 +18,58 @@ export interface ProductReviewFilterOptions {
   endDate?: Date;
 }
 
+// ============================================================================
+// 3. Repository Interface
+// ============================================================================
 export interface IProductReviewRepository {
   // Basic CRUD
   save(review: ProductReview): Promise<void>;
-  update(review: ProductReview): Promise<void>;
   delete(reviewId: ReviewId): Promise<void>;
 
   // Finders
   findById(reviewId: ReviewId): Promise<ProductReview | null>;
   findByProductId(
     productId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
   findByUserId(
     userId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
   findByStatus(
     status: ReviewStatus,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
-  findAll(options?: ProductReviewQueryOptions): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
+  findAll(
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
 
   // Advanced queries
   findWithFilters(
-    filters: ProductReviewFilterOptions,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
+    filters: ProductReviewFilters,
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
   findApprovedByProductId(
     productId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
   findPendingReviews(
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedResult<ProductReview>>;
   findByUserIdAndProductId(
     userId: string,
-    productId: string
+    productId: string,
   ): Promise<ProductReview | null>;
   findRecentByProductId(
     productId: string,
-    limit?: number
-  ): Promise<ProductReview[]>;
+    options?: ProductReviewQueryOptions, // Standardized to options
+  ): Promise<PaginatedResult<ProductReview>>;
 
   // Counts and statistics
   countByProductId(productId: string): Promise<number>;
   countByUserId(userId: string): Promise<number>;
   countByStatus(status: ReviewStatus): Promise<number>;
-  count(filters?: ProductReviewFilterOptions): Promise<number>;
+  count(filters?: ProductReviewFilters): Promise<number>;
 
   // Rating statistics
   getAverageRating(productId: string): Promise<number>;
@@ -78,6 +79,14 @@ export interface IProductReviewRepository {
   exists(reviewId: ReviewId): Promise<boolean>;
   existsByUserIdAndProductId(
     userId: string,
-    productId: string
+    productId: string,
   ): Promise<boolean>;
+}
+
+// ============================================================================
+// 4. Query Options interface
+// ============================================================================
+export interface ProductReviewQueryOptions extends PaginationOptions {
+  sortBy?: "rating" | "createdAt";
+  sortOrder?: "asc" | "desc";
 }

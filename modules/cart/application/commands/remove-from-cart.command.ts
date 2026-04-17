@@ -1,17 +1,29 @@
-import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { CartManagementService, CartDto } from "../services/cart-management.service";
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
+  CartManagementService,
+  CartDto,
+} from "../services/cart-management.service";
 
 export interface RemoveFromCartCommand extends ICommand {
-  cartId: string;
-  variantId: string;
-  userId?: string;
-  guestToken?: string;
+  readonly cartId: string;
+  readonly variantId: string;
+  readonly userId?: string;
+  readonly guestToken?: string;
 }
 
-export class RemoveFromCartHandler implements ICommandHandler<RemoveFromCartCommand, CommandResult<CartDto>> {
+export class RemoveFromCartHandler implements ICommandHandler<
+  RemoveFromCartCommand,
+  CommandResult<CartDto>
+> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(command: RemoveFromCartCommand): Promise<CommandResult<CartDto>> {
+  async handle(
+    command: RemoveFromCartCommand,
+  ): Promise<CommandResult<CartDto>> {
     const cart = await this.cartManagementService.removeFromCart({
       cartId: command.cartId,
       variantId: command.variantId,

@@ -13,24 +13,24 @@ import {
 } from "../../domain/errors/cart.errors";
 
 // DTOs for reservation operations
-export interface CreateReservationDto {
+interface CreateReservationDto {
   cartId: string;
   variantId: string;
   quantity: number;
   durationMinutes?: number;
 }
 
-export interface ExtendReservationDto {
+interface ExtendReservationDto {
   reservationId: string;
   additionalMinutes: number;
 }
 
-export interface RenewReservationDto {
+interface RenewReservationDto {
   reservationId: string;
   durationMinutes?: number;
 }
 
-export interface AdjustReservationDto {
+interface AdjustReservationDto {
   cartId: string;
   variantId: string;
   newQuantity: number;
@@ -81,7 +81,7 @@ export interface ReservationStatisticsDto {
   }>;
 }
 
-export interface BulkReservationDto {
+interface BulkReservationDto {
   cartId: string;
   items: Array<{
     variantId: string;
@@ -128,7 +128,7 @@ export class ReservationService {
       const newQuantity =
         existingReservation.quantity.getValue() + dto.quantity;
       existingReservation.updateQuantity(newQuantity);
-      await this.reservationRepository.update(existingReservation);
+      await this.reservationRepository.save(existingReservation);
       return this.mapReservationToDto(existingReservation);
     }
 

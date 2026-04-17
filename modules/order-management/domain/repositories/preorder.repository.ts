@@ -10,7 +10,6 @@ export interface PreorderQueryOptions {
 export interface IPreorderRepository {
   // Basic CRUD
   save(preorder: Preorder): Promise<void>;
-  update(preorder: Preorder): Promise<void>;
   delete(orderItemId: string): Promise<void>;
 
   // Finders

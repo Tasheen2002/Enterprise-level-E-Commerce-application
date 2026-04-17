@@ -1,10 +1,28 @@
 import { LoyaltyAccount } from '../entities/loyalty-account.entity';
+import { LoyaltyAccountId } from '../value-objects/loyalty-account-id.vo';
+import { LoyaltyTier } from '../enums/loyalty.enums';
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+
+export interface LoyaltyAccountFilters {
+  userId?: string;
+  tier?: LoyaltyTier;
+  minPoints?: number;
+}
 
 export interface ILoyaltyAccountRepository {
+  save(account: LoyaltyAccount): Promise<void>;
+  update(account: LoyaltyAccount): Promise<void>;
+  delete(id: LoyaltyAccountId): Promise<void>;
+  findById(id: LoyaltyAccountId): Promise<LoyaltyAccount | null>;
   findByUserId(userId: string): Promise<LoyaltyAccount | null>;
-  findById(accountId: string): Promise<LoyaltyAccount | null>;
-  create(account: LoyaltyAccount): Promise<LoyaltyAccount>;
-  update(account: LoyaltyAccount): Promise<LoyaltyAccount>;
-  delete(accountId: string): Promise<void>;
-  exists(userId: string): Promise<boolean>;
+  findWithFilters(filters: LoyaltyAccountFilters, options?: LoyaltyAccountQueryOptions): Promise<PaginatedResult<LoyaltyAccount>>;
+  count(filters?: LoyaltyAccountFilters): Promise<number>;
+  exists(id: LoyaltyAccountId): Promise<boolean>;
+}
+
+export interface LoyaltyAccountQueryOptions extends PaginationOptions {
+  sortBy?: 'createdAt' | 'updatedAt' | 'lifetimePoints';
 }

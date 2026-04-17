@@ -1,18 +1,17 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  AddOrderItemCommandHandler,
   AddOrderItemCommand,
-  UpdateOrderItemCommandHandler,
+  AddOrderItemCommandHandler,
   UpdateOrderItemCommand,
-  RemoveOrderItemCommandHandler,
+  UpdateOrderItemCommandHandler,
   RemoveOrderItemCommand,
-  GetOrderItemsHandler,
-  GetOrderItemsQuery,
-  GetOrderItemHandler,
+  RemoveOrderItemCommandHandler,
+  ListOrderItemsQuery,
+  ListOrderItemsHandler,
   GetOrderItemQuery,
-  OrderManagementService,
-  OrderItemManagementService,
+  GetOrderItemHandler,
 } from "../../../application";
 
 export interface AddItemRequest {
@@ -43,145 +42,94 @@ export interface GetItemsRequest {
 }
 
 export interface GetItemRequest {
-  Params: { itemId: string };
+  Params: { orderId: string; itemId: string };
 }
 
 export class OrderItemController {
-  private addOrderItemHandler: AddOrderItemCommandHandler;
-  private updateOrderItemHandler: UpdateOrderItemCommandHandler;
-  private removeOrderItemHandler: RemoveOrderItemCommandHandler;
-  private getOrderItemsHandler: GetOrderItemsHandler;
-  private getOrderItemHandler: GetOrderItemHandler;
-
   constructor(
-    private readonly orderService: OrderManagementService,
-    private readonly orderItemService: OrderItemManagementService,
-  ) {
-    this.addOrderItemHandler = new AddOrderItemCommandHandler(orderService);
-    this.updateOrderItemHandler = new UpdateOrderItemCommandHandler(
-      orderService,
-    );
-    this.removeOrderItemHandler = new RemoveOrderItemCommandHandler(
-      orderService,
-    );
-    this.getOrderItemsHandler = new GetOrderItemsHandler(orderItemService);
-    this.getOrderItemHandler = new GetOrderItemHandler(orderItemService);
-  }
+    private readonly addOrderItemHandler: AddOrderItemCommandHandler,
+    private readonly updateOrderItemHandler: UpdateOrderItemCommandHandler,
+    private readonly removeOrderItemHandler: RemoveOrderItemCommandHandler,
+    private readonly listOrderItemsHandler: ListOrderItemsHandler,
+    private readonly getOrderItemHandler: GetOrderItemHandler,
+  ) {}
 
   async addItem(
-    request: FastifyRequest<AddItemRequest>,
+    request: AuthenticatedRequest<AddItemRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { variantId, quantity, isGift, giftMessage } = request.body;
-
       const command: AddOrderItemCommand = {
-        orderId,
-        variantId,
-        quantity,
-        isGift,
-        giftMessage,
+        orderId: request.params.orderId,
+        variantId: request.body.variantId,
+        quantity: request.body.quantity,
+        isGift: request.body.isGift,
+        giftMessage: request.body.giftMessage,
       };
-
       const result = await this.addOrderItemHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Item added successfully",
-        201,
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Item added successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getItems(
-    request: FastifyRequest<GetItemsRequest>,
+    request: AuthenticatedRequest<GetItemsRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-
-      const query: GetOrderItemsQuery = { orderId };
-      const result = await this.getOrderItemsHandler.handle(query);
-
-      return ResponseHelper.fromQuery(reply, result, "Order items retrieved");
-    } catch (error) {
+      const query: ListOrderItemsQuery = { orderId: request.params.orderId };
+      const result = await this.listOrderItemsHandler.handle(query);
+      return ResponseHelper.ok(reply, "Order items retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getItem(
-    request: FastifyRequest<GetItemRequest>,
+    request: AuthenticatedRequest<GetItemRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { itemId } = request.params;
-
-      const query: GetOrderItemQuery = { itemId };
+      const query: GetOrderItemQuery = { itemId: request.params.itemId };
       const result = await this.getOrderItemHandler.handle(query);
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Order item retrieved",
-        "Order item not found",
-      );
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Order item retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateItem(
-    request: FastifyRequest<UpdateItemRequest>,
+    request: AuthenticatedRequest<UpdateItemRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId, itemId } = request.params;
-      const { quantity, isGift, giftMessage } = request.body;
-
       const command: UpdateOrderItemCommand = {
-        orderId,
-        itemId,
-        quantity,
-        isGift,
-        giftMessage,
+        orderId: request.params.orderId,
+        itemId: request.params.itemId,
+        quantity: request.body.quantity,
+        isGift: request.body.isGift,
+        giftMessage: request.body.giftMessage,
       };
-
       const result = await this.updateOrderItemHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Item updated successfully",
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Item updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeItem(
-    request: FastifyRequest<RemoveItemRequest>,
+    request: AuthenticatedRequest<RemoveItemRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId, itemId } = request.params;
-
       const command: RemoveOrderItemCommand = {
-        orderId,
-        itemId,
+        orderId: request.params.orderId,
+        itemId: request.params.itemId,
       };
-
       const result = await this.removeOrderItemHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Item removed successfully",
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Item removed successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

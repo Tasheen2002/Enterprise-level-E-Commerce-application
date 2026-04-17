@@ -3,20 +3,20 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const tagParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const tagByTagIdParamsSchema = z.object({
-  tagId: z.string().uuid(),
+  tagId: z.uuid(),
 });
 
 export const productTagParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const productTagAssocParamsSchema = z.object({
-  productId: z.string().uuid(),
-  tagId: z.string().uuid(),
+  productId: z.uuid(),
+  tagId: z.uuid(),
 });
 
 export const listTagsSchema = z.object({
@@ -56,11 +56,11 @@ export const bulkCreateTagsSchema = z.object({
 });
 
 export const bulkDeleteTagsSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.uuid()).min(1).max(100),
 });
 
 export const associateTagsSchema = z.object({
-  tagIds: z.array(z.string().uuid()).min(1),
+  tagIds: z.array(z.uuid()).min(1),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

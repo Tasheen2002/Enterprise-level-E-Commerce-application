@@ -13,8 +13,4 @@ export class CartId extends UuidId {
   static fromString(value: string): CartId {
     return new CartId(value);
   }
-
-  equals(other: CartId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

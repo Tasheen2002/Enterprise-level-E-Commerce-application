@@ -1,15 +1,15 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductVariantDTO } from "../../domain/entities/product-variant.entity";
 import { VariantManagementService } from "../services/variant-management.service";
 
-export interface GetVariantInput extends IQuery {
-  variantId: string;
+export interface GetVariantQuery extends IQuery {
+  readonly variantId: string;
 }
 
-export class GetVariantHandler implements IQueryHandler<GetVariantInput, ProductVariantDTO> {
+export class GetVariantHandler implements IQueryHandler<GetVariantQuery, ProductVariantDTO> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: GetVariantInput): Promise<ProductVariantDTO> {
+  async handle(input: GetVariantQuery): Promise<ProductVariantDTO> {
     return this.variantManagementService.getVariantById(input.variantId);
   }
 }

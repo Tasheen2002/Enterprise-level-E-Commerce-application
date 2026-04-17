@@ -1,59 +1,63 @@
-import { Reminder } from "../entities/reminder.entity.js";
+import { Reminder } from "../entities/reminder.entity";
 import {
   ReminderId,
   ReminderType,
   ReminderStatus,
-} from "../value-objects/index.js";
+} from "../value-objects";
+import {
+  PaginatedResult,
+  PaginationOptions,
+} from "../../../../packages/core/src/domain/interfaces";
 
-export interface ReminderQueryOptions {
-  limit?: number;
-  offset?: number;
-  sortBy?: "optInAt" | "createdAt";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface ReminderFilterOptions {
+// ============================================================================
+// 2. Filters interface
+// ============================================================================
+export interface ReminderFilters {
   userId?: string;
   variantId?: string;
   type?: ReminderType;
   status?: ReminderStatus;
 }
 
+// ============================================================================
+// 3. Repository Interface
+// ============================================================================
 export interface IReminderRepository {
   // Basic CRUD
   save(reminder: Reminder): Promise<void>;
-  update(reminder: Reminder): Promise<void>;
   delete(reminderId: ReminderId): Promise<void>;
 
   // Finders
   findById(reminderId: ReminderId): Promise<Reminder | null>;
   findByUserId(
     userId: string,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]>;
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
   findByVariantId(
     variantId: string,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]>;
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
   findByStatus(
     status: ReminderStatus,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]>;
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
   findByType(
     type: ReminderType,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]>;
-  findAll(options?: ReminderQueryOptions): Promise<Reminder[]>;
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
+  findAll(options?: ReminderQueryOptions): Promise<PaginatedResult<Reminder>>;
 
   // Advanced queries
   findWithFilters(
-    filters: ReminderFilterOptions,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]>;
-  findPendingReminders(options?: ReminderQueryOptions): Promise<Reminder[]>;
+    filters: ReminderFilters,
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
+  findPendingReminders(
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>>;
   findByUserIdAndVariantId(
     userId: string,
-    variantId: string
+    variantId: string,
   ): Promise<Reminder | null>;
 
   // Counts and statistics
@@ -61,12 +65,20 @@ export interface IReminderRepository {
   countByUserId(userId: string): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
   countByType(type: ReminderType): Promise<number>;
-  count(filters?: ReminderFilterOptions): Promise<number>;
+  count(filters?: ReminderFilters): Promise<number>;
 
   // Existence checks
   exists(reminderId: ReminderId): Promise<boolean>;
   existsByUserIdAndVariantId(
     userId: string,
-    variantId: string
+    variantId: string,
   ): Promise<boolean>;
+}
+
+// ============================================================================
+// 4. Query Options interface
+// ============================================================================
+export interface ReminderQueryOptions extends PaginationOptions {
+  sortBy?: "optInAt" | "createdAt";
+  sortOrder?: "asc" | "desc";
 }

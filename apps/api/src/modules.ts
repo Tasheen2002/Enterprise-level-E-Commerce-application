@@ -5,7 +5,7 @@ import { registerProductCatalogRoutes } from "../../../modules/product-catalog/i
 import { registerInventoryManagementRoutes } from "../../../modules/inventory-management/infra/http/routes";
 import { registerCartModuleRoutes } from "../../../modules/cart/infra/http/routes";
 import { registerOrderManagementRoutes } from "../../../modules/order-management/infra/http/routes";
-import { registerPaymentLoyaltyRoutes } from "../../../modules/payment-loyalty/infra/http/routes";
+import { registerPaymentRoutes } from "../../../modules/payment/infra/http/routes";
 
 export default fp(
   async (fastify) => {
@@ -18,7 +18,6 @@ export default fp(
     await registerUserManagementRoutes(
       fastify,
       userManagementServices,
-      userManagementServices.prisma
     );
     fastify.log.info("✓ User Management module registered");
 

@@ -2,6 +2,11 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { MediaController } from "../controllers/media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
   mediaParamsSchema,
@@ -11,15 +16,27 @@ import {
   mediaResponseSchema,
 } from "../validation/media.schema";
 
-export async function registerMediaRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function mediaRoutes(
   fastify: FastifyInstance,
   controller: MediaController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /media — List media assets (Staff+)
   fastify.get(
     "/media",
     {
-      preHandler: [validateQuery(listMediaSchema), RolePermissions.STAFF_LEVEL],
+      preValidation: [validateQuery(listMediaSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get paginated list of media assets with filtering options",
         tags: ["Media"],
@@ -45,6 +62,8 @@ export async function registerMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "object", properties: { assets: { type: "array", items: mediaResponseSchema }, meta: { type: "object" } } },
             },
           },
@@ -66,7 +85,17 @@ export async function registerMediaRoutes(
         summary: "Get Media Asset",
         security: [{ bearerAuth: [] }],
         params: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
-        response: { 200: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: mediaResponseSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) => controller.getMediaAsset(request as AuthenticatedRequest, reply),
@@ -76,7 +105,8 @@ export async function registerMediaRoutes(
   fastify.post(
     "/media",
     {
-      preHandler: [validateBody(createMediaSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateBody(createMediaSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new media asset",
         tags: ["Media"],
@@ -97,18 +127,28 @@ export async function registerMediaRoutes(
             renditions: { type: "object" },
           },
         },
-        response: { 201: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: mediaResponseSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) => controller.createMediaAsset(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /media/:id — Update media asset (Admin only)
-  fastify.put(
+  // PATCH /media/:id — Update media asset (Admin only)
+  fastify.patch(
     "/media/:id",
     {
-      preValidation: [validateParams(mediaParamsSchema)],
-      preHandler: [validateBody(updateMediaSchema), RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(mediaParamsSchema), validateBody(updateMediaSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update an existing media asset",
         tags: ["Media"],
@@ -128,7 +168,17 @@ export async function registerMediaRoutes(
             renditions: { type: "object" },
           },
         },
-        response: { 200: { type: "object", properties: { success: { type: "boolean" }, data: mediaResponseSchema } } },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: mediaResponseSchema,
+            },
+          },
+        },
       },
     },
     (request, reply) => controller.updateMediaAsset(request as AuthenticatedRequest, reply),
@@ -148,8 +198,8 @@ export async function registerMediaRoutes(
         params: { type: "object", required: ["id"], properties: { id: { type: "string", format: "uuid" } } },
         response: {
           204: {
-            description: 'Media asset deleted successfully',
-            type: 'null',
+            description: "Media asset deleted successfully",
+            type: "null",
           },
         },
       },

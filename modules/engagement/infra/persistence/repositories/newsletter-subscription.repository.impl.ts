@@ -1,63 +1,70 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   INewsletterSubscriptionRepository,
   NewsletterSubscriptionQueryOptions,
-  NewsletterSubscriptionFilterOptions,
-} from "../../../domain/repositories/newsletter-subscription.repository.js";
-import { NewsletterSubscription } from "../../../domain/entities/newsletter-subscription.entity.js";
+  NewsletterSubscriptionFilters,
+} from "../../../domain/repositories/newsletter-subscription.repository";
+import { NewsletterSubscription } from "../../../domain/entities/newsletter-subscription.entity";
 import {
   SubscriptionId,
   SubscriptionStatus,
-} from "../../../domain/value-objects/index.js";
+} from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
+// ============================================================================
+// Database Row Interface
+// ============================================================================
+interface NewsletterSubscriptionDatabaseRow {
+  id: string;
+  email: string;
+  status: string;
+  source: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// Repository Implementation
+// ============================================================================
 export class NewsletterSubscriptionRepositoryImpl
+  extends PrismaRepository<NewsletterSubscription>
   implements INewsletterSubscriptionRepository
 {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  private hydrate(record: any): NewsletterSubscription {
-    return NewsletterSubscription.fromDatabaseRow({
-      subscription_id: record.id,
-      email: record.email,
-      status: record.status,
-      source: record.source,
-      created_at: record.createdAt,
-    });
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
   }
 
-  private dehydrate(subscription: NewsletterSubscription): any {
-    const row = subscription.toDatabaseRow();
-    return {
-      id: row.subscription_id,
+  private toEntity(row: NewsletterSubscriptionDatabaseRow): NewsletterSubscription {
+    return NewsletterSubscription.fromPersistence({
+      id: SubscriptionId.fromString(row.id),
       email: row.email,
-      status: row.status,
-      source: row.source,
-      createdAt: row.created_at,
-    };
-  }
-
-  private buildOrderBy(options?: NewsletterSubscriptionQueryOptions): any {
-    if (!options?.sortBy) {
-      return { createdAt: "desc" };
-    }
-
-    return {
-      [options.sortBy]: options.sortOrder || "asc",
-    };
+      status: SubscriptionStatus.fromString(row.status),
+      source: row.source || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
   }
 
   async save(subscription: NewsletterSubscription): Promise<void> {
-    const data = this.dehydrate(subscription);
-    await this.prisma.newsletterSubscription.create({ data });
-  }
-
-  async update(subscription: NewsletterSubscription): Promise<void> {
-    const data = this.dehydrate(subscription);
-    const { id, ...updateData } = data;
-    await this.prisma.newsletterSubscription.update({
-      where: { id },
-      data: updateData,
+    await this.prisma.newsletterSubscription.upsert({
+      where: { id: subscription.id.getValue() },
+      create: {
+        id: subscription.id.getValue(),
+        email: subscription.email.toLowerCase(),
+        status: subscription.status.getValue() as any,
+        source: subscription.source,
+        createdAt: subscription.createdAt,
+        updatedAt: subscription.updatedAt,
+      },
+      update: {
+        status: subscription.status.getValue() as any,
+        source: subscription.source,
+        updatedAt: subscription.updatedAt,
+      },
     });
+    await this.dispatchEvents(subscription);
   }
 
   async delete(subscriptionId: SubscriptionId): Promise<void> {
@@ -67,13 +74,13 @@ export class NewsletterSubscriptionRepositoryImpl
   }
 
   async findById(
-    subscriptionId: SubscriptionId
+    subscriptionId: SubscriptionId,
   ): Promise<NewsletterSubscription | null> {
     const record = await this.prisma.newsletterSubscription.findUnique({
       where: { id: subscriptionId.getValue() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as NewsletterSubscriptionDatabaseRow) : null;
   }
 
   async findByEmail(email: string): Promise<NewsletterSubscription | null> {
@@ -81,120 +88,231 @@ export class NewsletterSubscriptionRepositoryImpl
       where: { email: email.toLowerCase() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as NewsletterSubscriptionDatabaseRow) : null;
   }
 
   async findByStatus(
     status: SubscriptionStatus,
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where: { status: status.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: status.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findBySource(
     source: string,
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where: { source },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { source };
+
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findAll(
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findWithFilters(
-    filters: NewsletterSubscriptionFilterOptions,
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
+    filters: NewsletterSubscriptionFilters,
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
+
     const where: any = {};
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
-
-    if (filters.source) {
-      where.source = filters.source;
-    }
-
+    if (filters.status) where.status = filters.status.getValue() as any;
+    if (filters.source) where.source = filters.source;
     if (filters.startDate || filters.endDate) {
       where.createdAt = {};
-      if (filters.startDate) {
-        where.createdAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.createdAt.lte = filters.endDate;
-      }
+      if (filters.startDate) where.createdAt.gte = filters.startDate;
+      if (filters.endDate) where.createdAt.lte = filters.endDate;
     }
 
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where,
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
 
-    return records.map((record) => this.hydrate(record));
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findActiveSubscriptions(
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where: { status: "active" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "active" };
+
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findUnsubscribed(
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where: { status: "unsubscribed" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "unsubscribed" };
+
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findBounced(
-    options?: NewsletterSubscriptionQueryOptions
-  ): Promise<NewsletterSubscription[]> {
-    const records = await this.prisma.newsletterSubscription.findMany({
-      where: { status: "bounced" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: NewsletterSubscriptionQueryOptions,
+  ): Promise<PaginatedResult<NewsletterSubscription>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "bounced" };
+
+    const [records, total] = await Promise.all([
+      this.prisma.newsletterSubscription.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.newsletterSubscription.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as NewsletterSubscriptionDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async countByStatus(status: SubscriptionStatus): Promise<number> {
@@ -215,31 +333,14 @@ export class NewsletterSubscriptionRepositoryImpl
     });
   }
 
-  async count(
-    filters?: NewsletterSubscriptionFilterOptions
-  ): Promise<number> {
-    if (!filters) {
-      return await this.prisma.newsletterSubscription.count();
-    }
-
+  async count(filters?: NewsletterSubscriptionFilters): Promise<number> {
     const where: any = {};
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
-
-    if (filters.source) {
-      where.source = filters.source;
-    }
-
-    if (filters.startDate || filters.endDate) {
+    if (filters?.status) where.status = filters.status.getValue() as any;
+    if (filters?.source) where.source = filters.source;
+    if (filters?.startDate || filters?.endDate) {
       where.createdAt = {};
-      if (filters.startDate) {
-        where.createdAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.createdAt.lte = filters.endDate;
-      }
+      if (filters.startDate) where.createdAt.gte = filters.startDate;
+      if (filters.endDate) where.createdAt.lte = filters.endDate;
     }
 
     return await this.prisma.newsletterSubscription.count({ where });

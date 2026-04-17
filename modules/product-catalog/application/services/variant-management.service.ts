@@ -7,6 +7,15 @@ import {
   ProductVariant,
   ProductVariantDTO,
 } from "../../domain/entities/product-variant.entity";
+import { VariantId } from "../../domain/value-objects/variant-id.vo";
+import { ProductId } from "../../domain/value-objects/product-id.vo";
+import { SKU } from "../../domain/value-objects/sku.vo";
+import {
+  ProductNotFoundError,
+  ProductVariantNotFoundError,
+  SkuAlreadyExistsError,
+  DomainValidationError,
+} from "../../domain/errors";
 
 /** Input shape for creating/updating a variant — mirrors ProductVariant.create() params */
 type CreateVariantInput = {
@@ -23,15 +32,6 @@ type CreateVariantInput = {
   allowPreorder?: boolean;
   restockEta?: Date;
 };
-import { VariantId } from "../../domain/value-objects/variant-id.vo";
-import { ProductId } from "../../domain/value-objects/product-id.vo";
-import { SKU } from "../../domain/value-objects/sku.vo";
-import {
-  ProductNotFoundError,
-  ProductVariantNotFoundError,
-  SkuAlreadyExistsError,
-  DomainValidationError,
-} from "../../domain/errors";
 
 export interface VariantServiceQueryOptions {
   page?: number;
@@ -95,7 +95,7 @@ export class VariantManagementService {
   }
 
   async getVariantById(id: string): Promise<ProductVariantDTO> {
-    return ProductVariant.toDTO(await this._getVariant(id));
+    return ProductVariant.toDTO(await this.getVariant(id));
   }
 
   async getVariantBySku(sku: string): Promise<ProductVariantDTO> {
@@ -110,7 +110,7 @@ export class VariantManagementService {
   async getVariantsByProduct(
     productId: string,
     options: VariantServiceQueryOptions = {},
-  ): Promise<ProductVariantDTO[]> {
+  ): Promise<{ variants: ProductVariantDTO[]; total: number }> {
     const {
       page = 1,
       limit = 20,
@@ -154,10 +154,12 @@ export class VariantManagementService {
       return sortOrder === "asc" ? comparison : -comparison;
     });
 
+    const total = variants.length;
     const startIndex = (page - 1) * limit;
-    return variants
-      .slice(startIndex, startIndex + limit)
-      .map((v) => ProductVariant.toDTO(v));
+    return {
+      variants: variants.slice(startIndex, startIndex + limit).map((v) => ProductVariant.toDTO(v)),
+      total,
+    };
   }
 
   async getAllVariants(
@@ -290,7 +292,7 @@ export class VariantManagementService {
       variant.setRestockEta(updateData.restockEta);
     }
 
-    await this.productVariantRepository.update(variant);
+    await this.productVariantRepository.save(variant);
     return ProductVariant.toDTO(variant);
   }
 
@@ -354,7 +356,7 @@ export class VariantManagementService {
   }
 
   async duplicateVariant(id: string, newSku: string): Promise<ProductVariantDTO> {
-    const originalVariant = await this._getVariant(id);
+    const originalVariant = await this.getVariant(id);
 
     const existingVariant = await this.productVariantRepository.findBySku(
       SKU.fromString(newSku),
@@ -411,7 +413,7 @@ export class VariantManagementService {
     return { isValid: issues.length === 0, issues };
   }
 
-  private async _getVariant(id: string): Promise<ProductVariant> {
+  private async getVariant(id: string): Promise<ProductVariant> {
     const variantId = VariantId.fromString(id);
     const variant = await this.productVariantRepository.findById(variantId);
     if (!variant) {

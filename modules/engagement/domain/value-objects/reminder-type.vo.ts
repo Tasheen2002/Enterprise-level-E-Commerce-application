@@ -1,25 +1,32 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { ReminderTypeEnum } from "../enums/engagement.enums";
+
 export class ReminderType {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: ReminderTypeEnum) {}
 
-  static restock(): ReminderType {
-    return new ReminderType("restock");
-  }
-
-  static priceDrop(): ReminderType {
-    return new ReminderType("price_drop");
+  static create(value: string): ReminderType {
+    return ReminderType.fromString(value);
   }
 
   static fromString(value: string): ReminderType {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "restock":
-      case "back_in_stock":
-        return ReminderType.restock();
-      case "price_drop":
-        return ReminderType.priceDrop();
-      default:
-        throw new Error(`Invalid reminder type: ${value}`);
+
+    // Support legacy alias "back_in_stock" → restock
+    const mapped = normalized === "back_in_stock" ? ReminderTypeEnum.RESTOCK : normalized;
+
+    if (!Object.values(ReminderTypeEnum).includes(mapped as ReminderTypeEnum)) {
+      throw new DomainValidationError(`Invalid reminder type: ${value}`);
     }
+
+    return new ReminderType(mapped as ReminderTypeEnum);
+  }
+
+  static restock(): ReminderType {
+    return new ReminderType(ReminderTypeEnum.RESTOCK);
+  }
+
+  static priceDrop(): ReminderType {
+    return new ReminderType(ReminderTypeEnum.PRICE_DROP);
   }
 
   getValue(): string {
@@ -27,11 +34,11 @@ export class ReminderType {
   }
 
   isRestock(): boolean {
-    return this.value === "restock";
+    return this.value === ReminderTypeEnum.RESTOCK;
   }
 
   isPriceDrop(): boolean {
-    return this.value === "price_drop";
+    return this.value === ReminderTypeEnum.PRICE_DROP;
   }
 
   equals(other: ReminderType): boolean {

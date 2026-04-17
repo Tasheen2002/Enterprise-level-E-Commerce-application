@@ -1,8 +1,6 @@
-// Barrel for controllers
-
-export * from "./wishlist.controller.js";
-export * from "./reminder.controller.js";
-export * from "./notification.controller.js";
-export * from "./appointment.controller.js";
-export * from "./product-review.controller.js";
-export * from "./newsletter.controller.js";
+export * from "./wishlist.controller";
+export * from "./reminder.controller";
+export * from "./notification.controller";
+export * from "./appointment.controller";
+export * from "./product-review.controller";
+export * from "./newsletter.controller";

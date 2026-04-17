@@ -152,24 +152,6 @@ export interface ShoppingCartProps {
   updatedAt: Date;
 }
 
-export interface CreateShoppingCartData {
-  userId?: string;
-  guestToken?: string;
-  currency: string;
-  reservationExpiresAt?: Date;
-}
-
-export interface ShoppingCartEntityData {
-  cartId: string;
-  userId?: string;
-  guestToken?: string;
-  currency: string;
-  reservationExpiresAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  items: CartItemEntityData[];
-}
-
 // ============================================================================
 // DTO
 // ============================================================================
@@ -203,27 +185,42 @@ export interface ShoppingCartDTO {
 export class ShoppingCart extends AggregateRoot {
   private constructor(private props: ShoppingCartProps) {
     super();
-    if (props.userId && props.guestToken) {
+  }
+
+  private static validateOwnership(
+    userId: CartOwnerId | null,
+    guestToken: GuestToken | null,
+  ): void {
+    if (userId && guestToken) {
       throw new DomainValidationError(
         "Cart cannot belong to both user and guest",
       );
     }
-    if (!props.userId && !props.guestToken) {
+    if (!userId && !guestToken) {
       throw new DomainValidationError(
         "Cart must belong to either user or guest",
       );
     }
   }
 
+  static create(params: CreateShoppingCartData): ShoppingCart {
+    if (params.userId) {
+      return ShoppingCart.createForUser(params as CreateShoppingCartData & { userId: string });
+    }
+    return ShoppingCart.createForGuest(params as CreateShoppingCartData & { guestToken: string });
+  }
+
   static createForUser(
     data: CreateShoppingCartData & { userId: string },
   ): ShoppingCart {
+    const userId = CartOwnerId.fromString(data.userId);
+    ShoppingCart.validateOwnership(userId, null);
     const cartId = CartId.create();
     const now = new Date();
 
     const cart = new ShoppingCart({
       cartId,
-      userId: CartOwnerId.fromString(data.userId),
+      userId,
       guestToken: null,
       currency: Currency.fromString(data.currency),
       items: [],
@@ -241,13 +238,15 @@ export class ShoppingCart extends AggregateRoot {
   static createForGuest(
     data: CreateShoppingCartData & { guestToken: string },
   ): ShoppingCart {
+    const guestToken = GuestToken.fromString(data.guestToken);
+    ShoppingCart.validateOwnership(null, guestToken);
     const cartId = CartId.create();
     const now = new Date();
 
     const cart = new ShoppingCart({
       cartId,
       userId: null,
-      guestToken: GuestToken.fromString(data.guestToken),
+      guestToken,
       currency: Currency.fromString(data.currency),
       items: [],
       reservationExpiresAt: data.reservationExpiresAt || null,
@@ -261,7 +260,7 @@ export class ShoppingCart extends AggregateRoot {
     return cart;
   }
 
-  static reconstitute(data: ShoppingCartEntityData): ShoppingCart {
+  static fromPersistence(data: ShoppingCartEntityData): ShoppingCart {
     return new ShoppingCart({
       cartId: CartId.fromString(data.cartId),
       userId: data.userId ? CartOwnerId.fromString(data.userId) : null,
@@ -269,35 +268,11 @@ export class ShoppingCart extends AggregateRoot {
         ? GuestToken.fromString(data.guestToken)
         : null,
       currency: Currency.fromString(data.currency),
-      items: data.items.map((itemData) => CartItem.reconstitute(itemData)),
+      items: data.items.map((itemData) => CartItem.fromPersistence(itemData)),
       reservationExpiresAt: data.reservationExpiresAt || null,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
-  }
-
-  static toDTO(cart: ShoppingCart): ShoppingCartDTO {
-    return {
-      cartId: cart.props.cartId.getValue(),
-      userId: cart.props.userId?.getValue(),
-      guestToken: cart.props.guestToken?.getValue(),
-      currency: cart.props.currency.getValue(),
-      items: cart.props.items.map((item) => CartItem.toDTO(item)),
-      reservationExpiresAt: cart.props.reservationExpiresAt?.toISOString(),
-      createdAt: cart.props.createdAt.toISOString(),
-      updatedAt: cart.props.updatedAt.toISOString(),
-      isUserCart: cart.isUserCart,
-      isGuestCart: cart.isGuestCart,
-      isEmpty: cart.isEmpty,
-      itemCount: cart.itemCount,
-      uniqueItemCount: cart.uniqueItemCount,
-      subtotal: cart.subtotal,
-      totalDiscount: cart.totalDiscount,
-      total: cart.total,
-      hasGiftItems: cart.hasGiftItems,
-      hasFreeShipping: cart.hasFreeShipping,
-      isReservationExpired: cart.isReservationExpired,
-    };
   }
 
   // Getters
@@ -585,4 +560,50 @@ export class ShoppingCart extends AggregateRoot {
   private touch(): void {
     this.props.updatedAt = new Date();
   }
+
+  static toDTO(cart: ShoppingCart): ShoppingCartDTO {
+    return {
+      cartId: cart.props.cartId.getValue(),
+      userId: cart.props.userId?.getValue(),
+      guestToken: cart.props.guestToken?.getValue(),
+      currency: cart.props.currency.getValue(),
+      items: cart.props.items.map((item) => CartItem.toDTO(item)),
+      reservationExpiresAt: cart.props.reservationExpiresAt?.toISOString(),
+      createdAt: cart.props.createdAt.toISOString(),
+      updatedAt: cart.props.updatedAt.toISOString(),
+      isUserCart: cart.isUserCart,
+      isGuestCart: cart.isGuestCart,
+      isEmpty: cart.isEmpty,
+      itemCount: cart.itemCount,
+      uniqueItemCount: cart.uniqueItemCount,
+      subtotal: cart.subtotal,
+      totalDiscount: cart.totalDiscount,
+      total: cart.total,
+      hasGiftItems: cart.hasGiftItems,
+      hasFreeShipping: cart.hasFreeShipping,
+      isReservationExpired: cart.isReservationExpired,
+    };
+  }
+}
+
+// ============================================================================
+// Supporting Input Types
+// ============================================================================
+
+export interface CreateShoppingCartData {
+  userId?: string;
+  guestToken?: string;
+  currency: string;
+  reservationExpiresAt?: Date;
+}
+
+export interface ShoppingCartEntityData {
+  cartId: string;
+  userId?: string;
+  guestToken?: string;
+  currency: string;
+  reservationExpiresAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  items: CartItemEntityData[];
 }

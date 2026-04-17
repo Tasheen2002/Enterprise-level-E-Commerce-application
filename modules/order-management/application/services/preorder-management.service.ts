@@ -2,14 +2,14 @@ import {
   IPreorderRepository,
   PreorderQueryOptions,
 } from "../../domain/repositories/preorder.repository";
-import { Preorder } from "../../domain/entities/preorder.entity";
+import { Preorder, PreorderDTO } from "../../domain/entities/preorder.entity";
 import {
   PreorderNotFoundError,
   PreorderAlreadyExistsError,
   DomainValidationError,
 } from "../../domain/errors/order-management.errors";
 
-export interface CreatePreorderData {
+interface CreatePreorderParams {
   orderItemId: string;
   releaseDate?: Date;
 }
@@ -17,121 +17,117 @@ export interface CreatePreorderData {
 export class PreorderManagementService {
   constructor(private readonly preorderRepository: IPreorderRepository) {}
 
-  async createPreorder(data: CreatePreorderData): Promise<Preorder> {
-    // Validate required fields
-    if (!data.orderItemId || data.orderItemId.trim().length === 0) {
+  async createPreorder(params: CreatePreorderParams): Promise<PreorderDTO> {
+    if (!params.orderItemId || params.orderItemId.trim().length === 0) {
       throw new DomainValidationError("Order item ID is required");
     }
 
-    // Check if preorder already exists for this item
     const existingPreorder = await this.preorderRepository.findByOrderItemId(
-      data.orderItemId,
+      params.orderItemId,
     );
     if (existingPreorder) {
-      throw new PreorderAlreadyExistsError(data.orderItemId);
+      throw new PreorderAlreadyExistsError(params.orderItemId);
     }
 
-    // Create the preorder entity
     const preorder = Preorder.create({
-      orderItemId: data.orderItemId,
-      releaseDate: data.releaseDate,
+      orderItemId: params.orderItemId,
+      releaseDate: params.releaseDate,
     });
 
-    // Save the preorder
     await this.preorderRepository.save(preorder);
 
-    return preorder;
+    return Preorder.toDTO(preorder);
   }
 
-  async getPreorderByOrderItemId(orderItemId: string): Promise<Preorder> {
+  async getPreorderByOrderItemId(orderItemId: string): Promise<PreorderDTO | null> {
     if (!orderItemId || orderItemId.trim().length === 0) {
       throw new DomainValidationError("Order item ID is required");
     }
 
-    const preorder =
-      await this.preorderRepository.findByOrderItemId(orderItemId);
-
-    if (!preorder) {
-      throw new PreorderNotFoundError(orderItemId);
-    }
-
-    return preorder;
+    const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
+    return preorder ? Preorder.toDTO(preorder) : null;
   }
 
-  async getAllPreorders(options?: PreorderQueryOptions): Promise<Preorder[]> {
-    return await this.preorderRepository.findAll(options);
+  async getAllPreorders(options?: PreorderQueryOptions): Promise<PreorderDTO[]> {
+    const preorders = await this.preorderRepository.findAll(options);
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async getNotifiedPreorders(
     options?: PreorderQueryOptions,
-  ): Promise<Preorder[]> {
-    return await this.preorderRepository.findNotified(options);
+  ): Promise<PreorderDTO[]> {
+    const preorders = await this.preorderRepository.findNotified(options);
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async getUnnotifiedPreorders(
     options?: PreorderQueryOptions,
-  ): Promise<Preorder[]> {
-    return await this.preorderRepository.findUnnotified(options);
+  ): Promise<PreorderDTO[]> {
+    const preorders = await this.preorderRepository.findUnnotified(options);
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async getReleasedPreorders(
     options?: PreorderQueryOptions,
-  ): Promise<Preorder[]> {
-    return await this.preorderRepository.findReleased(options);
+  ): Promise<PreorderDTO[]> {
+    const preorders = await this.preorderRepository.findReleased(options);
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async getPreordersByReleaseDateBefore(
     date: Date,
     options?: PreorderQueryOptions,
-  ): Promise<Preorder[]> {
+  ): Promise<PreorderDTO[]> {
     if (!date) {
       throw new DomainValidationError("Date is required");
     }
 
-    return await this.preorderRepository.findByReleaseDateBefore(date, options);
+    const preorders = await this.preorderRepository.findByReleaseDateBefore(date, options);
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async getPreordersReleasingSoon(
     daysAhead: number = 7,
     options?: PreorderQueryOptions,
-  ): Promise<Preorder[]> {
+  ): Promise<PreorderDTO[]> {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + daysAhead);
 
-    return await this.preorderRepository.findByReleaseDateBefore(
+    const preorders = await this.preorderRepository.findByReleaseDateBefore(
       futureDate,
       options,
     );
+    return preorders.map((p) => Preorder.toDTO(p));
   }
 
   async updateReleaseDate(
     orderItemId: string,
     releaseDate: Date,
-  ): Promise<Preorder> {
+  ): Promise<PreorderDTO> {
     if (!releaseDate) {
       throw new DomainValidationError("Release date is required");
     }
 
-    const preorder = await this.getPreorderByOrderItemId(orderItemId);
+    const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
+    if (!preorder) throw new PreorderNotFoundError(orderItemId);
 
     preorder.updateReleaseDate(releaseDate);
+    await this.preorderRepository.save(preorder);
 
-    await this.preorderRepository.update(preorder);
-
-    return preorder;
+    return Preorder.toDTO(preorder);
   }
 
-  async markAsNotified(orderItemId: string): Promise<Preorder> {
-    const preorder = await this.getPreorderByOrderItemId(orderItemId);
+  async markAsNotified(orderItemId: string): Promise<PreorderDTO> {
+    const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
+    if (!preorder) throw new PreorderNotFoundError(orderItemId);
 
     preorder.markAsNotified();
+    await this.preorderRepository.save(preorder);
 
-    await this.preorderRepository.update(preorder);
-
-    return preorder;
+    return Preorder.toDTO(preorder);
   }
 
-  async notifyMultiplePreorders(orderItemIds: string[]): Promise<Preorder[]> {
+  async notifyMultiplePreorders(orderItemIds: string[]): Promise<PreorderDTO[]> {
     if (!orderItemIds || orderItemIds.length === 0) {
       throw new DomainValidationError("At least one order item ID is required");
     }
@@ -139,53 +135,54 @@ export class PreorderManagementService {
     const notifiedPreorders: Preorder[] = [];
 
     for (const orderItemId of orderItemIds) {
-      const preorder = await this.getPreorderByOrderItemId(orderItemId);
+      const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
 
       if (preorder && !preorder.isCustomerNotified()) {
         preorder.markAsNotified();
-        await this.preorderRepository.update(preorder);
+        await this.preorderRepository.save(preorder);
         notifiedPreorders.push(preorder);
       }
     }
 
-    return notifiedPreorders;
+    return notifiedPreorders.map((p) => Preorder.toDTO(p));
   }
 
-  async notifyReleasedPreorders(): Promise<Preorder[]> {
+  async notifyReleasedPreorders(): Promise<PreorderDTO[]> {
     const releasedPreorders = await this.preorderRepository.findReleased();
     const notifiedPreorders: Preorder[] = [];
 
     for (const preorder of releasedPreorders) {
       if (!preorder.isCustomerNotified()) {
         preorder.markAsNotified();
-        await this.preorderRepository.update(preorder);
+        await this.preorderRepository.save(preorder);
         notifiedPreorders.push(preorder);
       }
     }
 
-    return notifiedPreorders;
+    return notifiedPreorders.map((p) => Preorder.toDTO(p));
   }
 
   async deletePreorder(orderItemId: string): Promise<void> {
-    await this.getPreorderByOrderItemId(orderItemId);
+    const exists = await this.preorderRepository.exists(orderItemId);
+    if (!exists) throw new PreorderNotFoundError(orderItemId);
 
     await this.preorderRepository.delete(orderItemId);
   }
 
   async getPreorderCount(): Promise<number> {
-    return await this.preorderRepository.count();
+    return this.preorderRepository.count();
   }
 
   async getNotifiedCount(): Promise<number> {
-    return await this.preorderRepository.countNotified();
+    return this.preorderRepository.countNotified();
   }
 
   async getUnnotifiedCount(): Promise<number> {
-    return await this.preorderRepository.countUnnotified();
+    return this.preorderRepository.countUnnotified();
   }
 
   async getReleasedCount(): Promise<number> {
-    return await this.preorderRepository.countReleased();
+    return this.preorderRepository.countReleased();
   }
 
   async preorderExists(orderItemId: string): Promise<boolean> {
@@ -193,11 +190,11 @@ export class PreorderManagementService {
       throw new DomainValidationError("Order item ID is required");
     }
 
-    return await this.preorderRepository.exists(orderItemId);
+    return this.preorderRepository.exists(orderItemId);
   }
 
   async isPreorderReleased(orderItemId: string): Promise<boolean> {
-    const preorder = await this.getPreorderByOrderItemId(orderItemId);
+    const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
     if (!preorder) {
       return false;
     }

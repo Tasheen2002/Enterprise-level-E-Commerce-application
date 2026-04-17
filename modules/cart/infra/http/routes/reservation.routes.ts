@@ -1,56 +1,61 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { ReservationController } from "../controllers/reservation.controller";
 import {
-  ReservationController,
-  CreateReservationRequest,
-  ExtendReservationRequest,
-  CheckAvailabilityRequest,
-  RenewReservationRequest,
-  AdjustReservationRequest,
-  BulkReservationRequest,
-  ReservationQueryParams,
-} from "../controllers/reservation.controller";
-import { requireAdmin, authenticateUser } from "@/api/src/shared/middleware";
+  requireRole,
+  RolePermissions,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../validation/validator";
+import {
+  reservationIdParamsSchema,
+  cartIdParamsSchema,
+  variantIdParamsSchema,
+  cartReservationParamsSchema,
+  variantAdminParamsSchema,
+  cartReservationsQuerySchema,
+  checkAvailabilityQuerySchema,
+  reservationsByStatusQuerySchema,
+  createReservationSchema,
+  extendReservationSchema,
+  renewReservationSchema,
+  adjustReservationSchema,
+  createBulkReservationsSchema,
+  reservationResponseSchema,
+  availabilityResponseSchema,
+} from "../validation/reservation.schema";
 
-const authErrorResponses = {
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-      code: { type: "string", example: "AUTHENTICATION_ERROR" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-      code: { type: "string", example: "INSUFFICIENT_PERMISSIONS" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
-export async function registerReservationRoutes(
+export async function reservationRoutes(
   fastify: FastifyInstance,
   reservationController: ReservationController,
 ): Promise<void> {
-  // Create reservation
-  fastify.post<{ Body: CreateReservationRequest }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /reservations — Create reservation
+  fastify.post(
     "/reservations",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateBody(createReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Create a new reservation (requires authentication)",
+        description: "Create a new reservation",
         tags: ["Reservations"],
         summary: "Create Reservation",
         security: [{ bearerAuth: [] }],
@@ -60,58 +65,35 @@ export async function registerReservationRoutes(
           properties: {
             cartId: { type: "string", format: "uuid" },
             variantId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1, example: 2 },
-            durationMinutes: { type: "integer", example: 30 },
+            quantity: { type: "integer", minimum: 1 },
+            durationMinutes: { type: "integer" },
           },
         },
         response: {
           201: {
-            description: "Reservation created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  reservationId: { type: "string", format: "uuid" },
-                  cartId: { type: "string", format: "uuid" },
-                  variantId: { type: "string", format: "uuid" },
-                  quantity: { type: "integer" },
-                  expiresAt: { type: "string", format: "date-time" },
-                  status: {
-                    type: "string",
-                    enum: ["active", "expiring_soon", "expired"],
-                  },
-                },
-              },
-              message: {
-                type: "string",
-                example: "Reservation created successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          400: {
-            description: "Bad request",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.createReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.createReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Get reservation by ID
-  fastify.get<{ Params: { reservationId: string } }>(
+  // GET /reservations/:reservationId — Get reservation by ID
+  fastify.get(
     "/reservations/:reservationId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(reservationIdParamsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Get reservation details (requires authentication)",
+        description: "Get reservation details",
         tags: ["Reservations"],
         summary: "Get Reservation",
         security: [{ bearerAuth: [] }],
@@ -124,56 +106,29 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Reservation retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  reservationId: { type: "string", format: "uuid" },
-                  cartId: { type: "string", format: "uuid" },
-                  variantId: { type: "string", format: "uuid" },
-                  quantity: { type: "integer" },
-                  expiresAt: { type: "string", format: "date-time" },
-                  status: {
-                    type: "string",
-                    enum: ["active", "expiring_soon", "expired"],
-                  },
-                  isExpired: { type: "boolean" },
-                  timeRemaining: { type: "string" },
-                  createdAt: { type: "string", format: "date-time" },
-                  updatedAt: { type: "string", format: "date-time" },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          404: {
-            description: "Reservation not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Reservation not found" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.getReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.getReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Get cart reservations
-  fastify.get<{
-    Params: { cartId: string };
-    Querystring: { activeOnly?: boolean };
-  }>(
+  // GET /carts/:cartId/reservations — Get cart reservations
+  fastify.get(
     "/carts/:cartId/reservations",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(cartIdParamsSchema), validateQuery(cartReservationsQuerySchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description:
-          "Get all reservations for a cart (requires authentication)",
+        description: "Get all reservations for a cart",
         tags: ["Reservations"],
         summary: "Get Cart Reservations",
         security: [{ bearerAuth: [] }],
@@ -192,50 +147,26 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Reservations retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    reservationId: { type: "string", format: "uuid" },
-                    cartId: { type: "string", format: "uuid" },
-                    variantId: { type: "string", format: "uuid" },
-                    quantity: { type: "integer", minimum: 1 },
-                    expiresAt: { type: "string", format: "date-time" },
-                    status: {
-                      type: "string",
-                      enum: [
-                        "active",
-                        "expiring_soon",
-                        "expired",
-                        "recently_expired",
-                      ],
-                    },
-                    isExpired: { type: "boolean" },
-                    isExpiringSoon: { type: "boolean" },
-                    timeUntilExpirySeconds: { type: "integer" },
-                    timeUntilExpiryMinutes: { type: "integer" },
-                    canBeExtended: { type: "boolean" },
-                  },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "array", items: reservationResponseSchema },
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.getCartReservations.bind(reservationController),
+    (request, reply) =>
+      reservationController.getCartReservations(request as AuthenticatedRequest, reply),
   );
 
-  // Get variant reservations
-  fastify.get<{ Params: { variantId: string } }>(
+  // GET /variants/:variantId/reservations — Get variant reservations (public)
+  fastify.get(
     "/variants/:variantId/reservations",
     {
+      preValidation: [validateParams(variantIdParamsSchema)],
       schema: {
         description: "Get all reservations for a variant",
         tags: ["Reservations"],
@@ -249,56 +180,29 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Reservations retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    reservationId: { type: "string", format: "uuid" },
-                    cartId: { type: "string", format: "uuid" },
-                    variantId: { type: "string", format: "uuid" },
-                    quantity: { type: "integer", minimum: 1 },
-                    expiresAt: { type: "string", format: "date-time" },
-                    status: {
-                      type: "string",
-                      enum: [
-                        "active",
-                        "expiring_soon",
-                        "expired",
-                        "recently_expired",
-                      ],
-                    },
-                    isExpired: { type: "boolean" },
-                    isExpiringSoon: { type: "boolean" },
-                    timeUntilExpirySeconds: { type: "integer" },
-                    timeUntilExpiryMinutes: { type: "integer" },
-                    canBeExtended: { type: "boolean" },
-                  },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "array", items: reservationResponseSchema },
             },
           },
-          500: authErrorResponses[500],
         },
       },
     },
-    reservationController.getVariantReservations.bind(reservationController),
+    (request, reply) =>
+      reservationController.getVariantReservations(request as AuthenticatedRequest, reply),
   );
 
-  // Extend reservation
-  fastify.post<{
-    Params: { reservationId: string };
-    Body: ExtendReservationRequest;
-  }>(
+  // POST /reservations/:reservationId/extend — Extend reservation
+  fastify.post(
     "/reservations/:reservationId/extend",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(reservationIdParamsSchema), validateBody(extendReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Extend reservation duration (requires authentication)",
+        description: "Extend reservation duration",
         tags: ["Reservations"],
         summary: "Extend Reservation",
         security: [{ bearerAuth: [] }],
@@ -313,36 +217,34 @@ export async function registerReservationRoutes(
           type: "object",
           required: ["additionalMinutes"],
           properties: {
-            additionalMinutes: { type: "integer", minimum: 1, example: 15 },
+            additionalMinutes: { type: "integer", minimum: 1 },
           },
         },
         response: {
           200: {
-            description: "Reservation extended successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Reservation extended successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.extendReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.extendReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Release reservation
-  fastify.delete<{ Params: { reservationId: string } }>(
+  // DELETE /reservations/:reservationId — Release reservation
+  fastify.delete(
     "/reservations/:reservationId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(reservationIdParamsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Release a reservation (requires authentication)",
+        description: "Release a reservation",
         tags: ["Reservations"],
         summary: "Release Reservation",
         security: [{ bearerAuth: [] }],
@@ -354,28 +256,22 @@ export async function registerReservationRoutes(
           },
         },
         response: {
-          200: {
+          204: {
             description: "Reservation released successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: {
-                type: "string",
-                example: "Reservation released successfully",
-              },
-            },
+            type: "null",
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.releaseReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.releaseReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Check availability
-  fastify.get<{ Querystring: CheckAvailabilityRequest }>(
+  // GET /availability — Check availability (public)
+  fastify.get(
     "/availability",
     {
+      preValidation: [validateQuery(checkAvailabilityQuerySchema)],
       schema: {
         description: "Check variant availability",
         tags: ["Reservations"],
@@ -390,33 +286,26 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Availability checked successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  available: { type: "boolean" },
-                  totalReserved: { type: "integer" },
-                  activeReserved: { type: "integer" },
-                  availableForReservation: { type: "integer" },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: availabilityResponseSchema,
             },
           },
-          500: authErrorResponses[500],
         },
       },
     },
-    reservationController.checkAvailability.bind(reservationController),
+    (request, reply) =>
+      reservationController.checkAvailability(request as AuthenticatedRequest, reply),
   );
 
-  // Get reservation statistics (admin)
+  // GET /admin/reservations/statistics — Reservation statistics (admin)
   fastify.get(
     "/admin/reservations/statistics",
     {
-      preHandler: [requireAdmin],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get reservation statistics (admin only)",
         tags: ["Reservations Admin"],
@@ -424,30 +313,29 @@ export async function registerReservationRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            description: "Statistics retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "object", additionalProperties: true },
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.getReservationStatistics.bind(reservationController),
+    (request, reply) =>
+      reservationController.getReservationStatistics(request as AuthenticatedRequest, reply),
   );
 
-  // Get reservation by variant for a cart
-  fastify.get<{
-    Params: { cartId: string; variantId: string };
-  }>(
+  // GET /carts/:cartId/reservations/:variantId — Get reservation by variant for a cart
+  fastify.get(
     "/carts/:cartId/reservations/:variantId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(cartReservationParamsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description:
-          "Get reservation for a specific variant in a cart (requires authentication)",
+        description: "Get reservation for a specific variant in a cart",
         tags: ["Reservations"],
         summary: "Get Reservation By Variant",
         security: [{ bearerAuth: [] }],
@@ -461,39 +349,29 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Reservation retrieved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          404: {
-            description: "Reservation not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Reservation not found" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.getReservationByVariant.bind(reservationController),
+    (request, reply) =>
+      reservationController.getReservationByVariant(request as AuthenticatedRequest, reply),
   );
 
-  // Renew reservation
-  fastify.post<{
-    Params: { reservationId: string };
-    Body: RenewReservationRequest;
-  }>(
+  // POST /reservations/:reservationId/renew — Renew reservation
+  fastify.post(
     "/reservations/:reservationId/renew",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(reservationIdParamsSchema), validateBody(renewReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description:
-          "Renew an expired or expiring reservation (requires authentication)",
+        description: "Renew an expired or expiring reservation",
         tags: ["Reservations"],
         summary: "Renew Reservation",
         security: [{ bearerAuth: [] }],
@@ -507,40 +385,34 @@ export async function registerReservationRoutes(
         body: {
           type: "object",
           properties: {
-            durationMinutes: { type: "integer", minimum: 1, example: 30 },
+            durationMinutes: { type: "integer", minimum: 1 },
           },
         },
         response: {
           200: {
-            description: "Reservation renewed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Reservation renewed successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.renewReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.renewReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Adjust reservation quantity
-  fastify.put<{
-    Params: { cartId: string; variantId: string };
-    Body: AdjustReservationRequest;
-  }>(
+  // PATCH /carts/:cartId/reservations/:variantId — Adjust reservation quantity
+  fastify.patch(
     "/carts/:cartId/reservations/:variantId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(cartReservationParamsSchema), validateBody(adjustReservationSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description:
-          "Adjust reservation quantity for a variant in a cart (requires authentication)",
+        description: "Adjust reservation quantity for a variant in a cart",
         tags: ["Reservations"],
         summary: "Adjust Reservation",
         security: [{ bearerAuth: [] }],
@@ -556,33 +428,31 @@ export async function registerReservationRoutes(
           type: "object",
           required: ["newQuantity"],
           properties: {
-            newQuantity: { type: "integer", minimum: 1, example: 3 },
+            newQuantity: { type: "integer", minimum: 1 },
           },
         },
         response: {
           200: {
-            description: "Reservation adjusted successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Reservation adjusted successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: reservationResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.adjustReservation.bind(reservationController),
+    (request, reply) =>
+      reservationController.adjustReservation(request as AuthenticatedRequest, reply),
   );
 
-  // Get total reserved quantity for a variant
-  fastify.get<{ Params: { variantId: string } }>(
+  // GET /variants/:variantId/reservations/total — Get total reserved quantity (public)
+  fastify.get(
     "/variants/:variantId/reservations/total",
     {
+      preValidation: [validateParams(variantIdParamsSchema)],
       schema: {
         description: "Get total reserved quantity for a variant",
         tags: ["Reservations"],
@@ -596,10 +466,11 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Total reserved quantity retrieved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -609,19 +480,20 @@ export async function registerReservationRoutes(
               },
             },
           },
-          500: authErrorResponses[500],
         },
       },
     },
-    reservationController.getTotalReservedQuantity.bind(reservationController),
+    (request, reply) =>
+      reservationController.getTotalReservedQuantity(request as AuthenticatedRequest, reply),
   );
 
-  // Get active reserved quantity for a variant
-  fastify.get<{ Params: { variantId: string } }>(
+  // GET /variants/:variantId/reservations/active — Get active reserved quantity (public)
+  fastify.get(
     "/variants/:variantId/reservations/active",
     {
+      preValidation: [validateParams(variantIdParamsSchema)],
       schema: {
-        description: "Get active (non-expired) reserved quantity for a variant",
+        description: "Get active reserved quantity for a variant",
         tags: ["Reservations"],
         summary: "Get Active Reserved Quantity",
         params: {
@@ -633,10 +505,11 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Active reserved quantity retrieved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -646,21 +519,21 @@ export async function registerReservationRoutes(
               },
             },
           },
-          500: authErrorResponses[500],
         },
       },
     },
-    reservationController.getActiveReservedQuantity.bind(reservationController),
+    (request, reply) =>
+      reservationController.getActiveReservedQuantity(request as AuthenticatedRequest, reply),
   );
 
-  // Create bulk reservations
-  fastify.post<{ Body: BulkReservationRequest }>(
+  // POST /reservations/bulk — Create bulk reservations
+  fastify.post(
     "/reservations/bulk",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateBody(createBulkReservationsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description:
-          "Create reservations for multiple items at once (requires authentication)",
+        description: "Create reservations for multiple items at once",
         tags: ["Reservations"],
         summary: "Create Bulk Reservations",
         security: [{ bearerAuth: [] }],
@@ -681,38 +554,32 @@ export async function registerReservationRoutes(
                 },
               },
             },
-            durationMinutes: { type: "integer", minimum: 1, example: 30 },
+            durationMinutes: { type: "integer", minimum: 1 },
           },
         },
         response: {
           201: {
-            description: "All reservations created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "object", additionalProperties: true },
             },
           },
-          207: {
-            description: "Partial success — some reservations failed",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.createBulkReservations.bind(reservationController),
+    (request, reply) =>
+      reservationController.createBulkReservations(request as AuthenticatedRequest, reply),
   );
 
-  // Get reservations by status (admin)
-  fastify.get<{ Querystring: ReservationQueryParams }>(
+  // GET /admin/reservations/by-status — Get reservations by status (admin)
+  fastify.get(
     "/admin/reservations/by-status",
     {
-      preHandler: [requireAdmin],
+      preValidation: [validateQuery(reservationsByStatusQuerySchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get reservations filtered by status (admin only)",
         tags: ["Reservations Admin"],
@@ -722,36 +589,32 @@ export async function registerReservationRoutes(
           type: "object",
           required: ["status"],
           properties: {
-            status: {
-              type: "string",
-              enum: ["active", "expiring_soon", "expired", "recently_expired"],
-            },
+            status: { type: "string", enum: ["active", "expiring_soon", "expired", "recently_expired"] },
           },
         },
         response: {
           200: {
-            description: "Reservations retrieved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "array",
-                items: { type: "object", additionalProperties: true },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "array", items: reservationResponseSchema },
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.getReservationsByStatus.bind(reservationController),
+    (request, reply) =>
+      reservationController.getReservationsByStatus(request as AuthenticatedRequest, reply),
   );
 
-  // Resolve reservation conflicts (admin)
-  fastify.post<{ Params: { variantId: string } }>(
+  // POST /admin/reservations/:variantId/resolve-conflicts — Resolve reservation conflicts (admin)
+  fastify.post(
     "/admin/reservations/:variantId/resolve-conflicts",
     {
-      preHandler: [requireAdmin],
+      preValidation: [validateParams(variantAdminParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Resolve reservation conflicts for a variant (admin only)",
         tags: ["Reservations Admin"],
@@ -766,51 +629,18 @@ export async function registerReservationRoutes(
         },
         response: {
           200: {
-            description: "Conflicts resolved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "array", items: reservationResponseSchema },
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    reservationController.resolveReservationConflicts.bind(
-      reservationController,
-    ),
-  );
-
-  // Optimize reservations (admin)
-  fastify.post(
-    "/admin/reservations/optimize",
-    {
-      preHandler: [requireAdmin],
-      schema: {
-        description:
-          "Optimize active reservations — cleanup and defragment (admin only)",
-        tags: ["Reservations Admin"],
-        summary: "Optimize Reservations",
-        security: [{ bearerAuth: [] }],
-        response: {
-          200: {
-            description: "Optimization completed",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  optimizedCount: { type: "integer" },
-                },
-              },
-            },
-          },
-          ...authErrorResponses,
-        },
-      },
-    },
-    reservationController.optimizeReservations.bind(reservationController),
+    (request, reply) =>
+      reservationController.resolveReservationConflicts(request as AuthenticatedRequest, reply),
   );
 }

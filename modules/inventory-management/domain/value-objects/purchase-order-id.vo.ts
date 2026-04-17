@@ -13,8 +13,4 @@ export class PurchaseOrderId extends UuidId {
   static fromString(id: string): PurchaseOrderId {
     return new PurchaseOrderId(id);
   }
-
-  equals(other: PurchaseOrderId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

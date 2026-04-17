@@ -1,15 +1,15 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductSearchService, SearchFilter } from "../services/product-search.service";
 
-export interface GetSearchFiltersInput extends IQuery {
-  query?: string;
-  category?: string;
+export interface GetSearchFiltersQuery extends IQuery {
+  readonly query?: string;
+  readonly category?: string;
 }
 
-export class GetSearchFiltersHandler implements IQueryHandler<GetSearchFiltersInput, SearchFilter[]> {
+export class GetSearchFiltersHandler implements IQueryHandler<GetSearchFiltersQuery, SearchFilter[]> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(input: GetSearchFiltersInput): Promise<SearchFilter[]> {
+  async handle(input: GetSearchFiltersQuery): Promise<SearchFilter[]> {
     return this.productSearchService.getAvailableFilters({ query: input.query, category: input.category });
   }
 }

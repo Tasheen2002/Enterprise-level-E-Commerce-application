@@ -3,12 +3,12 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const stockParamsSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
 });
 
 export const variantParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 export const listStocksSchema = z.object({
@@ -17,41 +17,41 @@ export const listStocksSchema = z.object({
   search: z.string().optional(),
   q: z.string().optional(),
   status: z.enum(["low_stock", "out_of_stock", "in_stock"]).optional(),
-  locationId: z.string().uuid().optional(),
+  locationId: z.uuid().optional(),
   sortBy: z.enum(["available", "onHand", "location", "product"]).optional().default("product"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });
 
 export const addStockSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
   quantity: z.number().int().min(1),
   reason: z.enum(["return", "adjustment", "po", "order", "damage", "theft"]),
 });
 
 export const adjustStockSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
   quantityDelta: z.number().int(),
   reason: z.enum(["return", "adjustment", "po", "order", "damage", "theft"]),
 });
 
 export const transferStockSchema = z.object({
-  variantId: z.string().uuid(),
-  fromLocationId: z.string().uuid(),
-  toLocationId: z.string().uuid(),
+  variantId: z.uuid(),
+  fromLocationId: z.uuid(),
+  toLocationId: z.uuid(),
   quantity: z.number().int().min(1),
 });
 
 export const reserveStockSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
   quantity: z.number().int().min(1),
 });
 
 export const fulfillReservationSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
   quantity: z.number().int().min(1),
 });
 

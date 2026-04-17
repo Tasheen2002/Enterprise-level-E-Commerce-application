@@ -1,37 +1,34 @@
-import { UserService, ListUsersResult } from '../services/user.service';
+import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
+import { UserService } from '../services/user.service';
 import { UserRole } from '../../domain/enums/user-role.enum';
 import { UserStatus } from '../../domain/enums/user-status.enum';
-import {
-  IQuery,
-  IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+import { UserListItem } from '../../domain/repositories/iuser.repository';
 
-export interface ListUsersInput extends IQuery {
-  search?: string;
-  role?: UserRole;
-  status?: UserStatus;
-  emailVerified?: boolean;
-  page?: number;
-  limit?: number;
-  sortBy?: 'createdAt' | 'email';
-  sortOrder?: 'asc' | 'desc';
+export interface ListUsersQuery extends IQuery {
+  readonly search?: string;
+  readonly role?: UserRole;
+  readonly status?: UserStatus;
+  readonly emailVerified?: boolean;
+  readonly page?: number;
+  readonly limit?: number;
+  readonly sortBy?: 'createdAt' | 'email';
+  readonly sortOrder?: 'asc' | 'desc';
 }
 
-export class ListUsersHandler implements IQueryHandler<ListUsersInput, ListUsersResult> {
+export class ListUsersHandler implements IQueryHandler<ListUsersQuery, PaginatedResult<UserListItem>> {
   constructor(private readonly userService: UserService) {}
 
-  async handle(input: ListUsersInput): Promise<ListUsersResult> {
+  async handle(query: ListUsersQuery): Promise<PaginatedResult<UserListItem>> {
     return this.userService.listUsers({
-      search: input.search,
-      role: input.role,
-      status: input.status,
-      emailVerified: input.emailVerified,
-      page: input.page,
-      limit: input.limit,
-      sortBy: input.sortBy,
-      sortOrder: input.sortOrder,
+      search: query.search,
+      role: query.role,
+      status: query.status,
+      emailVerified: query.emailVerified,
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
     });
   }
 }
-
-export { ListUsersResult };

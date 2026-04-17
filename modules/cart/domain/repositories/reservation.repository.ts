@@ -6,7 +6,6 @@ import { Quantity } from "../value-objects/quantity.vo";
 export interface IReservationRepository {
   save(reservation: Reservation): Promise<void>;
   findById(reservationId: string): Promise<Reservation | null>;
-  update(reservation: Reservation): Promise<void>;
   delete(reservationId: string): Promise<void>;
   findByCartId(cartId: CartId): Promise<Reservation[]>;
   findActiveByCartId(cartId: CartId): Promise<Reservation[]>;
@@ -35,7 +34,6 @@ export interface IReservationRepository {
     endTime: Date,
   ): Promise<Reservation[]>;
   saveBulk(reservations: Reservation[]): Promise<void>;
-  updateBulk(reservations: Reservation[]): Promise<void>;
   findByIds(reservationIds: string[]): Promise<Reservation[]>;
   deleteExpiredBefore(date: Date): Promise<number>;
   createReservation(
@@ -161,18 +159,6 @@ export interface IReservationRepository {
     timeUntilExpiryMinutes: number;
     canBeExtended: boolean;
   } | null>;
-  saveWithTransaction(
-    reservation: Reservation,
-    transactionContext?: any,
-  ): Promise<void>;
-  deleteWithTransaction(
-    reservationId: string,
-    transactionContext?: any,
-  ): Promise<void>;
-  saveBulkWithTransaction(
-    reservations: Reservation[],
-    transactionContext?: any,
-  ): Promise<void>;
   getReservationsForCleanup(batchSize?: number): Promise<Reservation[]>;
   getReservationsForExtension(
     thresholdMinutes: number,

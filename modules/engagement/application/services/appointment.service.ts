@@ -1,43 +1,54 @@
 import {
   IAppointmentRepository,
   AppointmentQueryOptions,
-  AppointmentFilterOptions,
-} from "../../domain/repositories/appointment.repository.js";
-import { Appointment } from "../../domain/entities/appointment.entity.js";
+  AppointmentFilters,
+} from "../../domain/repositories/appointment.repository";
 import {
-  AppointmentId,
-  AppointmentType,
-} from "../../domain/value-objects/index.js";
+  Appointment,
+  AppointmentDTO,
+} from "../../domain/entities/appointment.entity";
+import { AppointmentId, AppointmentType } from "../../domain/value-objects";
+import {
+  AppointmentNotFoundError,
+  AppointmentSchedulingError,
+} from "../../domain/errors/engagement.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
+
+export interface PaginatedAppointmentResult {
+  items: AppointmentDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 
 export class AppointmentService {
   constructor(
-    private readonly appointmentRepository: IAppointmentRepository
+    private readonly appointmentRepository: IAppointmentRepository,
   ) {}
 
   async createAppointment(data: {
     userId: string;
-    type: AppointmentType;
+    type: string;
     locationId?: string;
     startAt: Date;
     endAt: Date;
     notes?: string;
-  }): Promise<Appointment> {
-    // Check for conflicts
+  }): Promise<AppointmentDTO> {
     const hasConflict = await this.appointmentRepository.hasConflict(
       data.userId,
       data.startAt,
-      data.endAt
+      data.endAt,
     );
-
     if (hasConflict) {
-      throw new Error(
-        "Appointment conflicts with an existing appointment for this user"
+      throw new AppointmentSchedulingError(
+        "conflicts with an existing appointment for this user",
       );
     }
 
     const appointment = Appointment.create({
       userId: data.userId,
-      type: data.type,
+      type: AppointmentType.fromString(data.type),
       locationId: data.locationId,
       startAt: data.startAt,
       endAt: data.endAt,
@@ -45,211 +56,189 @@ export class AppointmentService {
     });
 
     await this.appointmentRepository.save(appointment);
-    return appointment;
+    return Appointment.toDTO(appointment);
   }
 
-  async getAppointment(appointmentId: string): Promise<Appointment | null> {
-    return await this.appointmentRepository.findById(
-      AppointmentId.fromString(appointmentId)
+  async getAppointmentById(appointmentId: string): Promise<AppointmentDTO | null> {
+    const entity = await this.appointmentRepository.findById(
+      AppointmentId.fromString(appointmentId),
     );
+    return entity ? Appointment.toDTO(entity) : null;
   }
 
   async rescheduleAppointment(
     appointmentId: string,
     startAt: Date,
-    endAt: Date
+    endAt: Date,
   ): Promise<void> {
     const appointment = await this.appointmentRepository.findById(
-      AppointmentId.fromString(appointmentId)
+      AppointmentId.fromString(appointmentId),
     );
+    if (!appointment) throw new AppointmentNotFoundError(appointmentId);
 
-    if (!appointment) {
-      throw new Error(`Appointment with ID ${appointmentId} not found`);
-    }
-
-    // Check for conflicts with the new time
     const hasConflict = await this.appointmentRepository.hasConflict(
-      appointment.getUserId(),
+      appointment.userId,
       startAt,
-      endAt
+      endAt,
     );
-
     if (hasConflict) {
-      throw new Error(
-        "New appointment time conflicts with an existing appointment"
+      throw new AppointmentSchedulingError(
+        "new time conflicts with an existing appointment",
       );
     }
 
     appointment.reschedule(startAt, endAt);
-    await this.appointmentRepository.update(appointment);
+    await this.appointmentRepository.save(appointment);
   }
 
-  async updateAppointmentNotes(
-    appointmentId: string,
-    notes?: string
-  ): Promise<void> {
+  async updateAppointmentNotes(appointmentId: string, notes?: string): Promise<void> {
     const appointment = await this.appointmentRepository.findById(
-      AppointmentId.fromString(appointmentId)
+      AppointmentId.fromString(appointmentId),
     );
-
-    if (!appointment) {
-      throw new Error(`Appointment with ID ${appointmentId} not found`);
-    }
-
+    if (!appointment) throw new AppointmentNotFoundError(appointmentId);
     appointment.updateNotes(notes);
-    await this.appointmentRepository.update(appointment);
+    await this.appointmentRepository.save(appointment);
   }
 
-  async updateAppointmentLocation(
-    appointmentId: string,
-    locationId?: string
-  ): Promise<void> {
+  async updateAppointmentLocation(appointmentId: string, locationId?: string): Promise<void> {
     const appointment = await this.appointmentRepository.findById(
-      AppointmentId.fromString(appointmentId)
+      AppointmentId.fromString(appointmentId),
     );
-
-    if (!appointment) {
-      throw new Error(`Appointment with ID ${appointmentId} not found`);
-    }
-
+    if (!appointment) throw new AppointmentNotFoundError(appointmentId);
     appointment.updateLocation(locationId);
-    await this.appointmentRepository.update(appointment);
+    await this.appointmentRepository.save(appointment);
   }
 
   async cancelAppointment(appointmentId: string): Promise<void> {
-    const exists = await this.appointmentRepository.exists(
-      AppointmentId.fromString(appointmentId)
+    const appointment = await this.appointmentRepository.findById(
+      AppointmentId.fromString(appointmentId),
     );
-
-    if (!exists) {
-      throw new Error(`Appointment with ID ${appointmentId} not found`);
-    }
-
-    await this.appointmentRepository.delete(
-      AppointmentId.fromString(appointmentId)
-    );
+    if (!appointment) throw new AppointmentNotFoundError(appointmentId);
+    await this.appointmentRepository.delete(appointment.id);
   }
 
   async getAppointmentsByUser(
     userId: string,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findByUserId(userId, options);
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findByUserId(userId, options);
+    return this.mapPaginated(result);
   }
 
   async getAppointmentsByLocation(
     locationId: string,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findByLocationId(
-      locationId,
-      options
-    );
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findByLocationId(locationId, options);
+    return this.mapPaginated(result);
   }
 
   async getAppointmentsByType(
-    type: AppointmentType,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findByType(type, options);
+    type: string,
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findByType(
+      AppointmentType.fromString(type),
+      options,
+    );
+    return this.mapPaginated(result);
   }
 
   async getUpcomingAppointments(
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findUpcoming(options);
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findUpcoming(options);
+    return this.mapPaginated(result);
   }
 
   async getPastAppointments(
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findPast(options);
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findPast(options);
+    return this.mapPaginated(result);
   }
 
   async getOngoingAppointments(
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findOngoing(options);
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findOngoing(options);
+    return this.mapPaginated(result);
   }
 
   async getAppointmentsByDateRange(
     startDate: Date,
     endDate: Date,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findByDateRange(
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findByDateRange(
       startDate,
       endDate,
-      options
+      options,
     );
+    return this.mapPaginated(result);
   }
 
   async getConflictingAppointments(
     userId: string,
     startAt: Date,
-    endAt: Date
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findConflictingAppointments(
+    endAt: Date,
+  ): Promise<AppointmentDTO[]> {
+    const entities = await this.appointmentRepository.findConflictingAppointments(
       userId,
       startAt,
-      endAt
+      endAt,
     );
+    return entities.map(Appointment.toDTO);
   }
 
   async getAppointmentsWithFilters(
-    filters: AppointmentFilterOptions,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findWithFilters(filters, options);
+    filters: AppointmentFilters,
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findWithFilters(filters, options);
+    return this.mapPaginated(result);
   }
 
-  async getAllAppointments(
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    return await this.appointmentRepository.findAll(options);
+  async getAllAppointments(options?: AppointmentQueryOptions): Promise<PaginatedAppointmentResult> {
+    const result = await this.appointmentRepository.findAll(options);
+    return this.mapPaginated(result);
   }
 
-  async countAppointments(
-    filters?: AppointmentFilterOptions
-  ): Promise<number> {
-    return await this.appointmentRepository.count(filters);
+  async countAppointments(filters?: AppointmentFilters): Promise<number> {
+    return this.appointmentRepository.count(filters);
   }
 
   async countAppointmentsByUser(userId: string): Promise<number> {
-    return await this.appointmentRepository.countByUserId(userId);
+    return this.appointmentRepository.countByUserId(userId);
   }
 
   async countAppointmentsByLocation(locationId: string): Promise<number> {
-    return await this.appointmentRepository.countByLocationId(locationId);
+    return this.appointmentRepository.countByLocationId(locationId);
   }
 
-  async countAppointmentsByType(type: AppointmentType): Promise<number> {
-    return await this.appointmentRepository.countByType(type);
+  async countAppointmentsByType(type: string): Promise<number> {
+    return this.appointmentRepository.countByType(AppointmentType.fromString(type));
   }
 
   async appointmentExists(appointmentId: string): Promise<boolean> {
-    return await this.appointmentRepository.exists(
-      AppointmentId.fromString(appointmentId)
-    );
+    return this.appointmentRepository.exists(AppointmentId.fromString(appointmentId));
   }
 
-  async hasConflict(
-    userId: string,
-    startAt: Date,
-    endAt: Date
-  ): Promise<boolean> {
-    return await this.appointmentRepository.hasConflict(userId, startAt, endAt);
+  async hasConflict(userId: string, startAt: Date, endAt: Date): Promise<boolean> {
+    return this.appointmentRepository.hasConflict(userId, startAt, endAt);
   }
 
-  async hasAppointmentAtTime(
-    userId: string,
-    startAt: Date,
-    endAt: Date
-  ): Promise<boolean> {
-    return await this.appointmentRepository.existsByUserIdAndTime(
-      userId,
-      startAt,
-      endAt
-    );
+  async hasAppointmentAtTime(userId: string, startAt: Date, endAt: Date): Promise<boolean> {
+    return this.appointmentRepository.existsByUserIdAndTime(userId, startAt, endAt);
+  }
+
+  private mapPaginated(result: PaginatedResult<Appointment>): PaginatedAppointmentResult {
+    return {
+      items: result.items.map(Appointment.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

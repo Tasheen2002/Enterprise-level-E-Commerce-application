@@ -7,7 +7,7 @@ import {
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { Quantity } from "../../../domain/value-objects/quantity.vo";
-import { IExternalStockService } from "../../../domain/external-services";
+import { IExternalStockService } from "../../../domain/ports/external-services";
 
 export class ReservationRepositoryImpl implements IReservationRepository {
   constructor(
@@ -19,11 +19,16 @@ export class ReservationRepositoryImpl implements IReservationRepository {
   async save(reservation: Reservation): Promise<void> {
     const data = reservation.toSnapshot();
 
-    await this.prisma.reservation.create({
-      data: {
+    await this.prisma.reservation.upsert({
+      where: { id: data.reservationId },
+      create: {
         id: data.reservationId,
         cartId: data.cartId,
         variantId: data.variantId,
+        qty: data.quantity,
+        expiresAt: data.expiresAt,
+      },
+      update: {
         qty: data.quantity,
         expiresAt: data.expiresAt,
       },
@@ -40,18 +45,6 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     }
 
     return this.mapPrismaToEntity(reservationData);
-  }
-
-  async update(reservation: Reservation): Promise<void> {
-    const data = reservation.toSnapshot();
-
-    await this.prisma.reservation.update({
-      where: { id: data.reservationId },
-      data: {
-        qty: data.quantity,
-        expiresAt: data.expiresAt,
-      },
-    });
   }
 
   async delete(reservationId: string): Promise<void> {
@@ -276,21 +269,6 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     });
   }
 
-  async updateBulk(reservations: Reservation[]): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      for (const reservation of reservations) {
-        const data = reservation.toSnapshot();
-        await tx.reservation.update({
-          where: { id: data.reservationId },
-          data: {
-            qty: data.quantity,
-            expiresAt: data.expiresAt,
-          },
-        });
-      }
-    });
-  }
-
   async findByIds(reservationIds: string[]): Promise<Reservation[]> {
     const reservations = await this.prisma.reservation.findMany({
       where: { id: { in: reservationIds } },
@@ -336,7 +314,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       return false;
     }
 
-    const currentExpiry = reservation.getExpiresAt();
+    const currentExpiry = reservation.expiresAt;
     const newExpiry = new Date(
       currentExpiry.getTime() + additionalMinutes * 60 * 1000,
     );
@@ -462,28 +440,14 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       return null;
     }
 
-    // Check if new quantity is available
-    const currentQuantity = existingReservation.getQuantity().getValue();
-    const quantityDifference = newQuantity - currentQuantity;
-
-    if (quantityDifference > 0) {
-      const availability = await this.checkAvailability(
-        variantId,
-        quantityDifference,
-      );
-      if (!availability.available) {
-        throw new Error(
-          "Insufficient inventory available for reservation adjustment",
-        );
-      }
-    }
+    const reservationId = existingReservation.reservationId.getValue();
 
     await this.prisma.reservation.update({
-      where: { id: existingReservation.getReservationId() },
+      where: { id: reservationId },
       data: { qty: newQuantity },
     });
 
-    return this.findById(existingReservation.getReservationId());
+    return this.findById(reservationId);
   }
 
   // Query operations
@@ -781,8 +745,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     const reservation = await this.findById(reservationId);
     if (!reservation) return false;
 
-    // Check if reservation is still active
-    return reservation.getExpiresAt() > new Date();
+    return reservation.expiresAt > new Date();
   }
 
   async canCreateReservation(
@@ -852,7 +815,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     if (!reservation) return null;
 
     const now = new Date();
-    const expiresAt = reservation.getExpiresAt();
+    const expiresAt = reservation.expiresAt;
     const timeUntilExpiryMinutes = Math.max(
       0,
       Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60)),
@@ -861,10 +824,10 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     const canBeExtended = expiresAt > now;
 
     return {
-      reservationId: reservation.getReservationId(),
-      cartId: reservation.getCartId().getValue(),
-      variantId: reservation.getVariantId().getValue(),
-      quantity: reservation.getQuantity().getValue(),
+      reservationId: reservation.reservationId.getValue(),
+      cartId: reservation.cartId.getValue(),
+      variantId: reservation.variantId.getValue(),
+      quantity: reservation.quantity.getValue(),
       status,
       expiresAt,
       timeUntilExpiryMinutes,
@@ -994,7 +957,6 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       quantity: reservationData.qty,
       expiresAt: reservationData.expiresAt,
     };
-
-    return Reservation.reconstitute(entityData);
+    return Reservation.fromPersistence(entityData);
   }
 }

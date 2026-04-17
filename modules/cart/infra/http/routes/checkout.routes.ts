@@ -1,47 +1,52 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { CheckoutController } from "../controllers/checkout.controller";
 import {
-  CheckoutController,
-  InitializeCheckoutRequest,
-  CompleteCheckoutRequest,
-  CompleteCheckoutWithOrderRequest,
-} from "../controllers/checkout.controller";
-import { optionalAuth } from "@/api/src/shared/middleware";
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
   extractGuestToken,
   requireCartAuth,
 } from "../middleware/cart-auth.middleware";
+import {
+  validateBody,
+  validateParams,
+} from "../validation/validator";
+import {
+  checkoutIdParamsSchema,
+  initializeCheckoutSchema,
+  completeCheckoutSchema,
+  completeCheckoutWithOrderSchema,
+  checkoutResponseSchema,
+  checkoutOrderResponseSchema,
+} from "../validation/checkout.schema";
 
-const authErrorResponses = {
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-      code: { type: "string", example: "AUTHENTICATION_ERROR" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
-export async function registerCheckoutRoutes(
+export async function checkoutRoutes(
   fastify: FastifyInstance,
   checkoutController: CheckoutController,
 ): Promise<void> {
-  // Initialize checkout
-  fastify.post<{ Body: InitializeCheckoutRequest }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /checkout/initialize — Initialize checkout
+  fastify.post(
     "/checkout/initialize",
     {
+      preValidation: [validateBody(initializeCheckoutSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description: "Initialize checkout from cart. Requires authentication.",
+        description: "Initialize checkout from cart.",
         tags: ["Checkout"],
         summary: "Initialize Checkout",
         security: [{ bearerAuth: [] }],
@@ -49,43 +54,35 @@ export async function registerCheckoutRoutes(
           type: "object",
           required: ["cartId"],
           properties: {
-            cartId: { type: "string", format: "uuid", description: "Cart ID" },
-            expiresInMinutes: { type: "integer", example: 15, default: 15 },
+            cartId: { type: "string", format: "uuid" },
+            expiresInMinutes: { type: "integer", default: 15 },
           },
         },
         response: {
           201: {
-            description: "Checkout initialized successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  checkoutId: { type: "string", format: "uuid" },
-                  cartId: { type: "string", format: "uuid" },
-                  status: { type: "string", example: "pending" },
-                  totalAmount: { type: "number", example: 139.95 },
-                  currency: { type: "string", example: "USD" },
-                  expiresAt: { type: "string", format: "date-time" },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.initialize.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.initialize(request as AuthenticatedRequest, reply),
   );
 
-  // Get checkout
-  fastify.get<{ Params: { checkoutId: string } }>(
+  // GET /checkout/:checkoutId — Get checkout
+  fastify.get(
     "/checkout/:checkoutId",
     {
+      preValidation: [validateParams(checkoutIdParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description: "Get checkout details. Requires authentication.",
+        description: "Get checkout details.",
         tags: ["Checkout"],
         summary: "Get Checkout",
         security: [{ bearerAuth: [] }],
@@ -98,39 +95,29 @@ export async function registerCheckoutRoutes(
         },
         response: {
           200: {
-            description: "Checkout retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutResponseSchema,
             },
           },
-          404: {
-            description: "Checkout not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Checkout not found" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.get.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.get(request as AuthenticatedRequest, reply),
   );
 
-  // Complete checkout
-  fastify.post<{
-    Params: { checkoutId: string };
-    Body: CompleteCheckoutRequest;
-  }>(
+  // POST /checkout/:checkoutId/complete — Complete checkout
+  fastify.post(
     "/checkout/:checkoutId/complete",
     {
+      preValidation: [validateParams(checkoutIdParamsSchema), validateBody(completeCheckoutSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description:
-          "Complete checkout with payment intent. Requires authentication.",
+        description: "Complete checkout with payment intent.",
         tags: ["Checkout"],
         summary: "Complete Checkout",
         security: [{ bearerAuth: [] }],
@@ -145,40 +132,34 @@ export async function registerCheckoutRoutes(
           type: "object",
           required: ["paymentIntentId"],
           properties: {
-            paymentIntentId: { type: "string", format: "uuid" },
+            paymentIntentId: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Checkout completed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutResponseSchema,
             },
           },
-          400: {
-            description: "Bad request",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.complete.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.complete(request as AuthenticatedRequest, reply),
   );
 
-  // Cancel checkout
-  fastify.post<{ Params: { checkoutId: string } }>(
+  // POST /checkout/:checkoutId/cancel — Cancel checkout
+  fastify.post(
     "/checkout/:checkoutId/cancel",
     {
+      preValidation: [validateParams(checkoutIdParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description: "Cancel checkout. Requires authentication.",
+        description: "Cancel checkout.",
         tags: ["Checkout"],
         summary: "Cancel Checkout",
         security: [{ bearerAuth: [] }],
@@ -191,31 +172,29 @@ export async function registerCheckoutRoutes(
         },
         response: {
           200: {
-            description: "Checkout cancelled successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.cancel.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.cancel(request as AuthenticatedRequest, reply),
   );
 
-  // Complete checkout with order creation
-  fastify.post<{
-    Params: { checkoutId: string };
-    Body: CompleteCheckoutWithOrderRequest;
-  }>(
+  // POST /checkout/:checkoutId/complete-with-order — Complete checkout and create order
+  fastify.post(
     "/checkout/:checkoutId/complete-with-order",
     {
+      preValidation: [validateParams(checkoutIdParamsSchema), validateBody(completeCheckoutWithOrderSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description:
-          "Complete checkout and create order in a single transaction. This is the recommended way to complete checkout.",
+        description: "Complete checkout and create order in a single transaction.",
         tags: ["Checkout"],
         summary: "Complete Checkout and Create Order",
         security: [{ bearerAuth: [] }],
@@ -230,16 +209,10 @@ export async function registerCheckoutRoutes(
           type: "object",
           required: ["paymentIntentId", "shippingAddress"],
           properties: {
-            paymentIntentId: { type: "string", format: "uuid" },
+            paymentIntentId: { type: "string" },
             shippingAddress: {
               type: "object",
-              required: [
-                "firstName",
-                "lastName",
-                "addressLine1",
-                "city",
-                "country",
-              ],
+              required: ["firstName", "lastName", "addressLine1", "city", "country"],
               properties: {
                 firstName: { type: "string" },
                 lastName: { type: "string" },
@@ -252,70 +225,34 @@ export async function registerCheckoutRoutes(
                 phone: { type: "string" },
               },
             },
-            billingAddress: {
-              type: "object",
-              properties: {
-                firstName: { type: "string" },
-                lastName: { type: "string" },
-                addressLine1: { type: "string" },
-                addressLine2: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                postalCode: { type: "string" },
-                country: { type: "string" },
-                phone: { type: "string" },
-              },
-            },
+            billingAddress: { type: "object", additionalProperties: true },
           },
         },
         response: {
           200: {
-            description: "Checkout completed and order created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  orderId: { type: "string", format: "uuid" },
-                  orderNo: { type: "string", example: "ORD-1234567890" },
-                  checkoutId: { type: "string", format: "uuid" },
-                  paymentIntentId: { type: "string", format: "uuid" },
-                  totalAmount: { type: "number" },
-                  currency: { type: "string" },
-                  status: { type: "string", example: "paid" },
-                  createdAt: { type: "string", format: "date-time" },
-                  items: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutOrderResponseSchema,
             },
           },
-          400: {
-            description: "Bad request",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.completeWithOrder.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.completeWithOrder(request as AuthenticatedRequest, reply),
   );
 
-  // Get order by checkout ID
-  fastify.get<{ Params: { checkoutId: string } }>(
+  // GET /checkout/:checkoutId/order — Get order by checkout ID
+  fastify.get(
     "/checkout/:checkoutId/order",
     {
+      preValidation: [validateParams(checkoutIdParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description:
-          "Get order details for a checkout that has already been completed (e.g., by webhook). Use this when the success page needs to fetch an already-created order.",
+        description: "Get order details for a completed checkout.",
         tags: ["Checkout"],
         summary: "Get Order by Checkout ID",
         security: [{ bearerAuth: [] }],
@@ -328,41 +265,18 @@ export async function registerCheckoutRoutes(
         },
         response: {
           200: {
-            description: "Order found",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  orderId: { type: "string", format: "uuid" },
-                  orderNo: { type: "string" },
-                  checkoutId: { type: "string", format: "uuid" },
-                  paymentIntentId: { type: "string" },
-                  totalAmount: { type: "number" },
-                  currency: { type: "string" },
-                  status: { type: "string" },
-                  createdAt: { type: "string", format: "date-time" },
-                  items: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                },
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: checkoutOrderResponseSchema,
             },
           },
-          404: {
-            description: "Order not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    checkoutController.getOrderByCheckoutId.bind(checkoutController),
+    (request, reply) =>
+      checkoutController.getOrderByCheckoutId(request as AuthenticatedRequest, reply),
   );
 }

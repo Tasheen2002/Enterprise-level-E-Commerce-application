@@ -1,7 +1,7 @@
-import { Address } from "../entities/address.entity";
-import { AddressId } from "../value-objects/address-id";
-import { AddressType } from "../value-objects/address.vo";
-import { UserId } from "../value-objects/user-id.vo";
+import { Address } from '../entities/address.entity';
+import { AddressId } from '../value-objects/address-id';
+import { AddressType } from '../value-objects/address.vo';
+import { UserId } from '../value-objects/user-id.vo';
 
 export interface IAddressRepository {
   // Core CRUD operations
@@ -14,17 +14,9 @@ export interface IAddressRepository {
   findByUserIdAndType(userId: UserId, type: AddressType): Promise<Address[]>;
   findDefaultByUserId(userId: UserId): Promise<Address | null>;
 
-  // Business operations
-  setAsDefault(addressId: AddressId, userId: UserId): Promise<void>;
-  removeDefault(userId: UserId): Promise<void>;
+  // Aggregation
   countByUserId(userId: UserId): Promise<number>;
 
-  // Validation operations
-  findConflictingAddress(
-    userId: UserId,
-    address: Address
-  ): Promise<Address | null>;
-
-  // Cleanup operations
+  // Cleanup
   deleteByUserId(userId: UserId): Promise<number>;
 }

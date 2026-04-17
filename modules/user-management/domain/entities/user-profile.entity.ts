@@ -1,4 +1,3 @@
-import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { UserId } from '../value-objects/user-id.vo';
 import { Currency } from '../value-objects/currency.vo';
 import { Locale } from '../value-objects/locale.vo';
@@ -38,9 +37,8 @@ export interface UserProfileDTO {
 // Entity
 // ============================================================================
 
-export class UserProfile extends AggregateRoot {
+export class UserProfile {
   private constructor(private props: UserProfileProps) {
-    super();
   }
 
   // --- Static factories ---
@@ -120,7 +118,7 @@ export class UserProfile extends AggregateRoot {
     this.props.currency = Currency.fromString(currency);
   }
 
-  updatePreference(key: string, value: any): void {
+  updatePreference(key: string, value: unknown): void {
     if (!key) throw new InvalidOperationError('Preference key is required');
     this.props.preferences = { ...this.props.preferences, [key]: value };
   }
@@ -135,11 +133,11 @@ export class UserProfile extends AggregateRoot {
     this.props.preferences = rest;
   }
 
-  getPreference(key: string): any {
+  getPreference(key: string): unknown {
     return this.props.preferences[key];
   }
 
-  updateStylePreference(category: string, preferences: any): void {
+  updateStylePreference(category: string, preferences: unknown): void {
     if (!category) throw new InvalidOperationError('Style category is required');
     this.props.stylePreferences = { ...this.props.stylePreferences, [category]: preferences };
   }
@@ -148,16 +146,16 @@ export class UserProfile extends AggregateRoot {
     this.props.stylePreferences = { ...stylePreferences };
   }
 
-  getStylePreference(category: string): any {
+  getStylePreference(category: string): unknown {
     return this.props.stylePreferences[category];
   }
 
   setFavoriteColors(colors: string[]): void { this.updateStylePreference('favoriteColors', colors); }
-  getFavoriteColors(): string[] { return this.getStylePreference('favoriteColors') || []; }
+  getFavoriteColors(): string[] { return (this.getStylePreference('favoriteColors') as string[]) || []; }
   setFavoriteBrands(brands: string[]): void { this.updateStylePreference('favoriteBrands', brands); }
-  getFavoriteBrands(): string[] { return this.getStylePreference('favoriteBrands') || []; }
+  getFavoriteBrands(): string[] { return (this.getStylePreference('favoriteBrands') as string[]) || []; }
   setStyleTypes(styles: string[]): void { this.updateStylePreference('styleTypes', styles); }
-  getStyleTypes(): string[] { return this.getStylePreference('styleTypes') || []; }
+  getStyleTypes(): string[] { return (this.getStylePreference('styleTypes') as string[]) || []; }
 
   updatePreferredSize(category: string, size: string): void {
     if (!category || !size) throw new InvalidOperationError('Category and size are required');
@@ -238,8 +236,7 @@ export class UserProfile extends AggregateRoot {
 // Supporting types
 // ============================================================================
 
-export interface UserPreferences {
-  [key: string]: any;
+export interface UserPreferences extends Record<string, unknown> {
   emailNotifications?: boolean;
   smsNotifications?: boolean;
   promotionalEmails?: boolean;
@@ -250,8 +247,7 @@ export interface UserPreferences {
   language?: string;
 }
 
-export interface StylePreferences {
-  [key: string]: any;
+export interface StylePreferences extends Record<string, unknown> {
   favoriteColors?: string[];
   favoriteBrands?: string[];
   styleTypes?: string[];

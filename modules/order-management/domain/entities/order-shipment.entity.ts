@@ -6,6 +6,7 @@ import {
   InvalidOperationError,
 } from "../errors/order-management.errors";
 
+
 export interface OrderShipmentProps {
   shipmentId: string;
   orderId: string;
@@ -16,42 +17,40 @@ export interface OrderShipmentProps {
   pickupLocationId?: string;
   shippedAt?: Date;
   deliveredAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderShipmentDTO {
+  shipmentId: string;
+  orderId: string;
+  carrier?: string;
+  service?: string;
+  trackingNumber?: string;
+  giftReceipt: boolean;
+  pickupLocationId?: string;
+  shippedAt?: string;
+  deliveredAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class OrderShipment {
-  private shipmentId: string;
-  private orderId: string;
-  private carrier?: string;
-  private service?: string;
-  private trackingNumber?: string;
-  private giftReceipt: boolean;
-  private pickupLocationId?: string;
-  private shippedAt?: Date;
-  private deliveredAt?: Date;
+  private constructor(private props: OrderShipmentProps) {}
 
-  private constructor(props: OrderShipmentProps) {
-    this.shipmentId = props.shipmentId;
-    this.orderId = props.orderId;
-    this.carrier = props.carrier;
-    this.service = props.service;
-    this.trackingNumber = props.trackingNumber;
-    this.giftReceipt = props.giftReceipt;
-    this.pickupLocationId = props.pickupLocationId;
-    this.shippedAt = props.shippedAt;
-    this.deliveredAt = props.deliveredAt;
-  }
-
-  static create(props: Omit<OrderShipmentProps, "shipmentId">): OrderShipment {
-    if (props.deliveredAt && !props.shippedAt) {
+  static create(
+    params: Omit<OrderShipmentProps, "shipmentId" | "createdAt" | "updatedAt">,
+  ): OrderShipment {
+    if (params.deliveredAt && !params.shippedAt) {
       throw new DomainValidationError(
         "Cannot have deliveredAt without shippedAt",
       );
     }
 
     if (
-      props.deliveredAt &&
-      props.shippedAt &&
-      props.deliveredAt < props.shippedAt
+      params.deliveredAt &&
+      params.shippedAt &&
+      params.deliveredAt < params.shippedAt
     ) {
       throw new DomainValidationError(
         "Delivered date cannot be before shipped date",
@@ -59,64 +58,71 @@ export class OrderShipment {
     }
 
     return new OrderShipment({
+      ...params,
       shipmentId: randomUUID(),
-      orderId: props.orderId,
-      carrier: props.carrier,
-      service: props.service,
-      trackingNumber: props.trackingNumber,
-      giftReceipt: props.giftReceipt,
-      pickupLocationId: props.pickupLocationId,
-      shippedAt: props.shippedAt,
-      deliveredAt: props.deliveredAt,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
-  static reconstitute(props: OrderShipmentProps): OrderShipment {
+  static fromPersistence(props: OrderShipmentProps): OrderShipment {
     return new OrderShipment(props);
   }
 
-  getShipmentId(): string {
-    return this.shipmentId;
+  get shipmentId(): string {
+    return this.props.shipmentId;
   }
 
-  getOrderId(): string {
-    return this.orderId;
+  get orderId(): string {
+    return this.props.orderId;
   }
 
-  getCarrier(): string | undefined {
-    return this.carrier;
+  get carrier(): string | undefined {
+    return this.props.carrier;
   }
 
-  getService(): string | undefined {
-    return this.service;
+  get service(): string | undefined {
+    return this.props.service;
   }
 
-  getTrackingNumber(): string | undefined {
-    return this.trackingNumber;
+  get trackingNumber(): string | undefined {
+    return this.props.trackingNumber;
+  }
+
+  get giftReceipt(): boolean {
+    return this.props.giftReceipt;
+  }
+
+  get pickupLocationId(): string | undefined {
+    return this.props.pickupLocationId;
+  }
+
+  get shippedAt(): Date | undefined {
+    return this.props.shippedAt;
+  }
+
+  get deliveredAt(): Date | undefined {
+    return this.props.deliveredAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   hasGiftReceipt(): boolean {
-    return this.giftReceipt;
-  }
-
-  getPickupLocationId(): string | undefined {
-    return this.pickupLocationId;
-  }
-
-  getShippedAt(): Date | undefined {
-    return this.shippedAt;
-  }
-
-  getDeliveredAt(): Date | undefined {
-    return this.deliveredAt;
+    return this.props.giftReceipt;
   }
 
   isShipped(): boolean {
-    return !!this.shippedAt;
+    return !!this.props.shippedAt;
   }
 
   isDelivered(): boolean {
-    return !!this.deliveredAt;
+    return !!this.props.deliveredAt;
   }
 
   markAsShipped(
@@ -124,57 +130,64 @@ export class OrderShipment {
     service: string,
     trackingNumber: string,
   ): void {
-    if (this.shippedAt) {
-      throw new ShipmentAlreadyShippedError(this.shipmentId);
+    if (this.props.shippedAt) {
+      throw new ShipmentAlreadyShippedError(this.props.shipmentId);
     }
 
-    this.carrier = carrier;
-    this.service = service;
-    this.trackingNumber = trackingNumber;
-    this.shippedAt = new Date();
+    this.props.carrier = carrier;
+    this.props.service = service;
+    this.props.trackingNumber = trackingNumber;
+    this.props.shippedAt = new Date();
+    this.props.updatedAt = new Date();
   }
 
   markAsDelivered(): void {
-    if (!this.shippedAt) {
+    if (!this.props.shippedAt) {
       throw new InvalidOperationError(
         "Cannot mark as delivered before shipped",
       );
     }
 
-    if (this.deliveredAt) {
-      throw new ShipmentAlreadyDeliveredError(this.shipmentId);
+    if (this.props.deliveredAt) {
+      throw new ShipmentAlreadyDeliveredError(this.props.shipmentId);
     }
 
-    this.deliveredAt = new Date();
+    this.props.deliveredAt = new Date();
+    this.props.updatedAt = new Date();
   }
 
   updateTrackingNumber(trackingNumber: string): void {
-    this.trackingNumber = trackingNumber;
+    this.props.trackingNumber = trackingNumber;
+    this.props.updatedAt = new Date();
   }
 
   updateCarrier(carrier: string): void {
-    this.carrier = carrier;
+    this.props.carrier = carrier;
+    this.props.updatedAt = new Date();
   }
 
   updateService(service: string): void {
-    this.service = service;
+    this.props.service = service;
+    this.props.updatedAt = new Date();
   }
 
   equals(other: OrderShipment): boolean {
-    return this.shipmentId === other.shipmentId;
+    return this.props.shipmentId === other.props.shipmentId;
   }
 
-  toSnapshot(): OrderShipmentProps {
+  static toDTO(entity: OrderShipment): OrderShipmentDTO {
     return {
-      shipmentId: this.shipmentId,
-      orderId: this.orderId,
-      carrier: this.carrier,
-      service: this.service,
-      trackingNumber: this.trackingNumber,
-      giftReceipt: this.giftReceipt,
-      pickupLocationId: this.pickupLocationId,
-      shippedAt: this.shippedAt,
-      deliveredAt: this.deliveredAt,
+      shipmentId: entity.props.shipmentId,
+      orderId: entity.props.orderId,
+      carrier: entity.props.carrier,
+      service: entity.props.service,
+      trackingNumber: entity.props.trackingNumber,
+      giftReceipt: entity.props.giftReceipt,
+      pickupLocationId: entity.props.pickupLocationId,
+      shippedAt: entity.props.shippedAt?.toISOString(),
+      deliveredAt: entity.props.deliveredAt?.toISOString(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

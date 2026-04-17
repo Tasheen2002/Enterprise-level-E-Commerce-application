@@ -4,18 +4,18 @@ import { OrderStatus } from "../value-objects/order-status.vo";
 export interface StatusHistoryQueryOptions {
   limit?: number;
   offset?: number;
-  sortBy?: "changedAt";
+  sortBy?: "createdAt" | "updatedAt";
   sortOrder?: "asc" | "desc";
 }
 
 export interface IOrderStatusHistoryRepository {
   // Basic CRUD
-  save(statusHistory: OrderStatusHistory): Promise<OrderStatusHistory>;
-  delete(historyId: number): Promise<void>;
+  save(statusHistory: OrderStatusHistory): Promise<void>;
+  delete(historyId: number | null): Promise<void>;
   deleteByOrderId(orderId: string): Promise<void>;
 
   // Finders
-  findById(historyId: number): Promise<OrderStatusHistory | null>;
+  findById(historyId: number | null): Promise<OrderStatusHistory | null>;
   findByOrderId(
     orderId: string,
     options?: StatusHistoryQueryOptions,
@@ -34,5 +34,5 @@ export interface IOrderStatusHistoryRepository {
   getLatestByOrderId(orderId: string): Promise<OrderStatusHistory | null>;
 
   // Existence checks
-  exists(historyId: number): Promise<boolean>;
+  exists(historyId: number | null): Promise<boolean>;
 }

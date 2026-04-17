@@ -28,7 +28,7 @@ export class EditorialLookManagementService {
     private readonly productRepository: IProductRepository,
   ) {}
 
-  private async _getLook(id: string): Promise<EditorialLook> {
+  private async getLook(id: string): Promise<EditorialLook> {
     const lookId = EntityEditorialLookId.fromString(id);
     const look = await this.editorialLookRepository.findById(lookId);
     if (!look) {
@@ -96,7 +96,7 @@ export class EditorialLookManagementService {
   }
 
   async getEditorialLookById(id: string): Promise<EditorialLookDTO> {
-    return EditorialLook.toDTO(await this._getLook(id));
+    return EditorialLook.toDTO(await this.getLook(id));
   }
 
   async getAllEditorialLooks(
@@ -136,7 +136,7 @@ export class EditorialLookManagementService {
       publishedAt?: Date | null;
     },
   ): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (updates.title !== undefined) {
       this.validateTitle(updates.title);
@@ -184,7 +184,7 @@ export class EditorialLookManagementService {
       }
     }
 
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
     return EditorialLook.toDTO(look);
   }
 
@@ -200,7 +200,7 @@ export class EditorialLookManagementService {
 
   // Publishing workflow
   async publishLook(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -209,15 +209,15 @@ export class EditorialLookManagementService {
     }
 
     look.publish();
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
 
     return EditorialLook.toDTO(look);
   }
 
   async unpublishLook(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     look.unpublish();
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
 
     return EditorialLook.toDTO(look);
   }
@@ -230,7 +230,7 @@ export class EditorialLookManagementService {
       throw new DomainValidationError("Publication date must be in the future");
     }
 
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     if (!look.canBePublished()) {
       throw new InvalidOperationError(
@@ -239,7 +239,7 @@ export class EditorialLookManagementService {
     }
 
     look.schedulePublication(publishDate);
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
 
     return EditorialLook.toDTO(look);
   }
@@ -261,7 +261,7 @@ export class EditorialLookManagementService {
       try {
         if (look.canBePublished()) {
           look.publish();
-          await this.editorialLookRepository.update(look);
+          await this.editorialLookRepository.save(look);
           published.push(EditorialLook.toDTO(look));
         }
       } catch (error) {
@@ -276,7 +276,7 @@ export class EditorialLookManagementService {
 
   // Hero image management
   async setHeroImage(id: string, assetId: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
 
     // Validate hero asset exists
     const heroAssetIdEntity = EntityMediaAssetId.fromString(assetId);
@@ -292,15 +292,15 @@ export class EditorialLookManagementService {
     }
 
     look.setHeroAsset(assetId);
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
 
     return EditorialLook.toDTO(look);
   }
 
   async removeHeroImage(id: string): Promise<EditorialLookDTO> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     look.setHeroAsset(null);
-    await this.editorialLookRepository.update(look);
+    await this.editorialLookRepository.save(look);
 
     return EditorialLook.toDTO(look);
   }
@@ -311,15 +311,8 @@ export class EditorialLookManagementService {
     return looks.map(EditorialLook.toDTO);
   }
 
-  // Product association management
+  // Product association management — all mutations via entity methods + save()
   async addProductToLook(lookId: string, productId: string): Promise<void> {
-    const lookIdEntity = EntityEditorialLookId.fromString(lookId);
-
-    // Validate look exists
-    if (!(await this.editorialLookRepository.exists(lookIdEntity))) {
-      throw new EditorialLookNotFoundError(lookId);
-    }
-
     // Validate product exists
     const productIdVo = ProductId.fromString(productId);
     const product = await this.productRepository.findById(productIdVo);
@@ -327,51 +320,38 @@ export class EditorialLookManagementService {
       throw new ProductNotFoundError(productId);
     }
 
-    try {
-      await this.editorialLookRepository.addProductToLook(
-        lookIdEntity,
-        productId,
+    const look = await this.getLook(lookId);
+
+    if (look.includesProduct(productId)) {
+      throw new InvalidOperationError(
+        `Product "${productId}" is already associated with this editorial look`,
       );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("duplicate")) {
-        throw new InvalidOperationError(
-          `Product "${productId}" is already associated with this editorial look`,
-        );
-      }
-      throw error;
     }
+
+    look.addProduct(productId);
+    await this.editorialLookRepository.save(look);
   }
 
   async removeProductFromLook(
     lookId: string,
     productId: string,
   ): Promise<void> {
-    const lookIdEntity = EntityEditorialLookId.fromString(lookId);
+    const look = await this.getLook(lookId);
 
-    // Validate association exists
-    const exists = await this.editorialLookRepository.existsProductInLook(
-      lookIdEntity,
-      productId,
-    );
-    if (!exists) {
+    if (!look.includesProduct(productId)) {
       throw new InvalidOperationError(
         `Product "${productId}" is not associated with look "${lookId}"`,
       );
     }
 
-    await this.editorialLookRepository.removeProductFromLook(
-      lookIdEntity,
-      productId,
-    );
+    look.removeProduct(productId);
+    await this.editorialLookRepository.save(look);
   }
 
   async setLookProducts(
     id: string,
     productIds: string[],
   ): Promise<EditorialLookDTO> {
-    // Validate look exists
-    await this._getLook(id);
-
     // Validate all products exist
     for (const productId of productIds) {
       const productIdVo = ProductId.fromString(productId);
@@ -381,40 +361,28 @@ export class EditorialLookManagementService {
       }
     }
 
-    // Use repository for consistency instead of entity method
-    const lookIdEntity = EntityEditorialLookId.fromString(id);
-    await this.editorialLookRepository.setLookProducts(lookIdEntity, productIds);
+    const look = await this.getLook(id);
+    look.setProducts(productIds);
+    await this.editorialLookRepository.save(look);
 
-    // Return updated look
-    return this.getEditorialLookById(id);
+    return EditorialLook.toDTO(look);
   }
 
   async getLookProducts(id: string): Promise<string[]> {
-    const lookIdEntity = EntityEditorialLookId.fromString(id);
-
-    // Validate look exists
-    const look = await this.editorialLookRepository.findById(lookIdEntity);
-    if (!look) {
-      throw new EditorialLookNotFoundError(id);
-    }
-
-    const productIds =
-      await this.editorialLookRepository.getLookProducts(lookIdEntity);
-    return productIds;
+    const look = await this.getLook(id);
+    return look.productIds.map((pid) => pid.getValue());
   }
 
   async getProductLooks(productId: string): Promise<string[]> {
-    const productIdVo = ProductId.fromString(productId);
-
     // Validate product exists
+    const productIdVo = ProductId.fromString(productId);
     const product = await this.productRepository.findById(productIdVo);
     if (!product) {
       throw new ProductNotFoundError(productId);
     }
 
-    const lookIds =
-      await this.editorialLookRepository.getProductLooks(productId);
-    return lookIds.map((id) => id.getValue());
+    const looks = await this.editorialLookRepository.findByProductId(productId);
+    return looks.map((l) => l.id.getValue());
   }
 
   async getLooksByProduct(
@@ -587,7 +555,7 @@ export class EditorialLookManagementService {
   async validateLookForPublication(
     id: string,
   ): Promise<{ isValid: boolean; errors: string[] }> {
-    const look = await this._getLook(id);
+    const look = await this.getLook(id);
     const errors: string[] = [];
 
     if (!look.title.trim()) {

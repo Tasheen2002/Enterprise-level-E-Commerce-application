@@ -3,11 +3,11 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const variantParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 export const variantByProductParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const listVariantsSchema = z.object({
@@ -35,7 +35,7 @@ export const createVariantSchema = z.object({
   taxClass: z.string().optional(),
   allowBackorder: z.boolean().optional().default(false),
   allowPreorder: z.boolean().optional().default(false),
-  restockEta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  restockEta: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
 });
 
 export const updateVariantSchema = z.object({
@@ -48,7 +48,7 @@ export const updateVariantSchema = z.object({
   taxClass: z.string().optional(),
   allowBackorder: z.boolean().optional(),
   allowPreorder: z.boolean().optional(),
-  restockEta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  restockEta: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

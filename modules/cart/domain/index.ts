@@ -6,6 +6,6 @@ export * from "./entities";
 
 export * from "./repositories";
 
-export * from "./external-services";
+export * from "./ports";
 
 export * from "./constants";

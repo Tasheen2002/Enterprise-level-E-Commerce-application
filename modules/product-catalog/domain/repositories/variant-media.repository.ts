@@ -4,16 +4,13 @@ import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 import { ProductId } from "../value-objects/product-id.vo";
 
 export interface IVariantMediaRepository {
-  // Association management
-  addMediaToVariant(variantId: VariantId, assetId: MediaAssetId): Promise<void>;
-  removeMediaFromVariant(
-    variantId: VariantId,
-    assetId: MediaAssetId,
-  ): Promise<void>;
-  removeAllVariantMedia(variantId: VariantId): Promise<void>;
-  removeAllAssetReferences(assetId: MediaAssetId): Promise<void>;
+  // Core CRUD
+  save(variantMedia: VariantMedia): Promise<void>;
+  delete(variantId: VariantId, assetId: MediaAssetId): Promise<void>;
+  deleteByVariantId(variantId: VariantId): Promise<void>;
+  deleteByAssetId(assetId: MediaAssetId): Promise<void>;
 
-  // Query methods
+  // Queries
   findByVariantId(variantId: VariantId): Promise<VariantMedia[]>;
   findByAssetId(assetId: MediaAssetId): Promise<VariantMedia[]>;
   findByProductVariants(productId: ProductId): Promise<VariantMedia[]>;
@@ -21,52 +18,8 @@ export interface IVariantMediaRepository {
     variantId: VariantId,
     assetId: MediaAssetId,
   ): Promise<VariantMedia | null>;
-  findAll(options?: VariantMediaQueryOptions): Promise<VariantMedia[]>;
 
-  // Bulk operations
-  setVariantMedia(
-    variantId: VariantId,
-    assetIds: MediaAssetId[],
-  ): Promise<void>;
-  addMediaToMultipleVariants(
-    variantIds: VariantId[],
-    assetId: MediaAssetId,
-  ): Promise<void>;
-  addMultipleMediaToVariant(
-    variantId: VariantId,
-    assetIds: MediaAssetId[],
-  ): Promise<void>;
-  duplicateVariantMedia(
-    sourceVariantId: VariantId,
-    targetVariantId: VariantId,
-  ): Promise<void>;
-
-  // Product-level variant media operations
-  getProductVariantMedia(
-    productId: ProductId,
-  ): Promise<Array<{ variantId: VariantId; media: VariantMedia[] }>>;
-  copyProductVariantMedia(
-    sourceProductId: ProductId,
-    targetProductId: ProductId,
-    variantMapping: Map<VariantId, VariantId>,
-  ): Promise<void>;
-
-  // Validation methods
-  exists(variantId: VariantId, assetId: MediaAssetId): Promise<boolean>;
-  isMediaAssociatedWithVariant(
-    variantId: VariantId,
-    assetId: MediaAssetId,
-  ): Promise<boolean>;
-  hasVariantMedia(variantId: VariantId): Promise<boolean>;
-
-  // Analytics and utility methods
-  countVariantMedia(variantId: VariantId): Promise<number>;
-  countAssetUsage(assetId: MediaAssetId): Promise<number>;
-  count(options?: VariantMediaCountOptions): Promise<number>;
-  getVariantsUsingAsset(assetId: MediaAssetId): Promise<VariantId[]>;
-  getUnusedAssets(productId?: ProductId): Promise<MediaAssetId[]>;
-
-  // Color/size specific media management
+  // Color/size specific queries
   findByVariantColor(
     color: string,
     options?: VariantMediaQueryOptions,
@@ -75,14 +28,15 @@ export interface IVariantMediaRepository {
     size: string,
     options?: VariantMediaQueryOptions,
   ): Promise<VariantMedia[]>;
-  getColorVariantMedia(
-    productId: ProductId,
-    color: string,
-  ): Promise<VariantMedia[]>;
-  getSizeVariantMedia(
-    productId: ProductId,
-    size: string,
-  ): Promise<VariantMedia[]>;
+  getColorVariantMedia(productId: ProductId, color: string): Promise<VariantMedia[]>;
+  getSizeVariantMedia(productId: ProductId, size: string): Promise<VariantMedia[]>;
+
+  // Utility queries
+  exists(variantId: VariantId, assetId: MediaAssetId): Promise<boolean>;
+  countByVariantId(variantId: VariantId): Promise<number>;
+  countAssetUsage(assetId: MediaAssetId): Promise<number>;
+  getVariantsUsingAsset(assetId: MediaAssetId): Promise<VariantId[]>;
+  getUnusedAssets(productId?: ProductId): Promise<MediaAssetId[]>;
 }
 
 export interface VariantMediaQueryOptions {

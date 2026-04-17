@@ -17,7 +17,7 @@ import {
   DomainValidationError,
 } from "../../domain/errors/user-management.errors";
 
-export interface AddPaymentMethodDto {
+interface AddPaymentMethodDto {
   userId: string;
   type: PaymentMethodType;
   brand?: string;
@@ -29,7 +29,7 @@ export interface AddPaymentMethodDto {
   isDefault?: boolean;
 }
 
-export interface UpdatePaymentMethodDto {
+interface UpdatePaymentMethodDto {
   paymentMethodId: string;
   userId: string;
   type?: PaymentMethodType;
@@ -42,7 +42,7 @@ export interface UpdatePaymentMethodDto {
   isDefault?: boolean;
 }
 
-export interface PaymentMethodValidationResult {
+interface PaymentMethodValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
@@ -95,12 +95,18 @@ export class PaymentMethodService {
       expYear: dto.expYear,
       billingAddressId: dto.billingAddressId,
       providerRef: dto.providerRef,
-      isDefault: shouldBeDefault,
+      isDefault: false,
     });
 
-    // If setting as default, remove default from other payment methods
+    // De-default all existing methods in-memory, then persist each
     if (shouldBeDefault) {
-      await this.paymentMethodRepository.removeDefault(userId);
+      for (const existing of existingMethods) {
+        if (existing.isDefault) {
+          existing.removeAsDefault();
+          await this.paymentMethodRepository.save(existing);
+        }
+      }
+      paymentMethod.setAsDefault();
     }
 
     await this.paymentMethodRepository.save(paymentMethod);
@@ -148,7 +154,14 @@ export class PaymentMethodService {
     // Handle default status
     if (dto.isDefault !== undefined) {
       if (dto.isDefault) {
-        await this.paymentMethodRepository.removeDefault(userId);
+        // De-default all other methods in-memory, then persist each
+        const allMethods = await this.paymentMethodRepository.findByUserId(userId);
+        for (const existing of allMethods) {
+          if (existing.isDefault && !existing.equals(paymentMethod)) {
+            existing.removeAsDefault();
+            await this.paymentMethodRepository.save(existing);
+          }
+        }
         paymentMethod.setAsDefault();
       } else {
         paymentMethod.removeAsDefault();
@@ -183,15 +196,12 @@ export class PaymentMethodService {
 
     await this.paymentMethodRepository.delete(paymentMethodIdVo);
 
-    // If this was the default payment method, set another as default
+    // If this was the default payment method, auto-assign a new default
     if (paymentMethod.isDefault) {
-      const remainingMethods =
-        await this.paymentMethodRepository.findByUserId(userIdVo);
-      if (remainingMethods.length > 0) {
-        await this.paymentMethodRepository.setAsDefault(
-          remainingMethods[0].id,
-          userIdVo,
-        );
+      const remaining = await this.paymentMethodRepository.findByUserId(userIdVo);
+      if (remaining.length > 0) {
+        remaining[0].setAsDefault();
+        await this.paymentMethodRepository.save(remaining[0]);
       }
     }
   }
@@ -237,7 +247,17 @@ export class PaymentMethodService {
       throw new InvalidOperationError("Payment method does not belong to user");
     }
 
-    await this.paymentMethodRepository.setAsDefault(paymentMethodIdVo, userIdVo);
+    // De-default all other methods in-memory, then persist each
+    const allMethods = await this.paymentMethodRepository.findByUserId(userIdVo);
+    for (const existing of allMethods) {
+      if (existing.isDefault && !existing.equals(paymentMethod)) {
+        existing.removeAsDefault();
+        await this.paymentMethodRepository.save(existing);
+      }
+    }
+
+    paymentMethod.setAsDefault();
+    await this.paymentMethodRepository.save(paymentMethod);
   }
 
   async getPaymentMethodsByType(

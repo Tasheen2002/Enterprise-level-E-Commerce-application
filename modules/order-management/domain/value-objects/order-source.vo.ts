@@ -1,15 +1,15 @@
 import { DomainValidationError } from "../errors/order-management.errors";
-
-export enum OrderSourceEnum {
-  WEB = "web",
-  MOBILE = "mobile",
-}
+import { OrderSourceEnum } from "../enums";
 
 export class OrderSource {
   private readonly value: OrderSourceEnum;
 
   private constructor(value: OrderSourceEnum) {
     this.value = value;
+  }
+
+  static create(value: string): OrderSource {
+    return OrderSource.fromString(value);
   }
 
   static fromString(value: string): OrderSource {

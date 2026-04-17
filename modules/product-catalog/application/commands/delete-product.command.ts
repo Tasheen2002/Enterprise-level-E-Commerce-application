@@ -1,15 +1,15 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductManagementService } from "../services/product-management.service";
 
-export interface DeleteProductInput extends ICommand {
-  productId: string;
+export interface DeleteProductCommand extends ICommand {
+  readonly productId: string;
 }
 
-export class DeleteProductHandler implements ICommandHandler<DeleteProductInput, CommandResult<void>> {
+export class DeleteProductHandler implements ICommandHandler<DeleteProductCommand, CommandResult<void>> {
   constructor(private readonly productManagementService: ProductManagementService) {}
 
-  async handle(input: DeleteProductInput): Promise<CommandResult<void>> {
-    await this.productManagementService.deleteProduct(input.productId);
+  async handle(command: DeleteProductCommand): Promise<CommandResult<void>> {
+    await this.productManagementService.deleteProduct(command.productId);
     return CommandResult.success(undefined);
   }
 }

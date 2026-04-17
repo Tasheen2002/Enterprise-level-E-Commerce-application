@@ -3,19 +3,19 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const reservationParamsSchema = z.object({
-  reservationId: z.string().uuid(),
+  reservationId: z.uuid(),
 });
 
 export const listPickupReservationsSchema = z.object({
-  orderId: z.string().uuid().optional(),
-  locationId: z.string().uuid().optional(),
+  orderId: z.uuid().optional(),
+  locationId: z.uuid().optional(),
   activeOnly: z.string().optional().transform((v) => v !== "false" && v !== "0"),
 });
 
 export const createPickupReservationSchema = z.object({
-  orderId: z.string().uuid(),
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid(),
+  orderId: z.uuid(),
+  variantId: z.uuid(),
+  locationId: z.uuid(),
   qty: z.number().int().min(1),
   expirationMinutes: z.number().int().min(1).max(1440).optional(),
 });

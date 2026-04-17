@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { StockAlert } from "../../../domain/entities/stock-alert.entity";
 import { AlertId } from "../../../domain/value-objects/alert-id.vo";
 import {
@@ -15,8 +17,11 @@ interface StockAlertDatabaseRow {
   resolvedAt: Date | null;
 }
 
-export class StockAlertRepositoryImpl implements IStockAlertRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class StockAlertRepositoryImpl extends PrismaRepository<StockAlert> implements IStockAlertRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
   private toEntity(row: StockAlertDatabaseRow): StockAlert {
     return StockAlert.fromPersistence({
       alertId: AlertId.fromString(row.alertId),
@@ -43,6 +48,8 @@ export class StockAlertRepositoryImpl implements IStockAlertRepository {
         resolvedAt: alert.resolvedAt,
       },
     });
+
+    await this.dispatchEvents(alert);
   }
 
   async findById(alertId: AlertId): Promise<StockAlert | null> {

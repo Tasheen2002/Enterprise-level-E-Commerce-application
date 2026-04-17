@@ -1,25 +1,21 @@
 import { UserService } from '../services/user.service';
 import { UserDTO } from '../../domain/entities/user.entity';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface ToggleUserEmailVerifiedInput extends ICommand {
-  userId: string;
-  isVerified: boolean;
-  reason?: string;
+export interface ToggleUserEmailVerifiedCommand extends ICommand {
+  readonly userId: string;
+  readonly isVerified: boolean;
+  readonly reason?: string;
 }
 
 export class ToggleUserEmailVerifiedHandler implements ICommandHandler<
-  ToggleUserEmailVerifiedInput,
+  ToggleUserEmailVerifiedCommand,
   CommandResult<UserDTO>
 > {
   constructor(private readonly userService: UserService) {}
 
-  async handle(input: ToggleUserEmailVerifiedInput): Promise<CommandResult<UserDTO>> {
-    const dto = await this.userService.toggleEmailVerified(input.userId, input.isVerified);
+  async handle(command: ToggleUserEmailVerifiedCommand): Promise<CommandResult<UserDTO>> {
+    const dto = await this.userService.toggleEmailVerified(command.userId, command.isVerified);
     return CommandResult.success(dto);
   }
 }

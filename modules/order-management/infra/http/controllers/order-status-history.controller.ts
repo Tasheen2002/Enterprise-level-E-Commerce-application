@@ -1,10 +1,12 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import {
-  LogOrderStatusChangeCommandHandler,
-  GetOrderStatusHistoryHandler,
-  OrderManagementService,
-} from "../../../application";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  LogOrderStatusChangeCommand,
+  LogOrderStatusChangeCommandHandler,
+  GetOrderStatusHistoryQuery,
+  GetOrderStatusHistoryHandler,
+} from "../../../application";
 
 export interface LogStatusChangeRequest {
   Params: { orderId: string };
@@ -24,64 +26,42 @@ export interface GetStatusHistoryRequest {
 }
 
 export class OrderStatusHistoryController {
-  private logStatusChangeHandler: LogOrderStatusChangeCommandHandler;
-  private getStatusHistoryHandler: GetOrderStatusHistoryHandler;
-
-  constructor(orderService: OrderManagementService) {
-    this.logStatusChangeHandler = new LogOrderStatusChangeCommandHandler(
-      orderService,
-    );
-    this.getStatusHistoryHandler = new GetOrderStatusHistoryHandler(
-      orderService,
-    );
-  }
+  constructor(
+    private readonly logStatusChangeHandler: LogOrderStatusChangeCommandHandler,
+    private readonly getStatusHistoryHandler: GetOrderStatusHistoryHandler,
+  ) {}
 
   async logStatusChange(
-    request: FastifyRequest<LogStatusChangeRequest>,
+    request: AuthenticatedRequest<LogStatusChangeRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { fromStatus, toStatus, changedBy } = request.body;
-
-      const result = await this.logStatusChangeHandler.handle({
-        orderId,
-        fromStatus,
-        toStatus,
-        changedBy,
-      });
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Status change logged successfully",
-        201,
-      );
-    } catch (error) {
+      const command: LogOrderStatusChangeCommand = {
+        orderId: request.params.orderId,
+        fromStatus: request.body.fromStatus,
+        toStatus: request.body.toStatus,
+        changedBy: request.body.changedBy,
+      };
+      const result = await this.logStatusChangeHandler.handle(command);
+      return ResponseHelper.fromCommand(reply, result, "Status change logged successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getStatusHistory(
-    request: FastifyRequest<GetStatusHistoryRequest>,
+    request: AuthenticatedRequest<GetStatusHistoryRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { limit, offset } = request.query;
-
-      const result = await this.getStatusHistoryHandler.handle({
-        orderId,
-        limit,
-        offset,
-      });
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Status history retrieved",
-      );
-    } catch (error) {
+      const query: GetOrderStatusHistoryQuery = {
+        orderId: request.params.orderId,
+        limit: request.query.limit,
+        offset: request.query.offset,
+      };
+      const result = await this.getStatusHistoryHandler.handle(query);
+      return ResponseHelper.ok(reply, "Status history retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

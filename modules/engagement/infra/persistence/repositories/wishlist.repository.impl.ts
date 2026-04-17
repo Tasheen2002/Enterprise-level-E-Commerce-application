@@ -1,66 +1,78 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IWishlistRepository,
   WishlistQueryOptions,
-  WishlistFilterOptions,
-} from "../../../domain/repositories/wishlist.repository.js";
-import { Wishlist } from "../../../domain/entities/wishlist.entity.js";
-import { WishlistId } from "../../../domain/value-objects/index.js";
+  WishlistFilters,
+} from "../../../domain/repositories/wishlist.repository";
+import { Wishlist } from "../../../domain/entities/wishlist.entity";
+import { WishlistId } from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-export class WishlistRepositoryImpl implements IWishlistRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ============================================================================
+// Database Row Interface
+// ============================================================================
+interface WishlistDatabaseRow {
+  id: string;
+  userId: string | null;
+  guestToken: string | null;
+  name: string | null;
+  isDefault: boolean;
+  isPublic: boolean;
+  description: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  private hydrate(record: any): Wishlist {
-    return Wishlist.fromDatabaseRow({
-      wishlist_id: record.id,
-      user_id: record.userId,
-      guest_token: record.guestToken,
-      name: record.name,
-      is_default: record.isDefault,
-      is_public: record.isPublic,
-      description: record.description,
-      created_at: record.createdAt,
-      updated_at: record.updatedAt,
+// ============================================================================
+// Repository Implementation
+// ============================================================================
+export class WishlistRepositoryImpl
+  extends PrismaRepository<Wishlist>
+  implements IWishlistRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  private toEntity(row: WishlistDatabaseRow): Wishlist {
+    return Wishlist.fromPersistence({
+      id: WishlistId.fromString(row.id),
+      userId: row.userId || undefined,
+      guestToken: row.guestToken || undefined,
+      name: row.name || undefined,
+      isDefault: row.isDefault,
+      isPublic: row.isPublic,
+      description: row.description || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
-  }
-
-  private dehydrate(wishlist: Wishlist): any {
-    const row = wishlist.toDatabaseRow();
-    return {
-      id: row.wishlist_id,
-      userId: row.user_id,
-      guestToken: row.guest_token,
-      name: row.name,
-      isDefault: row.is_default,
-      isPublic: row.is_public,
-      description: row.description,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
-  }
-
-  private buildOrderBy(options?: WishlistQueryOptions): any {
-    if (!options?.sortBy) {
-      return { createdAt: "desc" };
-    }
-
-    return {
-      [options.sortBy]: options.sortOrder || "asc",
-    };
   }
 
   async save(wishlist: Wishlist): Promise<void> {
-    const data = this.dehydrate(wishlist);
-    await this.prisma.wishlist.create({ data });
-  }
-
-  async update(wishlist: Wishlist): Promise<void> {
-    const data = this.dehydrate(wishlist);
-    const { id, ...updateData } = data;
-    await this.prisma.wishlist.update({
-      where: { id },
-      data: updateData,
+    await this.prisma.wishlist.upsert({
+      where: { id: wishlist.id.getValue() },
+      create: {
+        id: wishlist.id.getValue(),
+        userId: wishlist.userId,
+        guestToken: wishlist.guestToken,
+        name: wishlist.name,
+        isDefault: wishlist.isDefault,
+        isPublic: wishlist.isPublic,
+        description: wishlist.description,
+        createdAt: wishlist.createdAt,
+        updatedAt: wishlist.updatedAt,
+      },
+      update: {
+        name: wishlist.name,
+        isDefault: wishlist.isDefault,
+        isPublic: wishlist.isPublic,
+        description: wishlist.description,
+        updatedAt: wishlist.updatedAt,
+      },
     });
+    await this.dispatchEvents(wishlist);
   }
 
   async delete(wishlistId: WishlistId): Promise<void> {
@@ -74,112 +86,187 @@ export class WishlistRepositoryImpl implements IWishlistRepository {
       where: { id: wishlistId.getValue() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as WishlistDatabaseRow) : null;
   }
 
   async findByUserId(
     userId: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    const records = await this.prisma.wishlist.findMany({
-      where: { userId },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { userId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.wishlist.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.wishlist.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByGuestToken(
     guestToken: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    const records = await this.prisma.wishlist.findMany({
-      where: { guestToken },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { guestToken };
+
+    const [records, total] = await Promise.all([
+      this.prisma.wishlist.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.wishlist.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findDefaultByUserId(userId: string): Promise<Wishlist | null> {
     const record = await this.prisma.wishlist.findFirst({
-      where: {
-        userId,
-        isDefault: true,
-      },
+      where: { userId, isDefault: true },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as WishlistDatabaseRow) : null;
   }
 
-  async findPublicWishlists(options?: WishlistQueryOptions): Promise<Wishlist[]> {
-    const records = await this.prisma.wishlist.findMany({
-      where: { isPublic: true },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findPublicWishlists(
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { isPublic: true };
+
+    const [records, total] = await Promise.all([
+      this.prisma.wishlist.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.wishlist.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findAll(options?: WishlistQueryOptions): Promise<Wishlist[]> {
-    const records = await this.prisma.wishlist.findMany({
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findAll(
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.wishlist.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.wishlist.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findWithFilters(
-    filters: WishlistFilterOptions,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
+    filters: WishlistFilters,
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
+
     const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.guestToken) where.guestToken = filters.guestToken;
+    if (filters.isPublic !== undefined) where.isPublic = filters.isPublic;
+    if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
 
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
+    const [records, total] = await Promise.all([
+      this.prisma.wishlist.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.wishlist.count({ where }),
+    ]);
 
-    if (filters.guestToken) {
-      where.guestToken = filters.guestToken;
-    }
-
-    if (filters.isPublic !== undefined) {
-      where.isPublic = filters.isPublic;
-    }
-
-    if (filters.isDefault !== undefined) {
-      where.isDefault = filters.isDefault;
-    }
-
-    const records = await this.prisma.wishlist.findMany({
-      where,
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
-
-    return records.map((record) => this.hydrate(record));
+    return {
+      items: records.map((record) => this.toEntity(record as WishlistDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findUserWishlists(
     userId: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
     return this.findByUserId(userId, options);
   }
 
   async findGuestWishlists(
     guestToken: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedResult<Wishlist>> {
     return this.findByGuestToken(guestToken, options);
   }
 
@@ -201,28 +288,12 @@ export class WishlistRepositoryImpl implements IWishlistRepository {
     });
   }
 
-  async count(filters?: WishlistFilterOptions): Promise<number> {
-    if (!filters) {
-      return await this.prisma.wishlist.count();
-    }
-
+  async count(filters?: WishlistFilters): Promise<number> {
     const where: any = {};
-
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
-
-    if (filters.guestToken) {
-      where.guestToken = filters.guestToken;
-    }
-
-    if (filters.isPublic !== undefined) {
-      where.isPublic = filters.isPublic;
-    }
-
-    if (filters.isDefault !== undefined) {
-      where.isDefault = filters.isDefault;
-    }
+    if (filters?.userId) where.userId = filters.userId;
+    if (filters?.guestToken) where.guestToken = filters.guestToken;
+    if (filters?.isPublic !== undefined) where.isPublic = filters.isPublic;
+    if (filters?.isDefault !== undefined) where.isDefault = filters.isDefault;
 
     return await this.prisma.wishlist.count({ where });
   }
@@ -253,10 +324,7 @@ export class WishlistRepositoryImpl implements IWishlistRepository {
 
   async hasDefaultWishlist(userId: string): Promise<boolean> {
     const count = await this.prisma.wishlist.count({
-      where: {
-        userId,
-        isDefault: true,
-      },
+      where: { userId, isDefault: true },
     });
 
     return count > 0;

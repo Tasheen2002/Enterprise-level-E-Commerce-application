@@ -2,30 +2,39 @@ import {
   AuthenticationService,
   AuthResult,
 } from '../services/authentication.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface LoginUserInput extends ICommand {
-  email: string;
-  password: string;
-  rememberMe?: boolean;
+export interface LoginUserCommand extends ICommand {
+  readonly email: string;
+  readonly password: string;
+  readonly rememberMe?: boolean;
 }
 
 export class LoginUserHandler
-  implements ICommandHandler<LoginUserInput, CommandResult<AuthResult>>
+  implements ICommandHandler<LoginUserCommand, CommandResult<AuthResult>>
 {
   constructor(private readonly authService: AuthenticationService) {}
 
   async handle(
-    input: LoginUserInput
+    command: LoginUserCommand
   ): Promise<CommandResult<AuthResult>> {
-    const authResult = await this.authService.login({
-      email: input.email,
-      password: input.password,
-    });
-    return CommandResult.success(authResult);
+    if (this.authService.isAccountLocked(command.email)) {
+      return CommandResult.failure(
+        'Account temporarily locked due to multiple failed login attempts',
+        429,
+      );
+    }
+
+    try {
+      const authResult = await this.authService.login({
+        email: command.email,
+        password: command.password,
+      });
+      this.authService.clearFailedAttempts(command.email);
+      return CommandResult.success(authResult);
+    } catch (error) {
+      this.authService.recordFailedAttempt(command.email);
+      throw error;
+    }
   }
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const productParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const productSlugParamsSchema = z.object({
@@ -14,7 +14,7 @@ export const listProductsSchema = z.object({
   page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.uuid().optional(),
   brand: z.string().optional(),
   includeDrafts: z.string().optional().transform((v) => v === "true"),
   sortBy: z.enum(["title", "createdAt", "updatedAt", "publishAt"]).optional().default("createdAt"),
@@ -27,7 +27,7 @@ export const createProductSchema = z.object({
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
   status: z.enum(["draft", "published", "scheduled"]).optional().default("draft"),
-  publishAt: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  publishAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
   countryOfOrigin: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
@@ -35,7 +35,7 @@ export const createProductSchema = z.object({
   priceSgd: z.number().min(0).optional(),
   priceUsd: z.number().min(0).optional(),
   compareAtPrice: z.number().min(0).optional(),
-  categoryIds: z.array(z.string().uuid()).optional(),
+  categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
 });
 
@@ -45,7 +45,7 @@ export const updateProductSchema = z.object({
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
   status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
-  publishAt: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  publishAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
   countryOfOrigin: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
@@ -53,7 +53,7 @@ export const updateProductSchema = z.object({
   priceSgd: z.number().min(0).nullable().optional(),
   priceUsd: z.number().min(0).nullable().optional(),
   compareAtPrice: z.number().min(0).nullable().optional(),
-  categoryIds: z.array(z.string().uuid()).optional(),
+  categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
 });
 

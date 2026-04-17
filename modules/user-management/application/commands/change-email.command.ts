@@ -1,28 +1,24 @@
 import { AuthenticationService } from '../services/authentication.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface ChangeEmailInput extends ICommand {
-  userId: string;
-  newEmail: string;
-  password: string;
+export interface ChangeEmailCommand extends ICommand {
+  readonly userId: string;
+  readonly newEmail: string;
+  readonly password: string;
 }
 
 export class ChangeEmailHandler
-  implements ICommandHandler<ChangeEmailInput, CommandResult<void>>
+  implements ICommandHandler<ChangeEmailCommand, CommandResult<void>>
 {
   constructor(private readonly authService: AuthenticationService) {}
 
   async handle(
-    input: ChangeEmailInput
+    command: ChangeEmailCommand
   ): Promise<CommandResult<void>> {
     await this.authService.changeEmail(
-      input.userId,
-      input.newEmail,
-      input.password
+      command.userId,
+      command.newEmail,
+      command.password
     );
     return CommandResult.success();
   }

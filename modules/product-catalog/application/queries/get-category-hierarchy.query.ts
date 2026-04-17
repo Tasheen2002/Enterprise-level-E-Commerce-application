@@ -1,12 +1,12 @@
-import { IQuery, IQueryHandler } from "@/api/src/shared/application";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { CategoryManagementService, CategoryTreeNode } from "../services/category-management.service";
 
-export interface GetCategoryHierarchyInput extends IQuery {}
+export interface GetCategoryHierarchyQuery extends IQuery {}
 
-export class GetCategoryHierarchyHandler implements IQueryHandler<GetCategoryHierarchyInput, CategoryTreeNode[]> {
+export class GetCategoryHierarchyHandler implements IQueryHandler<GetCategoryHierarchyQuery, CategoryTreeNode[]> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(_input: GetCategoryHierarchyInput): Promise<CategoryTreeNode[]> {
+  async handle(_input: GetCategoryHierarchyQuery): Promise<CategoryTreeNode[]> {
     return this.categoryManagementService.getCategoryHierarchy();
   }
 }

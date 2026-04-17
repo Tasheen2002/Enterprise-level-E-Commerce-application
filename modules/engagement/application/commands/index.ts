@@ -1,102 +1,56 @@
-// Barrel for command handlers
-// Export base interfaces and classes from first command file
-export {
-  CommandResult,
-  CreateWishlistHandler,
-} from "./create-wishlist.command.js";
-export type {
-  ICommand,
-  ICommandHandler,
-  CreateWishlistCommand,
-  WishlistResult
-} from "./create-wishlist.command.js";
+export { CreateWishlistHandler } from "./create-wishlist.command";
+export type { CreateWishlistCommand } from "./create-wishlist.command";
 
-export {
-  AddToWishlistHandler,
-} from "./add-to-wishlist.command.js";
-export type { AddToWishlistCommand, WishlistItemResult } from "./add-to-wishlist.command.js";
+export { AddToWishlistHandler } from "./add-to-wishlist.command";
+export type { AddToWishlistCommand } from "./add-to-wishlist.command";
 
-export {
-  RemoveFromWishlistHandler,
-} from "./remove-from-wishlist.command.js";
-export type { RemoveFromWishlistCommand } from "./remove-from-wishlist.command.js";
+export { RemoveFromWishlistHandler } from "./remove-from-wishlist.command";
+export type { RemoveFromWishlistCommand } from "./remove-from-wishlist.command";
 
-export {
-  UpdateWishlistHandler,
-} from "./update-wishlist.command.js";
-export type { UpdateWishlistCommand } from "./update-wishlist.command.js";
+export { UpdateWishlistHandler } from "./update-wishlist.command";
+export type { UpdateWishlistCommand } from "./update-wishlist.command";
 
-export {
-  DeleteWishlistHandler,
-} from "./delete-wishlist.command.js";
-export type { DeleteWishlistCommand } from "./delete-wishlist.command.js";
+export { DeleteWishlistHandler } from "./delete-wishlist.command";
+export type { DeleteWishlistCommand } from "./delete-wishlist.command";
 
-export {
-  CreateReminderHandler,
-} from "./create-reminder.command.js";
-export type { CreateReminderCommand, ReminderResult } from "./create-reminder.command.js";
+export { CreateReminderHandler } from "./create-reminder.command";
+export type { CreateReminderCommand } from "./create-reminder.command";
 
-export {
-  UpdateReminderStatusHandler,
-} from "./update-reminder-status.command.js";
-export type { UpdateReminderStatusCommand } from "./update-reminder-status.command.js";
+export { UpdateReminderStatusHandler } from "./update-reminder-status.command";
+export type { UpdateReminderStatusCommand } from "./update-reminder-status.command";
 
-export {
-  UnsubscribeReminderHandler,
-} from "./unsubscribe-reminder.command.js";
-export type { UnsubscribeReminderCommand } from "./unsubscribe-reminder.command.js";
+export { UnsubscribeReminderHandler } from "./unsubscribe-reminder.command";
+export type { UnsubscribeReminderCommand } from "./unsubscribe-reminder.command";
 
-export {
-  DeleteReminderHandler,
-} from "./delete-reminder.command.js";
-export type { DeleteReminderCommand } from "./delete-reminder.command.js";
+export { DeleteReminderHandler } from "./delete-reminder.command";
+export type { DeleteReminderCommand } from "./delete-reminder.command";
 
-export {
-  ScheduleNotificationHandler,
-} from "./schedule-notification.command.js";
-export type { ScheduleNotificationCommand, NotificationResult } from "./schedule-notification.command.js";
+export { ScheduleNotificationHandler } from "./schedule-notification.command";
+export type { ScheduleNotificationCommand } from "./schedule-notification.command";
 
-export {
-  SendNotificationHandler,
-} from "./send-notification.command.js";
-export type { SendNotificationCommand } from "./send-notification.command.js";
+export { SendNotificationHandler } from "./send-notification.command";
+export type { SendNotificationCommand } from "./send-notification.command";
 
-export {
-  CreateAppointmentHandler,
-} from "./create-appointment.command.js";
-export type { CreateAppointmentCommand, AppointmentResult } from "./create-appointment.command.js";
+export { CreateAppointmentHandler } from "./create-appointment.command";
+export type { CreateAppointmentCommand } from "./create-appointment.command";
 
-export {
-  UpdateAppointmentHandler,
-} from "./update-appointment.command.js";
-export type { UpdateAppointmentCommand } from "./update-appointment.command.js";
+export { UpdateAppointmentHandler } from "./update-appointment.command";
+export type { UpdateAppointmentCommand } from "./update-appointment.command";
 
-export {
-  CancelAppointmentHandler,
-} from "./cancel-appointment.command.js";
-export type { CancelAppointmentCommand } from "./cancel-appointment.command.js";
+export { CancelAppointmentHandler } from "./cancel-appointment.command";
+export type { CancelAppointmentCommand } from "./cancel-appointment.command";
 
-export {
-  CreateProductReviewHandler,
-} from "./create-product-review.command.js";
-export type { CreateProductReviewCommand, ProductReviewResult } from "./create-product-review.command.js";
+export { CreateProductReviewHandler } from "./create-product-review.command";
+export type { CreateProductReviewCommand } from "./create-product-review.command";
 
-export {
-  UpdateReviewStatusHandler,
-} from "./update-review-status.command.js";
-export type { UpdateReviewStatusCommand } from "./update-review-status.command.js";
+export { UpdateReviewStatusHandler } from "./update-review-status.command";
+export type { UpdateReviewStatusCommand } from "./update-review-status.command";
 
-export {
-  DeleteProductReviewHandler,
-} from "./delete-product-review.command.js";
-export type { DeleteProductReviewCommand } from "./delete-product-review.command.js";
+export { DeleteProductReviewHandler } from "./delete-product-review.command";
+export type { DeleteProductReviewCommand } from "./delete-product-review.command";
 
-export {
-  SubscribeNewsletterHandler,
-} from "./subscribe-newsletter.command.js";
-export type { SubscribeNewsletterCommand, NewsletterSubscriptionResult } from "./subscribe-newsletter.command.js";
+export { SubscribeNewsletterHandler } from "./subscribe-newsletter.command";
+export type { SubscribeNewsletterCommand } from "./subscribe-newsletter.command";
 
-export {
-  UnsubscribeNewsletterHandler,
-} from "./unsubscribe-newsletter.command.js";
-export type { UnsubscribeNewsletterCommand } from "./unsubscribe-newsletter.command.js";
+export { UnsubscribeNewsletterHandler } from "./unsubscribe-newsletter.command";
+export type { UnsubscribeNewsletterCommand } from "./unsubscribe-newsletter.command";

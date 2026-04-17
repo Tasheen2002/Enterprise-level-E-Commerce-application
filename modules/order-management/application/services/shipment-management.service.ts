@@ -2,13 +2,13 @@ import {
   IOrderShipmentRepository,
   ShipmentQueryOptions,
 } from "../../domain/repositories/order-shipment.repository";
-import { OrderShipment } from "../../domain/entities/order-shipment.entity";
+import { OrderShipment, OrderShipmentDTO } from "../../domain/entities/order-shipment.entity";
 import {
   OrderShipmentNotFoundError,
   DomainValidationError,
 } from "../../domain/errors/order-management.errors";
 
-export interface CreateShipmentData {
+interface CreateShipmentParams {
   orderId: string;
   carrier?: string;
   service?: string;
@@ -22,99 +22,90 @@ export interface CreateShipmentData {
 export class ShipmentManagementService {
   constructor(private readonly shipmentRepository: IOrderShipmentRepository) {}
 
-  async createShipment(data: CreateShipmentData): Promise<OrderShipment> {
-    // Validate required fields
-    if (!data.orderId || data.orderId.trim().length === 0) {
+  async createShipment(params: CreateShipmentParams): Promise<OrderShipmentDTO> {
+    if (!params.orderId || params.orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    // Create the shipment entity
     const shipment = OrderShipment.create({
-      orderId: data.orderId,
-      carrier: data.carrier,
-      service: data.service,
-      trackingNumber: data.trackingNumber,
-      giftReceipt: data.giftReceipt || false,
-      pickupLocationId: data.pickupLocationId,
-      shippedAt: data.shippedAt,
-      deliveredAt: data.deliveredAt,
+      orderId: params.orderId,
+      carrier: params.carrier,
+      service: params.service,
+      trackingNumber: params.trackingNumber,
+      giftReceipt: params.giftReceipt || false,
+      pickupLocationId: params.pickupLocationId,
+      shippedAt: params.shippedAt,
+      deliveredAt: params.deliveredAt,
     });
 
-    // Save the shipment
     await this.shipmentRepository.save(shipment);
 
-    return shipment;
+    return OrderShipment.toDTO(shipment);
   }
 
-  async getShipmentById(id: string): Promise<OrderShipment> {
+  async getShipmentById(id: string): Promise<OrderShipmentDTO | null> {
     if (!id || id.trim().length === 0) {
       throw new DomainValidationError("Shipment ID is required");
     }
 
     const shipment = await this.shipmentRepository.findById(id);
-
-    if (!shipment) {
-      throw new OrderShipmentNotFoundError(id);
-    }
-
-    return shipment;
+    return shipment ? OrderShipment.toDTO(shipment) : null;
   }
 
   async getShipmentsByOrderId(
     orderId: string,
     options?: ShipmentQueryOptions,
-  ): Promise<OrderShipment[]> {
+  ): Promise<OrderShipmentDTO[]> {
     if (!orderId || orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.shipmentRepository.findByOrderId(orderId, options);
+    const shipments = await this.shipmentRepository.findByOrderId(orderId, options);
+    return shipments.map((s) => OrderShipment.toDTO(s));
   }
 
   async getShipmentByTrackingNumber(
     trackingNumber: string,
-  ): Promise<OrderShipment> {
+  ): Promise<OrderShipmentDTO | null> {
     if (!trackingNumber || trackingNumber.trim().length === 0) {
       throw new DomainValidationError("Tracking number is required");
     }
 
-    const shipment =
-      await this.shipmentRepository.findByTrackingNumber(trackingNumber);
-
-    if (!shipment) {
-      throw new OrderShipmentNotFoundError(trackingNumber);
-    }
-
-    return shipment;
+    const shipment = await this.shipmentRepository.findByTrackingNumber(trackingNumber);
+    return shipment ? OrderShipment.toDTO(shipment) : null;
   }
 
   async getShipmentsByCarrier(
     carrier: string,
     options?: ShipmentQueryOptions,
-  ): Promise<OrderShipment[]> {
+  ): Promise<OrderShipmentDTO[]> {
     if (!carrier || carrier.trim().length === 0) {
       throw new DomainValidationError("Carrier is required");
     }
 
-    return await this.shipmentRepository.findByCarrier(carrier, options);
+    const shipments = await this.shipmentRepository.findByCarrier(carrier, options);
+    return shipments.map((s) => OrderShipment.toDTO(s));
   }
 
   async getShippedShipments(
     options?: ShipmentQueryOptions,
-  ): Promise<OrderShipment[]> {
-    return await this.shipmentRepository.findShipped(options);
+  ): Promise<OrderShipmentDTO[]> {
+    const shipments = await this.shipmentRepository.findShipped(options);
+    return shipments.map((s) => OrderShipment.toDTO(s));
   }
 
   async getDeliveredShipments(
     options?: ShipmentQueryOptions,
-  ): Promise<OrderShipment[]> {
-    return await this.shipmentRepository.findDelivered(options);
+  ): Promise<OrderShipmentDTO[]> {
+    const shipments = await this.shipmentRepository.findDelivered(options);
+    return shipments.map((s) => OrderShipment.toDTO(s));
   }
 
   async getPendingShipments(
     options?: ShipmentQueryOptions,
-  ): Promise<OrderShipment[]> {
-    return await this.shipmentRepository.findPending(options);
+  ): Promise<OrderShipmentDTO[]> {
+    const shipments = await this.shipmentRepository.findPending(options);
+    return shipments.map((s) => OrderShipment.toDTO(s));
   }
 
   async markShipmentAsShipped(
@@ -122,57 +113,56 @@ export class ShipmentManagementService {
     carrier: string,
     service: string,
     trackingNumber: string,
-  ): Promise<OrderShipment> {
+  ): Promise<OrderShipmentDTO> {
     if (!carrier || carrier.trim().length === 0) {
       throw new DomainValidationError("Carrier is required");
     }
-
     if (!service || service.trim().length === 0) {
       throw new DomainValidationError("Service is required");
     }
-
     if (!trackingNumber || trackingNumber.trim().length === 0) {
       throw new DomainValidationError("Tracking number is required");
     }
 
-    const shipment = await this.getShipmentById(id);
+    const shipment = await this.shipmentRepository.findById(id);
+    if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.markAsShipped(carrier, service, trackingNumber);
+    await this.shipmentRepository.save(shipment);
 
-    await this.shipmentRepository.update(shipment);
-
-    return shipment;
+    return OrderShipment.toDTO(shipment);
   }
 
-  async markShipmentAsDelivered(id: string): Promise<OrderShipment> {
-    const shipment = await this.getShipmentById(id);
+  async markShipmentAsDelivered(id: string): Promise<OrderShipmentDTO> {
+    const shipment = await this.shipmentRepository.findById(id);
+    if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.markAsDelivered();
+    await this.shipmentRepository.save(shipment);
 
-    await this.shipmentRepository.update(shipment);
-
-    return shipment;
+    return OrderShipment.toDTO(shipment);
   }
 
   async updateTrackingNumber(
     id: string,
     trackingNumber: string,
-  ): Promise<OrderShipment> {
+  ): Promise<OrderShipmentDTO> {
     if (!trackingNumber || trackingNumber.trim().length === 0) {
       throw new DomainValidationError("Tracking number is required");
     }
 
-    const shipment = await this.getShipmentById(id);
+    const shipment = await this.shipmentRepository.findById(id);
+    if (!shipment) throw new OrderShipmentNotFoundError(id);
 
     shipment.updateTrackingNumber(trackingNumber);
+    await this.shipmentRepository.save(shipment);
 
-    await this.shipmentRepository.update(shipment);
-
-    return shipment;
+    return OrderShipment.toDTO(shipment);
   }
 
   async deleteShipment(id: string): Promise<void> {
-    await this.getShipmentById(id);
+    const exists = await this.shipmentRepository.exists(id);
+    if (!exists) throw new OrderShipmentNotFoundError(id);
 
     await this.shipmentRepository.delete(id);
   }
@@ -190,7 +180,7 @@ export class ShipmentManagementService {
       throw new DomainValidationError("Order ID is required");
     }
 
-    return await this.shipmentRepository.countByOrderId(orderId);
+    return this.shipmentRepository.countByOrderId(orderId);
   }
 
   async getShipmentCountByCarrier(carrier: string): Promise<number> {
@@ -198,15 +188,15 @@ export class ShipmentManagementService {
       throw new DomainValidationError("Carrier is required");
     }
 
-    return await this.shipmentRepository.countByCarrier(carrier);
+    return this.shipmentRepository.countByCarrier(carrier);
   }
 
   async getShippedCount(): Promise<number> {
-    return await this.shipmentRepository.countShipped();
+    return this.shipmentRepository.countShipped();
   }
 
   async getDeliveredCount(): Promise<number> {
-    return await this.shipmentRepository.countDelivered();
+    return this.shipmentRepository.countDelivered();
   }
 
   async shipmentExists(id: string): Promise<boolean> {
@@ -214,7 +204,7 @@ export class ShipmentManagementService {
       throw new DomainValidationError("Shipment ID is required");
     }
 
-    return await this.shipmentRepository.exists(id);
+    return this.shipmentRepository.exists(id);
   }
 
   async trackingNumberExists(trackingNumber: string): Promise<boolean> {
@@ -222,6 +212,6 @@ export class ShipmentManagementService {
       throw new DomainValidationError("Tracking number is required");
     }
 
-    return await this.shipmentRepository.existsByTrackingNumber(trackingNumber);
+    return this.shipmentRepository.existsByTrackingNumber(trackingNumber);
   }
 }

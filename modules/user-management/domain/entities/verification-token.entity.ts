@@ -81,6 +81,10 @@ export class VerificationToken {
     this.props.usedAt = new Date();
   }
 
+  equals(other: VerificationToken): boolean {
+    return this.props.tokenId === other.props.tokenId;
+  }
+
   static toDTO(token: VerificationToken): VerificationTokenDTO {
     return {
       tokenId: token.tokenId,

@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { InventoryTransaction } from "../../../domain/entities/inventory-transaction.entity";
 import { TransactionId } from "../../../domain/value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../../../domain/value-objects/transaction-reason.vo";
@@ -10,13 +12,15 @@ interface InventoryTransactionDatabaseRow {
   locationId: string;
   qtyDelta: number;
   reason: string;
-
   referenceId: string | null;
   createdAt: Date;
 }
 
-export class InventoryTransactionRepositoryImpl implements IInventoryTransactionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class InventoryTransactionRepositoryImpl extends PrismaRepository<InventoryTransaction> implements IInventoryTransactionRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
   private toEntity(row: InventoryTransactionDatabaseRow): InventoryTransaction {
     return InventoryTransaction.fromPersistence({
       invTxnId: TransactionId.fromString(row.invTxnId),
@@ -24,15 +28,15 @@ export class InventoryTransactionRepositoryImpl implements IInventoryTransaction
       locationId: row.locationId,
       qtyDelta: row.qtyDelta,
       reason: TransactionReasonVO.create(row.reason),
-
       referenceId: row.referenceId || undefined,
       createdAt: row.createdAt,
     });
   }
 
   async save(transaction: InventoryTransaction): Promise<void> {
-    await (this.prisma as any).inventoryTransaction.create({
-      data: {
+    await (this.prisma as any).inventoryTransaction.upsert({
+      where: { invTxnId: transaction.invTxnId.getValue() },
+      create: {
         invTxnId: transaction.invTxnId.getValue(),
         variantId: transaction.variantId,
         locationId: transaction.locationId,
@@ -41,7 +45,14 @@ export class InventoryTransactionRepositoryImpl implements IInventoryTransaction
         referenceId: transaction.referenceId,
         createdAt: transaction.createdAt,
       },
+      update: {
+        qtyDelta: transaction.qtyDelta,
+        reason: transaction.reason.getValue(),
+        referenceId: transaction.referenceId,
+      },
     });
+
+    await this.dispatchEvents(transaction);
   }
 
   async findById(

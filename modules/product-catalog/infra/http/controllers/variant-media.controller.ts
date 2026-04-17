@@ -1,40 +1,46 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  VariantMediaManagementService,
-  VariantMediaServiceQueryOptions,
-} from "../../../application/services/variant-media-management.service";
+  AddMediaToVariantHandler,
+  RemoveMediaFromVariantHandler,
+  RemoveAllVariantMediaHandler,
+  SetVariantMediaHandler,
+  AddMediaToMultipleVariantsHandler,
+  AddMultipleMediaToVariantHandler,
+  DuplicateVariantMediaHandler,
+  CopyProductVariantMediaHandler,
+  GetVariantMediaHandler,
+  GetProductVariantMediaHandler,
+  GetVariantsUsingAssetHandler,
+  GetVariantMediaAssetUsageCountHandler,
+  GetColorVariantMediaHandler,
+  GetSizeVariantMediaHandler,
+  GetUnusedVariantMediaAssetsHandler,
+  ValidateVariantMediaHandler,
+  GetVariantMediaStatisticsHandler,
+} from "../../../application";
+import { VariantMediaServiceQueryOptions } from "../../../application/services/variant-media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface AddMediaToVariantRequest {
-  assetId: string;
-}
-
-export interface SetVariantMediaRequest {
-  assetIds: string[];
-}
-
-export interface AddMediaToMultipleVariantsRequest {
-  variantIds: string[];
-  assetId: string;
-}
-
-export interface AddMultipleMediaToVariantRequest {
-  variantId: string;
-  assetIds: string[];
-}
-
-export interface CopyProductVariantMediaRequest {
-  sourceProductId: string;
-  targetProductId: string;
-  variantMapping: Record<string, string>;
-}
-
-export interface VariantMediaQueryParams extends VariantMediaServiceQueryOptions {}
 
 export class VariantMediaController {
   constructor(
-    private readonly variantMediaManagementService: VariantMediaManagementService,
+    private readonly addMediaToVariantHandler: AddMediaToVariantHandler,
+    private readonly removeMediaFromVariantHandler: RemoveMediaFromVariantHandler,
+    private readonly removeAllVariantMediaHandler: RemoveAllVariantMediaHandler,
+    private readonly setVariantMediaHandler: SetVariantMediaHandler,
+    private readonly addMediaToMultipleVariantsHandler: AddMediaToMultipleVariantsHandler,
+    private readonly addMultipleMediaToVariantHandler: AddMultipleMediaToVariantHandler,
+    private readonly duplicateVariantMediaHandler: DuplicateVariantMediaHandler,
+    private readonly copyProductVariantMediaHandler: CopyProductVariantMediaHandler,
+    private readonly getVariantMediaHandler: GetVariantMediaHandler,
+    private readonly getProductVariantMediaHandler: GetProductVariantMediaHandler,
+    private readonly getVariantsUsingAssetHandler: GetVariantsUsingAssetHandler,
+    private readonly getVariantMediaAssetUsageCountHandler: GetVariantMediaAssetUsageCountHandler,
+    private readonly getColorVariantMediaHandler: GetColorVariantMediaHandler,
+    private readonly getSizeVariantMediaHandler: GetSizeVariantMediaHandler,
+    private readonly getUnusedVariantMediaAssetsHandler: GetUnusedVariantMediaAssetsHandler,
+    private readonly validateVariantMediaHandler: ValidateVariantMediaHandler,
+    private readonly getVariantMediaStatisticsHandler: GetVariantMediaStatisticsHandler,
   ) {}
 
   async getVariantMedia(
@@ -42,18 +48,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-
-      const variantMedia =
-        await this.variantMediaManagementService.getVariantMedia(variantId);
-
-      return ResponseHelper.ok(
-        reply,
-        "Variant media retrieved successfully",
-        variantMedia,
-      );
-    } catch (error) {
-
+      const variantMedia = await this.getVariantMediaHandler.handle({ variantId: request.params.variantId });
+      return ResponseHelper.ok(reply, "Variant media retrieved successfully", variantMedia);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -61,37 +58,17 @@ export class VariantMediaController {
   async addMediaToVariant(
     request: AuthenticatedRequest<{
       Params: { variantId: string };
-      Body: AddMediaToVariantRequest;
+      Body: { assetId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-      const { assetId } = request.body;
-
-      await this.variantMediaManagementService.addMediaToVariant(
-        variantId,
-        assetId,
-      );
-
-      return ResponseHelper.created(
-        reply,
-        "Media added to variant successfully",
-      );
-    } catch (error) {
-
-      if (
-        error instanceof Error &&
-        error.message.includes("already associated")
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: error.message,
-        });
-      }
-
+      const result = await this.addMediaToVariantHandler.handle({
+        variantId: request.params.variantId,
+        assetId: request.body.assetId,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Media added to variant successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -101,16 +78,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId, assetId } = request.params;
-
-      await this.variantMediaManagementService.removeMediaFromVariant(
-        variantId,
-        assetId,
-      );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.removeMediaFromVariantHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Media removed from variant successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -120,13 +90,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-
-      await this.variantMediaManagementService.removeAllVariantMedia(variantId);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.removeAllVariantMediaHandler.handle({ variantId: request.params.variantId });
+      return ResponseHelper.fromCommand(reply, result, "All variant media removed successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -134,44 +100,29 @@ export class VariantMediaController {
   async setVariantMedia(
     request: AuthenticatedRequest<{
       Params: { variantId: string };
-      Body: SetVariantMediaRequest;
+      Body: { assetIds: string[] };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-      const { assetIds } = request.body;
-
-      await this.variantMediaManagementService.setVariantMedia(
-        variantId,
-        assetIds,
-      );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.setVariantMediaHandler.handle({
+        variantId: request.params.variantId,
+        assetIds: request.body.assetIds,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Variant media set successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async addMediaToMultipleVariants(
-    request: AuthenticatedRequest<{ Body: AddMediaToMultipleVariantsRequest }>,
+    request: AuthenticatedRequest<{ Body: { variantIds: string[]; assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { variantIds, assetId } = request.body;
-
-      await this.variantMediaManagementService.addMediaToMultipleVariants(
-        variantIds,
-        assetId,
-      );
-
-      return ResponseHelper.created(
-        reply,
-        `Media added to ${variantIds.length} variants successfully`,
-      );
-    } catch (error) {
-
+      const result = await this.addMediaToMultipleVariantsHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Media added to variants successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -184,20 +135,12 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-      const { assetIds } = request.body;
-
-      await this.variantMediaManagementService.addMultipleMediaToVariant(
-        variantId,
-        assetIds,
-      );
-
-      return ResponseHelper.created(
-        reply,
-        `${assetIds.length} media assets added to variant successfully`,
-      );
-    } catch (error) {
-
+      const result = await this.addMultipleMediaToVariantHandler.handle({
+        variantId: request.params.variantId,
+        assetIds: request.body.assetIds,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Media assets added to variant successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -209,16 +152,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { sourceVariantId, targetVariantId } = request.params;
-
-      await this.variantMediaManagementService.duplicateVariantMedia(
-        sourceVariantId,
-        targetVariantId,
-      );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.duplicateVariantMediaHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Variant media duplicated successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -226,47 +162,31 @@ export class VariantMediaController {
   async getProductVariantMedia(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Querystring: VariantMediaQueryParams;
+      Querystring: VariantMediaServiceQueryOptions;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const options = request.query;
-
-      const productVariantMedia =
-        await this.variantMediaManagementService.getProductVariantMedia(
-          productId,
-          options,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Product variant media retrieved successfully",
-        productVariantMedia,
-      );
-    } catch (error) {
-
+      const productVariantMedia = await this.getProductVariantMediaHandler.handle({
+        productId: request.params.productId,
+        options: request.query,
+      });
+      return ResponseHelper.ok(reply, "Product variant media retrieved successfully", productVariantMedia);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async copyProductVariantMedia(
-    request: AuthenticatedRequest<{ Body: CopyProductVariantMediaRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { sourceProductId: string; targetProductId: string; variantMapping: Record<string, string> };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { sourceProductId, targetProductId, variantMapping } = request.body;
-
-      await this.variantMediaManagementService.copyProductVariantMedia(
-        sourceProductId,
-        targetProductId,
-        variantMapping,
-      );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.copyProductVariantMediaHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Product variant media copied successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -276,18 +196,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { assetId } = request.params;
-
-      const variantIds =
-        await this.variantMediaManagementService.getVariantsUsingAsset(assetId);
-
-      return ResponseHelper.ok(
-        reply,
-        "Variants using asset retrieved successfully",
-        variantIds,
-      );
-    } catch (error) {
-
+      const variantIds = await this.getVariantsUsingAssetHandler.handle({ assetId: request.params.assetId });
+      return ResponseHelper.ok(reply, "Variants using asset retrieved successfully", variantIds);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -297,18 +208,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { assetId } = request.params;
-
-      const usageCount =
-        await this.variantMediaManagementService.getAssetUsageCount(assetId);
-
-      return ResponseHelper.ok(
-        reply,
-        "Asset usage count retrieved successfully",
-        { assetId, usageCount },
-      );
-    } catch (error) {
-
+      const result = await this.getVariantMediaAssetUsageCountHandler.handle({ assetId: request.params.assetId });
+      return ResponseHelper.ok(reply, "Asset usage count retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -318,21 +220,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId, color } = request.params;
-
-      const colorVariantMedia =
-        await this.variantMediaManagementService.getColorVariantMedia(
-          productId,
-          decodeURIComponent(color),
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Color variant media retrieved successfully",
-        colorVariantMedia,
-      );
-    } catch (error) {
-
+      const colorVariantMedia = await this.getColorVariantMediaHandler.handle(request.params);
+      return ResponseHelper.ok(reply, "Color variant media retrieved successfully", colorVariantMedia);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -342,21 +232,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId, size } = request.params;
-
-      const sizeVariantMedia =
-        await this.variantMediaManagementService.getSizeVariantMedia(
-          productId,
-          decodeURIComponent(size),
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Size variant media retrieved successfully",
-        sizeVariantMedia,
-      );
-    } catch (error) {
-
+      const sizeVariantMedia = await this.getSizeVariantMediaHandler.handle(request.params);
+      return ResponseHelper.ok(reply, "Size variant media retrieved successfully", sizeVariantMedia);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -366,19 +244,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.query;
-
-      const unusedAssetIds =
-        await this.variantMediaManagementService.getUnusedAssets(productId);
-
-      return ResponseHelper.ok(reply, "Unused assets retrieved successfully", {
-        assets: unusedAssetIds,
-        meta: {
-          productId: productId || "all",
-        },
-      });
-    } catch (error) {
-
+      const result = await this.getUnusedVariantMediaAssetsHandler.handle(request.query);
+      return ResponseHelper.ok(reply, "Unused assets retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -388,20 +256,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-
-      const validation =
-        await this.variantMediaManagementService.validateVariantMedia(
-          variantId,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Variant media validated successfully",
-        validation,
-      );
-    } catch (error) {
-
+      const validation = await this.validateVariantMediaHandler.handle({ variantId: request.params.variantId });
+      return ResponseHelper.ok(reply, "Variant media validated successfully", validation);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -411,20 +268,9 @@ export class VariantMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { variantId } = request.params;
-
-      const statistics =
-        await this.variantMediaManagementService.getVariantMediaStatistics(
-          variantId,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Variant media statistics retrieved successfully",
-        statistics,
-      );
-    } catch (error) {
-
+      const statistics = await this.getVariantMediaStatisticsHandler.handle({ variantId: request.params.variantId });
+      return ResponseHelper.ok(reply, "Variant media statistics retrieved successfully", statistics);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

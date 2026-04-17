@@ -1,84 +1,31 @@
 import { FastifyInstance } from "fastify";
-import {
-  BackorderController,
-  CreateBackorderRequest,
-  GetBackorderRequest,
-  ListBackordersRequest,
-  UpdateBackorderEtaRequest,
-  MarkBackorderNotifiedRequest,
-  DeleteBackorderRequest,
-} from "../controllers/backorder.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { BackorderController } from "../controllers/backorder.controller";
 import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  backorderParamsSchema,
+  listBackordersQuerySchema,
+  createBackorderSchema,
+  updateBackorderEtaSchema,
+  backorderResponseSchema,
+} from "../validation/backorder.schema";
 
 const authenticateAdmin = [authenticateUser, RolePermissions.ADMIN_ONLY];
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
-
-const backorderDataSchema = {
-  type: "object",
-  properties: {
-    orderItemId: { type: "string", format: "uuid" },
-    promisedEta: { type: "string", format: "date-time", nullable: true },
-    notifiedAt: { type: "string", format: "date-time", nullable: true },
-    hasPromisedEta: { type: "boolean" },
-    isCustomerNotified: { type: "boolean" },
-  },
-};
 
 export async function registerBackorderRoutes(
   fastify: FastifyInstance,
   backorderController: BackorderController,
 ): Promise<void> {
   // Create backorder for an order item
-  fastify.post<CreateBackorderRequest>(
+  fastify.post(
     "/backorders",
     {
+      preValidation: [validateBody(createBackorderSchema)],
       preHandler: authenticateAdmin,
       schema: {
         description:
-          "Create a new backorder for an order item. Used for items that are temporarily out of stock but will be restocked soon.",
+          "Create a new backorder for an order item. Used for items that are temporarily out of stock.",
         tags: ["Backorders"],
         summary: "Create Backorder",
         security: [{ bearerAuth: [] }],
@@ -86,44 +33,33 @@ export async function registerBackorderRoutes(
           type: "object",
           required: ["orderItemId"],
           properties: {
-            orderItemId: {
-              type: "string",
-              format: "uuid",
-              description: "Order item ID",
-            },
-            promisedEta: {
-              type: "string",
-              format: "date-time",
-              description:
-                "Promised ETA for restocking (must be in the future)",
-            },
+            orderItemId: { type: "string", format: "uuid" },
+            promisedEta: { type: "string", format: "date-time" },
           },
         },
         response: {
           201: {
-            description: "Backorder created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: backorderDataSchema,
-              message: {
-                type: "string",
-                example: "Backorder created successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: backorderResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    backorderController.createBackorder.bind(backorderController),
+    (request, reply) =>
+      backorderController.createBackorder(request as AuthenticatedRequest, reply),
   );
 
   // Get backorder by order item ID
-  fastify.get<GetBackorderRequest>(
+  fastify.get(
     "/backorders/:orderItemId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(backorderParamsSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Get backorder details for a specific order item",
         tags: ["Backorders"],
@@ -131,32 +67,34 @@ export async function registerBackorderRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderItemId"],
           properties: {
             orderItemId: { type: "string", format: "uuid" },
           },
-          required: ["orderItemId"],
         },
         response: {
           200: {
-            description: "Backorder retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: backorderDataSchema,
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: backorderResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    backorderController.getBackorder.bind(backorderController),
+    (request, reply) =>
+      backorderController.getBackorder(request as AuthenticatedRequest, reply),
   );
 
   // List backorders with filtering
-  fastify.get<ListBackordersRequest>(
+  fastify.get(
     "/backorders",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateQuery(listBackordersQuerySchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Get paginated list of backorders with filtering options (all, notified, unnotified, overdue)",
@@ -166,52 +104,24 @@ export async function registerBackorderRoutes(
         querystring: {
           type: "object",
           properties: {
-            limit: {
-              type: "integer",
-              minimum: 1,
-              maximum: 100,
-              default: 20,
-              description: "Maximum number of backorders to return",
-            },
-            offset: {
-              type: "integer",
-              minimum: 0,
-              default: 0,
-              description: "Number of backorders to skip",
-            },
-            sortBy: {
-              type: "string",
-              enum: ["promisedEta", "notifiedAt"],
-              default: "promisedEta",
-              description: "Sort by field",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "asc",
-              description: "Sort order",
-            },
-            filterType: {
-              type: "string",
-              enum: ["all", "notified", "unnotified", "overdue"],
-              default: "all",
-              description: "Filter backorders by type",
-            },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+            sortBy: { type: "string", enum: ["promisedEta", "notifiedAt"], default: "promisedEta" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
+            filterType: { type: "string", enum: ["all", "notified", "unnotified", "overdue"], default: "all" },
           },
         },
         response: {
           200: {
-            description: "Backorders retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
-                  items: {
-                    type: "array",
-                    items: backorderDataSchema,
-                  },
+                  items: { type: "array", items: backorderResponseSchema },
                   total: { type: "integer" },
                   limit: { type: "integer" },
                   offset: { type: "integer" },
@@ -219,132 +129,114 @@ export async function registerBackorderRoutes(
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    backorderController.listBackorders.bind(backorderController),
+    (request, reply) =>
+      backorderController.listBackorders(request as AuthenticatedRequest, reply),
   );
 
   // Update backorder promised ETA
-  fastify.patch<UpdateBackorderEtaRequest>(
+  fastify.patch(
     "/backorders/:orderItemId/eta",
     {
-      preHandler: authenticateAdmin,
+      preValidation: [validateParams(backorderParamsSchema), validateBody(updateBackorderEtaSchema)],
+      preHandler: [...authenticateAdmin],
       schema: {
-        description: "Update the promised ETA for a backorder",
+        description: "Update the promised ETA for a backorder (Admin only)",
         tags: ["Backorders"],
         summary: "Update Backorder ETA",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderItemId"],
           properties: {
             orderItemId: { type: "string", format: "uuid" },
           },
-          required: ["orderItemId"],
         },
         body: {
           type: "object",
           required: ["promisedEta"],
           properties: {
-            promisedEta: {
-              type: "string",
-              format: "date-time",
-              description: "New promised ETA (must be in the future)",
-            },
+            promisedEta: { type: "string", format: "date-time" },
           },
         },
         response: {
           200: {
-            description: "Backorder ETA updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: backorderDataSchema,
-              message: {
-                type: "string",
-                example: "Backorder promised ETA updated successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: backorderResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    backorderController.updatePromisedEta.bind(backorderController),
+    (request, reply) =>
+      backorderController.updatePromisedEta(request as AuthenticatedRequest, reply),
   );
 
   // Mark backorder customer as notified
-  fastify.post<MarkBackorderNotifiedRequest>(
+  fastify.post(
     "/backorders/:orderItemId/notify",
     {
+      preValidation: [validateParams(backorderParamsSchema)],
       preHandler: authenticateAdmin,
       schema: {
-        description:
-          "Mark that the customer has been notified about the backorder availability",
+        description: "Mark that the customer has been notified about the backorder (Admin only)",
         tags: ["Backorders"],
         summary: "Mark Backorder as Notified",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderItemId"],
           properties: {
             orderItemId: { type: "string", format: "uuid" },
           },
-          required: ["orderItemId"],
         },
         response: {
           200: {
-            description: "Backorder marked as notified successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: backorderDataSchema,
-              message: {
-                type: "string",
-                example: "Backorder marked as notified successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: backorderResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    backorderController.markNotified.bind(backorderController),
+    (request, reply) =>
+      backorderController.markNotified(request as AuthenticatedRequest, reply),
   );
 
   // Delete backorder
-  fastify.delete<DeleteBackorderRequest>(
+  fastify.delete(
     "/backorders/:orderItemId",
     {
+      preValidation: [validateParams(backorderParamsSchema)],
       preHandler: authenticateAdmin,
       schema: {
-        description: "Delete a backorder",
+        description: "Delete a backorder (Admin only)",
         tags: ["Backorders"],
         summary: "Delete Backorder",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderItemId"],
           properties: {
             orderItemId: { type: "string", format: "uuid" },
           },
-          required: ["orderItemId"],
         },
         response: {
-          200: {
-            description: "Backorder deleted successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: {
-                type: "string",
-                example: "Backorder deleted successfully",
-              },
-            },
-          },
-          ...errorResponses,
+          204: { type: "null", description: "No Content" },
         },
       },
     },
-    backorderController.deleteBackorder.bind(backorderController),
+    (request, reply) =>
+      backorderController.deleteBackorder(request as AuthenticatedRequest, reply),
   );
 }

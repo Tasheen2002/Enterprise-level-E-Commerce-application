@@ -1,24 +1,29 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { ContactTypeEnum } from "../enums/engagement.enums";
+
 export class ContactType {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: ContactTypeEnum) {}
 
-  static email(): ContactType {
-    return new ContactType("email");
-  }
-
-  static phone(): ContactType {
-    return new ContactType("phone");
+  static create(value: string): ContactType {
+    return ContactType.fromString(value);
   }
 
   static fromString(value: string): ContactType {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "email":
-        return ContactType.email();
-      case "phone":
-        return ContactType.phone();
-      default:
-        throw new Error(`Invalid contact type: ${value}`);
+
+    if (!Object.values(ContactTypeEnum).includes(normalized as ContactTypeEnum)) {
+      throw new DomainValidationError(`Invalid contact type: ${value}`);
     }
+
+    return new ContactType(normalized as ContactTypeEnum);
+  }
+
+  static email(): ContactType {
+    return new ContactType(ContactTypeEnum.EMAIL);
+  }
+
+  static phone(): ContactType {
+    return new ContactType(ContactTypeEnum.PHONE);
   }
 
   getValue(): string {
@@ -26,11 +31,11 @@ export class ContactType {
   }
 
   isEmail(): boolean {
-    return this.value === "email";
+    return this.value === ContactTypeEnum.EMAIL;
   }
 
   isPhone(): boolean {
-    return this.value === "phone";
+    return this.value === ContactTypeEnum.PHONE;
   }
 
   equals(other: ContactType): boolean {

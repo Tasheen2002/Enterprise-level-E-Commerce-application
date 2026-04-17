@@ -1,19 +1,18 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ReservationService, ReservationDto } from "../services/reservation.service";
 
 export interface GetReservationsQuery extends IQuery {
-  cartId: string;
-  activeOnly?: boolean;
+  readonly cartId: string;
+  readonly activeOnly?: boolean;
 }
 
-export class GetReservationsHandler implements IQueryHandler<GetReservationsQuery, QueryResult<ReservationDto[]>> {
+export class GetReservationsHandler implements IQueryHandler<GetReservationsQuery, ReservationDto[]> {
   constructor(private readonly reservationService: ReservationService) {}
 
-  async handle(query: GetReservationsQuery): Promise<QueryResult<ReservationDto[]>> {
+  async handle(query: GetReservationsQuery): Promise<ReservationDto[]> {
     const activeOnly = query.activeOnly !== false;
-    const reservations = activeOnly
-      ? await this.reservationService.getActiveCartReservations(query.cartId)
-      : await this.reservationService.getCartReservations(query.cartId);
-    return QueryResult.success<ReservationDto[]>(reservations);
+    return activeOnly
+      ? this.reservationService.getActiveCartReservations(query.cartId)
+      : this.reservationService.getCartReservations(query.cartId);
   }
 }

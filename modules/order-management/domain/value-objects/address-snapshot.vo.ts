@@ -14,55 +14,31 @@ export interface AddressSnapshotData {
 }
 
 export class AddressSnapshot {
-  private readonly firstName: string;
-  private readonly lastName: string;
-  private readonly addressLine1: string;
-  private readonly addressLine2?: string;
-  private readonly city: string;
-  private readonly state: string;
-  private readonly postalCode: string;
-  private readonly country: string;
-  private readonly phone?: string;
-  private readonly email?: string;
+  private readonly props: AddressSnapshotData;
 
   private constructor(data: AddressSnapshotData) {
-    this.firstName = data.firstName;
-    this.lastName = data.lastName;
-    this.addressLine1 = data.addressLine1;
-    this.addressLine2 = data.addressLine2;
-    this.city = data.city;
-    this.state = data.state;
-    this.postalCode = data.postalCode;
-    this.country = data.country;
-    this.phone = data.phone;
-    this.email = data.email;
+    this.props = { ...data };
   }
 
   static create(data: AddressSnapshotData): AddressSnapshot {
     if (!data.firstName || data.firstName.trim().length === 0) {
       throw new DomainValidationError("First name is required");
     }
-
     if (!data.lastName || data.lastName.trim().length === 0) {
       throw new DomainValidationError("Last name is required");
     }
-
     if (!data.addressLine1 || data.addressLine1.trim().length === 0) {
       throw new DomainValidationError("Address line 1 is required");
     }
-
     if (!data.city || data.city.trim().length === 0) {
       throw new DomainValidationError("City is required");
     }
-
     if (!data.state || data.state.trim().length === 0) {
       throw new DomainValidationError("State is required");
     }
-
     if (!data.postalCode || data.postalCode.trim().length === 0) {
       throw new DomainValidationError("Postal code is required");
     }
-
     if (!data.country || data.country.trim().length === 0) {
       throw new DomainValidationError("Country is required");
     }
@@ -70,77 +46,38 @@ export class AddressSnapshot {
     return new AddressSnapshot(data);
   }
 
-  getFirstName(): string {
-    return this.firstName;
+  get firstName(): string { return this.props.firstName; }
+  get lastName(): string { return this.props.lastName; }
+  get fullName(): string { return `${this.props.firstName} ${this.props.lastName}`; }
+  get addressLine1(): string { return this.props.addressLine1; }
+  get addressLine2(): string | undefined { return this.props.addressLine2; }
+  get city(): string { return this.props.city; }
+  get state(): string { return this.props.state; }
+  get postalCode(): string { return this.props.postalCode; }
+  get country(): string { return this.props.country; }
+  get phone(): string | undefined { return this.props.phone; }
+  get email(): string | undefined { return this.props.email; }
+
+  getValue(): AddressSnapshotData {
+    return { ...this.props };
   }
 
-  getLastName(): string {
-    return this.lastName;
-  }
-
-  getFullName(): string {
-    return `${this.firstName} ${this.lastName}`;
-  }
-
-  getAddressLine1(): string {
-    return this.addressLine1;
-  }
-
-  getAddressLine2(): string | undefined {
-    return this.addressLine2;
-  }
-
-  getCity(): string {
-    return this.city;
-  }
-
-  getState(): string {
-    return this.state;
-  }
-
-  getPostalCode(): string {
-    return this.postalCode;
-  }
-
-  getCountry(): string {
-    return this.country;
-  }
-
-  getPhone(): string | undefined {
-    return this.phone;
-  }
-
-  getEmail(): string | undefined {
-    return this.email;
-  }
-
-  toJSON(): AddressSnapshotData {
-    return {
-      firstName: this.firstName,
-      lastName: this.lastName,
-      addressLine1: this.addressLine1,
-      addressLine2: this.addressLine2,
-      city: this.city,
-      state: this.state,
-      postalCode: this.postalCode,
-      country: this.country,
-      phone: this.phone,
-      email: this.email,
-    };
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 
   equals(other: AddressSnapshot): boolean {
     return (
-      this.firstName === other.firstName &&
-      this.lastName === other.lastName &&
-      this.addressLine1 === other.addressLine1 &&
-      this.addressLine2 === other.addressLine2 &&
-      this.city === other.city &&
-      this.state === other.state &&
-      this.postalCode === other.postalCode &&
-      this.country === other.country &&
-      this.phone === other.phone &&
-      this.email === other.email
+      this.props.firstName === other.props.firstName &&
+      this.props.lastName === other.props.lastName &&
+      this.props.addressLine1 === other.props.addressLine1 &&
+      this.props.addressLine2 === other.props.addressLine2 &&
+      this.props.city === other.props.city &&
+      this.props.state === other.props.state &&
+      this.props.postalCode === other.props.postalCode &&
+      this.props.country === other.props.country &&
+      this.props.phone === other.props.phone &&
+      this.props.email === other.props.email
     );
   }
 }

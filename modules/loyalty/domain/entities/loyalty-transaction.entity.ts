@@ -1,33 +1,45 @@
+import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { LoyaltyTransactionId } from '../value-objects/loyalty-transaction-id.vo';
 import { Points } from '../value-objects/points';
+import { LoyaltyTransactionType, LoyaltyTransactionReason } from '../enums/loyalty.enums';
 
-export enum TransactionType {
-  EARN = 'EARN',
-  REDEEM = 'REDEEM',
-  EXPIRE = 'EXPIRE',
-  ADJUST = 'ADJUST'
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class LoyaltyTransactionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly transactionId: string,
+    public readonly accountId: string,
+    public readonly type: LoyaltyTransactionType,
+    public readonly points: number,
+  ) {
+    super(transactionId, 'LoyaltyTransaction');
+  }
+
+  get eventType(): string { return 'loyalty-transaction.created'; }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      transactionId: this.transactionId,
+      accountId: this.accountId,
+      type: this.type,
+      points: this.points,
+    };
+  }
 }
 
-export enum TransactionReason {
-  PURCHASE = 'PURCHASE',
-  SIGNUP = 'SIGNUP',
-  REVIEW = 'REVIEW',
-  STYLE_QUIZ = 'STYLE_QUIZ',
-  OUTFIT_PHOTO = 'OUTFIT_PHOTO',
-  SOCIAL_SHARE = 'SOCIAL_SHARE',
-  BIRTHDAY = 'BIRTHDAY',
-  REFERRAL = 'REFERRAL',
-  DISCOUNT_REDEMPTION = 'DISCOUNT_REDEMPTION',
-  PRODUCT_REDEMPTION = 'PRODUCT_REDEMPTION',
-  EXPIRY = 'EXPIRY',
-  ADMIN_ADJUSTMENT = 'ADMIN_ADJUSTMENT'
-}
+// ============================================================================
+// Props & DTO
+// ============================================================================
 
 export interface LoyaltyTransactionProps {
-  transactionId: string;
+  id: LoyaltyTransactionId;
   accountId: string;
-  type: TransactionType;
+  type: LoyaltyTransactionType;
   points: Points;
-  reason: TransactionReason;
+  reason: LoyaltyTransactionReason;
   description: string | null;
   referenceId: string | null;
   orderId: string | null;
@@ -37,137 +49,90 @@ export interface LoyaltyTransactionProps {
   createdAt: Date;
 }
 
-export class LoyaltyTransaction {
-  private readonly props: LoyaltyTransactionProps;
+export interface LoyaltyTransactionDTO {
+  id: string;
+  accountId: string;
+  type: string;
+  points: number;
+  reason: string;
+  description: string | null;
+  referenceId: string | null;
+  orderId: string | null;
+  createdBy: string | null;
+  expiresAt: string | null;
+  balanceAfter: number;
+  createdAt: string;
+}
 
-  private constructor(props: LoyaltyTransactionProps) {
-    this.props = props;
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class LoyaltyTransaction extends AggregateRoot {
+  private constructor(private props: LoyaltyTransactionProps) {
+    super();
   }
 
-  static create(props: Omit<LoyaltyTransactionProps, 'createdAt'>): LoyaltyTransaction {
-    return new LoyaltyTransaction({
-      ...props,
-      createdAt: new Date()
+  static create(params: Omit<LoyaltyTransactionProps, 'id' | 'createdAt'>): LoyaltyTransaction {
+    const entity = new LoyaltyTransaction({
+      ...params,
+      id: LoyaltyTransactionId.create(),
+      createdAt: new Date(),
     });
+
+    entity.addDomainEvent(new LoyaltyTransactionCreatedEvent(
+      entity.props.id.getValue(),
+      entity.props.accountId,
+      entity.props.type,
+      entity.props.points.getValue(),
+    ));
+
+    return entity;
   }
 
-  static fromDatabaseRow(row: {
-    transaction_id: string;
-    account_id: string;
-    type: string;
-    points: number;
-    reason: string;
-    description: string | null;
-    reference_id: string | null;
-    order_id: string | null;
-    created_by: string | null;
-    expires_at: Date | null;
-    balance_after: number;
-    created_at: Date;
-  }): LoyaltyTransaction {
-    return new LoyaltyTransaction({
-      transactionId: row.transaction_id,
-      accountId: row.account_id,
-      type: row.type as TransactionType,
-      points: Points.create(Math.abs(row.points)),
-      reason: row.reason as TransactionReason,
-      description: row.description,
-      referenceId: row.reference_id,
-      orderId: row.order_id,
-      createdBy: row.created_by,
-      expiresAt: row.expires_at,
-      balanceAfter: row.balance_after,
-      createdAt: row.created_at
-    });
+  static fromPersistence(props: LoyaltyTransactionProps): LoyaltyTransaction {
+    return new LoyaltyTransaction(props);
   }
 
-  get transactionId(): string {
-    return this.props.transactionId;
-  }
+  get id(): LoyaltyTransactionId { return this.props.id; }
+  get accountId(): string { return this.props.accountId; }
+  get type(): LoyaltyTransactionType { return this.props.type; }
+  get points(): Points { return this.props.points; }
+  get reason(): LoyaltyTransactionReason { return this.props.reason; }
+  get description(): string | null { return this.props.description; }
+  get referenceId(): string | null { return this.props.referenceId; }
+  get orderId(): string | null { return this.props.orderId; }
+  get createdBy(): string | null { return this.props.createdBy; }
+  get expiresAt(): Date | null { return this.props.expiresAt; }
+  get balanceAfter(): number { return this.props.balanceAfter; }
+  get createdAt(): Date { return this.props.createdAt; }
 
-  get accountId(): string {
-    return this.props.accountId;
-  }
-
-  get type(): TransactionType {
-    return this.props.type;
-  }
-
-  get points(): Points {
-    return this.props.points;
-  }
-
-  get reason(): TransactionReason {
-    return this.props.reason;
-  }
-
-  get description(): string | null {
-    return this.props.description;
-  }
-
-  get referenceId(): string | null {
-    return this.props.referenceId;
-  }
-
-  get orderId(): string | null {
-    return this.props.orderId;
-  }
-
-  get createdBy(): string | null {
-    return this.props.createdBy;
-  }
-
-  get expiresAt(): Date | null {
-    return this.props.expiresAt;
-  }
-
-  get balanceAfter(): number {
-    return this.props.balanceAfter;
-  }
-
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
+  isEarn(): boolean { return this.props.type === LoyaltyTransactionType.EARN; }
+  isBurn(): boolean { return this.props.type === LoyaltyTransactionType.REDEEM; }
 
   isExpired(): boolean {
-    if (!this.props.expiresAt) {
-      return false;
-    }
+    if (!this.props.expiresAt) return false;
     return new Date() > this.props.expiresAt;
   }
 
-  toDatabaseRow(): {
-    transaction_id: string;
-    account_id: string;
-    type: string;
-    points: number;
-    reason: string;
-    description: string | null;
-    reference_id: string | null;
-    order_id: string | null;
-    created_by: string | null;
-    expires_at: Date | null;
-    balance_after: number;
-    created_at: Date;
-  } {
-    const pointsValue = this.props.type === TransactionType.REDEEM ||
-                        this.props.type === TransactionType.EXPIRE
-      ? -this.props.points.value
-      : this.props.points.value;
+  equals(other: LoyaltyTransaction): boolean {
+    return this.props.id.equals(other.props.id);
+  }
 
+  static toDTO(entity: LoyaltyTransaction): LoyaltyTransactionDTO {
     return {
-      transaction_id: this.props.transactionId,
-      account_id: this.props.accountId,
-      type: this.props.type,
-      points: pointsValue,
-      reason: this.props.reason,
-      description: this.props.description,
-      reference_id: this.props.referenceId,
-      order_id: this.props.orderId,
-      created_by: this.props.createdBy,
-      expires_at: this.props.expiresAt,
-      balance_after: this.props.balanceAfter,
-      created_at: this.props.createdAt
+      id: entity.props.id.getValue(),
+      accountId: entity.props.accountId,
+      type: entity.props.type,
+      points: entity.props.points.getValue(),
+      reason: entity.props.reason,
+      description: entity.props.description,
+      referenceId: entity.props.referenceId,
+      orderId: entity.props.orderId,
+      createdBy: entity.props.createdBy,
+      expiresAt: entity.props.expiresAt?.toISOString() ?? null,
+      balanceAfter: entity.props.balanceAfter,
+      createdAt: entity.props.createdAt.toISOString(),
     };
   }
 }

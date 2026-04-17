@@ -2,6 +2,11 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { SearchController } from "../controllers/search.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateQuery } from "../validation/validator";
 import {
   searchQuerySchema,
@@ -14,15 +19,26 @@ import {
   searchStatsResponseSchema,
 } from "../validation/search.schema";
 
-export async function registerSearchRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function searchRoutes(
   fastify: FastifyInstance,
   controller: SearchController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /search — Search products (public)
   fastify.get(
     "/search",
     {
-      preHandler: [validateQuery(searchQuerySchema)],
+      preValidation: [validateQuery(searchQuerySchema)],
       schema: {
         description: "Full-text search across products with filtering and sorting",
         tags: ["Search"],
@@ -48,6 +64,8 @@ export async function registerSearchRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: searchResultsResponseSchema,
             },
           },
@@ -61,7 +79,7 @@ export async function registerSearchRoutes(
   fastify.get(
     "/search/suggestions",
     {
-      preHandler: [validateQuery(searchSuggestionsQuerySchema)],
+      preValidation: [validateQuery(searchSuggestionsQuerySchema)],
       schema: {
         description: "Get autocomplete suggestions for a search query",
         tags: ["Search"],
@@ -80,6 +98,8 @@ export async function registerSearchRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: searchSuggestionsResponseSchema,
             },
           },
@@ -102,6 +122,8 @@ export async function registerSearchRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: popularSearchesResponseSchema,
             },
           },
@@ -115,7 +137,7 @@ export async function registerSearchRoutes(
   fastify.get(
     "/search/filters",
     {
-      preHandler: [validateQuery(searchFiltersQuerySchema)],
+      preValidation: [validateQuery(searchFiltersQuerySchema)],
       schema: {
         description: "Get available filters for search results",
         tags: ["Search"],
@@ -131,6 +153,8 @@ export async function registerSearchRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: searchFiltersResponseSchema,
             },
           },
@@ -155,6 +179,8 @@ export async function registerSearchRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: searchStatsResponseSchema,
             },
           },

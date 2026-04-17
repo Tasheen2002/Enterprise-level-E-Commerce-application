@@ -16,9 +16,17 @@ export class PickupReservationCreatedEvent extends DomainEvent {
   ) {
     super(reservationId, "PickupReservation");
   }
-  get eventType(): string { return "pickup_reservation.created"; }
+  get eventType(): string {
+    return "pickup_reservation.created";
+  }
   getPayload(): Record<string, unknown> {
-    return { reservationId: this.reservationId, orderId: this.orderId, variantId: this.variantId, locationId: this.locationId, qty: this.qty };
+    return {
+      reservationId: this.reservationId,
+      orderId: this.orderId,
+      variantId: this.variantId,
+      locationId: this.locationId,
+      qty: this.qty,
+    };
   }
 }
 
@@ -26,7 +34,9 @@ export class PickupReservationCancelledEvent extends DomainEvent {
   constructor(public readonly reservationId: string) {
     super(reservationId, "PickupReservation");
   }
-  get eventType(): string { return "pickup_reservation.cancelled"; }
+  get eventType(): string {
+    return "pickup_reservation.cancelled";
+  }
   getPayload(): Record<string, unknown> {
     return { reservationId: this.reservationId };
   }
@@ -36,7 +46,9 @@ export class PickupReservationExpiredEvent extends DomainEvent {
   constructor(public readonly reservationId: string) {
     super(reservationId, "PickupReservation");
   }
-  get eventType(): string { return "pickup_reservation.expired"; }
+  get eventType(): string {
+    return "pickup_reservation.expired";
+  }
   getPayload(): Record<string, unknown> {
     return { reservationId: this.reservationId };
   }
@@ -46,9 +58,29 @@ export class PickupReservationFulfilledEvent extends DomainEvent {
   constructor(public readonly reservationId: string) {
     super(reservationId, "PickupReservation");
   }
-  get eventType(): string { return "pickup_reservation.fulfilled"; }
+  get eventType(): string {
+    return "pickup_reservation.fulfilled";
+  }
   getPayload(): Record<string, unknown> {
     return { reservationId: this.reservationId };
+  }
+}
+
+export class PickupReservationExtendedEvent extends DomainEvent {
+  constructor(
+    public readonly reservationId: string,
+    public readonly newExpiresAt: Date,
+  ) {
+    super(reservationId, "PickupReservation");
+  }
+  get eventType(): string {
+    return "pickup_reservation.extended";
+  }
+  getPayload(): Record<string, unknown> {
+    return {
+      reservationId: this.reservationId,
+      newExpiresAt: this.newExpiresAt.toISOString(),
+    };
   }
 }
 
@@ -70,7 +102,7 @@ export interface PickupReservationDTO {
   variantId: string;
   locationId: string;
   qty: number;
-  expiresAt: Date;
+  expiresAt: string;
   status: string;
   isActive: boolean;
   isExpired: boolean;
@@ -81,12 +113,16 @@ export interface PickupReservationDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PickupReservation extends AggregateRoot {
-  private props: PickupReservationProps;
-
-  private constructor(props: PickupReservationProps) {
+  private constructor(private props: PickupReservationProps) {
     super();
-    this.props = props;
-    this.validate();
+  }
+
+  private static validateQty(qty: number): void {
+    if (qty <= 0) {
+      throw new DomainValidationError(
+        "Reservation quantity must be greater than zero",
+      );
+    }
   }
 
   static create(params: {
@@ -96,6 +132,7 @@ export class PickupReservation extends AggregateRoot {
     qty: number;
     expiresAt: Date;
   }): PickupReservation {
+    PickupReservation.validateQty(params.qty);
     const reservation = new PickupReservation({
       reservationId: ReservationId.create(),
       orderId: params.orderId,
@@ -121,21 +158,29 @@ export class PickupReservation extends AggregateRoot {
     return new PickupReservation(props);
   }
 
-  private validate(): void {
-    if (this.props.qty <= 0) {
-      throw new DomainValidationError("Reservation quantity must be greater than zero");
-    }
-  }
-
   // ── Getters ────────────────────────────────────────────────────────
 
-  get reservationId(): ReservationId { return this.props.reservationId; }
-  get orderId(): string { return this.props.orderId; }
-  get variantId(): string { return this.props.variantId; }
-  get locationId(): string { return this.props.locationId; }
-  get qty(): number { return this.props.qty; }
-  get expiresAt(): Date { return this.props.expiresAt; }
-  get status(): ReservationStatusVO { return this.props.status; }
+  get reservationId(): ReservationId {
+    return this.props.reservationId;
+  }
+  get orderId(): string {
+    return this.props.orderId;
+  }
+  get variantId(): string {
+    return this.props.variantId;
+  }
+  get locationId(): string {
+    return this.props.locationId;
+  }
+  get qty(): number {
+    return this.props.qty;
+  }
+  get expiresAt(): Date {
+    return this.props.expiresAt;
+  }
+  get status(): ReservationStatusVO {
+    return this.props.status;
+  }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
@@ -164,12 +209,22 @@ export class PickupReservation extends AggregateRoot {
 
   extendExpiration(newExpiresAt: Date): void {
     if (newExpiresAt <= this.props.expiresAt) {
-      throw new InvalidOperationError("New expiration must be later than current expiration");
+      throw new InvalidOperationError(
+        "New expiration must be later than current expiration",
+      );
     }
     if (!this.isActive()) {
-      throw new InvalidOperationError("Cannot extend expiration of non-active reservation");
+      throw new InvalidOperationError(
+        "Cannot extend expiration of non-active reservation",
+      );
     }
     this.props.expiresAt = newExpiresAt;
+    this.addDomainEvent(
+      new PickupReservationExtendedEvent(
+        this.props.reservationId.getValue(),
+        newExpiresAt,
+      ),
+    );
   }
 
   cancel(): void {
@@ -184,7 +239,9 @@ export class PickupReservation extends AggregateRoot {
 
   markAsExpired(): void {
     if (!this.isActive()) {
-      throw new InvalidOperationError("Can only mark active reservations as expired");
+      throw new InvalidOperationError(
+        "Can only mark active reservations as expired",
+      );
     }
     this.props.status = ReservationStatusVO.expired();
     this.addDomainEvent(
@@ -215,7 +272,7 @@ export class PickupReservation extends AggregateRoot {
       variantId: entity.props.variantId,
       locationId: entity.props.locationId,
       qty: entity.props.qty,
-      expiresAt: entity.props.expiresAt,
+      expiresAt: entity.props.expiresAt.toISOString(),
       status: entity.props.status.getValue(),
       isActive: entity.isActive(),
       isExpired: entity.isExpired(),

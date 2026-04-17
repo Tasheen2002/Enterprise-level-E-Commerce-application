@@ -9,7 +9,7 @@ import {
   IProductSnapshotFactory,
   ICheckoutCompletionPort,
   CheckoutOrderResult,
-} from "../../domain/external-services";
+} from "../../domain/ports/external-services";
 import {
   CartNotFoundError,
   CheckoutNotFoundError,
@@ -19,7 +19,7 @@ import {
   DomainValidationError,
 } from "../../domain/errors/cart.errors";
 
-export interface CompleteCheckoutWithOrderDto {
+interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
   paymentIntentId: string;
   userId?: string;

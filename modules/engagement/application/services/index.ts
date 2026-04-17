@@ -1,7 +1,6 @@
-// Barrel for application services
-export { WishlistManagementService } from "./wishlist-management.service.js";
-export { ReminderManagementService } from "./reminder-management.service.js";
-export { NotificationService } from "./notification.service.js";
-export { AppointmentService } from "./appointment.service.js";
-export { ProductReviewService } from "./product-review.service.js";
-export { NewsletterService } from "./newsletter.service.js";
+export { WishlistManagementService } from "./wishlist-management.service";
+export { ReminderManagementService } from "./reminder-management.service";
+export { NotificationService } from "./notification.service";
+export { AppointmentService } from "./appointment.service";
+export { ProductReviewService } from "./product-review.service";
+export { NewsletterService } from "./newsletter.service";

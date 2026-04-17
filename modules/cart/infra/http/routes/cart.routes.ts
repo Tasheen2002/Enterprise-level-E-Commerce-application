@@ -1,58 +1,52 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { CartController } from "../controllers/cart.controller";
 import {
-  CartController,
-  AddToCartRequest,
-  UpdateCartItemRequest,
-  CreateCartRequest,
-  TransferCartRequest,
-  CartQueryParams,
-  UpdateCartEmailBody,
-  UpdateCartShippingInfoBody,
-  UpdateCartAddressesBody,
-} from "../controllers/cart.controller";
+  requireRole,
+  RolePermissions,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
-  optionalAuth,
-  requireAdmin,
-  authenticateUser,
-} from "@/api/src/shared/middleware";
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
   extractGuestToken,
   requireCartAuth,
 } from "../middleware/cart-auth.middleware";
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  cartIdParamsSchema,
+  userIdParamsSchema,
+  guestTokenParamsSchema,
+  cartItemParamsSchema,
+  createUserCartSchema,
+  createGuestCartSchema,
+  addToCartSchema,
+  updateCartItemSchema,
+  transferCartSchema,
+  updateCartEmailSchema,
+  updateCartShippingInfoSchema,
+  updateCartAddressesSchema,
+  cartResponseSchema,
+} from "../validation/cart.schema";
 
-const authErrorResponses = {
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-      code: { type: "string", example: "AUTHENTICATION_ERROR" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-      code: { type: "string", example: "INSUFFICIENT_PERMISSIONS" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
-export async function registerCartRoutes(
+export async function cartRoutes(
   fastify: FastifyInstance,
   cartController: CartController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // Generate guest token
   fastify.get(
     "/generate-guest-token",
@@ -63,196 +57,37 @@ export async function registerCartRoutes(
         summary: "Generate Guest Token",
         response: {
           200: {
-            description: "Guest token generated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
-                  guestToken: {
-                    type: "string",
-                    example:
-                      "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
-                  },
+                  guestToken: { type: "string" },
                 },
               },
             },
           },
-          500: authErrorResponses[500],
         },
       },
     },
-    cartController.generateGuestToken.bind(cartController),
+    (request, reply) =>
+      cartController.generateGuestToken(request as AuthenticatedRequest, reply),
   );
 
-  // Get cart by ID
-  fastify.get<{ Params: { cartId: string }; Querystring: CartQueryParams }>(
+  // GET /carts/:cartId — Get cart by ID
+  fastify.get(
     "/carts/:cartId",
     {
+      preValidation: [validateParams(cartIdParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Get cart details by cart ID. Requires authentication - provide either Bearer token (for user carts) or X-Guest-Token header (for guest carts).",
+        description: "Get cart details by cart ID.",
         tags: ["Cart"],
         summary: "Get Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid", description: "Cart ID" },
-          },
-        },
-        response: {
-          200: {
-            description: "Cart retrieved successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: {
-                type: "object",
-                properties: {
-                  cartId: { type: "string", format: "uuid" },
-                  userId: { type: "string", format: "uuid", nullable: true },
-                  guestToken: { type: "string", nullable: true },
-                  currency: { type: "string", example: "USD" },
-                  items: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        id: { type: "string", format: "uuid" },
-                        cartItemId: { type: "string", format: "uuid" },
-                        variantId: { type: "string", format: "uuid" },
-                        quantity: { type: "integer", example: 2 },
-                        unitPrice: { type: "number", example: 29.99 },
-                        subtotal: { type: "number", example: 59.98 },
-                        discountAmount: { type: "number", example: 0 },
-                        totalPrice: { type: "number", example: 59.98 },
-                        appliedPromos: {
-                          type: "array",
-                          items: { type: "object" },
-                        },
-                        isGift: { type: "boolean", example: false },
-                        giftMessage: { type: "string", nullable: true },
-                        hasPromosApplied: { type: "boolean", example: false },
-                        hasFreeShipping: { type: "boolean", example: false },
-                        product: {
-                          type: "object",
-                          nullable: true,
-                          properties: {
-                            productId: { type: "string", format: "uuid" },
-                            title: {
-                              type: "string",
-                              example: "V-Neck Knit Vest",
-                            },
-                            slug: {
-                              type: "string",
-                              example: "v-neck-knit-vest",
-                            },
-                            images: {
-                              type: "array",
-                              items: {
-                                type: "object",
-                                properties: {
-                                  url: { type: "string" },
-                                  alt: { type: "string", nullable: true },
-                                },
-                              },
-                            },
-                          },
-                        },
-                        variant: {
-                          type: "object",
-                          nullable: true,
-                          properties: {
-                            size: { type: "string", nullable: true },
-                            color: { type: "string", nullable: true },
-                            sku: { type: "string" },
-                          },
-                        },
-                      },
-                    },
-                  },
-                  summary: {
-                    type: "object",
-                    properties: {
-                      itemCount: { type: "integer", example: 5 },
-                      subtotal: { type: "number", example: 149.95 },
-                      discount: { type: "number", example: 10.0 },
-                      total: { type: "number", example: 139.95 },
-                    },
-                  },
-                  email: { type: "string", format: "email", nullable: true },
-                  shippingMethod: { type: "string", nullable: true },
-                  shippingOption: { type: "string", nullable: true },
-                  isGift: { type: "boolean", nullable: true },
-                  shippingFirstName: { type: "string", nullable: true },
-                  shippingLastName: { type: "string", nullable: true },
-                  shippingAddress1: { type: "string", nullable: true },
-                  shippingAddress2: { type: "string", nullable: true },
-                  shippingCity: { type: "string", nullable: true },
-                  shippingProvince: { type: "string", nullable: true },
-                  shippingPostalCode: { type: "string", nullable: true },
-                  shippingCountryCode: { type: "string", nullable: true },
-                  shippingPhone: { type: "string", nullable: true },
-                  billingFirstName: { type: "string", nullable: true },
-                  billingLastName: { type: "string", nullable: true },
-                  billingAddress1: { type: "string", nullable: true },
-                  billingAddress2: { type: "string", nullable: true },
-                  billingCity: { type: "string", nullable: true },
-                  billingProvince: { type: "string", nullable: true },
-                  billingPostalCode: { type: "string", nullable: true },
-                  billingCountryCode: { type: "string", nullable: true },
-                  billingPhone: { type: "string", nullable: true },
-                  sameAddressForBilling: { type: "boolean", nullable: true },
-                  createdAt: { type: "string", format: "date-time" },
-                  updatedAt: { type: "string", format: "date-time" },
-                },
-              },
-            },
-          },
-          404: {
-            description: "Cart not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Cart not found" },
-            },
-          },
-          403: authErrorResponses[403],
-          500: authErrorResponses[500],
-        },
-      },
-    },
-    cartController.getCart.bind(cartController),
-  );
-
-  // Get cart summary
-  fastify.get<{
-    Params: { cartId: string };
-    Querystring: CartQueryParams;
-  }>(
-    "/carts/:cartId/summary",
-    {
-      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
-      schema: {
-        description:
-          "Get cart summary (totals, item count, etc.). Requires either Authorization header or X-Guest-Token header.",
-        tags: ["Cart"],
-        summary: "Get Cart Summary",
-        security: [{ bearerAuth: [] }],
-        headers: {
-          type: "object",
-          properties: {
-            "X-Guest-Token": {
-              type: "string",
-              description: "Guest token for unauthenticated users",
-              pattern: "^[a-f0-9]{64}$",
-            },
-          },
-        },
         params: {
           type: "object",
           required: ["cartId"],
@@ -262,35 +97,64 @@ export async function registerCartRoutes(
         },
         response: {
           200: {
-            description: "Cart summary retrieved",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          404: {
-            description: "Cart not found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Cart not found" },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.getCartSummary.bind(cartController),
+    (request, reply) =>
+      cartController.getCart(request as AuthenticatedRequest, reply),
   );
 
-  // Get active cart by user ID
-  fastify.get<{ Params: { userId: string } }>(
+  // GET /carts/:cartId/summary — Get cart summary
+  fastify.get(
+    "/carts/:cartId/summary",
+    {
+      preValidation: [validateParams(cartIdParamsSchema)],
+      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
+      schema: {
+        description: "Get cart summary (totals, item count, etc.).",
+        tags: ["Cart"],
+        summary: "Get Cart Summary",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["cartId"],
+          properties: {
+            cartId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
+            },
+          },
+        },
+      },
+    },
+    (request, reply) =>
+      cartController.getCartSummary(request as AuthenticatedRequest, reply),
+  );
+
+  // GET /users/:userId/cart — Get active cart by user ID
+  fastify.get(
     "/users/:userId/cart",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(userIdParamsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Get active cart for a user (requires authentication)",
+        description: "Get active cart for a user",
         tags: ["Cart"],
         summary: "Get User Cart",
         security: [{ bearerAuth: [] }],
@@ -298,106 +162,74 @@ export async function registerCartRoutes(
           type: "object",
           required: ["userId"],
           properties: {
-            userId: { type: "string", format: "uuid", description: "User ID" },
+            userId: { type: "string", format: "uuid" },
           },
         },
         response: {
           200: {
-            description: "Cart retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          404: {
-            description: "No active cart found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: {
-                type: "string",
-                example: "No active cart found for this user",
-              },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.getActiveCartByUser.bind(cartController),
+    (request, reply) =>
+      cartController.getActiveCartByUser(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
-  // Get active cart by guest token
-  fastify.get<{ Params: { guestToken: string } }>(
+  // GET /guests/:guestToken/cart — Get active cart by guest token
+  fastify.get(
     "/guests/:guestToken/cart",
     {
+      preValidation: [validateParams(guestTokenParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Get active cart for a guest. WARNING: Do NOT provide Authorization header - this endpoint is for guest users only. If you are logged in (have a bearer token), you must logout first.",
+        description: "Get active cart for a guest.",
         tags: ["Cart"],
         summary: "Get Guest Cart",
-        security: [{ bearerAuth: [] }, {}],
         params: {
           type: "object",
           required: ["guestToken"],
           properties: {
-            guestToken: { type: "string", description: "Guest token" },
+            guestToken: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Cart retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          400: {
-            description:
-              "Bad request - Authenticated user cannot access guest cart",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Bad Request" },
-              message: {
-                type: "string",
-                example:
-                  "Authenticated users cannot access guest carts. Use the user cart endpoint instead.",
-              },
-              code: {
-                type: "string",
-                example: "AUTHENTICATED_USER_CANNOT_ACCESS_GUEST_CART",
-              },
-            },
-          },
-          404: {
-            description: "No active cart found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: {
-                type: "string",
-                example: "No active cart found for this guest",
-              },
-            },
-          },
-          500: authErrorResponses[500],
         },
       },
     },
-    cartController.getActiveCartByGuestToken.bind(cartController),
+    (request, reply) =>
+      cartController.getActiveCartByGuestToken(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
-  // Create user cart
-  fastify.post<{ Params: { userId: string }; Body: CreateCartRequest }>(
+  // POST /users/:userId/cart — Create user cart
+  fastify.post(
     "/users/:userId/cart",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(userIdParamsSchema), validateBody(createUserCartSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Create a new cart for a user (requires authentication)",
+        description: "Create a new cart for a user",
         tags: ["Cart"],
         summary: "Create User Cart",
         security: [{ bearerAuth: [] }],
@@ -405,197 +237,121 @@ export async function registerCartRoutes(
           type: "object",
           required: ["userId"],
           properties: {
-            userId: { type: "string", format: "uuid", description: "User ID" },
+            userId: { type: "string", format: "uuid" },
           },
         },
         body: {
           type: "object",
           properties: {
-            currency: { type: "string", default: "USD", example: "USD" },
-            reservationDurationMinutes: { type: "integer", example: 30 },
+            currency: { type: "string", default: "USD" },
+            reservationDurationMinutes: { type: "integer" },
           },
         },
         response: {
           201: {
-            description: "Cart created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.createUserCart.bind(cartController),
+    (request, reply) =>
+      cartController.createUserCart(request as AuthenticatedRequest, reply),
   );
 
-  // Create guest cart
-  fastify.post<{ Params: { guestToken: string }; Body: CreateCartRequest }>(
+  // POST /guests/:guestToken/cart — Create guest cart
+  fastify.post(
     "/guests/:guestToken/cart",
     {
+      preValidation: [validateParams(guestTokenParamsSchema), validateBody(createGuestCartSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Create a new cart for a guest. WARNING: Do NOT provide Authorization header - this endpoint is for guest users only. If you are logged in (have a bearer token), you must logout first.",
+        description: "Create a new cart for a guest.",
         tags: ["Cart"],
         summary: "Create Guest Cart",
-        security: [{ bearerAuth: [] }, {}],
         params: {
           type: "object",
           required: ["guestToken"],
           properties: {
-            guestToken: { type: "string", description: "Guest token" },
+            guestToken: { type: "string" },
           },
         },
         body: {
           type: "object",
           properties: {
-            currency: { type: "string", default: "USD", example: "USD" },
-            reservationDurationMinutes: { type: "integer", example: 30 },
+            currency: { type: "string", default: "USD" },
+            reservationDurationMinutes: { type: "integer" },
           },
         },
         response: {
           201: {
-            description: "Cart created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          400: {
-            description:
-              "Bad request - Authenticated user cannot create guest cart",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Bad Request" },
-              message: {
-                type: "string",
-                example:
-                  "Authenticated users cannot create guest carts. Use the user cart endpoint instead.",
-              },
-              code: {
-                type: "string",
-                example: "AUTHENTICATED_USER_CANNOT_CREATE_GUEST_CART",
-              },
-            },
-          },
-          500: authErrorResponses[500],
         },
       },
     },
-    cartController.createGuestCart.bind(cartController),
+    (request, reply) =>
+      cartController.createGuestCart(request as AuthenticatedRequest, reply),
   );
 
-  // Add item to cart
-  fastify.post<{ Body: AddToCartRequest }>(
+  // POST /cart/items — Add item to cart
+  fastify.post(
     "/cart/items",
     {
+      preValidation: [validateBody(addToCartSchema)],
       preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
-        description:
-          "Add an item to cart. Cart will be automatically created if it doesn't exist. Requires either Bearer token authentication (for registered users) or X-Guest-Token header (for guest users).",
+        description: "Add an item to cart.",
         tags: ["Cart"],
         summary: "Add to Cart",
         security: [{ bearerAuth: [] }],
-        headers: {
-          type: "object",
-          properties: {
-            authorization: {
-              type: "string",
-              description: "Bearer token for registered users",
-            },
-            "x-guest-token": {
-              type: "string",
-              description:
-                "Guest token (64-char hex). Get from /generate-guest-token endpoint.",
-              pattern: "^[a-f0-9]{64}$",
-            },
-          },
-          additionalProperties: true,
-        },
         body: {
           type: "object",
           required: ["variantId", "quantity"],
           properties: {
-            cartId: {
-              type: "string",
-              format: "uuid",
-              description: "Cart ID (optional for guest users)",
-            },
-            variantId: {
-              type: "string",
-              format: "uuid",
-              description: "Product variant ID",
-            },
-            quantity: { type: "integer", minimum: 1, example: 2 },
-            appliedPromos: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  id: { type: "string" },
-                  code: { type: "string" },
-                  type: {
-                    type: "string",
-                    enum: [
-                      "percentage",
-                      "fixed_amount",
-                      "free_shipping",
-                      "buy_x_get_y",
-                    ],
-                  },
-                  value: { type: "number" },
-                  description: { type: "string" },
-                  appliedAt: { type: "string", format: "date-time" },
-                },
-              },
-            },
+            cartId: { type: "string", format: "uuid" },
+            variantId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
             isGift: { type: "boolean", default: false },
             giftMessage: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Item added to cart successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          400: {
-            description: "Bad request",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string" },
-              errors: { type: "array", items: { type: "string" } },
-            },
-          },
-          401: authErrorResponses[401],
-          403: authErrorResponses[403],
-          500: authErrorResponses[500],
         },
       },
     },
-    cartController.addToCart.bind(cartController),
+    (request, reply) =>
+      cartController.addToCart(request as AuthenticatedRequest, reply),
   );
 
-  // Update cart item
-  fastify.put<{
-    Params: { cartId: string; variantId: string };
-    Body: UpdateCartItemRequest;
-    Querystring: CartQueryParams;
-  }>(
+  // PATCH /carts/:cartId/items/:variantId — Update cart item
+  fastify.patch(
     "/carts/:cartId/items/:variantId",
     {
+      preValidation: [validateParams(cartItemParamsSchema), validateBody(updateCartItemSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description: "Update cart item quantity. Requires authentication.",
+        description: "Update cart item quantity.",
         tags: ["Cart"],
         summary: "Update Cart Item",
         security: [{ bearerAuth: [] }],
@@ -611,35 +367,34 @@ export async function registerCartRoutes(
           type: "object",
           required: ["quantity"],
           properties: {
-            quantity: { type: "integer", minimum: 0, example: 3 },
+            quantity: { type: "integer", minimum: 0 },
           },
         },
         response: {
           200: {
-            description: "Cart item updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.updateCartItem.bind(cartController),
+    (request, reply) =>
+      cartController.updateCartItem(request as AuthenticatedRequest, reply),
   );
 
-  // Remove item from cart
-  fastify.delete<{
-    Params: { cartId: string; variantId: string };
-    Querystring: CartQueryParams;
-  }>(
+  // DELETE /carts/:cartId/items/:variantId — Remove item from cart
+  fastify.delete(
     "/carts/:cartId/items/:variantId",
     {
+      preValidation: [validateParams(cartItemParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description: "Remove item from cart. Requires authentication.",
+        description: "Remove item from cart.",
         tags: ["Cart"],
         summary: "Remove from Cart",
         security: [{ bearerAuth: [] }],
@@ -652,28 +407,25 @@ export async function registerCartRoutes(
           },
         },
         response: {
-          200: {
+          204: {
             description: "Item removed from cart successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-            },
+            type: "null",
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.removeFromCart.bind(cartController),
+    (request, reply) =>
+      cartController.removeFromCart(request as AuthenticatedRequest, reply),
   );
 
-  // Clear user cart
-  fastify.delete<{ Params: { userId: string } }>(
+  // DELETE /users/:userId/cart — Clear user cart
+  fastify.delete(
     "/users/:userId/cart",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(userIdParamsSchema)],
+      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
-        description: "Clear all items from user cart (requires authentication)",
+        description: "Clear all items from user cart",
         tags: ["Cart"],
         summary: "Clear User Cart",
         security: [{ bearerAuth: [] }],
@@ -681,107 +433,58 @@ export async function registerCartRoutes(
           type: "object",
           required: ["userId"],
           properties: {
-            userId: { type: "string", format: "uuid", description: "User ID" },
+            userId: { type: "string", format: "uuid" },
           },
         },
         response: {
-          200: {
+          204: {
             description: "Cart cleared successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-            },
+            type: "null",
           },
-          404: {
-            description: "No active cart found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: {
-                type: "string",
-                example: "No active cart found for this user",
-              },
-            },
-          },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.clearUserCart.bind(cartController),
+    (request, reply) =>
+      cartController.clearUserCart(request as AuthenticatedRequest, reply),
   );
 
-  // Clear guest cart
-  fastify.delete<{ Params: { guestToken: string } }>(
+  // DELETE /guests/:guestToken/cart — Clear guest cart
+  fastify.delete(
     "/guests/:guestToken/cart",
     {
+      preValidation: [validateParams(guestTokenParamsSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Clear all items from guest cart. WARNING: Do NOT provide Authorization header - this endpoint is for guest users only.",
+        description: "Clear all items from guest cart.",
         tags: ["Cart"],
         summary: "Clear Guest Cart",
-        security: [{ bearerAuth: [] }, {}],
         params: {
           type: "object",
           required: ["guestToken"],
           properties: {
-            guestToken: { type: "string", description: "Guest token" },
+            guestToken: { type: "string" },
           },
         },
         response: {
-          200: {
+          204: {
             description: "Cart cleared successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-            },
+            type: "null",
           },
-          400: {
-            description:
-              "Bad request - Authenticated user cannot clear guest cart",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: { type: "string", example: "Bad Request" },
-              message: {
-                type: "string",
-                example:
-                  "Authenticated users cannot clear guest carts. Use the user cart endpoint instead.",
-              },
-              code: {
-                type: "string",
-                example: "AUTHENTICATED_USER_CANNOT_CLEAR_GUEST_CART",
-              },
-            },
-          },
-          404: {
-            description: "No active cart found",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: false },
-              error: {
-                type: "string",
-                example: "No active cart found for this guest",
-              },
-            },
-          },
-          500: authErrorResponses[500],
         },
       },
     },
-    cartController.clearGuestCart.bind(cartController),
+    (request, reply) =>
+      cartController.clearGuestCart(request as AuthenticatedRequest, reply),
   );
 
-  // Transfer guest cart to user
-  fastify.post<{ Params: { guestToken: string }; Body: TransferCartRequest }>(
+  // POST /guests/:guestToken/cart/transfer — Transfer guest cart to user
+  fastify.post(
     "/guests/:guestToken/cart/transfer",
     {
+      preValidation: [validateParams(guestTokenParamsSchema), validateBody(transferCartSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Transfer guest cart to authenticated user. This endpoint can optionally use Bearer token to verify the user.",
+        description: "Transfer guest cart to authenticated user.",
         tags: ["Cart"],
         summary: "Transfer Cart",
         security: [{ bearerAuth: [] }],
@@ -802,25 +505,29 @@ export async function registerCartRoutes(
         },
         response: {
           200: {
-            description: "Cart transferred successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.transferGuestCartToUser.bind(cartController),
+    (request, reply) =>
+      cartController.transferGuestCartToUser(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
-  // Get cart statistics (admin)
+  // GET /admin/carts/statistics — Cart statistics (admin)
   fastify.get(
     "/admin/carts/statistics",
     {
-      preHandler: [requireAdmin],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get cart statistics (admin only)",
         tags: ["Cart Admin"],
@@ -828,25 +535,26 @@ export async function registerCartRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            description: "Statistics retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.getCartStatistics.bind(cartController),
+    (request, reply) =>
+      cartController.getCartStatistics(request as AuthenticatedRequest, reply),
   );
 
-  // Cleanup expired carts (admin)
+  // POST /admin/carts/cleanup — Cleanup expired carts (admin)
   fastify.post(
     "/admin/carts/cleanup",
     {
-      preHandler: [requireAdmin],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Cleanup expired carts (admin only)",
         tags: ["Cart Admin"],
@@ -854,10 +562,11 @@ export async function registerCartRoutes(
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            description: "Cleanup completed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -866,35 +575,27 @@ export async function registerCartRoutes(
               },
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.cleanupExpiredCarts.bind(cartController),
+    (request, reply) =>
+      cartController.cleanupExpiredCarts(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
-  // Update cart email
-  fastify.patch<{ Params: { cartId: string }; Body: UpdateCartEmailBody }>(
+  // PATCH /carts/:cartId/email — Update cart email
+  fastify.patch(
     "/carts/:cartId/email",
     {
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartEmailSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Update cart email address. Requires either Authorization header (for authenticated users) or X-Guest-Token header (for guest users).",
+        description: "Update cart email address.",
         tags: ["Cart"],
         summary: "Update Cart Email",
         security: [{ bearerAuth: [] }],
-        headers: {
-          type: "object",
-          properties: {
-            "X-Guest-Token": {
-              type: "string",
-              description:
-                "Guest token for unauthenticated users (64-character hexadecimal string)",
-              pattern: "^[a-f0-9]{64}$",
-            },
-          },
-        },
         params: {
           type: "object",
           required: ["cartId"],
@@ -911,45 +612,32 @@ export async function registerCartRoutes(
         },
         response: {
           200: {
-            description: "Cart email updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.updateCartEmail.bind(cartController),
+    (request, reply) =>
+      cartController.updateCartEmail(request as AuthenticatedRequest, reply),
   );
 
-  // Update cart shipping info
-  fastify.patch<{
-    Params: { cartId: string };
-    Body: UpdateCartShippingInfoBody;
-  }>(
+  // PATCH /carts/:cartId/shipping — Update cart shipping info
+  fastify.patch(
     "/carts/:cartId/shipping",
     {
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartShippingInfoSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Update cart shipping information. Requires either Authorization header (for authenticated users) or X-Guest-Token header (for guest users).",
+        description: "Update cart shipping information.",
         tags: ["Cart"],
         summary: "Update Cart Shipping Info",
         security: [{ bearerAuth: [] }],
-        headers: {
-          type: "object",
-          properties: {
-            "X-Guest-Token": {
-              type: "string",
-              description:
-                "Guest token for unauthenticated users (64-character hexadecimal string)",
-              pattern: "^[a-f0-9]{64}$",
-            },
-          },
-        },
         params: {
           type: "object",
           required: ["cartId"],
@@ -967,42 +655,35 @@ export async function registerCartRoutes(
         },
         response: {
           200: {
-            description: "Cart shipping info updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.updateCartShippingInfo.bind(cartController),
+    (request, reply) =>
+      cartController.updateCartShippingInfo(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
-  // Update cart addresses
-  fastify.patch<{ Params: { cartId: string }; Body: UpdateCartAddressesBody }>(
+  // PATCH /carts/:cartId/addresses — Update cart addresses
+  fastify.patch(
     "/carts/:cartId/addresses",
     {
+      preValidation: [validateParams(cartIdParamsSchema), validateBody(updateCartAddressesSchema)],
       preHandler: [optionalAuth, extractGuestToken],
       schema: {
-        description:
-          "Update cart shipping and billing addresses. Requires either Authorization header (for authenticated users) or X-Guest-Token header (for guest users).",
+        description: "Update cart shipping and billing addresses.",
         tags: ["Cart"],
         summary: "Update Cart Addresses",
         security: [{ bearerAuth: [] }],
-        headers: {
-          type: "object",
-          properties: {
-            "X-Guest-Token": {
-              type: "string",
-              description:
-                "Guest token for unauthenticated users (64-character hexadecimal string)",
-              pattern: "^[a-f0-9]{64}$",
-            },
-          },
-        },
         params: {
           type: "object",
           required: ["cartId"],
@@ -1036,17 +717,21 @@ export async function registerCartRoutes(
         },
         response: {
           200: {
-            description: "Cart addresses updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: cartResponseSchema,
             },
           },
-          ...authErrorResponses,
         },
       },
     },
-    cartController.updateCartAddresses.bind(cartController),
+    (request, reply) =>
+      cartController.updateCartAddresses(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 }

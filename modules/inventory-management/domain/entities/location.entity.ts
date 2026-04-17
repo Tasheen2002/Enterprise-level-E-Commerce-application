@@ -2,8 +2,8 @@ import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-ro
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { LocationId } from "../value-objects/location-id.vo";
 import { LocationTypeVO } from "../value-objects/location-type.vo";
-import { LocationAddress } from "../value-objects/location-address.vo";
-import { DomainValidationError } from "../errors";
+import { LocationAddress, LocationAddressProps } from "../value-objects/location-address.vo";
+import { EmptyFieldError } from "../errors";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -47,36 +47,46 @@ export interface LocationProps {
   type: LocationTypeVO;
   name: string;
   address?: LocationAddress;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface LocationDTO {
   locationId: string;
   type: string;
   name: string;
-  address?: ReturnType<LocationAddress["toJSON"]>;
+  address?: LocationAddressProps;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Location extends AggregateRoot {
-  private props: LocationProps;
-
-  private constructor(props: LocationProps) {
+  private constructor(private props: LocationProps) {
     super();
-    this.props = props;
-    this.validate();
+  }
+
+  private static validateName(name: string): void {
+    if (!name || name.trim().length === 0) {
+      throw new EmptyFieldError('name');
+    }
   }
 
   static create(params: {
     type: string;
     name: string;
-    address?: ReturnType<LocationAddress["toJSON"]>;
+    address?: LocationAddressProps;
   }): Location {
+    Location.validateName(params.name);
+    const now = new Date();
     const location = new Location({
       locationId: LocationId.create(),
       type: LocationTypeVO.create(params.type),
       name: params.name,
       address: params.address ? LocationAddress.create(params.address) : undefined,
+      createdAt: now,
+      updatedAt: now,
     });
     location.addDomainEvent(
       new LocationCreatedEvent(
@@ -91,31 +101,27 @@ export class Location extends AggregateRoot {
     return new Location(props);
   }
 
-  private validate(): void {
-    if (!this.props.name || this.props.name.trim().length === 0) {
-      throw new DomainValidationError("Location name is required");
-    }
-  }
-
   // ── Getters ────────────────────────────────────────────────────────
 
   get locationId(): LocationId { return this.props.locationId; }
   get type(): LocationTypeVO { return this.props.type; }
   get name(): string { return this.props.name; }
   get address(): LocationAddress | undefined { return this.props.address; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
   updateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new DomainValidationError("Location name is required");
-    }
+    Location.validateName(name);
     this.props.name = name;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
   }
 
   updateAddress(address: LocationAddress): void {
     this.props.address = address;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
   }
 
@@ -136,7 +142,9 @@ export class Location extends AggregateRoot {
       locationId: entity.props.locationId.getValue(),
       type: entity.props.type.getValue(),
       name: entity.props.name,
-      address: entity.props.address?.toJSON(),
+      address: entity.props.address?.getValue(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

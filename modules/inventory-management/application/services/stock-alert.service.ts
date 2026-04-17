@@ -73,7 +73,7 @@ export class StockAlertService {
     }
 
     const totalAvailable = stocks.reduce(
-      (sum, stock) => sum + stock.stockLevel.getAvailable(),
+      (sum, stock) => sum + stock.stockLevel.available,
       0,
     );
 

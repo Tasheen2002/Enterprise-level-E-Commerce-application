@@ -1,11 +1,249 @@
+// ============================================================================
+// 1. Imports
+// ============================================================================
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import {
   ReminderId,
   ReminderType,
   ContactType,
   ChannelType,
   ReminderStatus,
-} from "../value-objects/index.js";
+} from "../value-objects";
+import { DomainValidationError } from "../errors/engagement.errors";
 
+// ============================================================================
+// 2. Domain Events
+// ============================================================================
+export class ReminderCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly reminderId: string,
+    public readonly type: string,
+    public readonly variantId: string,
+    public readonly userId?: string
+  ) {
+    super(reminderId, "Reminder");
+  }
+
+  get eventType(): string {
+    return "reminder.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      reminderId: this.reminderId,
+      type: this.type,
+      variantId: this.variantId,
+      userId: this.userId,
+    };
+  }
+}
+
+export class ReminderStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly reminderId: string,
+    public readonly oldStatus: string,
+    public readonly newStatus: string
+  ) {
+    super(reminderId, "Reminder");
+  }
+
+  get eventType(): string {
+    return "reminder.status_changed";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      reminderId: this.reminderId,
+      oldStatus: this.oldStatus,
+      newStatus: this.newStatus,
+    };
+  }
+}
+
+// ============================================================================
+// 3. Props Interface
+// ============================================================================
+export interface ReminderProps {
+  id: ReminderId;
+  type: ReminderType;
+  variantId: string;
+  userId?: string;
+  contact: ContactType;
+  channel: ChannelType;
+  status: ReminderStatus;
+  optInAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+export interface ReminderDTO {
+  id: string;
+  type: string;
+  variantId: string;
+  userId?: string;
+  contact: string;
+  channel: string;
+  status: string;
+  optInAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// 5. Entity Class
+// ============================================================================
+export class Reminder extends AggregateRoot {
+  private constructor(private props: ReminderProps) {
+    super();
+  }
+
+  static create(
+    params: Omit<ReminderProps, "id" | "createdAt" | "updatedAt" | "status">
+  ): Reminder {
+    Reminder.validateVariantId(params.variantId);
+
+    const entity = new Reminder({
+      ...params,
+      id: ReminderId.create(),
+      status: ReminderStatus.pending(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    entity.addDomainEvent(
+      new ReminderCreatedEvent(
+        entity.props.id.getValue(),
+        entity.props.type.getValue(),
+        entity.props.variantId,
+        entity.props.userId
+      )
+    );
+
+    return entity;
+  }
+
+  static fromPersistence(props: ReminderProps): Reminder {
+    return new Reminder(props);
+  }
+
+  private static validateVariantId(variantId: string): void {
+    if (!variantId || variantId.trim().length === 0) {
+      throw new DomainValidationError("Variant ID is required");
+    }
+  }
+
+  // Getters
+  get id(): ReminderId {
+    return this.props.id;
+  }
+  get type(): ReminderType {
+    return this.props.type;
+  }
+  get variantId(): string {
+    return this.props.variantId;
+  }
+  get userId(): string | undefined {
+    return this.props.userId;
+  }
+  get contact(): ContactType {
+    return this.props.contact;
+  }
+  get channel(): ChannelType {
+    return this.props.channel;
+  }
+  get optInAt(): Date | undefined {
+    return this.props.optInAt;
+  }
+  get status(): ReminderStatus {
+    return this.props.status;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  // Business methods
+  private updateStatus(newStatus: ReminderStatus): void {
+    const oldStatusLabel = this.props.status.getValue();
+    const newStatusLabel = newStatus.getValue();
+
+    if (oldStatusLabel === newStatusLabel) return;
+
+    this.props.status = newStatus;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new ReminderStatusChangedEvent(
+        this.props.id.getValue(),
+        oldStatusLabel,
+        newStatusLabel
+      )
+    );
+  }
+
+  optIn(): void {
+    this.props.optInAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  markAsSent(): void {
+    this.updateStatus(ReminderStatus.sent());
+  }
+
+  unsubscribe(): void {
+    this.updateStatus(ReminderStatus.unsubscribed());
+  }
+
+  // Helper methods
+  isPending(): boolean {
+    return this.props.status.isPending();
+  }
+
+  isSent(): boolean {
+    return this.props.status.isSent();
+  }
+
+  isUnsubscribed(): boolean {
+    return this.props.status.isUnsubscribed();
+  }
+
+  isRestockReminder(): boolean {
+    return this.props.type.isRestock();
+  }
+
+  isPriceDropReminder(): boolean {
+    return this.props.type.isPriceDrop();
+  }
+
+  equals(other: Reminder): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(entity: Reminder): ReminderDTO {
+    return {
+      id: entity.props.id.getValue(),
+      type: entity.props.type.getValue(),
+      variantId: entity.props.variantId,
+      userId: entity.props.userId,
+      contact: entity.props.contact.getValue(),
+      channel: entity.props.channel.getValue(),
+      status: entity.props.status.getValue(),
+      optInAt: entity.props.optInAt?.toISOString(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// 6. Supporting input types
+// ============================================================================
 export interface CreateReminderData {
   type: ReminderType;
   variantId: string;
@@ -13,185 +251,4 @@ export interface CreateReminderData {
   contact: ContactType;
   channel: ChannelType;
   optInAt?: Date;
-}
-
-export interface ReminderEntityData {
-  reminderId: string;
-  type: ReminderType;
-  variantId: string;
-  userId?: string;
-  contact: ContactType;
-  channel: ChannelType;
-  optInAt?: Date;
-  status: ReminderStatus;
-}
-
-export interface ReminderDatabaseRow {
-  reminder_id: string;
-  type: string;
-  variant_id: string;
-  user_id: string | null;
-  contact: string;
-  channel: string;
-  opt_in_at: Date | null;
-  status: string;
-}
-
-export class Reminder {
-  private constructor(
-    private readonly reminderId: ReminderId,
-    private readonly type: ReminderType,
-    private readonly variantId: string,
-    private readonly contact: ContactType,
-    private readonly channel: ChannelType,
-    private status: ReminderStatus,
-    private userId?: string,
-    private optInAt?: Date
-  ) {}
-
-  // Factory methods
-  static create(data: CreateReminderData): Reminder {
-    const reminderId = ReminderId.create();
-
-    if (!data.variantId) {
-      throw new Error("Variant ID is required");
-    }
-
-    return new Reminder(
-      reminderId,
-      data.type,
-      data.variantId,
-      data.contact,
-      data.channel,
-      ReminderStatus.pending(),
-      data.userId,
-      data.optInAt
-    );
-  }
-
-  static reconstitute(data: ReminderEntityData): Reminder {
-    const reminderId = ReminderId.fromString(data.reminderId);
-
-    return new Reminder(
-      reminderId,
-      data.type,
-      data.variantId,
-      data.contact,
-      data.channel,
-      data.status,
-      data.userId,
-      data.optInAt
-    );
-  }
-
-  static fromDatabaseRow(row: ReminderDatabaseRow): Reminder {
-    return new Reminder(
-      ReminderId.fromString(row.reminder_id),
-      ReminderType.fromString(row.type),
-      row.variant_id,
-      ContactType.fromString(row.contact),
-      ChannelType.fromString(row.channel),
-      ReminderStatus.fromString(row.status),
-      row.user_id || undefined,
-      row.opt_in_at || undefined
-    );
-  }
-
-  // Getters
-  getReminderId(): ReminderId {
-    return this.reminderId;
-  }
-
-  getType(): ReminderType {
-    return this.type;
-  }
-
-  getVariantId(): string {
-    return this.variantId;
-  }
-
-  getUserId(): string | undefined {
-    return this.userId;
-  }
-
-  getContact(): ContactType {
-    return this.contact;
-  }
-
-  getChannel(): ChannelType {
-    return this.channel;
-  }
-
-  getOptInAt(): Date | undefined {
-    return this.optInAt;
-  }
-
-  getStatus(): ReminderStatus {
-    return this.status;
-  }
-
-  // Business methods
-  optIn(): void {
-    this.optInAt = new Date();
-  }
-
-  markAsSent(): void {
-    this.status = ReminderStatus.sent();
-  }
-
-  unsubscribe(): void {
-    this.status = ReminderStatus.unsubscribed();
-  }
-
-  // Helper methods
-  isPending(): boolean {
-    return this.status.isPending();
-  }
-
-  isSent(): boolean {
-    return this.status.isSent();
-  }
-
-  isUnsubscribed(): boolean {
-    return this.status.isUnsubscribed();
-  }
-
-  isRestockReminder(): boolean {
-    return this.type.isRestock();
-  }
-
-  isPriceDropReminder(): boolean {
-    return this.type.isPriceDrop();
-  }
-
-  // Convert to data for persistence
-  toData(): ReminderEntityData {
-    return {
-      reminderId: this.reminderId.getValue(),
-      type: this.type,
-      variantId: this.variantId,
-      userId: this.userId,
-      contact: this.contact,
-      channel: this.channel,
-      optInAt: this.optInAt,
-      status: this.status,
-    };
-  }
-
-  toDatabaseRow(): ReminderDatabaseRow {
-    return {
-      reminder_id: this.reminderId.getValue(),
-      type: this.type.getValue(),
-      variant_id: this.variantId,
-      user_id: this.userId || null,
-      contact: this.contact.getValue(),
-      channel: this.channel.getValue(),
-      opt_in_at: this.optInAt || null,
-      status: this.status.getValue(),
-    };
-  }
-
-  equals(other: Reminder): boolean {
-    return this.reminderId.equals(other.reminderId);
-  }
 }

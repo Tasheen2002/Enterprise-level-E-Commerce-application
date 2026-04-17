@@ -1,8 +1,81 @@
-import { Points } from '../value-objects/points';
-import { Tier } from '../value-objects/tier';
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { LoyaltyAccountId } from "../value-objects/loyalty-account-id.vo";
+import { Points } from "../value-objects/points";
+import { Tier } from "../value-objects/tier";
+import { InsufficientPointsError } from "../errors/loyalty.errors";
+
+// ============================================================================
+// Domain Events
+// ============================================================================
+
+export class LoyaltyAccountCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly accountId: string,
+    public readonly userId: string,
+  ) {
+    super(accountId, "LoyaltyAccount");
+  }
+
+  get eventType(): string {
+    return "loyalty-account.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { accountId: this.accountId, userId: this.userId };
+  }
+}
+
+export class PointsEarnedEvent extends DomainEvent {
+  constructor(
+    public readonly accountId: string,
+    public readonly points: number,
+    public readonly newBalance: number,
+  ) {
+    super(accountId, "LoyaltyAccount");
+  }
+
+  get eventType(): string {
+    return "loyalty-account.points-earned";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      accountId: this.accountId,
+      points: this.points,
+      newBalance: this.newBalance,
+    };
+  }
+}
+
+export class PointsRedeemedEvent extends DomainEvent {
+  constructor(
+    public readonly accountId: string,
+    public readonly points: number,
+    public readonly newBalance: number,
+  ) {
+    super(accountId, "LoyaltyAccount");
+  }
+
+  get eventType(): string {
+    return "loyalty-account.points-redeemed";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      accountId: this.accountId,
+      points: this.points,
+      newBalance: this.newBalance,
+    };
+  }
+}
+
+// ============================================================================
+// Props & DTO
+// ============================================================================
 
 export interface LoyaltyAccountProps {
-  accountId: string;
+  id: LoyaltyAccountId;
   userId: string;
   currentBalance: Points;
   totalPointsEarned: Points;
@@ -15,89 +88,101 @@ export interface LoyaltyAccountProps {
   updatedAt: Date;
 }
 
-export class LoyaltyAccount {
-  private readonly props: LoyaltyAccountProps;
+export interface LoyaltyAccountDTO {
+  id: string;
+  userId: string;
+  currentBalance: number;
+  totalPointsEarned: number;
+  totalPointsRedeemed: number;
+  lifetimePoints: number;
+  tier: string;
+  tierMultiplier: number;
+  joinedAt: string;
+  lastActivityAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  private constructor(props: LoyaltyAccountProps) {
-    this.props = props;
+// ============================================================================
+// Entity
+// ============================================================================
+
+export class LoyaltyAccount extends AggregateRoot {
+  private constructor(private props: LoyaltyAccountProps) {
+    super();
   }
 
-  static create(props: Omit<LoyaltyAccountProps, 'createdAt' | 'updatedAt'>): LoyaltyAccount {
-    return new LoyaltyAccount({
-      ...props,
+  static create(
+    params: Omit<
+      LoyaltyAccountProps,
+      | "id"
+      | "currentBalance"
+      | "totalPointsEarned"
+      | "totalPointsRedeemed"
+      | "lifetimePoints"
+      | "tier"
+      | "lastActivityAt"
+      | "createdAt"
+      | "updatedAt"
+    >,
+  ): LoyaltyAccount {
+    const entity = new LoyaltyAccount({
+      ...params,
+      id: LoyaltyAccountId.create(),
+      currentBalance: Points.zero(),
+      totalPointsEarned: Points.zero(),
+      totalPointsRedeemed: Points.zero(),
+      lifetimePoints: Points.zero(),
+      tier: Tier.default(),
+      lastActivityAt: null,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
+
+    entity.addDomainEvent(
+      new LoyaltyAccountCreatedEvent(
+        entity.props.id.getValue(),
+        entity.props.userId,
+      ),
+    );
+
+    return entity;
   }
 
-  static fromDatabaseRow(row: {
-    account_id: string;
-    user_id: string;
-    current_balance: number;
-    total_points_earned: number;
-    total_points_redeemed: number;
-    lifetime_points: number;
-    tier: string;
-    joined_at: Date;
-    last_activity_at: Date | null;
-    created_at: Date;
-    updated_at: Date;
-  }): LoyaltyAccount {
-    return new LoyaltyAccount({
-      accountId: row.account_id,
-      userId: row.user_id,
-      currentBalance: Points.create(row.current_balance),
-      totalPointsEarned: Points.create(row.total_points_earned),
-      totalPointsRedeemed: Points.create(row.total_points_redeemed),
-      lifetimePoints: Points.create(row.lifetime_points),
-      tier: Tier.create(row.tier),
-      joinedAt: row.joined_at,
-      lastActivityAt: row.last_activity_at,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    });
+  static fromPersistence(props: LoyaltyAccountProps): LoyaltyAccount {
+    return new LoyaltyAccount(props);
   }
 
-  get accountId(): string {
-    return this.props.accountId;
+  get id(): LoyaltyAccountId {
+    return this.props.id;
   }
-
   get userId(): string {
     return this.props.userId;
   }
-
   get currentBalance(): Points {
     return this.props.currentBalance;
   }
-
   get totalPointsEarned(): Points {
     return this.props.totalPointsEarned;
   }
-
   get totalPointsRedeemed(): Points {
     return this.props.totalPointsRedeemed;
   }
-
   get lifetimePoints(): Points {
     return this.props.lifetimePoints;
   }
-
   get tier(): Tier {
     return this.props.tier;
   }
-
   get joinedAt(): Date {
     return this.props.joinedAt;
   }
-
   get lastActivityAt(): Date | null {
     return this.props.lastActivityAt;
   }
-
   get createdAt(): Date {
     return this.props.createdAt;
   }
-
   get updatedAt(): Date {
     return this.props.updatedAt;
   }
@@ -106,22 +191,38 @@ export class LoyaltyAccount {
     this.props.currentBalance = this.props.currentBalance.add(points);
     this.props.totalPointsEarned = this.props.totalPointsEarned.add(points);
     this.props.lifetimePoints = this.props.lifetimePoints.add(points);
+    this.props.tier = Tier.calculateTier(this.props.lifetimePoints.getValue());
     this.props.lastActivityAt = new Date();
     this.props.updatedAt = new Date();
 
-    // Recalculate tier based on lifetime points
-    this.props.tier = Tier.calculateTier(this.props.lifetimePoints.value);
+    this.addDomainEvent(
+      new PointsEarnedEvent(
+        this.props.id.getValue(),
+        points.getValue(),
+        this.props.currentBalance.getValue(),
+      ),
+    );
   }
 
   redeemPoints(points: Points): void {
     if (!this.props.currentBalance.isGreaterThanOrEqual(points)) {
-      throw new Error('Insufficient points balance');
+      throw new InsufficientPointsError(
+        points.getValue(),
+        this.props.currentBalance.getValue(),
+      );
     }
-
     this.props.currentBalance = this.props.currentBalance.subtract(points);
     this.props.totalPointsRedeemed = this.props.totalPointsRedeemed.add(points);
     this.props.lastActivityAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PointsRedeemedEvent(
+        this.props.id.getValue(),
+        points.getValue(),
+        this.props.currentBalance.getValue(),
+      ),
+    );
   }
 
   adjustPoints(points: Points, isAddition: boolean): void {
@@ -144,31 +245,24 @@ export class LoyaltyAccount {
     this.props.updatedAt = new Date();
   }
 
-  toDatabaseRow(): {
-    account_id: string;
-    user_id: string;
-    current_balance: number;
-    total_points_earned: number;
-    total_points_redeemed: number;
-    lifetime_points: number;
-    tier: string;
-    joined_at: Date;
-    last_activity_at: Date | null;
-    created_at: Date;
-    updated_at: Date;
-  } {
+  equals(other: LoyaltyAccount): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(entity: LoyaltyAccount): LoyaltyAccountDTO {
     return {
-      account_id: this.props.accountId,
-      user_id: this.props.userId,
-      current_balance: this.props.currentBalance.value,
-      total_points_earned: this.props.totalPointsEarned.value,
-      total_points_redeemed: this.props.totalPointsRedeemed.value,
-      lifetime_points: this.props.lifetimePoints.value,
-      tier: this.props.tier.toString(),
-      joined_at: this.props.joinedAt,
-      last_activity_at: this.props.lastActivityAt,
-      created_at: this.props.createdAt,
-      updated_at: this.props.updatedAt
+      id: entity.props.id.getValue(),
+      userId: entity.props.userId,
+      currentBalance: entity.props.currentBalance.getValue(),
+      totalPointsEarned: entity.props.totalPointsEarned.getValue(),
+      totalPointsRedeemed: entity.props.totalPointsRedeemed.getValue(),
+      lifetimePoints: entity.props.lifetimePoints.getValue(),
+      tier: entity.props.tier.getValue(),
+      tierMultiplier: entity.props.tier.pointsMultiplier,
+      joinedAt: entity.props.joinedAt.toISOString(),
+      lastActivityAt: entity.props.lastActivityAt?.toISOString() ?? null,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

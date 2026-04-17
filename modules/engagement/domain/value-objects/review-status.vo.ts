@@ -1,36 +1,37 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { ReviewStatusEnum } from "../enums/engagement.enums";
+
 export class ReviewStatus {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: ReviewStatusEnum) {}
 
-  static pending(): ReviewStatus {
-    return new ReviewStatus("pending");
-  }
-
-  static approved(): ReviewStatus {
-    return new ReviewStatus("approved");
-  }
-
-  static rejected(): ReviewStatus {
-    return new ReviewStatus("rejected");
-  }
-
-  static flagged(): ReviewStatus {
-    return new ReviewStatus("flagged");
+  static create(value: string): ReviewStatus {
+    return ReviewStatus.fromString(value);
   }
 
   static fromString(value: string): ReviewStatus {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "pending":
-        return ReviewStatus.pending();
-      case "approved":
-        return ReviewStatus.approved();
-      case "rejected":
-        return ReviewStatus.rejected();
-      case "flagged":
-        return ReviewStatus.flagged();
-      default:
-        throw new Error(`Invalid review status: ${value}`);
+
+    if (!Object.values(ReviewStatusEnum).includes(normalized as ReviewStatusEnum)) {
+      throw new DomainValidationError(`Invalid review status: ${value}`);
     }
+
+    return new ReviewStatus(normalized as ReviewStatusEnum);
+  }
+
+  static pending(): ReviewStatus {
+    return new ReviewStatus(ReviewStatusEnum.PENDING);
+  }
+
+  static approved(): ReviewStatus {
+    return new ReviewStatus(ReviewStatusEnum.APPROVED);
+  }
+
+  static rejected(): ReviewStatus {
+    return new ReviewStatus(ReviewStatusEnum.REJECTED);
+  }
+
+  static flagged(): ReviewStatus {
+    return new ReviewStatus(ReviewStatusEnum.FLAGGED);
   }
 
   getValue(): string {
@@ -38,19 +39,19 @@ export class ReviewStatus {
   }
 
   isPending(): boolean {
-    return this.value === "pending";
+    return this.value === ReviewStatusEnum.PENDING;
   }
 
   isApproved(): boolean {
-    return this.value === "approved";
+    return this.value === ReviewStatusEnum.APPROVED;
   }
 
   isRejected(): boolean {
-    return this.value === "rejected";
+    return this.value === ReviewStatusEnum.REJECTED;
   }
 
   isFlagged(): boolean {
-    return this.value === "flagged";
+    return this.value === ReviewStatusEnum.FLAGGED;
   }
 
   equals(other: ReviewStatus): boolean {

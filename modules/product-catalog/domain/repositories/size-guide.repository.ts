@@ -1,4 +1,6 @@
-import { SizeGuide, SizeGuideId, Region } from "../entities/size-guide.entity";
+import { SizeGuide } from "../entities/size-guide.entity";
+import { SizeGuideId } from "../value-objects/size-guide-id.vo";
+import { Region } from "../enums/product-catalog.enums";
 
 export interface ISizeGuideRepository {
   save(sizeGuide: SizeGuide): Promise<void>;
@@ -17,7 +19,6 @@ export interface ISizeGuideRepository {
     category: string,
   ): Promise<SizeGuide | null>;
   findGeneral(region: Region): Promise<SizeGuide[]>;
-  update(sizeGuide: SizeGuide): Promise<void>;
   delete(id: SizeGuideId): Promise<void>;
   exists(id: SizeGuideId): Promise<boolean>;
   count(options?: SizeGuideCountOptions): Promise<number>;

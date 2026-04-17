@@ -7,13 +7,20 @@ export interface EditorialLookProductProps {
   productId: ProductId;
   displayOrder: number;
   createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EditorialLookProductDTO {
+  id: string;
+  editorialLookId: string;
+  productId: string;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class EditorialLookProduct {
-  private props: EditorialLookProductProps;
-
-  private constructor(props: EditorialLookProductProps) {
-    this.props = props;
+  private constructor(private props: EditorialLookProductProps) {
   }
 
   static create(params: {
@@ -29,6 +36,7 @@ export class EditorialLookProduct {
       productId: ProductId.fromString(params.productId),
       displayOrder: params.displayOrder,
       createdAt: now,
+      updatedAt: now,
     });
   }
 
@@ -57,9 +65,14 @@ export class EditorialLookProduct {
     return this.props.createdAt;
   }
 
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   // Business methods
   updateDisplayOrder(order: number): void {
     this.props.displayOrder = order;
+    this.props.updatedAt = new Date();
   }
 
   isForLook(lookId: EditorialLookId): boolean {
@@ -81,14 +94,7 @@ export class EditorialLookProduct {
       productId: entity.props.productId.getValue(),
       displayOrder: entity.props.displayOrder,
       createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface EditorialLookProductDTO {
-  id: string;
-  editorialLookId: string;
-  productId: string;
-  displayOrder: number;
-  createdAt: string;
 }

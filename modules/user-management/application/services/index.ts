@@ -1,6 +1,10 @@
-export { AuthenticationService } from "./authentication.service";
-export { PasswordHasherService } from "./password-hasher.service";
-export { AddressManagementService } from "./address-management.service";
-export { PaymentMethodService } from "./payment-method.service";
-export { UserProfileService } from "./user-profile.service";
-export { VerificationService } from "./verification.service";
+export { AuthenticationService } from './authentication.service';
+export type { AuthResult, LoginResult, RefreshTokenResult } from './authentication.service';
+export { UserService } from './user.service';
+export type { IJwtService, TokenPayload } from './ijwt.service';
+export type { ITokenBlacklistService } from './itoken-blacklist.service';
+export type { IPasswordHasherService } from './password-hasher.service';
+export { AddressManagementService } from './address-management.service';
+export { PaymentMethodService } from './payment-method.service';
+export { UserProfileService } from './user-profile.service';
+export { VerificationService } from './verification.service';

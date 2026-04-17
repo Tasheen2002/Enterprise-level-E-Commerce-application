@@ -1,3 +1,5 @@
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import {
   OrderId,
   OrderNumber,
@@ -5,10 +7,14 @@ import {
   OrderSource,
   Currency,
   OrderTotals,
+  OrderTotalsData,
 } from "../value-objects";
-import { OrderItem } from "./order-item.entity";
-import { OrderAddress } from "./order-address.entity";
-import { OrderShipment } from "./order-shipment.entity";
+import {
+  OrderItem,
+  OrderItemDTO,
+} from "./order-item.entity";
+import { OrderAddress, OrderAddressDTO } from "./order-address.entity";
+import { OrderShipment, OrderShipmentDTO } from "./order-shipment.entity";
 import {
   DomainValidationError,
   OrderNotEditableError,
@@ -20,461 +26,88 @@ import {
   InvalidOrderStatusTransitionError,
 } from "../errors/order-management.errors";
 
-export class Order {
-  private constructor(
-    private readonly orderId: OrderId,
-    private readonly orderNumber: OrderNumber,
-    private userId: string | undefined,
-    private guestToken: string | undefined,
-    private items: OrderItem[],
-    private address: OrderAddress | undefined,
-    private shipments: OrderShipment[],
-    private totals: OrderTotals,
-    private status: OrderStatus,
-    private readonly source: OrderSource,
-    private readonly currency: Currency,
-    private readonly createdAt: Date,
-    private updatedAt: Date,
-  ) {}
-
-  static create(data: CreateOrderData): Order {
-    if (!data.userId && !data.guestToken) {
-      throw new DomainValidationError(
-        "Order must have either userId or guestToken",
-      );
-    }
-
-    if (data.userId && data.guestToken) {
-      throw new DomainValidationError(
-        "Order cannot have both userId and guestToken",
-      );
-    }
-
-    if (!data.items || data.items.length === 0) {
-      throw new DomainValidationError("Order must have at least one item");
-    }
-
-    const orderId = OrderId.create();
-    const orderNumber = OrderNumber.generate();
-    const now = new Date();
-
-    // Create order items
-    const items = data.items.map((item) =>
-      OrderItem.create({
-        orderId: orderId.getValue(),
-        variantId: item.variantId,
-        quantity: item.quantity,
-        productSnapshot: item.productSnapshot,
-        isGift: item.isGift || false,
-        giftMessage: item.giftMessage,
-      }),
-    );
-
-    // Calculate subtotal from items
-    const subtotal = items.reduce(
-      (sum, item) => sum + item.calculateSubtotal(),
-      0,
-    );
-
-    // Create totals
-    const totals = OrderTotals.create({
-      subtotal,
-      tax: data.tax || 0,
-      shipping: data.shipping || 0,
-      discount: data.discount || 0,
-      total:
-        subtotal +
-        (data.tax || 0) +
-        (data.shipping || 0) -
-        (data.discount || 0),
-    });
-
-    return new Order(
-      orderId,
-      orderNumber,
-      data.userId,
-      data.guestToken,
-      items,
-      undefined,
-      [],
-      totals,
-      OrderStatus.created(),
-      data.source || OrderSource.fromString("web"),
-      data.currency,
-      now,
-      now,
-    );
+export class OrderCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly orderId: string,
+    public readonly orderNumber: string,
+    public readonly total: number,
+  ) {
+    super(orderId, "Order");
   }
-
-  static reconstitute(data: OrderData): Order {
-    return new Order(
-      OrderId.fromString(data.orderId),
-      OrderNumber.create(data.orderNumber),
-      data.userId,
-      data.guestToken,
-      data.items || [],
-      data.address,
-      data.shipments || [],
-      data.totals,
-      data.status,
-      data.source,
-      data.currency,
-      data.createdAt,
-      data.updatedAt,
-    );
+  get eventType(): string {
+    return "order.created";
   }
-
-  static fromDatabaseRow(
-    row: OrderDatabaseRow,
-    items: OrderItem[] = [],
-    address?: OrderAddress,
-    shipments: OrderShipment[] = [],
-  ): Order {
-    return new Order(
-      OrderId.fromString(row.order_id),
-      OrderNumber.create(row.order_no),
-      row.user_id || undefined,
-      row.guest_token || undefined,
-      items,
-      address,
-      shipments,
-      OrderTotals.create(row.totals),
-      OrderStatus.fromString(row.status),
-      OrderSource.fromString(row.source),
-      Currency.create(row.currency),
-      row.created_at,
-      row.updated_at,
-    );
-  }
-
-  // Getters
-  getOrderId(): OrderId {
-    return this.orderId;
-  }
-
-  getOrderNumber(): OrderNumber {
-    return this.orderNumber;
-  }
-
-  getUserId(): string | undefined {
-    return this.userId;
-  }
-
-  getGuestToken(): string | undefined {
-    return this.guestToken;
-  }
-
-  getItems(): OrderItem[] {
-    return [...this.items];
-  }
-
-  getAddress(): OrderAddress | undefined {
-    return this.address;
-  }
-
-  getShipments(): OrderShipment[] {
-    return [...this.shipments];
-  }
-
-  getTotals(): OrderTotals {
-    return this.totals;
-  }
-
-  getStatus(): OrderStatus {
-    return this.status;
-  }
-
-  getSource(): OrderSource {
-    return this.source;
-  }
-
-  getCurrency(): Currency {
-    return this.currency;
-  }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
-  }
-
-  getUpdatedAt(): Date {
-    return this.updatedAt;
-  }
-
-  // Aggregate root methods - Item management
-  addItem(item: OrderItem): void {
-    if (this.status.getValue() !== "created") {
-      throw new OrderNotEditableError(this.status.getValue());
-    }
-
-    this.items.push(item);
-    this.recalculateTotals();
-    this.touch();
-  }
-
-  removeItem(itemId: string): void {
-    if (this.status.getValue() !== "created") {
-      throw new OrderNotEditableError(this.status.getValue());
-    }
-
-    const index = this.items.findIndex(
-      (item) => item.getOrderItemId() === itemId,
-    );
-    if (index === -1) {
-      throw new OrderItemNotFoundError(itemId);
-    }
-
-    this.items.splice(index, 1);
-
-    if (this.items.length === 0) {
-      throw new DomainValidationError("Order must have at least one item");
-    }
-
-    this.recalculateTotals();
-    this.touch();
-  }
-
-  updateItemQuantity(itemId: string, quantity: number): void {
-    if (this.status.getValue() !== "created") {
-      throw new OrderNotEditableError(this.status.getValue());
-    }
-
-    const item = this.items.find((item) => item.getOrderItemId() === itemId);
-    if (!item) {
-      throw new OrderItemNotFoundError(itemId);
-    }
-
-    item.updateQuantity(quantity);
-    this.recalculateTotals();
-    this.touch();
-  }
-
-  // Aggregate root methods - Address management
-  setAddress(address: OrderAddress): void {
-    if (this.status.getValue() !== "created") {
-      throw new OrderNotEditableError(this.status.getValue());
-    }
-
-    this.address = address;
-    this.touch();
-  }
-
-  // Aggregate root methods - Shipment management
-  createShipment(shipment: OrderShipment): void {
-    if (!this.status.isFulfilled() && this.status.getValue() !== "paid") {
-      throw new InvalidOperationError(
-        "Cannot create shipment for order that is not paid or fulfilled",
-      );
-    }
-
-    this.shipments.push(shipment);
-    this.touch();
-  }
-
-  // Business logic methods - Status management
-  markAsPaid(): void {
-    if (!this.address) {
-      throw new OrderAddressRequiredError();
-    }
-
-    this.changeStatus(OrderStatus.paid());
-  }
-
-  markAsFulfilled(): void {
-    if (this.shipments.length === 0) {
-      throw new InvalidOperationError(
-        "Cannot mark order as fulfilled without shipments",
-      );
-    }
-
-    this.changeStatus(OrderStatus.fulfilled());
-  }
-
-  cancel(): void {
-    if (this.status.isFulfilled()) {
-      throw new OrderCancellationError("Order is already fulfilled");
-    }
-
-    this.changeStatus(OrderStatus.cancelled());
-  }
-
-  refund(): void {
-    if (!this.status.isFulfilled() && !this.status.isPaid()) {
-      throw new OrderRefundError("Order must be paid or fulfilled");
-    }
-
-    this.changeStatus(OrderStatus.refunded());
-  }
-
-  updateStatus(newStatus: OrderStatus): void {
-    if (!this.status.canTransitionTo(newStatus)) {
-      throw new InvalidOrderStatusTransitionError(
-        this.status.getValue(),
-        newStatus.getValue(),
-      );
-    }
-
-    this.status = newStatus;
-    this.touch();
-  }
-
-  private changeStatus(newStatus: OrderStatus): void {
-    if (!this.status.canTransitionTo(newStatus)) {
-      throw new InvalidOrderStatusTransitionError(
-        this.status.getValue(),
-        newStatus.getValue(),
-      );
-    }
-
-    this.status = newStatus;
-    this.touch();
-  }
-
-  // Business logic methods - Totals management
-  updateTotals(tax: number, shipping: number, discount: number): void {
-    const subtotal = this.calculateSubtotal();
-
-    this.totals = OrderTotals.create({
-      subtotal,
-      tax,
-      shipping,
-      discount,
-      total: subtotal + tax + shipping - discount,
-    });
-
-    this.touch();
-  }
-
-  private recalculateTotals(): void {
-    const subtotal = this.calculateSubtotal();
-    const currentTotals = this.totals.toJSON();
-
-    this.totals = OrderTotals.create({
-      subtotal,
-      tax: currentTotals.tax,
-      shipping: currentTotals.shipping,
-      discount: currentTotals.discount,
-      total:
-        subtotal +
-        currentTotals.tax +
-        currentTotals.shipping -
-        currentTotals.discount,
-    });
-  }
-
-  private calculateSubtotal(): number {
-    return this.items.reduce((sum, item) => sum + item.calculateSubtotal(), 0);
-  }
-
-  // Validation methods
-  isGuestOrder(): boolean {
-    return !!this.guestToken;
-  }
-
-  isUserOrder(): boolean {
-    return !!this.userId;
-  }
-
-  hasAddress(): boolean {
-    return !!this.address;
-  }
-
-  hasShipments(): boolean {
-    return this.shipments.length > 0;
-  }
-
-  canBePaid(): boolean {
-    return (
-      this.status.isCreated() && this.hasAddress() && this.items.length > 0
-    );
-  }
-
-  canBeFulfilled(): boolean {
-    return this.status.isPaid() && this.hasShipments();
-  }
-
-  canBeCancelled(): boolean {
-    return (
-      !this.status.isFulfilled() &&
-      !this.status.isCancelled() &&
-      !this.status.isRefunded()
-    );
-  }
-
-  canBeRefunded(): boolean {
-    return this.status.isPaid() || this.status.isFulfilled();
-  }
-
-  getTotalItemCount(): number {
-    return this.items.reduce((sum, item) => sum + item.getQuantity(), 0);
-  }
-
-  // Internal methods
-  private touch(): void {
-    this.updatedAt = new Date();
-  }
-
-  // Convert to data for persistence
-  toData(): OrderData {
+  getPayload(): Record<string, unknown> {
     return {
-      orderId: this.orderId.getValue(),
-      orderNumber: this.orderNumber.getValue(),
-      userId: this.userId,
-      guestToken: this.guestToken,
-      items: this.items,
-      address: this.address,
-      shipments: this.shipments,
-      totals: this.totals,
-      status: this.status,
-      source: this.source,
-      currency: this.currency,
-      createdAt: this.createdAt,
-      updatedAt: this.updatedAt,
+      orderId: this.orderId,
+      orderNumber: this.orderNumber,
+      total: this.total,
     };
   }
+}
 
-  toDatabaseRow(): OrderDatabaseRow {
+export class OrderStatusUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly orderId: string,
+    public readonly previousStatus: string,
+    public readonly newStatus: string,
+  ) {
+    super(orderId, "Order");
+  }
+  get eventType(): string {
+    return "order.status.updated";
+  }
+  getPayload(): Record<string, unknown> {
     return {
-      order_id: this.orderId.getValue(),
-      order_no: this.orderNumber.getValue(),
-      user_id: this.userId || null,
-      guest_token: this.guestToken || null,
-      totals: this.totals.toJSON(),
-      status: this.status.getValue(),
-      source: this.source.getValue(),
-      currency: this.currency.getValue(),
-      created_at: this.createdAt,
-      updated_at: this.updatedAt,
+      orderId: this.orderId,
+      previousStatus: this.previousStatus,
+      newStatus: this.newStatus,
     };
   }
+}
 
-  equals(other: Order): boolean {
-    return this.orderId.equals(other.orderId);
+export class OrderItemAddedEvent extends DomainEvent {
+  constructor(
+    public readonly orderId: string,
+    public readonly variantId: string,
+  ) {
+    super(orderId, "Order");
+  }
+  get eventType(): string { return "order.item.added"; }
+  getPayload(): Record<string, unknown> {
+    return { orderId: this.orderId, variantId: this.variantId };
   }
 }
 
-// Supporting types and interfaces
-export interface CreateOrderItemData {
-  variantId: string;
-  quantity: number;
-  productSnapshot: any;
-  isGift?: boolean;
-  giftMessage?: string;
+export class OrderItemRemovedEvent extends DomainEvent {
+  constructor(
+    public readonly orderId: string,
+    public readonly itemId: string,
+  ) {
+    super(orderId, "Order");
+  }
+  get eventType(): string { return "order.item.removed"; }
+  getPayload(): Record<string, unknown> {
+    return { orderId: this.orderId, itemId: this.itemId };
+  }
 }
 
-export interface CreateOrderData {
-  userId?: string;
-  guestToken?: string;
-  items: CreateOrderItemData[];
-  source?: OrderSource;
-  currency: Currency;
-  tax?: number;
-  shipping?: number;
-  discount?: number;
+export class OrderShipmentCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly orderId: string,
+    public readonly shipmentId: string,
+  ) {
+    super(orderId, "Order");
+  }
+  get eventType(): string { return "order.shipment.created"; }
+  getPayload(): Record<string, unknown> {
+    return { orderId: this.orderId, shipmentId: this.shipmentId };
+  }
 }
 
-export interface OrderData {
-  orderId: string;
-  orderNumber: string;
+export interface OrderProps {
+  id: OrderId;
+  orderNumber: OrderNumber;
   userId?: string;
   guestToken?: string;
   items: OrderItem[];
@@ -488,15 +121,359 @@ export interface OrderData {
   updatedAt: Date;
 }
 
-export interface OrderDatabaseRow {
-  order_id: string;
-  order_no: string;
-  user_id: string | null;
-  guest_token: string | null;
-  totals: any;
+export interface OrderDTO {
+  id: string;
+  orderNumber: string;
+  userId?: string;
+  guestToken?: string;
+  items: OrderItemDTO[];
+  address?: OrderAddressDTO;
+  shipments: OrderShipmentDTO[];
+  totals: OrderTotalsData;
   status: string;
   source: string;
   currency: string;
-  created_at: Date;
-  updated_at: Date;
+  createdAt: string;
+  updatedAt: string;
 }
+
+export class Order extends AggregateRoot {
+  private constructor(private props: OrderProps) {
+    super();
+  }
+
+  static create(
+    params: Omit<
+      OrderProps,
+      "id" | "orderNumber" | "status" | "createdAt" | "updatedAt"
+    >,
+  ): Order {
+    Order.validateIdentity(params.userId, params.guestToken);
+
+    if (!params.items || params.items.length === 0) {
+      throw new DomainValidationError("Order must have at least one item");
+    }
+
+    const orderId = OrderId.create();
+    const orderNumber = OrderNumber.generate();
+
+    const order = new Order({
+      ...params,
+      id: orderId,
+      orderNumber,
+      status: OrderStatus.created(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    order.addDomainEvent(
+      new OrderCreatedEvent(
+        order.props.id.getValue(),
+        order.props.orderNumber.getValue(),
+        order.props.totals.total,
+      ),
+    );
+
+    return order;
+  }
+
+  static fromPersistence(props: OrderProps): Order {
+    return new Order(props);
+  }
+
+  private static validateIdentity(userId?: string, guestToken?: string): void {
+    if (!userId && !guestToken) {
+      throw new DomainValidationError(
+        "Order must have either userId or guestToken",
+      );
+    }
+
+    if (userId && guestToken) {
+      throw new DomainValidationError(
+        "Order cannot have both userId and guestToken",
+      );
+    }
+  }
+
+  // Getters
+  get id(): OrderId {
+    return this.props.id;
+  }
+  get orderNumber(): OrderNumber {
+    return this.props.orderNumber;
+  }
+  get userId(): string | undefined {
+    return this.props.userId;
+  }
+  get guestToken(): string | undefined {
+    return this.props.guestToken;
+  }
+  get items(): OrderItem[] {
+    return [...this.props.items];
+  }
+  get address(): OrderAddress | undefined {
+    return this.props.address;
+  }
+  get shipments(): OrderShipment[] {
+    return [...this.props.shipments];
+  }
+  get totals(): OrderTotals {
+    return this.props.totals;
+  }
+  get status(): OrderStatus {
+    return this.props.status;
+  }
+  get source(): OrderSource {
+    return this.props.source;
+  }
+  get currency(): Currency {
+    return this.props.currency;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  // Aggregate Root Logic
+
+  addItem(item: OrderItem): void {
+    if (!this.props.status.isCreated()) {
+      throw new OrderNotEditableError(this.props.status.getValue());
+    }
+
+    this.props.items.push(item);
+    this.recalculateTotals();
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new OrderItemAddedEvent(this.props.id.getValue(), item.variantId),
+    );
+  }
+
+  removeItem(itemId: string): void {
+    if (!this.props.status.isCreated()) {
+      throw new OrderNotEditableError(this.props.status.getValue());
+    }
+
+    const index = this.props.items.findIndex(
+      (item) => item.orderItemId === itemId,
+    );
+    if (index === -1) {
+      throw new OrderItemNotFoundError(itemId);
+    }
+
+    this.props.items.splice(index, 1);
+
+    if (this.props.items.length === 0) {
+      throw new DomainValidationError("Order must have at least one item");
+    }
+
+    this.recalculateTotals();
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new OrderItemRemovedEvent(this.props.id.getValue(), itemId),
+    );
+  }
+
+  updateItemQuantity(itemId: string, quantity: number): void {
+    if (!this.props.status.isCreated()) {
+      throw new OrderNotEditableError(this.props.status.getValue());
+    }
+
+    const item = this.props.items.find((item) => item.orderItemId === itemId);
+    if (!item) {
+      throw new OrderItemNotFoundError(itemId);
+    }
+
+    item.updateQuantity(quantity);
+    this.recalculateTotals();
+    this.props.updatedAt = new Date();
+  }
+
+  setAddress(address: OrderAddress): void {
+    if (!this.props.status.isCreated()) {
+      throw new OrderNotEditableError(this.props.status.getValue());
+    }
+
+    this.props.address = address;
+    this.props.updatedAt = new Date();
+  }
+
+  createShipment(shipment: OrderShipment): void {
+    if (
+      !this.props.status.isFulfilled() &&
+      this.props.status.getValue() !== "paid"
+    ) {
+      throw new InvalidOperationError(
+        "Cannot create shipment for order that is not paid or fulfilled",
+      );
+    }
+
+    this.props.shipments.push(shipment);
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new OrderShipmentCreatedEvent(this.props.id.getValue(), shipment.shipmentId),
+    );
+  }
+
+  markAsPaid(): void {
+    if (!this.props.address) {
+      throw new OrderAddressRequiredError();
+    }
+    this.changeStatus(OrderStatus.paid());
+  }
+
+  markAsFulfilled(): void {
+    if (this.props.shipments.length === 0) {
+      throw new InvalidOperationError(
+        "Cannot mark order as fulfilled without shipments",
+      );
+    }
+    this.changeStatus(OrderStatus.fulfilled());
+  }
+
+  cancel(): void {
+    if (this.props.status.isFulfilled()) {
+      throw new OrderCancellationError("Order is already fulfilled");
+    }
+    this.changeStatus(OrderStatus.cancelled());
+  }
+
+  refund(): void {
+    if (!this.props.status.isFulfilled() && !this.props.status.isPaid()) {
+      throw new OrderRefundError("Order must be paid or fulfilled");
+    }
+    this.changeStatus(OrderStatus.refunded());
+  }
+
+  updateStatus(newStatus: OrderStatus): void {
+    this.changeStatus(newStatus);
+  }
+
+  private changeStatus(newStatus: OrderStatus): void {
+    const previousStatus = this.props.status;
+
+    if (!previousStatus.canTransitionTo(newStatus)) {
+      throw new InvalidOrderStatusTransitionError(
+        previousStatus.getValue(),
+        newStatus.getValue(),
+      );
+    }
+
+    this.props.status = newStatus;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new OrderStatusUpdatedEvent(
+        this.props.id.getValue(),
+        previousStatus.getValue(),
+        newStatus.getValue(),
+      ),
+    );
+  }
+
+  updateTotals(tax: number, shipping: number, discount: number): void {
+    const subtotal = this.calculateSubtotal();
+
+    this.props.totals = OrderTotals.create({
+      subtotal,
+      tax,
+      shipping,
+      discount,
+      total: subtotal + tax + shipping - discount,
+    });
+
+    this.props.updatedAt = new Date();
+  }
+
+  private recalculateTotals(): void {
+    const subtotal = this.calculateSubtotal();
+    const currentTotals = this.props.totals.getValue();
+
+    this.props.totals = OrderTotals.create({
+      subtotal,
+      tax: currentTotals.tax,
+      shipping: currentTotals.shipping,
+      discount: currentTotals.discount,
+      total:
+        subtotal +
+        currentTotals.tax +
+        currentTotals.shipping -
+        currentTotals.discount,
+    });
+  }
+
+  private calculateSubtotal(): number {
+    return this.props.items.reduce(
+      (sum, item) => sum + item.calculateSubtotal(),
+      0,
+    );
+  }
+
+  isGuestOrder(): boolean {
+    return !!this.props.guestToken;
+  }
+  isUserOrder(): boolean {
+    return !!this.props.userId;
+  }
+  hasAddress(): boolean {
+    return !!this.props.address;
+  }
+  hasShipments(): boolean {
+    return this.props.shipments.length > 0;
+  }
+
+  canBePaid(): boolean {
+    return (
+      this.props.status.isCreated() &&
+      this.hasAddress() &&
+      this.props.items.length > 0
+    );
+  }
+
+  canBeFulfilled(): boolean {
+    return this.props.status.isPaid() && this.hasShipments();
+  }
+
+  canBeCancelled(): boolean {
+    return (
+      !this.props.status.isFulfilled() &&
+      !this.props.status.isCancelled() &&
+      !this.props.status.isRefunded()
+    );
+  }
+
+  canBeRefunded(): boolean {
+    return this.props.status.isPaid() || this.props.status.isFulfilled();
+  }
+
+  getTotalItemCount(): number {
+    return this.props.items.reduce((sum, item) => sum + item.quantity, 0);
+  }
+
+  equals(other: Order): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
+  static toDTO(entity: Order): OrderDTO {
+    return {
+      id: entity.props.id.getValue(),
+      orderNumber: entity.props.orderNumber.getValue(),
+      userId: entity.props.userId,
+      guestToken: entity.props.guestToken,
+      items: entity.props.items.map(OrderItem.toDTO),
+      address: entity.props.address
+        ? OrderAddress.toDTO(entity.props.address)
+        : undefined,
+      shipments: entity.props.shipments.map(OrderShipment.toDTO),
+      totals: entity.props.totals.getValue(),
+      status: entity.props.status.getValue(),
+      source: entity.props.source.getValue(),
+      currency: entity.props.currency.getValue(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+

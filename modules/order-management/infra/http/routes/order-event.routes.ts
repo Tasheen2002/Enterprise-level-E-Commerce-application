@@ -1,197 +1,119 @@
 import { FastifyInstance } from "fastify";
-import {
-  OrderEventController,
-  LogEventRequest,
-  GetEventsRequest,
-  GetEventRequest,
-} from "../controllers/order-event.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { OrderEventController } from "../controllers/order-event.controller";
 import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  orderEventsParamsSchema,
+  orderEventParamsSchema,
+  listOrderEventsQuerySchema,
+  logOrderEventSchema,
+  orderEventResponseSchema,
+} from "../validation/order-event.schema";
 
 const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
-
-const eventDataSchema = {
-  type: "object",
-  properties: {
-    eventId: { type: "number" },
-    orderId: { type: "string", format: "uuid" },
-    eventType: { type: "string" },
-    payload: { type: "object", additionalProperties: true },
-    createdAt: { type: "string", format: "date-time" },
-  },
-};
 
 export async function registerOrderEventRoutes(
   fastify: FastifyInstance,
   orderEventController: OrderEventController,
 ): Promise<void> {
   // Log an event for an order
-  fastify.post<LogEventRequest>(
+  fastify.post(
     "/orders/:orderId/events",
     {
-      preHandler: authenticateStaff,
+      preValidation: [validateParams(orderEventsParamsSchema), validateBody(logOrderEventSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description:
-          "Log a custom event for an order (Staff/Admin only). Creates an audit trail entry with event type and payload.",
+          "Log a custom event for an order (Staff/Admin only). Creates an audit trail entry.",
         tags: ["Order Events"],
         summary: "Log Order Event",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         body: {
           type: "object",
           required: ["eventType"],
           properties: {
-            eventType: {
-              type: "string",
-              description:
-                "Event type (e.g., 'order.created', 'order.paid', 'payment.received')",
-            },
-            payload: {
-              type: "object",
-              description: "Event payload - custom data related to the event",
-              additionalProperties: true,
-            },
+            eventType: { type: "string" },
+            payload: { type: "object", additionalProperties: true },
           },
         },
         response: {
           201: {
-            description: "Event logged successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: eventDataSchema,
-              message: { type: "string", example: "Event logged successfully" },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderEventResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderEventController.logEvent.bind(orderEventController),
+    (request, reply) =>
+      orderEventController.logEvent(request as AuthenticatedRequest, reply),
   );
 
   // Get all events for an order
-  fastify.get<GetEventsRequest>(
+  fastify.get(
     "/orders/:orderId/events",
     {
+      preValidation: [validateParams(orderEventsParamsSchema), validateQuery(listOrderEventsQuerySchema)],
       preHandler: authenticateUser,
       schema: {
-        description:
-          "Get all events for an order with optional filtering and pagination",
+        description: "Get all events for an order with optional filtering and pagination",
         tags: ["Order Events"],
         summary: "Get Order Events",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         querystring: {
           type: "object",
           properties: {
-            eventType: {
-              type: "string",
-              description: "Filter by event type",
-            },
-            limit: {
-              type: "integer",
-              minimum: 1,
-              maximum: 100,
-              description: "Maximum number of events to return",
-            },
-            offset: {
-              type: "integer",
-              minimum: 0,
-              description: "Number of events to skip",
-            },
-            sortBy: {
-              type: "string",
-              enum: ["createdAt", "eventId"],
-              default: "createdAt",
-              description: "Sort by field",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-              description: "Sort order",
-            },
+            eventType: { type: "string" },
+            limit: { type: "integer", minimum: 1, maximum: 100 },
+            offset: { type: "integer", minimum: 0 },
+            sortBy: { type: "string", enum: ["createdAt", "eventId"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
           },
         },
         response: {
           200: {
-            description: "Events retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: eventDataSchema,
+                items: orderEventResponseSchema,
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderEventController.getEvents.bind(orderEventController),
+    (request, reply) =>
+      orderEventController.getEvents(request as AuthenticatedRequest, reply),
   );
 
   // Get single event by ID
-  fastify.get<GetEventRequest>(
+  fastify.get(
     "/orders/:orderId/events/:eventId",
     {
+      preValidation: [validateParams(orderEventParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get a specific event by its ID",
@@ -200,25 +122,26 @@ export async function registerOrderEventRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "eventId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             eventId: { type: "string" },
           },
-          required: ["orderId", "eventId"],
         },
         response: {
           200: {
-            description: "Event retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: eventDataSchema,
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderEventResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderEventController.getEvent.bind(orderEventController),
+    (request, reply) =>
+      orderEventController.getEvent(request as AuthenticatedRequest, reply),
   );
 }

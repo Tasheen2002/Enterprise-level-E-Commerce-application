@@ -41,36 +41,40 @@ export interface StockAlertProps {
   type: AlertTypeVO;
   triggeredAt: Date;
   resolvedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface StockAlertDTO {
   alertId: string;
   variantId: string;
   type: string;
-  triggeredAt: Date;
-  resolvedAt?: Date;
+  triggeredAt: string;
+  resolvedAt?: string;
   isResolved: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class StockAlert extends AggregateRoot {
-  private props: StockAlertProps;
-
-  private constructor(props: StockAlertProps) {
+  private constructor(private props: StockAlertProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
     variantId: string;
     type: string;
   }): StockAlert {
+    const now = new Date();
     const alert = new StockAlert({
       alertId: AlertId.create(),
       variantId: params.variantId,
       type: AlertTypeVO.create(params.type),
-      triggeredAt: new Date(),
+      triggeredAt: now,
+      createdAt: now,
+      updatedAt: now,
     });
     alert.addDomainEvent(
       new StockAlertCreatedEvent(
@@ -93,6 +97,8 @@ export class StockAlert extends AggregateRoot {
   get type(): AlertTypeVO { return this.props.type; }
   get triggeredAt(): Date { return this.props.triggeredAt; }
   get resolvedAt(): Date | undefined { return this.props.resolvedAt; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
@@ -105,6 +111,7 @@ export class StockAlert extends AggregateRoot {
       throw new InvalidOperationError("Alert is already resolved");
     }
     this.props.resolvedAt = resolvedAt;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new StockAlertResolvedEvent(
         this.props.alertId.getValue(),
@@ -124,9 +131,11 @@ export class StockAlert extends AggregateRoot {
       alertId: entity.props.alertId.getValue(),
       variantId: entity.props.variantId,
       type: entity.props.type.getValue(),
-      triggeredAt: entity.props.triggeredAt,
-      resolvedAt: entity.props.resolvedAt,
+      triggeredAt: entity.props.triggeredAt.toISOString(),
+      resolvedAt: entity.props.resolvedAt?.toISOString(),
       isResolved: entity.isResolved(),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

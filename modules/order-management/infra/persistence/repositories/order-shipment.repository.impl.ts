@@ -15,14 +15,15 @@ interface OrderShipmentDatabaseRow {
   pickupLocationId: string | null;
   shippedAt: Date | null;
   deliveredAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Hydration: Database row � Entity
   private toEntity(row: OrderShipmentDatabaseRow): OrderShipment {
-    return OrderShipment.reconstitute({
+    return OrderShipment.fromPersistence({
       shipmentId: row.id,
       orderId: row.orderId,
       carrier: row.carrier || undefined,
@@ -32,37 +33,26 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
       pickupLocationId: row.pickupLocationId || undefined,
       shippedAt: row.shippedAt || undefined,
       deliveredAt: row.deliveredAt || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
   async save(shipment: OrderShipment): Promise<void> {
-    await this.prisma.orderShipment.create({
-      data: {
-        id: shipment.getShipmentId(),
-        orderId: shipment.getOrderId(),
-        carrier: shipment.getCarrier() || null,
-        service: shipment.getService() || null,
-        trackingNo: shipment.getTrackingNumber() || null,
-        giftReceipt: shipment.hasGiftReceipt(),
-        pickupLocationId: shipment.getPickupLocationId() || null,
-        shippedAt: shipment.getShippedAt() || null,
-        deliveredAt: shipment.getDeliveredAt() || null,
-      },
-    });
-  }
-
-  async update(shipment: OrderShipment): Promise<void> {
-    await this.prisma.orderShipment.update({
-      where: { id: shipment.getShipmentId() },
-      data: {
-        carrier: shipment.getCarrier() || null,
-        service: shipment.getService() || null,
-        trackingNo: shipment.getTrackingNumber() || null,
-        giftReceipt: shipment.hasGiftReceipt(),
-        pickupLocationId: shipment.getPickupLocationId() || null,
-        shippedAt: shipment.getShippedAt() || null,
-        deliveredAt: shipment.getDeliveredAt() || null,
-      },
+    const data = {
+      orderId: shipment.orderId,
+      carrier: shipment.carrier || null,
+      service: shipment.service || null,
+      trackingNo: shipment.trackingNumber || null,
+      giftReceipt: shipment.giftReceipt,
+      pickupLocationId: shipment.pickupLocationId || null,
+      shippedAt: shipment.shippedAt || null,
+      deliveredAt: shipment.deliveredAt || null,
+    };
+    await this.prisma.orderShipment.upsert({
+      where: { id: shipment.shipmentId },
+      create: { id: shipment.shipmentId, ...data },
+      update: data,
     });
   }
 
@@ -209,7 +199,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
   }
 
   async findPending(options?: ShipmentQueryOptions): Promise<OrderShipment[]> {
-    const { limit, offset, sortOrder = "desc" } = options || {};
+    const { limit, offset } = options || {};
 
     const shipments = await this.prisma.orderShipment.findMany({
       where: {

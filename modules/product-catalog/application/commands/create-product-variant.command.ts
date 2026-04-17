@@ -1,26 +1,26 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductVariantDTO } from "../../domain/entities/product-variant.entity";
 import { VariantManagementService } from "../services/variant-management.service";
 
-export interface CreateProductVariantInput extends ICommand {
-  productId: string;
-  sku: string;
-  size?: string;
-  color?: string;
-  barcode?: string;
-  weightG?: number;
-  dims?: { length?: number; width?: number; height?: number };
-  taxClass?: string;
-  allowBackorder?: boolean;
-  allowPreorder?: boolean;
-  restockEta?: Date;
+export interface CreateProductVariantCommand extends ICommand {
+  readonly productId: string;
+  readonly sku: string;
+  readonly size?: string;
+  readonly color?: string;
+  readonly barcode?: string;
+  readonly weightG?: number;
+  readonly dims?: { length?: number; width?: number; height?: number };
+  readonly taxClass?: string;
+  readonly allowBackorder?: boolean;
+  readonly allowPreorder?: boolean;
+  readonly restockEta?: Date;
 }
 
-export class CreateProductVariantHandler implements ICommandHandler<CreateProductVariantInput, CommandResult<ProductVariantDTO>> {
+export class CreateProductVariantHandler implements ICommandHandler<CreateProductVariantCommand, CommandResult<ProductVariantDTO>> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: CreateProductVariantInput): Promise<CommandResult<ProductVariantDTO>> {
-    const { productId, ...variantData } = input;
+  async handle(command: CreateProductVariantCommand): Promise<CommandResult<ProductVariantDTO>> {
+    const { productId, ...variantData } = command;
     const dto = await this.variantManagementService.createVariant(productId, variantData);
     return CommandResult.success(dto);
   }

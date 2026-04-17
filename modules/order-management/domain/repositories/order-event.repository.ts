@@ -10,11 +10,11 @@ export interface OrderEventQueryOptions {
 export interface IOrderEventRepository {
   // Basic CRUD
   save(orderEvent: OrderEvent): Promise<void>;
-  delete(eventId: number): Promise<void>;
+  delete(eventId: number | null): Promise<void>;
   deleteByOrderId(orderId: string): Promise<void>;
 
   // Finders
-  findById(eventId: number): Promise<OrderEvent | null>;
+  findById(eventId: number | null): Promise<OrderEvent | null>;
   findByOrderId(
     orderId: string,
     options?: OrderEventQueryOptions,
@@ -36,5 +36,5 @@ export interface IOrderEventRepository {
   getLatestByOrderId(orderId: string): Promise<OrderEvent | null>;
 
   // Existence checks
-  exists(eventId: number): Promise<boolean>;
+  exists(eventId: number | null): Promise<boolean>;
 }

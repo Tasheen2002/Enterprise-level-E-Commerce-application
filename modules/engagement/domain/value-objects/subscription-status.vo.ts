@@ -1,36 +1,37 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { SubscriptionStatusEnum } from "../enums/engagement.enums";
+
 export class SubscriptionStatus {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: SubscriptionStatusEnum) {}
 
-  static active(): SubscriptionStatus {
-    return new SubscriptionStatus("active");
-  }
-
-  static unsubscribed(): SubscriptionStatus {
-    return new SubscriptionStatus("unsubscribed");
-  }
-
-  static bounced(): SubscriptionStatus {
-    return new SubscriptionStatus("bounced");
-  }
-
-  static spam(): SubscriptionStatus {
-    return new SubscriptionStatus("spam");
+  static create(value: string): SubscriptionStatus {
+    return SubscriptionStatus.fromString(value);
   }
 
   static fromString(value: string): SubscriptionStatus {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "active":
-        return SubscriptionStatus.active();
-      case "unsubscribed":
-        return SubscriptionStatus.unsubscribed();
-      case "bounced":
-        return SubscriptionStatus.bounced();
-      case "spam":
-        return SubscriptionStatus.spam();
-      default:
-        throw new Error(`Invalid subscription status: ${value}`);
+
+    if (!Object.values(SubscriptionStatusEnum).includes(normalized as SubscriptionStatusEnum)) {
+      throw new DomainValidationError(`Invalid subscription status: ${value}`);
     }
+
+    return new SubscriptionStatus(normalized as SubscriptionStatusEnum);
+  }
+
+  static active(): SubscriptionStatus {
+    return new SubscriptionStatus(SubscriptionStatusEnum.ACTIVE);
+  }
+
+  static unsubscribed(): SubscriptionStatus {
+    return new SubscriptionStatus(SubscriptionStatusEnum.UNSUBSCRIBED);
+  }
+
+  static bounced(): SubscriptionStatus {
+    return new SubscriptionStatus(SubscriptionStatusEnum.BOUNCED);
+  }
+
+  static spam(): SubscriptionStatus {
+    return new SubscriptionStatus(SubscriptionStatusEnum.SPAM);
   }
 
   getValue(): string {
@@ -38,23 +39,23 @@ export class SubscriptionStatus {
   }
 
   isActive(): boolean {
-    return this.value === "active";
+    return this.value === SubscriptionStatusEnum.ACTIVE;
   }
 
   isUnsubscribed(): boolean {
-    return this.value === "unsubscribed";
+    return this.value === SubscriptionStatusEnum.UNSUBSCRIBED;
   }
 
   isBounced(): boolean {
-    return this.value === "bounced";
+    return this.value === SubscriptionStatusEnum.BOUNCED;
   }
 
   isSpam(): boolean {
-    return this.value === "spam";
+    return this.value === SubscriptionStatusEnum.SPAM;
   }
 
   canReceiveEmails(): boolean {
-    return this.value === "active";
+    return this.value === SubscriptionStatusEnum.ACTIVE;
   }
 
   equals(other: SubscriptionStatus): boolean {

@@ -10,12 +10,13 @@ export interface IStockAlertRepository {
   findActiveAlerts(): Promise<StockAlert[]>;
   findResolvedAlerts(): Promise<StockAlert[]>;
   findByType(type: AlertType): Promise<StockAlert[]>;
-
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-    includeResolved?: boolean;
-  }): Promise<{ alerts: StockAlert[]; total: number }>;
+  findAll(options?: StockAlertQueryOptions): Promise<{ alerts: StockAlert[]; total: number }>;
   findActiveAlertsByVariant(variantId: string): Promise<StockAlert[]>;
   hasActiveAlert(variantId: string, type: AlertType): Promise<boolean>;
+}
+
+export interface StockAlertQueryOptions {
+  limit?: number;
+  offset?: number;
+  includeResolved?: boolean;
 }

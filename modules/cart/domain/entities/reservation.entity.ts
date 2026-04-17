@@ -67,6 +67,8 @@ export interface ReservationProps {
   variantId: VariantId;
   quantity: Quantity;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CreateReservationData {
@@ -82,6 +84,8 @@ export interface ReservationEntityData {
   variantId: string;
   quantity: number;
   expiresAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // ============================================================================
@@ -99,6 +103,8 @@ export interface ReservationDTO {
   isExpiringSoon: boolean;
   timeUntilExpirySeconds: number;
   canBeExtended: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ============================================================================
@@ -114,6 +120,7 @@ export class Reservation extends AggregateRoot {
     const reservationId = ReservationId.create();
     const durationMinutes = data.durationMinutes || RESERVATION_DEFAULT_DURATION_MINUTES;
     const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+    const now = new Date();
 
     const reservation = new Reservation({
       reservationId,
@@ -121,6 +128,8 @@ export class Reservation extends AggregateRoot {
       variantId: VariantId.fromString(data.variantId),
       quantity: Quantity.fromNumber(data.quantity),
       expiresAt,
+      createdAt: now,
+      updatedAt: now,
     });
 
     reservation.addDomainEvent(
@@ -135,29 +144,16 @@ export class Reservation extends AggregateRoot {
     return reservation;
   }
 
-  static reconstitute(data: ReservationEntityData): Reservation {
+  static fromPersistence(data: ReservationEntityData): Reservation {
     return new Reservation({
       reservationId: ReservationId.fromString(data.reservationId),
       cartId: CartId.fromString(data.cartId),
       variantId: VariantId.fromString(data.variantId),
       quantity: Quantity.fromNumber(data.quantity),
       expiresAt: data.expiresAt,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
     });
-  }
-
-  static toDTO(reservation: Reservation): ReservationDTO {
-    return {
-      reservationId: reservation.props.reservationId.getValue(),
-      cartId: reservation.props.cartId.getValue(),
-      variantId: reservation.props.variantId.getValue(),
-      quantity: reservation.props.quantity.getValue(),
-      expiresAt: reservation.props.expiresAt.toISOString(),
-      status: reservation.status,
-      isExpired: reservation.isExpired,
-      isExpiringSoon: reservation.isExpiringSoon(),
-      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
-      canBeExtended: reservation.canBeExtended,
-    };
   }
 
   // Getters
@@ -179,6 +175,14 @@ export class Reservation extends AggregateRoot {
 
   get expiresAt(): Date {
     return this.props.expiresAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Business methods
@@ -212,6 +216,7 @@ export class Reservation extends AggregateRoot {
     const now = new Date();
     const currentExpiry = this.isExpired ? now : this.props.expiresAt;
     this.props.expiresAt = new Date(currentExpiry.getTime() + additionalMinutes * 60 * 1000);
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new ReservationExtendedEvent(
         this.props.reservationId.getValue(),
@@ -230,6 +235,7 @@ export class Reservation extends AggregateRoot {
       );
     }
     this.props.expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new ReservationExtendedEvent(
         this.props.reservationId.getValue(),
@@ -298,6 +304,8 @@ export class Reservation extends AggregateRoot {
       variantId: this.props.variantId.getValue(),
       quantity: this.props.quantity.getValue(),
       expiresAt: this.props.expiresAt,
+      createdAt: this.props.createdAt,
+      updatedAt: this.props.updatedAt,
     };
   }
 
@@ -318,5 +326,22 @@ export class Reservation extends AggregateRoot {
 
   static getMaxDurationMinutes(): number {
     return RESERVATION_MAX_DURATION_MINUTES;
+  }
+
+  static toDTO(reservation: Reservation): ReservationDTO {
+    return {
+      reservationId: reservation.props.reservationId.getValue(),
+      cartId: reservation.props.cartId.getValue(),
+      variantId: reservation.props.variantId.getValue(),
+      quantity: reservation.props.quantity.getValue(),
+      expiresAt: reservation.props.expiresAt.toISOString(),
+      status: reservation.status,
+      isExpired: reservation.isExpired,
+      isExpiringSoon: reservation.isExpiringSoon(),
+      timeUntilExpirySeconds: reservation.timeUntilExpirySeconds,
+      canBeExtended: reservation.canBeExtended,
+      createdAt: reservation.props.createdAt.toISOString(),
+      updatedAt: reservation.props.updatedAt.toISOString(),
+    };
   }
 }

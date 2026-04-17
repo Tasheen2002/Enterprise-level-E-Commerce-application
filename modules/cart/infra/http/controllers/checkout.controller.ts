@@ -1,54 +1,32 @@
-import { FastifyRequest, FastifyReply } from "fastify";
-import { CheckoutService } from "../../../application/services/checkout.service";
-import { CheckoutOrderService } from "../../../application/services/checkout-order.service";
+import { FastifyReply } from "fastify";
+import {
+  InitializeCheckoutHandler,
+  CompleteCheckoutHandler,
+  CancelCheckoutHandler,
+  CompleteCheckoutWithOrderHandler,
+  GetCheckoutHandler,
+  GetOrderByCheckoutHandler,
+} from "../../../application";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 // Import middleware for type augmentations (request.guestToken)
 import "../middleware/cart-auth.middleware";
 
-export interface InitializeCheckoutRequest {
-  cartId: string;
-  expiresInMinutes?: number;
-}
-
-export interface CompleteCheckoutRequest {
-  paymentIntentId: string;
-}
-
-export interface CompleteCheckoutWithOrderRequest {
-  paymentIntentId: string;
-  shippingAddress: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state?: string;
-    postalCode?: string;
-    country: string;
-    phone?: string;
-  };
-  billingAddress?: {
-    firstName: string;
-    lastName: string;
-    addressLine1: string;
-    addressLine2?: string;
-    city: string;
-    state?: string;
-    postalCode?: string;
-    country: string;
-    phone?: string;
-  };
-}
-
 export class CheckoutController {
   constructor(
-    private readonly checkoutService: CheckoutService,
-    private readonly checkoutOrderService?: CheckoutOrderService,
+    private readonly initializeCheckoutHandler: InitializeCheckoutHandler,
+    private readonly completeCheckoutHandler: CompleteCheckoutHandler,
+    private readonly cancelCheckoutHandler: CancelCheckoutHandler,
+    private readonly completeCheckoutWithOrderHandler: CompleteCheckoutWithOrderHandler,
+    private readonly getCheckoutHandler: GetCheckoutHandler,
+    private readonly getOrderByCheckoutHandler: GetOrderByCheckoutHandler,
   ) {}
 
   async initialize(
-    request: FastifyRequest<{ Body: InitializeCheckoutRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { cartId: string; expiresInMinutes?: number };
+    }>,
     reply: FastifyReply,
   ) {
     try {
@@ -60,22 +38,20 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const checkout = await this.checkoutService.initializeCheckout({
+      const result = await this.initializeCheckoutHandler.handle({
         cartId: body.cartId,
         userId,
         guestToken,
         expiresInMinutes: body.expiresInMinutes,
       });
-
-      return ResponseHelper.created(reply, "Checkout initialized", checkout);
-    } catch (error) {
-      request.log.error(error, "Failed to initialize checkout");
+      return ResponseHelper.fromCommand(reply, result, "Checkout initialized", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async get(
-    request: FastifyRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -83,27 +59,18 @@ export class CheckoutController {
       const guestToken = request.guestToken;
       const { checkoutId } = request.params;
 
-      const checkout = await this.checkoutService.getCheckout(
-        checkoutId,
-        userId,
-        guestToken,
-      );
-
-      if (!checkout) {
-        return ResponseHelper.notFound(reply, "Checkout not found");
-      }
-
-      return ResponseHelper.ok(reply, "Checkout retrieved", checkout);
-    } catch (error) {
-      request.log.error(error, "Failed to get checkout");
+      const result = await this.getCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      if (result === null) return ResponseHelper.notFound(reply, "Checkout not found");
+      return ResponseHelper.ok(reply, "Checkout retrieved", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async complete(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { checkoutId: string };
-      Body: CompleteCheckoutRequest;
+      Body: { paymentIntentId: string };
     }>,
     reply: FastifyReply,
   ) {
@@ -116,21 +83,15 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const checkout = await this.checkoutService.completeCheckout({
-        checkoutId,
-        userId,
-        guestToken,
-      });
-
-      return ResponseHelper.ok(reply, "Checkout completed", checkout);
-    } catch (error) {
-      request.log.error(error, "Failed to complete checkout");
+      const result = await this.completeCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      return ResponseHelper.fromCommand(reply, result, "Checkout completed");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async cancel(
-    request: FastifyRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -142,34 +103,45 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const checkout = await this.checkoutService.cancelCheckout(
-        checkoutId,
-        userId,
-        guestToken,
-      );
-
-      return ResponseHelper.ok(reply, "Checkout cancelled", checkout);
-    } catch (error) {
-      request.log.error(error, "Failed to cancel checkout");
+      const result = await this.cancelCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      return ResponseHelper.fromCommand(reply, result, "Checkout cancelled");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async completeWithOrder(
-    request: FastifyRequest<{
+    request: AuthenticatedRequest<{
       Params: { checkoutId: string };
-      Body: CompleteCheckoutWithOrderRequest;
+      Body: {
+        paymentIntentId: string;
+        shippingAddress: {
+          firstName: string;
+          lastName: string;
+          addressLine1: string;
+          addressLine2?: string;
+          city: string;
+          state?: string;
+          postalCode?: string;
+          country: string;
+          phone?: string;
+        };
+        billingAddress?: {
+          firstName: string;
+          lastName: string;
+          addressLine1: string;
+          addressLine2?: string;
+          city: string;
+          state?: string;
+          postalCode?: string;
+          country: string;
+          phone?: string;
+        };
+      };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      if (!this.checkoutOrderService) {
-        return ResponseHelper.error(
-          reply,
-          new Error("Checkout order service not initialized"),
-        );
-      }
-
       const userId = request.user?.userId;
       const guestToken = request.guestToken;
       const { checkoutId } = request.params;
@@ -179,7 +151,7 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const result = await this.checkoutOrderService.completeCheckoutWithOrder({
+      const result = await this.completeCheckoutWithOrderHandler.handle({
         checkoutId,
         paymentIntentId: body.paymentIntentId,
         userId,
@@ -187,30 +159,17 @@ export class CheckoutController {
         shippingAddress: body.shippingAddress,
         billingAddress: body.billingAddress,
       });
-
-      return ResponseHelper.ok(
-        reply,
-        "Order created successfully from checkout",
-        result,
-      );
-    } catch (error) {
-      request.log.error(error, "Failed to complete checkout and create order");
+      return ResponseHelper.fromCommand(reply, result, "Order created successfully from checkout");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getOrderByCheckoutId(
-    request: FastifyRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      if (!this.checkoutOrderService) {
-        return ResponseHelper.error(
-          reply,
-          new Error("Checkout order service not initialized"),
-        );
-      }
-
       const userId = request.user?.userId;
       const guestToken = request.guestToken;
       const { checkoutId } = request.params;
@@ -219,22 +178,10 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const order = await this.checkoutOrderService.getOrderByCheckoutId(
-        checkoutId,
-        userId,
-        guestToken,
-      );
-
-      if (!order) {
-        return ResponseHelper.notFound(
-          reply,
-          "Order not found for this checkout",
-        );
-      }
-
-      return ResponseHelper.ok(reply, "Order retrieved", order);
-    } catch (error) {
-      request.log.error(error, "Failed to get order by checkout ID");
+      const result = await this.getOrderByCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      if (result === null) return ResponseHelper.notFound(reply, "Order not found for this checkout");
+      return ResponseHelper.ok(reply, "Order retrieved", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

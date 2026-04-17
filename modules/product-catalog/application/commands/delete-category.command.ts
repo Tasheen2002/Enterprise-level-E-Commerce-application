@@ -1,15 +1,15 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { CategoryManagementService } from "../services/category-management.service";
 
-export interface DeleteCategoryInput extends ICommand {
-  categoryId: string;
+export interface DeleteCategoryCommand extends ICommand {
+  readonly categoryId: string;
 }
 
-export class DeleteCategoryHandler implements ICommandHandler<DeleteCategoryInput, CommandResult<void>> {
+export class DeleteCategoryHandler implements ICommandHandler<DeleteCategoryCommand, CommandResult<void>> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(input: DeleteCategoryInput): Promise<CommandResult<void>> {
-    await this.categoryManagementService.deleteCategory(input.categoryId);
+  async handle(command: DeleteCategoryCommand): Promise<CommandResult<void>> {
+    await this.categoryManagementService.deleteCategory(command.categoryId);
     return CommandResult.success(undefined);
   }
 }

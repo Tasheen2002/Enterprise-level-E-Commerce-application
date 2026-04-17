@@ -14,7 +14,48 @@ import {
   AppointmentService,
   ProductReviewService,
   NewsletterService,
-} from "../../application/services/index.js";
+  // Wishlist handlers
+  CreateWishlistHandler,
+  AddToWishlistHandler,
+  RemoveFromWishlistHandler,
+  UpdateWishlistHandler,
+  DeleteWishlistHandler,
+  GetWishlistHandler,
+  GetUserWishlistsHandler,
+  GetPublicWishlistsHandler,
+  GetWishlistItemsHandler,
+  // Reminder handlers
+  CreateReminderHandler,
+  UpdateReminderStatusHandler,
+  UnsubscribeReminderHandler,
+  DeleteReminderHandler,
+  GetReminderHandler,
+  GetUserRemindersHandler,
+  GetVariantRemindersHandler,
+  // Notification handlers
+  ScheduleNotificationHandler,
+  SendNotificationHandler,
+  GetNotificationHandler,
+  GetUserNotificationsHandler,
+  // Appointment handlers
+  CreateAppointmentHandler,
+  UpdateAppointmentHandler,
+  CancelAppointmentHandler,
+  GetAppointmentHandler,
+  GetUserAppointmentsHandler,
+  GetLocationAppointmentsHandler,
+  // Product review handlers
+  CreateProductReviewHandler,
+  UpdateReviewStatusHandler,
+  DeleteProductReviewHandler,
+  GetProductReviewHandler,
+  GetProductReviewsHandler,
+  GetUserReviewsHandler,
+  // Newsletter handlers
+  SubscribeNewsletterHandler,
+  UnsubscribeNewsletterHandler,
+  GetNewsletterSubscriptionHandler,
+} from "../../application/index.js";
 import { authenticateUser } from "../../../user-management/infra/http/middleware/auth.middleware.js";
 import { optionalAuth } from "../../../user-management/infra/http/middleware/auth.middleware.js";
 import { authenticateAdmin } from "../../../user-management/infra/http/middleware/auth.middleware.js";
@@ -65,21 +106,51 @@ export async function registerEngagementRoutes(
 
   // Initialize controllers
   const wishlistController = new WishlistController(
-    services.wishlistService,
-    services.prisma,
+    new CreateWishlistHandler(services.wishlistService),
+    new AddToWishlistHandler(services.wishlistService),
+    new RemoveFromWishlistHandler(services.wishlistService),
+    new UpdateWishlistHandler(services.wishlistService),
+    new DeleteWishlistHandler(services.wishlistService),
+    new GetWishlistHandler(services.wishlistService),
+    new GetUserWishlistsHandler(services.wishlistService),
+    new GetPublicWishlistsHandler(services.wishlistService),
+    new GetWishlistItemsHandler(services.wishlistService),
   );
-  const reminderController = new ReminderController(services.reminderService);
+  const reminderController = new ReminderController(
+    new CreateReminderHandler(services.reminderService),
+    new UpdateReminderStatusHandler(services.reminderService),
+    new UnsubscribeReminderHandler(services.reminderService),
+    new DeleteReminderHandler(services.reminderService),
+    new GetReminderHandler(services.reminderService),
+    new GetUserRemindersHandler(services.reminderService),
+    new GetVariantRemindersHandler(services.reminderService),
+  );
   const notificationController = new NotificationController(
-    services.notificationService,
+    new ScheduleNotificationHandler(services.notificationService),
+    new SendNotificationHandler(services.notificationService),
+    new GetNotificationHandler(services.notificationService),
+    new GetUserNotificationsHandler(services.notificationService),
   );
   const appointmentController = new AppointmentController(
-    services.appointmentService,
+    new CreateAppointmentHandler(services.appointmentService),
+    new UpdateAppointmentHandler(services.appointmentService),
+    new CancelAppointmentHandler(services.appointmentService),
+    new GetAppointmentHandler(services.appointmentService),
+    new GetUserAppointmentsHandler(services.appointmentService),
+    new GetLocationAppointmentsHandler(services.appointmentService),
   );
   const productReviewController = new ProductReviewController(
-    services.productReviewService,
+    new CreateProductReviewHandler(services.productReviewService),
+    new UpdateReviewStatusHandler(services.productReviewService),
+    new DeleteProductReviewHandler(services.productReviewService),
+    new GetProductReviewHandler(services.productReviewService),
+    new GetProductReviewsHandler(services.productReviewService),
+    new GetUserReviewsHandler(services.productReviewService),
   );
   const newsletterController = new NewsletterController(
-    services.newsletterService,
+    new SubscribeNewsletterHandler(services.newsletterService),
+    new UnsubscribeNewsletterHandler(services.newsletterService),
+    new GetNewsletterSubscriptionHandler(services.newsletterService),
   );
 
   // ============================================================
@@ -1042,25 +1113,23 @@ export async function registerEngagementRoutes(
 
   // Get User Notifications
   fastify.get(
-    "/engagement/notifications/type/:type",
+    "/engagement/notifications",
     {
       preHandler: authenticateUser,
       schema: {
         description: "Get notifications by type",
         tags: ["Engagement - Notifications"],
-        params: {
+        querystring: {
           type: "object",
           required: ["type"],
           properties: {
             type: { type: "string", description: "Notification type" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "string", description: "Maximum number of results" },
+            limit: {
+              type: "integer",
+              description: "Maximum number of results",
+            },
             offset: {
-              type: "string",
+              type: "integer",
               description: "Number of results to skip",
             },
           },

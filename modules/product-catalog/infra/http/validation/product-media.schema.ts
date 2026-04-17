@@ -3,12 +3,12 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const productMediaParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const productMediaAssetParamsSchema = z.object({
-  productId: z.string().uuid(),
-  assetId: z.string().uuid(),
+  productId: z.uuid(),
+  assetId: z.uuid(),
 });
 
 export const getProductMediaQuerySchema = z.object({
@@ -17,19 +17,19 @@ export const getProductMediaQuerySchema = z.object({
 });
 
 export const addMediaToProductSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.uuid(),
   position: z.number().int().min(1).optional(),
   isCover: z.boolean().optional(),
 });
 
 export const setProductCoverImageSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.uuid(),
 });
 
 export const reorderProductMediaSchema = z.object({
   reorderData: z.array(
     z.object({
-      assetId: z.string().uuid(),
+      assetId: z.uuid(),
       position: z.number().int().min(1),
     }),
   ).min(1),

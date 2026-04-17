@@ -2,7 +2,6 @@ import { Product } from "../entities/product.entity";
 import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
 
-// Enrichment read-model DTOs returned by enrichment queries
 export interface EnrichedVariantData {
   id: string;
   sku: string;
@@ -68,7 +67,6 @@ export interface IProductRepository {
     options?: ProductQueryOptions,
   ): Promise<Product[]>;
   search(query: string, options?: ProductSearchOptions): Promise<Product[]>;
-  update(product: Product): Promise<void>;
   delete(id: ProductId): Promise<void>;
   exists(id: ProductId): Promise<boolean>;
   existsBySlug(slug: Slug): Promise<boolean>;

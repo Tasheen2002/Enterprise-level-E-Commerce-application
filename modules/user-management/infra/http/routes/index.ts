@@ -1,15 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
 import { AuthController } from "../controllers/auth.controller";
 import { ProfileController } from "../controllers/profile.controller";
 import { AddressesController } from "../controllers/addresses.controller";
 import { PaymentMethodsController } from "../controllers/payment-methods.controller";
 import { UsersController } from "../controllers/users.controller";
-import { registerAuthRoutes } from "./auth.routes";
-import { registerProfileRoutes } from "./profile.routes";
-import { registerAddressRoutes } from "./addresses.routes";
-import { registerPaymentMethodRoutes } from "./payment-methods.routes";
-import { registerUserRoutes } from "./users.routes";
+import { authRoutes } from "./auth.routes";
+import { profileRoutes } from "./profile.routes";
+import { addressRoutes } from "./addresses.routes";
+import { paymentMethodRoutes } from "./payment-methods.routes";
+import { userRoutes } from "./users.routes";
 
 export async function registerUserManagementRoutes(
   fastify: FastifyInstance,
@@ -20,12 +19,11 @@ export async function registerUserManagementRoutes(
     paymentMethodsController: PaymentMethodsController;
     usersController: UsersController;
   },
-  prisma: PrismaClient,
-) {
+): Promise<void> {
   await fastify.register(
     async (instance) => {
       // Public auth routes
-      await registerAuthRoutes(instance, controllers.authController);
+      await authRoutes(instance, controllers.authController);
 
       // Protected routes — require a valid JWT
       await instance.register(async (protected_) => {
@@ -33,16 +31,16 @@ export async function registerUserManagementRoutes(
           await fastify.authenticate(request);
         });
 
-        await registerProfileRoutes(protected_, controllers.profileController);
-        await registerAddressRoutes(
+        await profileRoutes(protected_, controllers.profileController);
+        await addressRoutes(
           protected_,
           controllers.addressesController,
         );
-        await registerPaymentMethodRoutes(
+        await paymentMethodRoutes(
           protected_,
           controllers.paymentMethodsController,
         );
-        await registerUserRoutes(protected_, controllers.usersController);
+        await userRoutes(protected_, controllers.usersController);
       });
     },
     { prefix: "/api/v1" },

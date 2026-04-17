@@ -1,89 +1,94 @@
 import { OrderStatus } from "../value-objects";
 
 export interface OrderStatusHistoryProps {
-  historyId: number;
+  historyId: number | null;
   orderId: string;
   fromStatus?: OrderStatus;
   toStatus: OrderStatus;
-  changedAt: Date;
   changedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderStatusHistoryDTO {
+  historyId: number | null;
+  orderId: string;
+  fromStatus?: string;
+  toStatus: string;
+  changedBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class OrderStatusHistory {
-  private historyId: number;
-  private orderId: string;
-  private fromStatus?: OrderStatus;
-  private toStatus: OrderStatus;
-  private changedAt: Date;
-  private changedBy?: string;
-
-  private constructor(props: OrderStatusHistoryProps) {
-    this.historyId = props.historyId;
-    this.orderId = props.orderId;
-    this.fromStatus = props.fromStatus;
-    this.toStatus = props.toStatus;
-    this.changedAt = props.changedAt;
-    this.changedBy = props.changedBy;
-  }
+  private constructor(private props: OrderStatusHistoryProps) {}
 
   static create(
-    props: Omit<OrderStatusHistoryProps, "historyId" | "changedAt">,
+    params: Omit<
+      OrderStatusHistoryProps,
+      "historyId" | "createdAt" | "updatedAt"
+    >,
   ): OrderStatusHistory {
     return new OrderStatusHistory({
-      historyId: 0, // Will be assigned by database
-      orderId: props.orderId,
-      fromStatus: props.fromStatus,
-      toStatus: props.toStatus,
-      changedAt: new Date(),
-      changedBy: props.changedBy,
+      ...params,
+      historyId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
-  static reconstitute(props: OrderStatusHistoryProps): OrderStatusHistory {
+  static fromPersistence(props: OrderStatusHistoryProps): OrderStatusHistory {
     return new OrderStatusHistory(props);
   }
 
-  getHistoryId(): number {
-    return this.historyId;
+  get historyId(): number | null {
+    return this.props.historyId;
   }
 
-  getOrderId(): string {
-    return this.orderId;
+  get orderId(): string {
+    return this.props.orderId;
   }
 
-  getFromStatus(): OrderStatus | undefined {
-    return this.fromStatus;
+  get fromStatus(): OrderStatus | undefined {
+    return this.props.fromStatus;
   }
 
-  getToStatus(): OrderStatus {
-    return this.toStatus;
+  get toStatus(): OrderStatus {
+    return this.props.toStatus;
   }
 
-  getChangedAt(): Date {
-    return this.changedAt;
+  get changedBy(): string | undefined {
+    return this.props.changedBy;
   }
 
-  getChangedBy(): string | undefined {
-    return this.changedBy;
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   isInitialStatus(): boolean {
-    return !this.fromStatus;
+    return !this.props.fromStatus;
   }
 
   equals(other: OrderStatusHistory): boolean {
-    return this.historyId === other.historyId;
+    if (this.props.historyId === null || other.props.historyId === null) {
+      return false;
+    }
+    return this.props.historyId === other.props.historyId;
   }
 
-  toSnapshot() {
+  static toDTO(entity: OrderStatusHistory): OrderStatusHistoryDTO {
     return {
-      historyId: this.historyId,
-      orderId: this.orderId,
-      fromStatus: this.fromStatus?.getValue(),
-      toStatus: this.toStatus.getValue(),
-      changedAt: this.changedAt,
-      changedBy: this.changedBy,
-      isInitialStatus: this.isInitialStatus(),
+      historyId: entity.props.historyId,
+      orderId: entity.props.orderId,
+      fromStatus: entity.props.fromStatus?.getValue(),
+      toStatus: entity.props.toStatus.getValue(),
+      changedBy: entity.props.changedBy,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

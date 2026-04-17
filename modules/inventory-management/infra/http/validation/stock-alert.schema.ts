@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const alertParamsSchema = z.object({
-  alertId: z.string().uuid(),
+  alertId: z.uuid(),
 });
 
 export const listStockAlertsSchema = z.object({
@@ -13,7 +13,7 @@ export const listStockAlertsSchema = z.object({
 });
 
 export const createStockAlertSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
   type: z.enum(["low_stock", "oos", "overstock"]),
 });
 

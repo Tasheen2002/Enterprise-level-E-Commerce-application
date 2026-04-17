@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
-import { RolePermissions } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { SupplierController } from "../controllers/supplier.controller";
 import {
   validateBody,
@@ -16,29 +20,46 @@ import {
   supplierResponseSchema,
 } from "../validation/supplier.schema";
 
-export async function registerSupplierRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function supplierRoutes(
   fastify: FastifyInstance,
   controller: SupplierController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // List suppliers
   fastify.get(
     "/suppliers",
     {
-      preHandler: [
-        authenticate,
-        RolePermissions.STAFF_LEVEL,
-        validateQuery(listSuppliersSchema),
-      ],
+      preValidation: [validateQuery(listSuppliersSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all suppliers (Staff/Admin only)",
         tags: ["Suppliers"],
         summary: "List Suppliers",
         security: [{ bearerAuth: [] }],
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+          },
+        },
         response: {
           200: {
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -60,7 +81,7 @@ export async function registerSupplierRoutes(
     "/suppliers/:supplierId",
     {
       preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get supplier by ID (Staff/Admin only)",
         tags: ["Suppliers"],
@@ -78,6 +99,8 @@ export async function registerSupplierRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: supplierResponseSchema,
             },
           },
@@ -92,11 +115,8 @@ export async function registerSupplierRoutes(
   fastify.post(
     "/suppliers",
     {
-      preHandler: [
-        authenticate,
-        RolePermissions.ADMIN_ONLY,
-        validateBody(createSupplierSchema),
-      ],
+      preValidation: [validateBody(createSupplierSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new supplier",
         tags: ["Suppliers"],
@@ -126,6 +146,8 @@ export async function registerSupplierRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: supplierResponseSchema,
             },
           },
@@ -137,15 +159,11 @@ export async function registerSupplierRoutes(
   );
 
   // Update supplier
-  fastify.put(
+  fastify.patch(
     "/suppliers/:supplierId",
     {
-      preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [
-        authenticate,
-        RolePermissions.ADMIN_ONLY,
-        validateBody(updateSupplierSchema),
-      ],
+      preValidation: [validateParams(supplierParamsSchema), validateBody(updateSupplierSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update supplier",
         tags: ["Suppliers"],
@@ -171,6 +189,8 @@ export async function registerSupplierRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: supplierResponseSchema,
             },
           },
@@ -186,7 +206,7 @@ export async function registerSupplierRoutes(
     "/suppliers/:supplierId",
     {
       preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete supplier",
         tags: ["Suppliers"],

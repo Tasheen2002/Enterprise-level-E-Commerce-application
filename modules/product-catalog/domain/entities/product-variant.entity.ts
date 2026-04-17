@@ -56,7 +56,7 @@ export interface ProductVariantProps {
   color: string | null;
   barcode: string | null;
   weightG: number | null;
-  dims: Record<string, any> | null;
+  dims: Record<string, unknown> | null;
   taxClass: string | null;
   allowBackorder: boolean;
   allowPreorder: boolean;
@@ -73,23 +73,20 @@ export interface ProductVariantDTO {
   color: string | null;
   barcode: string | null;
   weightG: number | null;
-  dims: Record<string, any> | null;
+  dims: Record<string, unknown> | null;
   taxClass: string | null;
   allowBackorder: boolean;
   allowPreorder: boolean;
-  restockEta: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
+  restockEta: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class ProductVariant extends AggregateRoot {
-  private props: ProductVariantProps;
-
-  private constructor(props: ProductVariantProps) {
+  private constructor(private props: ProductVariantProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -100,7 +97,7 @@ export class ProductVariant extends AggregateRoot {
     color?: string;
     barcode?: string;
     weightG?: number;
-    dims?: Record<string, any>;
+    dims?: Record<string, unknown>;
     taxClass?: string;
     allowBackorder?: boolean;
     allowPreorder?: boolean;
@@ -149,7 +146,7 @@ export class ProductVariant extends AggregateRoot {
   get color(): string | null { return this.props.color; }
   get barcode(): string | null { return this.props.barcode; }
   get weightG(): number | null { return this.props.weightG; }
-  get dims(): Record<string, any> | null { return this.props.dims; }
+  get dims(): Record<string, unknown> | null { return this.props.dims; }
   get taxClass(): string | null { return this.props.taxClass; }
   get allowBackorder(): boolean { return this.props.allowBackorder; }
   get allowPreorder(): boolean { return this.props.allowPreorder; }
@@ -187,7 +184,7 @@ export class ProductVariant extends AggregateRoot {
     this.touch();
   }
 
-  updateDimensions(newDims: Record<string, any> | null): void {
+  updateDimensions(newDims: Record<string, unknown> | null): void {
     this.props.dims = newDims;
     this.touch();
   }
@@ -246,6 +243,10 @@ export class ProductVariant extends AggregateRoot {
 
   // ── Serialisation ──────────────────────────────────────────────────
 
+  equals(other: ProductVariant): boolean {
+    return this.props.id.equals(other.props.id);
+  }
+
   static toDTO(entity: ProductVariant): ProductVariantDTO {
     return {
       id: entity.props.id.getValue(),
@@ -259,13 +260,9 @@ export class ProductVariant extends AggregateRoot {
       taxClass: entity.props.taxClass,
       allowBackorder: entity.props.allowBackorder,
       allowPreorder: entity.props.allowPreorder,
-      restockEta: entity.props.restockEta,
-      createdAt: entity.props.createdAt,
-      updatedAt: entity.props.updatedAt,
+      restockEta: entity.props.restockEta?.toISOString() ?? null,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
-  }
-
-  equals(other: ProductVariant): boolean {
-    return this.props.id.equals(other.props.id);
   }
 }

@@ -1,23 +1,52 @@
 import {
   IWishlistRepository,
   WishlistQueryOptions,
-  WishlistFilterOptions,
-} from "../../domain/repositories/wishlist.repository.js";
+  WishlistFilters,
+} from "../../domain/repositories/wishlist.repository";
 import {
   IWishlistItemRepository,
   WishlistItemQueryOptions,
-} from "../../domain/repositories/wishlist-item.repository.js";
-import { Wishlist } from "../../domain/entities/wishlist.entity.js";
-import { WishlistItem } from "../../domain/entities/wishlist-item.entity.js";
-import { WishlistId } from "../../domain/value-objects/index.js";
+} from "../../domain/repositories/wishlist-item.repository";
+import {
+  Wishlist,
+  WishlistDTO,
+} from "../../domain/entities/wishlist.entity";
+import {
+  WishlistItem,
+  WishlistItemDTO,
+} from "../../domain/entities/wishlist-item.entity";
+import { WishlistId } from "../../domain/value-objects";
+import {
+  WishlistNotFoundError,
+  WishlistItemNotFoundError,
+  WishlistItemAlreadyExistsError,
+} from "../../domain/errors/engagement.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
+
+export interface PaginatedWishlistResult {
+  items: WishlistDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedWishlistItemResult {
+  items: WishlistItemDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 
 export class WishlistManagementService {
   constructor(
     private readonly wishlistRepository: IWishlistRepository,
-    private readonly wishlistItemRepository: IWishlistItemRepository
+    private readonly wishlistItemRepository: IWishlistItemRepository,
   ) {}
 
-  // Wishlist operations
+  // ── Wishlist CRUD ────────────────────────────────────────────────────────────
+
   async createWishlist(data: {
     userId?: string;
     guestToken?: string;
@@ -25,382 +54,249 @@ export class WishlistManagementService {
     isDefault?: boolean;
     isPublic?: boolean;
     description?: string;
-  }): Promise<Wishlist> {
+  }): Promise<WishlistDTO> {
+    if (data.isDefault && data.userId) {
+      const existingDefault = await this.wishlistRepository.findDefaultByUserId(data.userId);
+      if (existingDefault) {
+        return Wishlist.toDTO(existingDefault);
+      }
+    } else if (data.isDefault && data.guestToken) {
+      const existing = await this.wishlistRepository.findWithFilters({
+        guestToken: data.guestToken,
+        isDefault: true,
+      });
+      if (existing.total > 0) {
+        return Wishlist.toDTO(existing.items[0]);
+      }
+    }
+
     const wishlist = Wishlist.create({
       userId: data.userId,
       guestToken: data.guestToken,
       name: data.name,
-      isDefault: data.isDefault,
-      isPublic: data.isPublic,
+      isDefault: data.isDefault ?? false,
+      isPublic: data.isPublic ?? false,
       description: data.description,
     });
 
-    // Check for existing default wishlist to prevent duplicates
-    if (data.isDefault) {
-      if (data.userId) {
-        const existingDefault =
-          await this.wishlistRepository.findDefaultByUserId(data.userId);
-        if (existingDefault) {
-          console.log(
-            `[WishlistService] Returning existing default wishlist for user ${data.userId}`
-          );
-          return existingDefault;
-        }
-      } else if (data.guestToken) {
-        const existingDefaults = await this.wishlistRepository.findWithFilters({
-          guestToken: data.guestToken,
-          isDefault: true,
-        });
-        if (existingDefaults.length > 0) {
-          console.log(
-            `[WishlistService] Returning existing default wishlist for guest ${data.guestToken}`
-          );
-          return existingDefaults[0];
-        }
-      }
-    }
-
     await this.wishlistRepository.save(wishlist);
-    return wishlist;
+    return Wishlist.toDTO(wishlist);
   }
 
-  async getWishlist(wishlistId: string): Promise<Wishlist | null> {
-    return await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
+  async getWishlistById(wishlistId: string): Promise<WishlistDTO | null> {
+    const entity = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    return entity ? Wishlist.toDTO(entity) : null;
   }
 
-  async updateWishlistName(wishlistId: string, newName: string): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async updateWishlistName(wishlistId: string, newName: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.updateName(newName);
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async updateWishlistDescription(
-    wishlistId: string,
-    description?: string
-  ): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async updateWishlistDescription(wishlistId: string, description?: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.updateDescription(description);
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async makeWishlistDefault(wishlistId: string): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async makeWishlistDefault(wishlistId: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.makeDefault();
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async removeWishlistDefault(wishlistId: string): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async removeWishlistDefault(wishlistId: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.removeDefault();
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async makeWishlistPublic(wishlistId: string): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async makeWishlistPublic(wishlistId: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.makePublic();
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async makeWishlistPrivate(wishlistId: string): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async makeWishlistPrivate(wishlistId: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.makePrivate();
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
-  async transferWishlistToUser(
-    wishlistId: string,
-    userId: string
-  ): Promise<void> {
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
+  async transferWishlistToUser(wishlistId: string, userId: string): Promise<WishlistDTO> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
     wishlist.transferToUser(userId);
-    await this.wishlistRepository.update(wishlist);
+    await this.wishlistRepository.save(wishlist);
+    return Wishlist.toDTO(wishlist);
   }
 
   async deleteWishlist(wishlistId: string): Promise<void> {
-    const exists = await this.wishlistRepository.exists(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!exists) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
-    // Delete all items first
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
-
-    // Then delete the wishlist
-    await this.wishlistRepository.delete(WishlistId.fromString(wishlistId));
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    await this.wishlistItemRepository.deleteByWishlistId(wishlist.id);
+    await this.wishlistRepository.delete(wishlist.id);
   }
+
+  // ── Wishlist queries ─────────────────────────────────────────────────────────
 
   async getWishlistsByUser(
     userId: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    return await this.wishlistRepository.findByUserId(userId, options);
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedWishlistResult> {
+    const result = await this.wishlistRepository.findByUserId(userId, options);
+    return this.mapPaginatedWishlists(result);
   }
 
   async getWishlistsByGuest(
     guestToken: string,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    return await this.wishlistRepository.findByGuestToken(guestToken, options);
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedWishlistResult> {
+    const result = await this.wishlistRepository.findByGuestToken(guestToken, options);
+    return this.mapPaginatedWishlists(result);
   }
 
-  async getDefaultWishlist(userId: string): Promise<Wishlist | null> {
-    return await this.wishlistRepository.findDefaultByUserId(userId);
+  async getDefaultWishlist(userId: string): Promise<WishlistDTO | null> {
+    const entity = await this.wishlistRepository.findDefaultByUserId(userId);
+    return entity ? Wishlist.toDTO(entity) : null;
   }
 
-  async getPublicWishlists(
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    return await this.wishlistRepository.findPublicWishlists(options);
+  async getPublicWishlists(options?: WishlistQueryOptions): Promise<PaginatedWishlistResult> {
+    const result = await this.wishlistRepository.findPublicWishlists(options);
+    return this.mapPaginatedWishlists(result);
   }
 
   async getWishlistsWithFilters(
-    filters: WishlistFilterOptions,
-    options?: WishlistQueryOptions
-  ): Promise<Wishlist[]> {
-    return await this.wishlistRepository.findWithFilters(filters, options);
+    filters: WishlistFilters,
+    options?: WishlistQueryOptions,
+  ): Promise<PaginatedWishlistResult> {
+    const result = await this.wishlistRepository.findWithFilters(filters, options);
+    return this.mapPaginatedWishlists(result);
   }
 
-  async getAllWishlists(options?: WishlistQueryOptions): Promise<Wishlist[]> {
-    return await this.wishlistRepository.findAll(options);
+  async getAllWishlists(options?: WishlistQueryOptions): Promise<PaginatedWishlistResult> {
+    const result = await this.wishlistRepository.findAll(options);
+    return this.mapPaginatedWishlists(result);
   }
 
-  async countWishlists(filters?: WishlistFilterOptions): Promise<number> {
-    return await this.wishlistRepository.count(filters);
+  async countWishlists(filters?: WishlistFilters): Promise<number> {
+    return this.wishlistRepository.count(filters);
   }
 
   async wishlistExists(wishlistId: string): Promise<boolean> {
-    return await this.wishlistRepository.exists(
-      WishlistId.fromString(wishlistId)
-    );
+    return this.wishlistRepository.exists(WishlistId.fromString(wishlistId));
   }
 
   async hasDefaultWishlist(userId: string): Promise<boolean> {
-    return await this.wishlistRepository.hasDefaultWishlist(userId);
+    return this.wishlistRepository.hasDefaultWishlist(userId);
   }
 
-  // Wishlist Item operations
+  // ── Wishlist Item operations ─────────────────────────────────────────────────
+
   async addToWishlist(
     wishlistId: string,
     variantId: string,
-    context?: { userId?: string; guestToken?: string }
-  ): Promise<WishlistItem> {
-    console.log("Adding to wishlist:", { wishlistId, variantId, context });
+    context?: { userId?: string; guestToken?: string },
+  ): Promise<WishlistItemDTO> {
+    const wishlistIdVO = WishlistId.fromString(wishlistId);
+    const wishlist = await this.wishlistRepository.findById(wishlistIdVO);
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
 
-    const wishlist = await this.wishlistRepository.findById(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlist) {
-      console.error("Wishlist not found:", wishlistId);
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
-    console.log("Wishlist found:", {
-      wishlistId: wishlist.getWishlistId(),
-      userId: wishlist.getUserId(),
-      guestToken: wishlist.getGuestToken()?.substring(0, 8) + "...",
-    });
-
-    // Verify ownership
     if (context) {
-      const wishlistUserId = wishlist.getUserId();
-      const wishlistGuestToken = wishlist.getGuestToken();
-
-      if (wishlistUserId && context.userId !== wishlistUserId) {
-        console.error("User ID mismatch:", {
-          expected: wishlistUserId,
-          got: context.userId,
-        });
-        throw new Error(`Unauthorized: Wishlist belongs to a different user`);
+      if (wishlist.userId && context.userId !== wishlist.userId) {
+        throw new WishlistNotFoundError(wishlistId);
       }
-
-      if (wishlistGuestToken) {
-        if (!context.guestToken) {
-          console.error("Missing guest token in context");
-          throw new Error(
-            `Unauthorized: X-Guest-Token header is required for guest wishlists`
-          );
-        }
-        if (context.guestToken !== wishlistGuestToken) {
-          console.error("Guest token mismatch:", {
-            expected: wishlistGuestToken.substring(0, 8) + "...",
-            got: context.guestToken.substring(0, 8) + "...",
-          });
-          throw new Error(
-            `Unauthorized: Guest token mismatch. Expected: ${wishlistGuestToken.substring(
-              0,
-              8
-            )}..., Got: ${context.guestToken.substring(0, 8)}...`
-          );
-        }
-      }
-
-      if (!wishlistUserId && !wishlistGuestToken) {
-        console.error("No owner information in wishlist");
-        throw new Error(`Invalid wishlist: No owner information`);
+      if (wishlist.guestToken && context.guestToken !== wishlist.guestToken) {
+        throw new WishlistNotFoundError(wishlistId);
       }
     }
 
-    console.log("Creating wishlist item...");
-    const item = WishlistItem.create({
-      wishlistId,
+    const alreadyExists = await this.wishlistItemRepository.isVariantInWishlist(
+      wishlistIdVO,
       variantId,
-    });
+    );
+    if (alreadyExists) throw new WishlistItemAlreadyExistsError(variantId);
 
-    console.log("Saving wishlist item...", {
-      wishlistId: item.getWishlistId(),
-      variantId: item.getVariantId(),
-    });
+    const item = WishlistItem.create({ wishlistId: wishlistIdVO, variantId });
     await this.wishlistItemRepository.save(item);
-    console.log("Wishlist item saved successfully");
-    return item;
+    return WishlistItem.toDTO(item);
   }
 
-  async removeFromWishlist(
-    wishlistId: string,
-    variantId: string
-  ): Promise<void> {
-    const exists = await this.wishlistItemRepository.exists(
-      wishlistId,
-      variantId
-    );
-
-    if (!exists) {
-      return;
-    }
-
-    await this.wishlistItemRepository.delete(wishlistId, variantId);
+  async removeFromWishlist(wishlistId: string, variantId: string): Promise<void> {
+    const wishlistIdVO = WishlistId.fromString(wishlistId);
+    const exists = await this.wishlistItemRepository.isVariantInWishlist(wishlistIdVO, variantId);
+    if (!exists) throw new WishlistItemNotFoundError(`${wishlistId}/${variantId}`);
+    await this.wishlistItemRepository.deleteByWishlistId(wishlistIdVO);
   }
 
   async getWishlistItems(
     wishlistId: string,
-    options?: WishlistItemQueryOptions
-  ): Promise<WishlistItem[]> {
-    return await this.wishlistItemRepository.findByWishlistId(
-      wishlistId,
-      options
+    options?: WishlistItemQueryOptions,
+  ): Promise<PaginatedWishlistItemResult> {
+    const result = await this.wishlistItemRepository.findByWishlistId(
+      WishlistId.fromString(wishlistId),
+      options,
     );
-  }
-
-  async getWishlistsByVariant(variantId: string): Promise<Wishlist[]> {
-    const items = await this.wishlistItemRepository.findByVariantId(variantId);
-    const wishlistIds = items.map((item) => item.getWishlistId());
-
-    const wishlists: Wishlist[] = [];
-    for (const wishlistId of wishlistIds) {
-      const wishlist = await this.wishlistRepository.findById(
-        WishlistId.fromString(wishlistId)
-      );
-      if (wishlist) {
-        wishlists.push(wishlist);
-      }
-    }
-
-    return wishlists;
+    return {
+      items: result.items.map(WishlistItem.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 
   async countWishlistItems(wishlistId: string): Promise<number> {
-    return await this.wishlistItemRepository.countByWishlistId(wishlistId);
+    return this.wishlistItemRepository.countByWishlistId(WishlistId.fromString(wishlistId));
   }
 
   async isInWishlist(wishlistId: string, variantId: string): Promise<boolean> {
-    return await this.wishlistItemRepository.exists(wishlistId, variantId);
+    return this.wishlistItemRepository.isVariantInWishlist(
+      WishlistId.fromString(wishlistId),
+      variantId,
+    );
   }
 
   async clearWishlist(wishlistId: string): Promise<void> {
-    const wishlistExists = await this.wishlistRepository.exists(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlistExists) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
-
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
+    const wishlistIdVO = WishlistId.fromString(wishlistId);
+    const exists = await this.wishlistRepository.exists(wishlistIdVO);
+    if (!exists) throw new WishlistNotFoundError(wishlistId);
+    await this.wishlistItemRepository.deleteByWishlistId(wishlistIdVO);
   }
 
-  async addManyToWishlist(
-    wishlistId: string,
-    variantIds: string[]
-  ): Promise<void> {
-    const wishlistExists = await this.wishlistRepository.exists(
-      WishlistId.fromString(wishlistId)
-    );
-
-    if (!wishlistExists) {
-      throw new Error(`Wishlist with ID ${wishlistId} not found`);
-    }
+  async addManyToWishlist(wishlistId: string, variantIds: string[]): Promise<void> {
+    const wishlistIdVO = WishlistId.fromString(wishlistId);
+    const exists = await this.wishlistRepository.exists(wishlistIdVO);
+    if (!exists) throw new WishlistNotFoundError(wishlistId);
 
     const items = variantIds.map((variantId) =>
-      WishlistItem.create({ wishlistId, variantId })
+      WishlistItem.create({ wishlistId: wishlistIdVO, variantId }),
     );
-
     await this.wishlistItemRepository.saveMany(items);
   }
 
-  async removeManyFromWishlist(
-    wishlistId: string,
-    variantIds: string[]
-  ): Promise<void> {
-    const items = variantIds.map((variantId) => ({
-      wishlistId,
-      variantId,
-    }));
+  // ── Private helpers ──────────────────────────────────────────────────────────
 
-    await this.wishlistItemRepository.deleteMany(items);
+  private mapPaginatedWishlists(result: PaginatedResult<Wishlist>): PaginatedWishlistResult {
+    return {
+      items: result.items.map(Wishlist.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

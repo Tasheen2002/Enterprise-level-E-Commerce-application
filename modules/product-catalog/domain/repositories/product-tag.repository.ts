@@ -17,7 +17,6 @@ export interface IProductTagRepository {
   getMostUsed(
     limit?: number,
   ): Promise<Array<{ tag: ProductTag; count: number }>>;
-  update(tag: ProductTag): Promise<void>;
   delete(id: ProductTagId): Promise<void>;
   exists(id: ProductTagId): Promise<boolean>;
   existsByTag(tagName: string): Promise<boolean>;
@@ -27,26 +26,17 @@ export interface IProductTagRepository {
     averageTagLength: number;
   }>;
 
-  // Product-Tag associations
-  addTagToProduct(productId: string, tagId: ProductTagId): Promise<void>;
-  removeTagFromProduct(productId: string, tagId: ProductTagId): Promise<void>;
-  getProductTagAssociations(productId: string): Promise<ProductTagId[]>;
-  getTagProductAssociations(tagId: ProductTagId): Promise<string[]>;
-
-  // Bulk association methods
   associateProductTags(productId: string, tagIds: string[]): Promise<void>;
-  removeProductTag(productId: string, tagId: string): Promise<void>;
+
+  // Association read-only queries
+  findProductIdsByTagId(
+    tagId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<string[]>;
   isTagAssociatedWithProduct(
     productId: string,
     tagId: string,
   ): Promise<boolean>;
-  findProductsByTagId(
-    tagId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<{
-    products: any[];
-    total: number;
-  }>;
 }
 
 export interface ProductTagQueryOptions {

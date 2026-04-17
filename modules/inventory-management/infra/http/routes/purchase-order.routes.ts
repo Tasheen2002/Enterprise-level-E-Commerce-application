@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
-import { RolePermissions } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { PurchaseOrderController } from "../controllers/purchase-order.controller";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
@@ -14,15 +18,27 @@ import {
   purchaseOrderResponseSchema,
 } from "../validation/purchase-order.schema";
 
-export async function registerPurchaseOrderRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function purchaseOrderRoutes(
   fastify: FastifyInstance,
   controller: PurchaseOrderController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // List purchase orders
   fastify.get(
     "/purchase-orders",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateQuery(listPurchaseOrdersSchema)],
+      preValidation: [validateQuery(listPurchaseOrdersSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all purchase orders (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -47,6 +63,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -66,7 +84,7 @@ export async function registerPurchaseOrderRoutes(
   fastify.get(
     "/purchase-orders/overdue",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all overdue purchase orders (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -77,6 +95,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: purchaseOrderResponseSchema },
             },
           },
@@ -90,7 +110,7 @@ export async function registerPurchaseOrderRoutes(
   fastify.get(
     "/purchase-orders/pending-receival",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get purchase orders pending receival (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -101,6 +121,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: purchaseOrderResponseSchema },
             },
           },
@@ -115,7 +137,7 @@ export async function registerPurchaseOrderRoutes(
     "/purchase-orders/:poId",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get purchase order by ID (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -133,6 +155,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: purchaseOrderResponseSchema,
             },
           },
@@ -146,7 +170,8 @@ export async function registerPurchaseOrderRoutes(
   fastify.post(
     "/purchase-orders/full",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createPurchaseOrderWithItemsSchema)],
+      preValidation: [validateBody(createPurchaseOrderWithItemsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Create a new purchase order with items (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -178,6 +203,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: purchaseOrderResponseSchema,
             },
           },
@@ -188,11 +215,11 @@ export async function registerPurchaseOrderRoutes(
   );
 
   // Update PO status
-  fastify.put(
+  fastify.patch(
     "/purchase-orders/:poId/status",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOStatusSchema)],
+      preValidation: [validateParams(poParamsSchema), validateBody(updatePOStatusSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order status (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -220,6 +247,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -236,11 +265,11 @@ export async function registerPurchaseOrderRoutes(
   );
 
   // Update PO ETA
-  fastify.put(
+  fastify.patch(
     "/purchase-orders/:poId/eta",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOEtaSchema)],
+      preValidation: [validateParams(poParamsSchema), validateBody(updatePOEtaSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Update purchase order estimated arrival (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -265,6 +294,8 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -285,8 +316,8 @@ export async function registerPurchaseOrderRoutes(
   fastify.post(
     "/purchase-orders/:poId/receive",
     {
-      preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(receivePOItemsSchema)],
+      preValidation: [validateParams(poParamsSchema), validateBody(receivePOItemsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Receive items from purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -323,7 +354,9 @@ export async function registerPurchaseOrderRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
+              data: { type: "object" },
             },
           },
         },
@@ -337,7 +370,7 @@ export async function registerPurchaseOrderRoutes(
     "/purchase-orders/:poId",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Delete purchase order (draft only, Staff/Admin only)",
         tags: ["Purchase Orders"],

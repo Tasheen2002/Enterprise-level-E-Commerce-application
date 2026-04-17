@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const sizeGuideParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const regionParamsSchema = z.object({
@@ -55,7 +55,7 @@ export const bulkCreateSizeGuidesSchema = z.object({
 });
 
 export const bulkDeleteSizeGuidesSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.uuid()).min(1).max(100),
 });
 
 export const regionalSizeGuideSchema = z.object({

@@ -14,14 +14,15 @@ interface OrderItemDatabaseRow {
   productSnapshot: any;
   isGift: boolean;
   giftMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export class OrderItemRepositoryImpl implements IOrderItemRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  // Hydration: Database row � Entity
   private toEntity(row: OrderItemDatabaseRow): OrderItem {
-    return OrderItem.reconstitute({
+    return OrderItem.fromPersistence({
       orderItemId: row.id,
       orderId: row.orderId,
       variantId: row.variantId,
@@ -29,20 +30,24 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
       productSnapshot: ProductSnapshot.create(row.productSnapshot),
       isGift: row.isGift,
       giftMessage: row.giftMessage || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
   async save(orderItem: OrderItem): Promise<void> {
-    await this.prisma.orderItem.create({
-      data: {
-        id: orderItem.getOrderItemId(),
-        orderId: orderItem.getOrderId(),
-        variantId: orderItem.getVariantId(),
-        qty: orderItem.getQuantity(),
-        productSnapshot: orderItem.getProductSnapshot().toJSON() as any,
-        isGift: orderItem.isGiftItem(),
-        giftMessage: orderItem.getGiftMessage() || null,
-      },
+    const data = {
+      orderId: orderItem.orderId,
+      variantId: orderItem.variantId,
+      qty: orderItem.quantity,
+      productSnapshot: orderItem.productSnapshot.getValue() as any,
+      isGift: orderItem.isGift,
+      giftMessage: orderItem.giftMessage || null,
+    };
+    await this.prisma.orderItem.upsert({
+      where: { id: orderItem.orderItemId },
+      create: { id: orderItem.orderItemId, ...data },
+      update: data,
     });
   }
 
@@ -53,27 +58,14 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
 
     await this.prisma.orderItem.createMany({
       data: orderItems.map((item) => ({
-        id: item.getOrderItemId(),
-        orderId: item.getOrderId(),
-        variantId: item.getVariantId(),
-        qty: item.getQuantity(),
-        productSnapshot: item.getProductSnapshot().toJSON() as any,
-        isGift: item.isGiftItem(),
-        giftMessage: item.getGiftMessage() || null,
+        id: item.orderItemId,
+        orderId: item.orderId,
+        variantId: item.variantId,
+        qty: item.quantity,
+        productSnapshot: item.productSnapshot.getValue() as any,
+        isGift: item.isGift,
+        giftMessage: item.giftMessage || null,
       })),
-    });
-  }
-
-  async update(orderItem: OrderItem): Promise<void> {
-    await this.prisma.orderItem.update({
-      where: { id: orderItem.getOrderItemId() },
-      data: {
-        variantId: orderItem.getVariantId(),
-        qty: orderItem.getQuantity(),
-        productSnapshot: orderItem.getProductSnapshot().toJSON() as any,
-        isGift: orderItem.isGiftItem(),
-        giftMessage: orderItem.getGiftMessage() || null,
-      },
     });
   }
 

@@ -1,230 +1,228 @@
 import {
   INotificationRepository,
   NotificationQueryOptions,
-  NotificationFilterOptions,
-} from "../../domain/repositories/notification.repository.js";
-import { Notification } from "../../domain/entities/notification.entity.js";
+  NotificationFilters,
+} from "../../domain/repositories/notification.repository";
+import {
+  Notification,
+  NotificationDTO,
+} from "../../domain/entities/notification.entity";
 import {
   NotificationId,
   NotificationType,
   NotificationStatus,
   ChannelType,
-} from "../../domain/value-objects/index.js";
+} from "../../domain/value-objects";
+import { NotificationNotFoundError } from "../../domain/errors/engagement.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
+
+export interface PaginatedNotificationResult {
+  items: NotificationDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 
 export class NotificationService {
   constructor(
-    private readonly notificationRepository: INotificationRepository
+    private readonly notificationRepository: INotificationRepository,
   ) {}
 
   async createNotification(data: {
-    type: NotificationType;
-    channel?: ChannelType;
+    type: string;
+    channel?: string;
     templateId?: string;
     payload?: Record<string, any>;
     scheduledAt?: Date;
-  }): Promise<Notification> {
+  }): Promise<NotificationDTO> {
     const notification = Notification.create({
-      type: data.type,
-      channel: data.channel,
+      type: NotificationType.fromString(data.type),
+      channel: data.channel ? ChannelType.fromString(data.channel) : undefined,
       templateId: data.templateId,
-      payload: data.payload,
+      payload: data.payload ?? {},
       scheduledAt: data.scheduledAt,
     });
 
     await this.notificationRepository.save(notification);
-    return notification;
+    return Notification.toDTO(notification);
   }
 
-  async getNotification(notificationId: string): Promise<Notification | null> {
-    return await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+  async getNotificationById(notificationId: string): Promise<NotificationDTO | null> {
+    const entity = await this.notificationRepository.findById(
+      NotificationId.fromString(notificationId),
     );
+    return entity ? Notification.toDTO(entity) : null;
   }
 
   async updateNotificationPayload(
     notificationId: string,
-    payload: Record<string, any>
+    payload: Record<string, any>,
   ): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.updatePayload(payload);
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
-  async scheduleNotification(
-    notificationId: string,
-    scheduledAt: Date
-  ): Promise<void> {
+  async scheduleNotification(notificationId: string, scheduledAt: Date): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.schedule(scheduledAt);
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
   async markNotificationAsSending(notificationId: string): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.markAsSending();
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
   async markNotificationAsSent(notificationId: string): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.markAsSent();
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
-  async markNotificationAsFailed(
-    notificationId: string,
-    error: string
-  ): Promise<void> {
+  async markNotificationAsFailed(notificationId: string, error: string): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.markAsFailed(error);
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
   async retryNotification(notificationId: string): Promise<void> {
     const notification = await this.notificationRepository.findById(
-      NotificationId.fromString(notificationId)
+      NotificationId.fromString(notificationId),
     );
-
-    if (!notification) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
+    if (!notification) throw new NotificationNotFoundError(notificationId);
     notification.retry();
-    await this.notificationRepository.update(notification);
+    await this.notificationRepository.save(notification);
   }
 
   async deleteNotification(notificationId: string): Promise<void> {
-    const exists = await this.notificationRepository.exists(
-      NotificationId.fromString(notificationId)
+    const notification = await this.notificationRepository.findById(
+      NotificationId.fromString(notificationId),
     );
-
-    if (!exists) {
-      throw new Error(`Notification with ID ${notificationId} not found`);
-    }
-
-    await this.notificationRepository.delete(
-      NotificationId.fromString(notificationId)
-    );
+    if (!notification) throw new NotificationNotFoundError(notificationId);
+    await this.notificationRepository.delete(notification.id);
   }
 
   async getNotificationsByType(
-    type: NotificationType,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findByType(type, options);
+    type: string,
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findByType(
+      NotificationType.fromString(type),
+      options,
+    );
+    return this.mapPaginated(result);
   }
 
   async getNotificationsByChannel(
-    channel: ChannelType,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findByChannel(channel, options);
+    channel: string,
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findByChannel(
+      ChannelType.fromString(channel),
+      options,
+    );
+    return this.mapPaginated(result);
   }
 
   async getNotificationsByStatus(
-    status: NotificationStatus,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findByStatus(status, options);
+    status: string,
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findByStatus(
+      NotificationStatus.fromString(status),
+      options,
+    );
+    return this.mapPaginated(result);
   }
 
   async getPendingNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findPendingNotifications(options);
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findPendingNotifications(options);
+    return this.mapPaginated(result);
   }
 
   async getScheduledNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findScheduledNotifications(
-      options
-    );
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findScheduledNotifications(options);
+    return this.mapPaginated(result);
   }
 
   async getDueNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findDueNotifications(options);
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findDueNotifications(options);
+    return this.mapPaginated(result);
   }
 
   async getFailedNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findFailedNotifications(options);
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findFailedNotifications(options);
+    return this.mapPaginated(result);
   }
 
   async getNotificationsWithFilters(
-    filters: NotificationFilterOptions,
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findWithFilters(filters, options);
+    filters: NotificationFilters,
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findWithFilters(filters, options);
+    return this.mapPaginated(result);
   }
 
   async getAllNotifications(
-    options?: NotificationQueryOptions
-  ): Promise<Notification[]> {
-    return await this.notificationRepository.findAll(options);
+    options?: NotificationQueryOptions,
+  ): Promise<PaginatedNotificationResult> {
+    const result = await this.notificationRepository.findAll(options);
+    return this.mapPaginated(result);
   }
 
-  async countNotifications(
-    filters?: NotificationFilterOptions
-  ): Promise<number> {
-    return await this.notificationRepository.count(filters);
+  async countNotifications(filters?: NotificationFilters): Promise<number> {
+    return this.notificationRepository.count(filters);
   }
 
-  async countNotificationsByType(type: NotificationType): Promise<number> {
-    return await this.notificationRepository.countByType(type);
+  async countNotificationsByType(type: string): Promise<number> {
+    return this.notificationRepository.countByType(NotificationType.fromString(type));
   }
 
-  async countNotificationsByChannel(channel: ChannelType): Promise<number> {
-    return await this.notificationRepository.countByChannel(channel);
+  async countNotificationsByChannel(channel: string): Promise<number> {
+    return this.notificationRepository.countByChannel(ChannelType.fromString(channel));
   }
 
-  async countNotificationsByStatus(
-    status: NotificationStatus
-  ): Promise<number> {
-    return await this.notificationRepository.countByStatus(status);
+  async countNotificationsByStatus(status: string): Promise<number> {
+    return this.notificationRepository.countByStatus(NotificationStatus.fromString(status));
   }
 
   async notificationExists(notificationId: string): Promise<boolean> {
-    return await this.notificationRepository.exists(
-      NotificationId.fromString(notificationId)
-    );
+    return this.notificationRepository.exists(NotificationId.fromString(notificationId));
+  }
+
+  private mapPaginated(result: PaginatedResult<Notification>): PaginatedNotificationResult {
+    return {
+      items: result.items.map(Notification.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

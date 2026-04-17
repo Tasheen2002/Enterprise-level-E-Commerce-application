@@ -1,4 +1,5 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
+import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { UserId } from '../value-objects/user-id.vo';
 import { PaymentMethodId } from '../value-objects/payment-method-id';
 import {
@@ -7,7 +8,35 @@ import {
 } from '../errors/user-management.errors';
 import { PaymentMethodType } from '../enums/payment-method-type.enum';
 
-export { PaymentMethodType, PaymentMethodId };
+
+// ── Domain Events ──────────────────────────────────────────────────────
+
+export class PaymentMethodAddedEvent extends DomainEvent {
+  constructor(
+    public readonly paymentMethodId: string,
+    public readonly userId: string,
+    public readonly type: string,
+  ) {
+    super(paymentMethodId, 'PaymentMethod');
+  }
+  get eventType(): string { return 'payment-method.added'; }
+  getPayload(): Record<string, unknown> {
+    return { paymentMethodId: this.paymentMethodId, userId: this.userId, type: this.type };
+  }
+}
+
+export class PaymentMethodSetAsDefaultEvent extends DomainEvent {
+  constructor(
+    public readonly paymentMethodId: string,
+    public readonly userId: string,
+  ) {
+    super(paymentMethodId, 'PaymentMethod');
+  }
+  get eventType(): string { return 'payment-method.set_as_default'; }
+  getPayload(): Record<string, unknown> {
+    return { paymentMethodId: this.paymentMethodId, userId: this.userId };
+  }
+}
 
 // ============================================================================
 // Props Interface
@@ -61,6 +90,33 @@ export class PaymentMethod extends AggregateRoot {
 
   // --- Static factories ---
 
+  private static validateType(type: PaymentMethodType): void {
+    if (!PaymentMethodType.getAllValues().includes(type)) {
+      throw new InvalidOperationError(`Invalid payment method type: ${type}`);
+    }
+  }
+
+  private static validateLast4(last4: string | null, type: PaymentMethodType): void {
+    if (last4 && !/^\d{4}$/.test(last4)) {
+      throw new DomainValidationError('last4 must be exactly 4 digits');
+    }
+    if (type === PaymentMethodType.CARD && !last4) {
+      throw new DomainValidationError('Card payment methods must have last4 digits');
+    }
+  }
+
+  private static validateExpiry(expMonth: number | null, expYear: number | null, type: PaymentMethodType): void {
+    if (expMonth && (expMonth < 1 || expMonth > 12)) {
+      throw new DomainValidationError('Expiry month must be between 1 and 12');
+    }
+    if (expYear && expYear < 1900) {
+      throw new DomainValidationError('Expiry year must be a valid year');
+    }
+    if (type === PaymentMethodType.CARD && (!expMonth || !expYear)) {
+      throw new DomainValidationError('Card payment methods must have expiry date');
+    }
+  }
+
   static create(params: {
     userId: string;
     type: PaymentMethodType;
@@ -72,6 +128,10 @@ export class PaymentMethod extends AggregateRoot {
     providerRef?: string;
     isDefault?: boolean;
   }): PaymentMethod {
+    PaymentMethod.validateType(params.type);
+    PaymentMethod.validateLast4(params.last4 || null, params.type);
+    PaymentMethod.validateExpiry(params.expMonth || null, params.expYear || null, params.type);
+
     const now = new Date();
     const paymentMethod = new PaymentMethod({
       id: PaymentMethodId.create(),
@@ -87,7 +147,13 @@ export class PaymentMethod extends AggregateRoot {
       createdAt: now,
       updatedAt: now,
     });
-    paymentMethod.validate();
+    paymentMethod.addDomainEvent(
+      new PaymentMethodAddedEvent(
+        paymentMethod.props.id.getValue(),
+        params.userId,
+        params.type.toString(),
+      ),
+    );
     return paymentMethod;
   }
 
@@ -114,7 +180,7 @@ export class PaymentMethod extends AggregateRoot {
 
   updateExpiry(month: number, year: number): void {
     if (this.props.expMonth === month && this.props.expYear === year) return;
-    if (month < 1 || month > 12) throw new DomainValidationError('Invalid expiry month');
+    PaymentMethod.validateExpiry(month, year, this.props.type);
     if (year < new Date().getFullYear()) throw new DomainValidationError('Expiry year cannot be in the past');
     this.props.expMonth = month;
     this.props.expYear = year;
@@ -137,6 +203,12 @@ export class PaymentMethod extends AggregateRoot {
     if (this.props.isDefault) return;
     this.props.isDefault = true;
     this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new PaymentMethodSetAsDefaultEvent(
+        this.props.id.getValue(),
+        this.props.userId.getValue(),
+      ),
+    );
   }
 
   removeAsDefault(): void {
@@ -186,25 +258,6 @@ export class PaymentMethod extends AggregateRoot {
 
   requiresBillingAddress(): boolean {
     return this.props.type === PaymentMethodType.CARD;
-  }
-
-  validate(): void {
-    if (!PaymentMethodType.getAllValues().includes(this.props.type)) {
-      throw new InvalidOperationError(`Invalid payment method type: ${this.props.type}`);
-    }
-    if (this.props.last4 && !/^\d{4}$/.test(this.props.last4)) {
-      throw new DomainValidationError('last4 must be exactly 4 digits');
-    }
-    if (this.props.expMonth && (this.props.expMonth < 1 || this.props.expMonth > 12)) {
-      throw new DomainValidationError('Expiry month must be between 1 and 12');
-    }
-    if (this.props.expYear && this.props.expYear < 1900) {
-      throw new DomainValidationError('Expiry year must be a valid year');
-    }
-    if (this.props.type === PaymentMethodType.CARD) {
-      if (!this.props.last4) throw new DomainValidationError('Card payment methods must have last4 digits');
-      if (!this.props.expMonth || !this.props.expYear) throw new DomainValidationError('Card payment methods must have expiry date');
-    }
   }
 
   getDisplayName(): string {

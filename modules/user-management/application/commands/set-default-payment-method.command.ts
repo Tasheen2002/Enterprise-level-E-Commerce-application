@@ -1,25 +1,21 @@
 import { PaymentMethodService } from '../services/payment-method.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface SetDefaultPaymentMethodInput extends ICommand {
-  paymentMethodId: string;
-  userId: string;
+export interface SetDefaultPaymentMethodCommand extends ICommand {
+  readonly paymentMethodId: string;
+  readonly userId: string;
 }
 
 export class SetDefaultPaymentMethodHandler implements ICommandHandler<
-  SetDefaultPaymentMethodInput,
+  SetDefaultPaymentMethodCommand,
   CommandResult<void>
 > {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 
   async handle(
-    input: SetDefaultPaymentMethodInput
+    command: SetDefaultPaymentMethodCommand
   ): Promise<CommandResult<void>> {
-    await this.paymentMethodService.setDefaultPaymentMethod(input.paymentMethodId, input.userId);
+    await this.paymentMethodService.setDefaultPaymentMethod(command.paymentMethodId, command.userId);
     return CommandResult.success(undefined);
   }
 }

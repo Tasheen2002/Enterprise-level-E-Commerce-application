@@ -1,97 +1,22 @@
-import { ReminderManagementService } from "../services/reminder-management.service.js";
-
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = void> {
-  handle(query: TQuery): Promise<TResult>;
-}
-
-export class QueryResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): QueryResult<T> {
-    return new QueryResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): QueryResult<T> {
-    return new QueryResult<T>(false, undefined, error, errors);
-  }
-}
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
+import { ReminderManagementService, PaginatedReminderResult } from "../services/reminder-management.service";
 
 export interface GetUserRemindersQuery extends IQuery {
-  userId: string;
-  limit?: number;
-  offset?: number;
+  readonly userId: string;
+  readonly limit?: number;
+  readonly offset?: number;
 }
 
-export interface ReminderDto {
-  reminderId: string;
-  type: string;
-  variantId: string;
-  userId?: string;
-  contact: string;
-  channel: string;
-  status: string;
-  optInAt?: Date;
-}
+export class GetUserRemindersHandler implements IQueryHandler<GetUserRemindersQuery, PaginatedReminderResult> {
+  constructor(private readonly reminderManagementService: ReminderManagementService) {}
 
-export class GetUserRemindersHandler
-  implements IQueryHandler<GetUserRemindersQuery, QueryResult<ReminderDto[]>>
-{
-  constructor(
-    private readonly reminderService: ReminderManagementService
-  ) {}
-
-  async handle(
-    query: GetUserRemindersQuery
-  ): Promise<QueryResult<ReminderDto[]>> {
-    try {
-      if (!query.userId || query.userId.trim().length === 0) {
-        return QueryResult.failure<ReminderDto[]>(
-          "User ID is required",
-          ["userId"]
-        );
+  async handle(query: GetUserRemindersQuery): Promise<PaginatedReminderResult> {
+    return this.reminderManagementService.getRemindersByUser(
+      query.userId,
+      {
+        limit: query.limit,
+        offset: query.offset,
       }
-
-      const reminders = await this.reminderService.getRemindersByUser(
-        query.userId,
-        {
-          limit: query.limit,
-          offset: query.offset,
-        }
-      );
-
-      const result: ReminderDto[] = reminders.map((reminder) => ({
-        reminderId: reminder.getReminderId().getValue(),
-        type: reminder.getType().getValue(),
-        variantId: reminder.getVariantId(),
-        userId: reminder.getUserId(),
-        contact: reminder.getContact().getValue(),
-        channel: reminder.getChannel().getValue(),
-        status: reminder.getStatus().getValue(),
-        optInAt: reminder.getOptInAt(),
-      }));
-
-      return QueryResult.success<ReminderDto[]>(result);
-    } catch (error) {
-      if (error instanceof Error) {
-        return QueryResult.failure<ReminderDto[]>(
-          "Failed to get user reminders",
-          [error.message]
-        );
-      }
-
-      return QueryResult.failure<ReminderDto[]>(
-        "An unexpected error occurred while getting user reminders"
-      );
-    }
+    );
   }
 }

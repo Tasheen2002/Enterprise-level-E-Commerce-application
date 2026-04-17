@@ -1,164 +1,223 @@
-import {
-  SubscriptionId,
-  SubscriptionStatus,
-} from "../value-objects/index.js";
+// ============================================================================
+// 1. Imports
+// ============================================================================
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { SubscriptionId, SubscriptionStatus } from "../value-objects";
+import { DomainValidationError } from "../errors/engagement.errors";
 
-export interface CreateNewsletterSubscriptionData {
-  email: string;
-  source?: string;
+// ============================================================================
+// 2. Domain Events
+// ============================================================================
+export class SubscriptionCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly subscriptionId: string,
+    public readonly email: string,
+    public readonly source?: string
+  ) {
+    super(subscriptionId, "Subscription");
+  }
+
+  get eventType(): string {
+    return "subscription.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      subscriptionId: this.subscriptionId,
+      email: this.email,
+      source: this.source,
+    };
+  }
 }
 
-export interface NewsletterSubscriptionEntityData {
-  subscriptionId: string;
+export class SubscriptionStatusChangedEvent extends DomainEvent {
+  constructor(
+    public readonly subscriptionId: string,
+    public readonly oldStatus: string,
+    public readonly newStatus: string
+  ) {
+    super(subscriptionId, "Subscription");
+  }
+
+  get eventType(): string {
+    return "subscription.status_changed";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      subscriptionId: this.subscriptionId,
+      oldStatus: this.oldStatus,
+      newStatus: this.newStatus,
+    };
+  }
+}
+
+// ============================================================================
+// 3. Props Interface
+// ============================================================================
+export interface SubscriptionProps {
+  id: SubscriptionId;
   email: string;
   status: SubscriptionStatus;
   source?: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface NewsletterSubscriptionDatabaseRow {
-  subscription_id: string;
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+export interface SubscriptionDTO {
+  id: string;
   email: string;
-  status: string | null;
-  source: string | null;
-  created_at: Date;
+  status: string;
+  source?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export class NewsletterSubscription {
-  private constructor(
-    private readonly subscriptionId: SubscriptionId,
-    private readonly email: string,
-    private status: SubscriptionStatus,
-    private readonly createdAt: Date,
-    private readonly source?: string
-  ) {}
+// ============================================================================
+// 5. Entity Class
+// ============================================================================
+export class NewsletterSubscription extends AggregateRoot {
+  private constructor(private props: SubscriptionProps) {
+    super();
+  }
 
-  // Factory methods
-  static create(data: CreateNewsletterSubscriptionData): NewsletterSubscription {
-    const subscriptionId = SubscriptionId.create();
+  static create(params: Omit<SubscriptionProps, "id" | "createdAt" | "updatedAt">): NewsletterSubscription {
+    NewsletterSubscription.validateEmail(params.email);
 
-    if (!data.email) {
-      throw new Error("Email is required");
+    const entity = new NewsletterSubscription({
+      id: SubscriptionId.create(),
+      email: params.email.toLowerCase().trim(),
+      status: SubscriptionStatus.active(),
+      source: params.source,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    entity.addDomainEvent(
+      new SubscriptionCreatedEvent(
+        entity.props.id.getValue(),
+        entity.props.email,
+        entity.props.source
+      )
+    );
+
+    return entity;
+  }
+
+  static fromPersistence(props: SubscriptionProps): NewsletterSubscription {
+    return new NewsletterSubscription(props);
+  }
+
+  private static validateEmail(email: string): void {
+    if (!email || email.trim().length === 0) {
+      throw new DomainValidationError("Email is required");
     }
-
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.email)) {
-      throw new Error("Invalid email format");
+    if (!emailRegex.test(email)) {
+      throw new DomainValidationError("Invalid email format");
     }
-
-    return new NewsletterSubscription(
-      subscriptionId,
-      data.email.toLowerCase().trim(),
-      SubscriptionStatus.active(),
-      new Date(),
-      data.source
-    );
-  }
-
-  static reconstitute(data: NewsletterSubscriptionEntityData): NewsletterSubscription {
-    const subscriptionId = SubscriptionId.fromString(data.subscriptionId);
-
-    return new NewsletterSubscription(
-      subscriptionId,
-      data.email,
-      data.status,
-      data.createdAt,
-      data.source
-    );
-  }
-
-  static fromDatabaseRow(row: NewsletterSubscriptionDatabaseRow): NewsletterSubscription {
-    return new NewsletterSubscription(
-      SubscriptionId.fromString(row.subscription_id),
-      row.email,
-      row.status ? SubscriptionStatus.fromString(row.status) : SubscriptionStatus.active(),
-      row.created_at,
-      row.source || undefined
-    );
   }
 
   // Getters
-  getSubscriptionId(): SubscriptionId {
-    return this.subscriptionId;
+  get id(): SubscriptionId {
+    return this.props.id;
   }
-
-  getEmail(): string {
-    return this.email;
+  get email(): string {
+    return this.props.email;
   }
-
-  getStatus(): SubscriptionStatus {
-    return this.status;
+  get status(): SubscriptionStatus {
+    return this.props.status;
   }
-
-  getSource(): string | undefined {
-    return this.source;
+  get source(): string | undefined {
+    return this.props.source;
   }
-
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Business methods
+  private updateStatus(newStatus: SubscriptionStatus): void {
+    const oldStatusLabel = this.props.status.getValue();
+    const newStatusLabel = newStatus.getValue();
+
+    if (oldStatusLabel === newStatusLabel) return;
+
+    this.props.status = newStatus;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new SubscriptionStatusChangedEvent(
+        this.props.id.getValue(),
+        oldStatusLabel,
+        newStatusLabel
+      )
+    );
+  }
+
   activate(): void {
-    this.status = SubscriptionStatus.active();
+    this.updateStatus(SubscriptionStatus.active());
   }
 
   unsubscribe(): void {
-    this.status = SubscriptionStatus.unsubscribed();
+    this.updateStatus(SubscriptionStatus.unsubscribed());
   }
 
   bounce(): void {
-    this.status = SubscriptionStatus.bounced();
+    this.updateStatus(SubscriptionStatus.bounced());
   }
 
   markAsSpam(): void {
-    this.status = SubscriptionStatus.spam();
+    this.updateStatus(SubscriptionStatus.spam());
   }
 
-  // Helper methods
+  // Helpers
   isActive(): boolean {
-    return this.status.isActive();
+    return this.props.status.isActive();
   }
 
   isUnsubscribed(): boolean {
-    return this.status.isUnsubscribed();
+    return this.props.status.isUnsubscribed();
   }
 
   isBounced(): boolean {
-    return this.status.isBounced();
+    return this.props.status.isBounced();
   }
 
   isSpam(): boolean {
-    return this.status.isSpam();
+    return this.props.status.isSpam();
   }
 
   canReceiveEmails(): boolean {
-    return this.status.canReceiveEmails();
-  }
-
-  // Convert to data for persistence
-  toData(): NewsletterSubscriptionEntityData {
-    return {
-      subscriptionId: this.subscriptionId.getValue(),
-      email: this.email,
-      status: this.status,
-      source: this.source,
-      createdAt: this.createdAt,
-    };
-  }
-
-  toDatabaseRow(): NewsletterSubscriptionDatabaseRow {
-    return {
-      subscription_id: this.subscriptionId.getValue(),
-      email: this.email,
-      status: this.status.getValue(),
-      source: this.source || null,
-      created_at: this.createdAt,
-    };
+    return this.props.status.canReceiveEmails();
   }
 
   equals(other: NewsletterSubscription): boolean {
-    return this.subscriptionId.equals(other.subscriptionId);
+    return this.props.id.equals(other.props.id);
   }
+
+  static toDTO(entity: NewsletterSubscription): SubscriptionDTO {
+    return {
+      id: entity.props.id.getValue(),
+      email: entity.props.email,
+      status: entity.props.status.getValue(),
+      source: entity.props.source,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// 6. Supporting input types
+// ============================================================================
+export interface CreateNewsletterSubscriptionData {
+  email: string;
+  source?: string;
 }

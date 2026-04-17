@@ -1,57 +1,53 @@
 import { UserProfileService } from '../services/user-profile.service';
 import { UserProfileDTO } from '../../domain/entities/user-profile.entity';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface UpdateProfileInput extends ICommand {
-  userId: string;
-  defaultAddressId?: string;
-  defaultPaymentMethodId?: string;
-  prefs?: Record<string, any>;
-  locale?: string;
-  currency?: string;
-  stylePreferences?: Record<string, any>;
-  preferredSizes?: Record<string, any>;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  title?: string;
-  dateOfBirth?: string;
-  residentOf?: string;
-  nationality?: string;
+export interface UpdateProfileCommand extends ICommand {
+  readonly userId: string;
+  readonly defaultAddressId?: string;
+  readonly defaultPaymentMethodId?: string;
+  readonly prefs?: Record<string, any>;
+  readonly locale?: string;
+  readonly currency?: string;
+  readonly stylePreferences?: Record<string, any>;
+  readonly preferredSizes?: Record<string, any>;
+  readonly firstName?: string;
+  readonly lastName?: string;
+  readonly phone?: string;
+  readonly title?: string;
+  readonly dateOfBirth?: string;
+  readonly residentOf?: string;
+  readonly nationality?: string;
 }
 
 export class UpdateProfileHandler
   implements
-    ICommandHandler<UpdateProfileInput, CommandResult<UserProfileDTO>>
+    ICommandHandler<UpdateProfileCommand, CommandResult<UserProfileDTO>>
 {
   constructor(
     private readonly userProfileService: UserProfileService
   ) {}
 
   async handle(
-    input: UpdateProfileInput
+    command: UpdateProfileCommand
   ): Promise<CommandResult<UserProfileDTO>> {
     const updatedProfile = await this.userProfileService.updateUserProfile(
-      input.userId,
+      command.userId,
       {
-        defaultAddressId: input.defaultAddressId,
-        defaultPaymentMethodId: input.defaultPaymentMethodId,
-        prefs: input.prefs,
-        locale: input.locale,
-        currency: input.currency,
-        stylePreferences: input.stylePreferences,
-        preferredSizes: input.preferredSizes,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        phone: input.phone,
-        title: input.title,
-        dateOfBirth: input.dateOfBirth,
-        residentOf: input.residentOf,
-        nationality: input.nationality,
+        defaultAddressId: command.defaultAddressId,
+        defaultPaymentMethodId: command.defaultPaymentMethodId,
+        prefs: command.prefs,
+        locale: command.locale,
+        currency: command.currency,
+        stylePreferences: command.stylePreferences,
+        preferredSizes: command.preferredSizes,
+        firstName: command.firstName,
+        lastName: command.lastName,
+        phone: command.phone,
+        title: command.title,
+        dateOfBirth: command.dateOfBirth,
+        residentOf: command.residentOf,
+        nationality: command.nationality,
       }
     );
     return CommandResult.success(updatedProfile);

@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const mediaParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const listMediaSchema = z.object({
@@ -32,7 +32,7 @@ export const createMediaSchema = z.object({
   altText: z.string().optional(),
   focalX: z.number().int().optional(),
   focalY: z.number().int().optional(),
-  renditions: z.record(z.unknown()).optional(),
+  renditions: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateMediaSchema = z.object({
@@ -43,7 +43,7 @@ export const updateMediaSchema = z.object({
   altText: z.string().optional(),
   focalX: z.number().int().optional(),
   focalY: z.number().int().optional(),
-  renditions: z.record(z.unknown()).optional(),
+  renditions: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

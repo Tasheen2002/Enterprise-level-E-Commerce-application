@@ -3,28 +3,36 @@ import { IOrderAddressRepository } from "../../../domain/repositories/order-addr
 import { OrderAddress } from "../../../domain/entities/order-address.entity";
 import { AddressSnapshot } from "../../../domain/value-objects/address-snapshot.vo";
 
+interface OrderAddressDatabaseRow {
+  orderId: string;
+  billingSnapshot: any;
+  shippingSnapshot: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export class OrderAddressRepositoryImpl implements IOrderAddressRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async save(orderAddress: OrderAddress): Promise<void> {
-    await this.prisma.orderAddress.create({
-      data: {
-        orderId: orderAddress.getOrderId(),
-        billingSnapshot: orderAddress.getBillingAddress().toJSON() as any,
-        shippingSnapshot: orderAddress.getShippingAddress().toJSON() as any,
-      },
+  private toEntity(row: OrderAddressDatabaseRow): OrderAddress {
+    return OrderAddress.fromPersistence({
+      orderId: row.orderId,
+      billingAddress: AddressSnapshot.create(row.billingSnapshot),
+      shippingAddress: AddressSnapshot.create(row.shippingSnapshot),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
-  async update(orderAddress: OrderAddress): Promise<void> {
-    await this.prisma.orderAddress.update({
-      where: {
-        orderId: orderAddress.getOrderId(),
-      },
-      data: {
-        billingSnapshot: orderAddress.getBillingAddress().toJSON() as any,
-        shippingSnapshot: orderAddress.getShippingAddress().toJSON() as any,
-      },
+  async save(orderAddress: OrderAddress): Promise<void> {
+    const data = {
+      billingSnapshot: orderAddress.billingAddress.getValue() as any,
+      shippingSnapshot: orderAddress.shippingAddress.getValue() as any,
+    };
+    await this.prisma.orderAddress.upsert({
+      where: { orderId: orderAddress.orderId },
+      create: { orderId: orderAddress.orderId, ...data },
+      update: data,
     });
   }
 
@@ -47,11 +55,7 @@ export class OrderAddressRepositoryImpl implements IOrderAddressRepository {
       return null;
     }
 
-    return OrderAddress.reconstitute({
-      orderId: record.orderId,
-      billingAddress: AddressSnapshot.create(record.billingSnapshot as any),
-      shippingAddress: AddressSnapshot.create(record.shippingSnapshot as any),
-    });
+    return this.toEntity(record as any);
   }
 
   async exists(orderId: string): Promise<boolean> {

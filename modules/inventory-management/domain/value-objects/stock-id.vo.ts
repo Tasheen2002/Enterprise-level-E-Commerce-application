@@ -1,10 +1,14 @@
 import { DomainValidationError } from "../errors/inventory-management.errors";
 
 export class StockId {
-  private constructor(
-    private readonly variantId: string,
-    private readonly locationId: string,
-  ) {}
+  private readonly props: {
+    variantId: string;
+    locationId: string;
+  };
+
+  private constructor(variantId: string, locationId: string) {
+    this.props = { variantId, locationId };
+  }
 
   static create(variantId: string, locationId: string): StockId {
     if (!variantId || !locationId) {
@@ -15,21 +19,22 @@ export class StockId {
     return new StockId(variantId, locationId);
   }
 
-  getVariantId(): string {
-    return this.variantId;
+  get variantId(): string {
+    return this.props.variantId;
   }
 
-  getLocationId(): string {
-    return this.locationId;
+  get locationId(): string {
+    return this.props.locationId;
   }
 
   equals(other: StockId): boolean {
     return (
-      this.variantId === other.variantId && this.locationId === other.locationId
+      this.props.variantId === other.props.variantId &&
+      this.props.locationId === other.props.locationId
     );
   }
 
   toString(): string {
-    return `${this.variantId}:${this.locationId}`;
+    return `${this.props.variantId}:${this.props.locationId}`;
   }
 }

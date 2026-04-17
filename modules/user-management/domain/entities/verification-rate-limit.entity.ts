@@ -66,6 +66,10 @@ export class VerificationRateLimit {
     this.props.lastAttemptAt = new Date();
   }
 
+  equals(other: VerificationRateLimit): boolean {
+    return this.props.rateLimitId === other.props.rateLimitId;
+  }
+
   static toDTO(rateLimit: VerificationRateLimit): VerificationRateLimitDTO {
     return {
       rateLimitId: rateLimit.rateLimitId,

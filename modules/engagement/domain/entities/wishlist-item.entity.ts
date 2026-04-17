@@ -1,73 +1,135 @@
-export interface CreateWishlistItemData {
-  wishlistId: string;
-  variantId: string;
-}
+// ============================================================================
+// 1. Imports
+// ============================================================================
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { WishlistId, WishlistItemId } from "../value-objects";
+import { DomainValidationError } from "../errors/engagement.errors";
 
-export interface WishlistItemEntityData {
-  wishlistId: string;
-  variantId: string;
-}
-
-export interface WishlistItemDatabaseRow {
-  wishlist_id: string;
-  variant_id: string;
-}
-
-export class WishlistItem {
-  private constructor(
-    private readonly wishlistId: string,
-    private readonly variantId: string
-  ) {}
-
-  // Factory methods
-  static create(data: CreateWishlistItemData): WishlistItem {
-    if (!data.wishlistId) {
-      throw new Error("Wishlist ID is required");
-    }
-
-    if (!data.variantId) {
-      throw new Error("Variant ID is required");
-    }
-
-    return new WishlistItem(data.wishlistId, data.variantId);
+// ============================================================================
+// 2. Domain Events
+// ============================================================================
+export class WishlistItemAddedEvent extends DomainEvent {
+  constructor(
+    public readonly wishlistId: string,
+    public readonly variantId: string
+  ) {
+    super(wishlistId, "Wishlist");
   }
 
-  static reconstitute(data: WishlistItemEntityData): WishlistItem {
-    return new WishlistItem(data.wishlistId, data.variantId);
+  get eventType(): string {
+    return "wishlist.item_added";
   }
 
-  static fromDatabaseRow(row: WishlistItemDatabaseRow): WishlistItem {
-    return new WishlistItem(row.wishlist_id, row.variant_id);
-  }
-
-  // Getters
-  getWishlistId(): string {
-    return this.wishlistId;
-  }
-
-  getVariantId(): string {
-    return this.variantId;
-  }
-
-  // Convert to data for persistence
-  toData(): WishlistItemEntityData {
+  getPayload(): Record<string, unknown> {
     return {
       wishlistId: this.wishlistId,
       variantId: this.variantId,
     };
   }
+}
 
-  toDatabaseRow(): WishlistItemDatabaseRow {
-    return {
-      wishlist_id: this.wishlistId,
-      variant_id: this.variantId,
-    };
+// ============================================================================
+// 3. Props Interface
+// ============================================================================
+export interface WishlistItemProps {
+  id: WishlistItemId;
+  wishlistId: WishlistId;
+  variantId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+export interface WishlistItemDTO {
+  id: string;
+  wishlistId: string;
+  variantId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ============================================================================
+// 5. Entity Class
+// ============================================================================
+export class WishlistItem extends AggregateRoot {
+  private constructor(private props: WishlistItemProps) {
+    super();
+  }
+
+  static create(
+    params: Omit<WishlistItemProps, "id" | "createdAt" | "updatedAt">
+  ): WishlistItem {
+    WishlistItem.validateIds(params.wishlistId, params.variantId);
+
+    const entity = new WishlistItem({
+      ...params,
+      id: WishlistItemId.create(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    entity.addDomainEvent(
+      new WishlistItemAddedEvent(
+        entity.props.wishlistId.getValue(),
+        entity.props.variantId
+      )
+    );
+
+    return entity;
+  }
+
+  static fromPersistence(props: WishlistItemProps): WishlistItem {
+    return new WishlistItem(props);
+  }
+
+  private static validateIds(wishlistId: WishlistId, variantId: string): void {
+    if (!wishlistId) {
+      throw new DomainValidationError("Wishlist ID is required");
+    }
+    if (!variantId || variantId.trim().length === 0) {
+      throw new DomainValidationError("Variant ID is required");
+    }
+  }
+
+  // Getters
+  get id(): WishlistItemId {
+    return this.props.id;
+  }
+  get wishlistId(): WishlistId {
+    return this.props.wishlistId;
+  }
+  get variantId(): string {
+    return this.props.variantId;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   equals(other: WishlistItem): boolean {
-    return (
-      this.wishlistId === other.wishlistId &&
-      this.variantId === other.variantId
-    );
+    return this.props.id.equals(other.props.id);
   }
+
+  static toDTO(entity: WishlistItem): WishlistItemDTO {
+    return {
+      id: entity.props.id.getValue(),
+      wishlistId: entity.props.wishlistId.getValue(),
+      variantId: entity.props.variantId,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// 6. Supporting input types
+// ============================================================================
+export interface CreateWishlistItemData {
+  wishlistId: string;
+  variantId: string;
 }

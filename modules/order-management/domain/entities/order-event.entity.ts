@@ -1,112 +1,93 @@
 import { DomainValidationError } from "../errors/order-management.errors";
 
 export interface OrderEventProps {
-  eventId: number;
+  eventId: number | null;
   orderId: string;
   eventType: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface OrderEventDatabaseRow {
-  event_id: number;
-  order_id: string;
-  event_type: string;
-  payload: any;
-  created_at: Date;
+export interface OrderEventDTO {
+  eventId: number | null;
+  orderId: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class OrderEvent {
-  private eventId: number;
-  private orderId: string;
-  private eventType: string;
-  private payload: Record<string, any>;
-  private createdAt: Date;
-
-  private constructor(props: OrderEventProps) {
-    this.eventId = props.eventId;
-    this.orderId = props.orderId;
-    this.eventType = props.eventType;
-    this.payload = props.payload;
-    this.createdAt = props.createdAt;
-  }
+  private constructor(private props: OrderEventProps) {}
 
   static create(
-    props: Omit<OrderEventProps, "eventId" | "createdAt">,
+    params: Omit<OrderEventProps, "eventId" | "createdAt" | "updatedAt">,
   ): OrderEvent {
-    if (!props.orderId || props.orderId.trim().length === 0) {
+    OrderEvent.validateEventType(params.eventType);
+
+    if (!params.orderId || params.orderId.trim().length === 0) {
       throw new DomainValidationError("Order ID is required");
     }
 
-    if (!props.eventType || props.eventType.trim().length === 0) {
-      throw new DomainValidationError("Event type is required");
-    }
-
     return new OrderEvent({
-      eventId: 0, // Will be assigned by database
-      orderId: props.orderId,
-      eventType: props.eventType,
-      payload: props.payload || {},
+      ...params,
+      eventId: null,
+      payload: params.payload || {},
       createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
-  static reconstitute(props: OrderEventProps): OrderEvent {
+  static fromPersistence(props: OrderEventProps): OrderEvent {
     return new OrderEvent(props);
   }
 
-  static fromDatabaseRow(row: OrderEventDatabaseRow): OrderEvent {
-    return new OrderEvent({
-      eventId: row.event_id,
-      orderId: row.order_id,
-      eventType: row.event_type,
-      payload: row.payload || {},
-      createdAt: row.created_at,
-    });
+  private static validateEventType(eventType: string): void {
+    if (!eventType || eventType.trim().length === 0) {
+      throw new DomainValidationError("Event type is required");
+    }
   }
 
-  getEventId(): number {
-    return this.eventId;
+  get eventId(): number | null {
+    return this.props.eventId;
   }
 
-  getOrderId(): string {
-    return this.orderId;
+  get orderId(): string {
+    return this.props.orderId;
   }
 
-  getEventType(): string {
-    return this.eventType;
+  get eventType(): string {
+    return this.props.eventType;
   }
 
-  getPayload(): Record<string, any> {
-    return this.payload;
+  get payload(): Record<string, unknown> {
+    return this.props.payload;
   }
 
-  getCreatedAt(): Date {
-    return this.createdAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   equals(other: OrderEvent): boolean {
-    return this.eventId === other.eventId;
+    if (this.props.eventId === null || other.props.eventId === null) {
+      return false;
+    }
+    return this.props.eventId === other.props.eventId;
   }
 
-  // Utility methods
-  toDatabaseRow(): OrderEventDatabaseRow {
+  static toDTO(entity: OrderEvent): OrderEventDTO {
     return {
-      event_id: this.eventId,
-      order_id: this.orderId,
-      event_type: this.eventType,
-      payload: this.payload,
-      created_at: this.createdAt,
-    };
-  }
-
-  toSnapshot() {
-    return {
-      eventId: this.eventId,
-      orderId: this.orderId,
-      eventType: this.eventType,
-      payload: this.payload,
-      createdAt: this.createdAt,
+      eventId: entity.props.eventId,
+      orderId: entity.props.orderId,
+      eventType: entity.props.eventType,
+      payload: entity.props.payload,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

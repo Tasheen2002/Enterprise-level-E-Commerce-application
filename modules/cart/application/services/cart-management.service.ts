@@ -20,7 +20,7 @@ import {
   IExternalProductMediaRepository,
   IExternalMediaAssetRepository,
   IExternalSettingsService,
-} from "../../domain/external-services";
+} from "../../domain/ports/external-services";
 import {
   RESERVATION_DEFAULT_DURATION_MINUTES,
   DEFAULT_CURRENCY,
@@ -33,14 +33,14 @@ import {
 } from "../../domain/errors/cart.errors";
 
 // DTOs for service operations
-export interface CreateCartDto {
+interface CreateCartDto {
   userId?: string;
   guestToken?: string;
   currency: string;
   reservationDurationMinutes?: number;
 }
 
-export interface AddToCartDto {
+interface AddToCartDto {
   cartId?: string;
   userId?: string;
   guestToken?: string;
@@ -51,7 +51,7 @@ export interface AddToCartDto {
   giftMessage?: string;
 }
 
-export interface UpdateCartItemDto {
+interface UpdateCartItemDto {
   cartId: string;
   variantId: string;
   quantity: number;
@@ -59,14 +59,14 @@ export interface UpdateCartItemDto {
   guestToken?: string;
 }
 
-export interface RemoveFromCartDto {
+interface RemoveFromCartDto {
   cartId: string;
   variantId: string;
   userId?: string;
   guestToken?: string;
 }
 
-export interface TransferCartDto {
+interface TransferCartDto {
   guestToken: string;
   userId: string;
   mergeWithExisting?: boolean;
@@ -91,7 +91,7 @@ export interface CartSummaryDto {
   updatedAt: Date;
 }
 
-export interface CartItemDto {
+interface CartItemDto {
   id: string;
   variantId: string;
   quantity: number;
@@ -184,7 +184,7 @@ export class CartManagementService {
           Date.now() + dto.reservationDurationMinutes * 60 * 1000,
         );
         existingCart.updateReservationExpiry(newExpiryTime);
-        await this.cartRepository.update(existingCart);
+        await this.cartRepository.save(existingCart);
       }
 
       return await this.mapCartToDto(existingCart);
@@ -235,7 +235,7 @@ export class CartManagementService {
               1000,
         );
         existingCart.updateReservationExpiry(newExpiryTime);
-        await this.cartRepository.update(existingCart);
+        await this.cartRepository.save(existingCart);
 
         return await this.mapCartToDto(existingCart);
       }
@@ -447,7 +447,7 @@ export class CartManagementService {
     };
 
     cart.addItem(itemData);
-    await this.cartRepository.update(cart);
+    await this.cartRepository.save(cart);
 
     return await this.mapCartToDto(cart);
   }
@@ -473,7 +473,7 @@ export class CartManagementService {
     if (reservation) {
       if (dto.quantity > 0) {
         reservation.updateQuantity(dto.quantity);
-        await this.reservationRepository.update(reservation);
+        await this.reservationRepository.save(reservation);
       } else {
         await this.reservationRepository.delete(reservation.reservationId.getValue());
       }
@@ -481,7 +481,7 @@ export class CartManagementService {
 
     // Update cart item
     cart.updateItemQuantity(dto.variantId, dto.quantity);
-    await this.cartRepository.update(cart);
+    await this.cartRepository.save(cart);
 
     return await this.mapCartToDto(cart);
   }
@@ -506,7 +506,7 @@ export class CartManagementService {
 
     // Remove from cart
     cart.removeItem(dto.variantId);
-    await this.cartRepository.update(cart);
+    await this.cartRepository.save(cart);
 
     return await this.mapCartToDto(cart);
   }
@@ -530,7 +530,7 @@ export class CartManagementService {
 
     // Clear cart items
     cart.clearItems();
-    await this.cartRepository.update(cart);
+    await this.cartRepository.save(cart);
 
     return await this.mapCartToDto(cart);
   }
@@ -554,7 +554,7 @@ export class CartManagementService {
       if (userCart) {
         // Merge guest cart into user cart
         userCart.mergeWith(guestCart);
-        await this.cartRepository.update(userCart);
+        await this.cartRepository.save(userCart);
 
         // Transfer reservations
         const guestReservations =
@@ -581,7 +581,7 @@ export class CartManagementService {
 
     // Transfer ownership of guest cart to user
     const transferredCart = guestCart.transferToUser(dto.userId);
-    await this.cartRepository.update(transferredCart);
+    await this.cartRepository.save(transferredCart);
 
     await this.refreshCartReservations(transferredCart);
     return await this.mapCartToDto(transferredCart);
@@ -669,8 +669,8 @@ export class CartManagementService {
 
     // Calculate shipping
     const shippingCost = await this.calculateShippingCost(
-      cartWithCheckoutInfo?.shippingMethod,
-      cartWithCheckoutInfo?.shippingOption,
+      cartWithCheckoutInfo?.shippingMethod ?? undefined,
+      cartWithCheckoutInfo?.shippingOption ?? undefined,
     );
 
     const summary: CartSummaryDto = {
@@ -929,6 +929,8 @@ export class CartManagementService {
 
     this.validateCartOwnership(cart, userId, guestToken);
 
-    return await this.cartRepository.getCartWithCheckoutInfo(cartId);
+    return await this.cartRepository.getCartWithCheckoutInfo(
+      cart.cartId.getValue(),
+    );
   }
 }

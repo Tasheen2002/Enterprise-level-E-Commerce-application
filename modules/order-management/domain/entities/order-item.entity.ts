@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
-import { ProductSnapshot } from "../value-objects";
+import { ProductSnapshot, ProductSnapshotData } from "../value-objects";
 import { DomainValidationError } from "../errors/order-management.errors";
+
 
 export interface OrderItemProps {
   orderItemId: string;
@@ -10,79 +11,92 @@ export interface OrderItemProps {
   productSnapshot: ProductSnapshot;
   isGift: boolean;
   giftMessage?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrderItemDTO {
+  orderItemId: string;
+  orderId: string;
+  variantId: string;
+  quantity: number;
+  productSnapshot: ProductSnapshotData;
+  isGift: boolean;
+  giftMessage?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class OrderItem {
-  private orderItemId: string;
-  private orderId: string;
-  private variantId: string;
-  private quantity: number;
-  private productSnapshot: ProductSnapshot;
-  private isGift: boolean;
-  private giftMessage?: string;
+  private constructor(private props: OrderItemProps) {}
 
-  private constructor(props: OrderItemProps) {
-    this.orderItemId = props.orderItemId;
-    this.orderId = props.orderId;
-    this.variantId = props.variantId;
-    this.quantity = props.quantity;
-    this.productSnapshot = props.productSnapshot;
-    this.isGift = props.isGift;
-    this.giftMessage = props.giftMessage;
-  }
-
-  static create(props: Omit<OrderItemProps, "orderItemId">): OrderItem {
-    if (props.quantity <= 0) {
+  static create(
+    params: Omit<OrderItemProps, "orderItemId" | "createdAt" | "updatedAt">,
+  ): OrderItem {
+    if (params.quantity <= 0) {
       throw new DomainValidationError("Quantity must be greater than 0");
     }
 
-    if (props.isGift && props.giftMessage && props.giftMessage.length > 500) {
+    if (
+      params.isGift &&
+      params.giftMessage &&
+      params.giftMessage.length > 500
+    ) {
       throw new DomainValidationError(
         "Gift message cannot exceed 500 characters",
       );
     }
 
     return new OrderItem({
+      ...params,
       orderItemId: randomUUID(),
-      orderId: props.orderId,
-      variantId: props.variantId,
-      quantity: props.quantity,
-      productSnapshot: props.productSnapshot,
-      isGift: props.isGift,
-      giftMessage: props.giftMessage,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   }
 
-  static reconstitute(props: OrderItemProps): OrderItem {
+  static fromPersistence(props: OrderItemProps): OrderItem {
     return new OrderItem(props);
   }
 
-  getOrderItemId(): string {
-    return this.orderItemId;
+  get orderItemId(): string {
+    return this.props.orderItemId;
   }
 
-  getOrderId(): string {
-    return this.orderId;
+  get orderId(): string {
+    return this.props.orderId;
   }
 
-  getVariantId(): string {
-    return this.variantId;
+  get variantId(): string {
+    return this.props.variantId;
   }
 
-  getQuantity(): number {
-    return this.quantity;
+  get quantity(): number {
+    return this.props.quantity;
   }
 
-  getProductSnapshot(): ProductSnapshot {
-    return this.productSnapshot;
+  get productSnapshot(): ProductSnapshot {
+    return this.props.productSnapshot;
+  }
+
+  get isGift(): boolean {
+    return this.props.isGift;
+  }
+
+  get giftMessage(): string | undefined {
+    return this.props.giftMessage;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   isGiftItem(): boolean {
-    return this.isGift;
-  }
-
-  getGiftMessage(): string | undefined {
-    return this.giftMessage;
+    return this.props.isGift;
   }
 
   updateQuantity(newQuantity: number): void {
@@ -90,7 +104,8 @@ export class OrderItem {
       throw new DomainValidationError("Quantity must be greater than 0");
     }
 
-    this.quantity = newQuantity;
+    this.props.quantity = newQuantity;
+    this.props.updatedAt = new Date();
   }
 
   setAsGift(giftMessage?: string): void {
@@ -100,32 +115,36 @@ export class OrderItem {
       );
     }
 
-    this.isGift = true;
-    this.giftMessage = giftMessage;
+    this.props.isGift = true;
+    this.props.giftMessage = giftMessage;
+    this.props.updatedAt = new Date();
   }
 
   removeGift(): void {
-    this.isGift = false;
-    this.giftMessage = undefined;
+    this.props.isGift = false;
+    this.props.giftMessage = undefined;
+    this.props.updatedAt = new Date();
   }
 
   calculateSubtotal(): number {
-    return this.productSnapshot.getPrice() * this.quantity;
+    return this.props.productSnapshot.price * this.props.quantity;
   }
 
   equals(other: OrderItem): boolean {
-    return this.orderItemId === other.orderItemId;
+    return this.props.orderItemId === other.props.orderItemId;
   }
 
-  toSnapshot(): OrderItemProps {
+  static toDTO(entity: OrderItem): OrderItemDTO {
     return {
-      orderItemId: this.orderItemId,
-      orderId: this.orderId,
-      variantId: this.variantId,
-      quantity: this.quantity,
-      productSnapshot: this.productSnapshot,
-      isGift: this.isGift,
-      giftMessage: this.giftMessage,
+      orderItemId: entity.props.orderItemId,
+      orderId: entity.props.orderId,
+      variantId: entity.props.variantId,
+      quantity: entity.props.quantity,
+      productSnapshot: entity.props.productSnapshot.getValue(),
+      isGift: entity.props.isGift,
+      giftMessage: entity.props.giftMessage,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

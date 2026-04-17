@@ -1,45 +1,41 @@
 import { PaymentMethodService } from '../services/payment-method.service';
 import { PaymentMethodDTO } from '../../domain/entities/payment-method.entity';
 import { PaymentMethodType } from '../../domain/enums/payment-method-type.enum';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface AddPaymentMethodInput extends ICommand {
-  userId: string;
-  type: 'card' | 'wallet' | 'bank' | 'cod' | 'gift_card';
-  brand?: string;
-  last4?: string;
-  expMonth?: number;
-  expYear?: number;
-  billingAddressId?: string;
-  providerRef?: string;
-  isDefault?: boolean;
+export interface AddPaymentMethodCommand extends ICommand {
+  readonly userId: string;
+  readonly type: 'card' | 'wallet' | 'bank' | 'cod' | 'gift_card';
+  readonly brand?: string;
+  readonly last4?: string;
+  readonly expMonth?: number;
+  readonly expYear?: number;
+  readonly billingAddressId?: string;
+  readonly providerRef?: string;
+  readonly isDefault?: boolean;
 }
 
 export class AddPaymentMethodHandler implements ICommandHandler<
-  AddPaymentMethodInput,
+  AddPaymentMethodCommand,
   CommandResult<PaymentMethodDTO>
 > {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 
   async handle(
-    input: AddPaymentMethodInput
+    command: AddPaymentMethodCommand
   ): Promise<CommandResult<PaymentMethodDTO>> {
-    const type = PaymentMethodType.fromString(input.type);
+    const type = PaymentMethodType.fromString(command.type);
 
     const result = await this.paymentMethodService.addPaymentMethod({
-      userId: input.userId,
+      userId: command.userId,
       type,
-      brand: input.brand,
-      last4: input.last4,
-      expMonth: input.expMonth,
-      expYear: input.expYear,
-      billingAddressId: input.billingAddressId,
-      providerRef: input.providerRef,
-      isDefault: input.isDefault,
+      brand: command.brand,
+      last4: command.last4,
+      expMonth: command.expMonth,
+      expYear: command.expYear,
+      billingAddressId: command.billingAddressId,
+      providerRef: command.providerRef,
+      isDefault: command.isDefault,
     });
 
     return CommandResult.success(result);

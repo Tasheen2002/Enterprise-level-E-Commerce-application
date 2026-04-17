@@ -1,65 +1,82 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IAppointmentRepository,
   AppointmentQueryOptions,
-  AppointmentFilterOptions,
-} from "../../../domain/repositories/appointment.repository.js";
-import { Appointment } from "../../../domain/entities/appointment.entity.js";
+  AppointmentFilters,
+} from "../../../domain/repositories/appointment.repository";
+import { Appointment } from "../../../domain/entities/appointment.entity";
 import {
   AppointmentId,
   AppointmentType,
-} from "../../../domain/value-objects/index.js";
+} from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-export class AppointmentRepositoryImpl implements IAppointmentRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ============================================================================
+// Database Row Interface
+// ============================================================================
+interface AppointmentDatabaseRow {
+  id: string;
+  userId: string;
+  type: string;
+  locationId: string | null;
+  startAt: Date;
+  endAt: Date;
+  notes: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  private hydrate(record: any): Appointment {
-    return Appointment.fromDatabaseRow({
-      appt_id: record.id,
-      user_id: record.userId,
-      type: record.type,
-      location_id: record.locationId,
-      start_at: record.startAt,
-      end_at: record.endAt,
-      notes: record.notes,
+// ============================================================================
+// Repository Implementation
+// ============================================================================
+export class AppointmentRepositoryImpl
+  extends PrismaRepository<Appointment>
+  implements IAppointmentRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  private toEntity(row: AppointmentDatabaseRow): Appointment {
+    return Appointment.fromPersistence({
+      id: AppointmentId.fromString(row.id),
+      userId: row.userId,
+      type: AppointmentType.fromString(row.type),
+      locationId: row.locationId || undefined,
+      startAt: row.startAt,
+      endAt: row.endAt,
+      notes: row.notes || undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
-  }
-
-  private dehydrate(appointment: Appointment): any {
-    const row = appointment.toDatabaseRow();
-    return {
-      id: row.appt_id,
-      userId: row.user_id,
-      type: row.type,
-      locationId: row.location_id,
-      startAt: row.start_at,
-      endAt: row.end_at,
-      notes: row.notes,
-    };
-  }
-
-  private buildOrderBy(options?: AppointmentQueryOptions): any {
-    if (!options?.sortBy) {
-      return { startAt: "asc" };
-    }
-
-    return {
-      [options.sortBy]: options.sortOrder || "asc",
-    };
   }
 
   async save(appointment: Appointment): Promise<void> {
-    const data = this.dehydrate(appointment);
-    await this.prisma.appointment.create({ data });
-  }
-
-  async update(appointment: Appointment): Promise<void> {
-    const data = this.dehydrate(appointment);
-    const { id, ...updateData } = data;
-    await this.prisma.appointment.update({
-      where: { id },
-      data: updateData,
+    await this.prisma.appointment.upsert({
+      where: { id: appointment.id.getValue() },
+      create: {
+        id: appointment.id.getValue(),
+        userId: appointment.userId,
+        type: appointment.type.getValue() as any,
+        locationId: appointment.locationId,
+        startAt: appointment.startAt,
+        endAt: appointment.endAt,
+        notes: appointment.notes,
+        createdAt: appointment.createdAt,
+        updatedAt: appointment.updatedAt,
+      },
+      update: {
+        type: appointment.type.getValue() as any,
+        locationId: appointment.locationId,
+        startAt: appointment.startAt,
+        endAt: appointment.endAt,
+        notes: appointment.notes,
+        updatedAt: appointment.updatedAt,
+      },
     });
+    await this.dispatchEvents(appointment);
   }
 
   async delete(appointmentId: AppointmentId): Promise<void> {
@@ -73,200 +90,331 @@ export class AppointmentRepositoryImpl implements IAppointmentRepository {
       where: { id: appointmentId.getValue() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as AppointmentDatabaseRow) : null;
   }
 
   async findByUserId(
     userId: string,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: { userId },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { userId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByLocationId(
     locationId: string,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: { locationId },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { locationId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByType(
     type: AppointmentType,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: { type: type.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { type: type.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findAll(options?: AppointmentQueryOptions): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findAll(
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findWithFilters(
-    filters: AppointmentFilterOptions,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
+    filters: AppointmentFilters,
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
+
     const where: any = {};
-
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
-
-    if (filters.locationId) {
-      where.locationId = filters.locationId;
-    }
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.locationId) where.locationId = filters.locationId;
+    if (filters.type) where.type = filters.type.getValue() as any;
     if (filters.startDate || filters.endDate) {
       where.startAt = {};
-      if (filters.startDate) {
-        where.startAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.startAt.lte = filters.endDate;
-      }
+      if (filters.startDate) where.startAt.gte = filters.startDate;
+      if (filters.endDate) where.startAt.lte = filters.endDate;
     }
 
-    const records = await this.prisma.appointment.findMany({
-      where,
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
 
-    return records.map((record) => this.hydrate(record));
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findUpcoming(options?: AppointmentQueryOptions): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: {
-        startAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findUpcoming(
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { startAt: { gt: new Date() } };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findPast(options?: AppointmentQueryOptions): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: {
-        endAt: {
-          lt: new Date(),
-        },
-      },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findPast(
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { endAt: { lt: new Date() } };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findOngoing(options?: AppointmentQueryOptions): Promise<Appointment[]> {
+  async findOngoing(
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
+
     const now = new Date();
-    const records = await this.prisma.appointment.findMany({
-      where: {
-        startAt: {
-          lte: now,
-        },
-        endAt: {
-          gte: now,
-        },
-      },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    const where = {
+      startAt: { lte: now },
+      endAt: { gte: now },
+    };
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByDateRange(
     startDate: Date,
     endDate: Date,
-    options?: AppointmentQueryOptions
-  ): Promise<Appointment[]> {
-    const records = await this.prisma.appointment.findMany({
-      where: {
-        startAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: AppointmentQueryOptions,
+  ): Promise<PaginatedResult<Appointment>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "startAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = {
+      startAt: {
+        gte: startDate,
+        lte: endDate,
+      },
+    };
+
+    const [records, total] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder },
+      }),
+      this.prisma.appointment.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as AppointmentDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findConflictingAppointments(
     userId: string,
     startAt: Date,
-    endAt: Date
+    endAt: Date,
   ): Promise<Appointment[]> {
     const records = await this.prisma.appointment.findMany({
       where: {
         userId,
         OR: [
           {
-            AND: [
-              { startAt: { gte: startAt } },
-              { startAt: { lt: endAt } },
-            ],
+            AND: [{ startAt: { gte: startAt } }, { startAt: { lt: endAt } }],
           },
           {
-            AND: [
-              { endAt: { gt: startAt } },
-              { endAt: { lte: endAt } },
-            ],
+            AND: [{ endAt: { gt: startAt } }, { endAt: { lte: endAt } }],
           },
           {
-            AND: [
-              { startAt: { lte: startAt } },
-              { endAt: { gte: endAt } },
-            ],
+            AND: [{ startAt: { lte: startAt } }, { endAt: { gte: endAt } }],
           },
         ],
       },
     });
 
-    return records.map((record) => this.hydrate(record));
+    return records.map((record) => this.toEntity(record as AppointmentDatabaseRow));
   }
 
   async countByUserId(userId: string): Promise<number> {
@@ -287,33 +435,15 @@ export class AppointmentRepositoryImpl implements IAppointmentRepository {
     });
   }
 
-  async count(filters?: AppointmentFilterOptions): Promise<number> {
-    if (!filters) {
-      return await this.prisma.appointment.count();
-    }
-
+  async count(filters?: AppointmentFilters): Promise<number> {
     const where: any = {};
-
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
-
-    if (filters.locationId) {
-      where.locationId = filters.locationId;
-    }
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
-    if (filters.startDate || filters.endDate) {
+    if (filters?.userId) where.userId = filters.userId;
+    if (filters?.locationId) where.locationId = filters.locationId;
+    if (filters?.type) where.type = filters.type.getValue() as any;
+    if (filters?.startDate || filters?.endDate) {
       where.startAt = {};
-      if (filters.startDate) {
-        where.startAt.gte = filters.startDate;
-      }
-      if (filters.endDate) {
-        where.startAt.lte = filters.endDate;
-      }
+      if (filters.startDate) where.startAt.gte = filters.startDate;
+      if (filters.endDate) where.startAt.lte = filters.endDate;
     }
 
     return await this.prisma.appointment.count({ where });
@@ -330,7 +460,7 @@ export class AppointmentRepositoryImpl implements IAppointmentRepository {
   async existsByUserIdAndTime(
     userId: string,
     startAt: Date,
-    endAt: Date
+    endAt: Date,
   ): Promise<boolean> {
     const count = await this.prisma.appointment.count({
       where: {
@@ -346,9 +476,13 @@ export class AppointmentRepositoryImpl implements IAppointmentRepository {
   async hasConflict(
     userId: string,
     startAt: Date,
-    endAt: Date
+    endAt: Date,
   ): Promise<boolean> {
-    const conflicts = await this.findConflictingAppointments(userId, startAt, endAt);
+    const conflicts = await this.findConflictingAppointments(
+      userId,
+      startAt,
+      endAt,
+    );
     return conflicts.length > 0;
   }
 }

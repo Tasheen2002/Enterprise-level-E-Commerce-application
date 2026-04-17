@@ -5,13 +5,12 @@ import {
   InvalidPasswordError,
   EmailAlreadyVerifiedError,
   InvalidOperationError,
+  DomainValidationError,
 } from '../errors/user-management.errors';
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { UserRole } from '../enums/user-role.enum';
 import { UserStatus } from '../enums/user-status.enum';
-
-export { UserRole, UserStatus };
 
 // ============================================================================
 // Domain Events
@@ -194,6 +193,23 @@ export class User extends AggregateRoot {
     super();
   }
 
+  // --- Private static validators ---
+
+  private static validateName(value: string, field: string): void {
+    if (value.trim().length === 0) {
+      throw new DomainValidationError(`${field} cannot be empty`);
+    }
+    if (value.length > 50) {
+      throw new DomainValidationError(`${field} cannot exceed 50 characters`);
+    }
+  }
+
+  private static validatePasswordHash(hash: string): void {
+    if (!hash) {
+      throw new InvalidPasswordError('Password hash is required');
+    }
+  }
+
   // --- Static factories ---
 
   static create(params: {
@@ -205,6 +221,16 @@ export class User extends AggregateRoot {
     role?: UserRole;
     isGuest?: boolean;
   }): User {
+    if (!params.isGuest) {
+      User.validatePasswordHash(params.passwordHash);
+    }
+    if (params.firstName !== undefined && params.firstName !== null) {
+      User.validateName(params.firstName, 'First name');
+    }
+    if (params.lastName !== undefined && params.lastName !== null) {
+      User.validateName(params.lastName, 'Last name');
+    }
+
     const id = UserId.create();
     const now = new Date();
 
@@ -311,11 +337,13 @@ export class User extends AggregateRoot {
   }
 
   updateFirstName(firstName: string | null): void {
+    if (firstName !== null) User.validateName(firstName, 'First name');
     this.props.firstName = firstName;
     this.props.updatedAt = new Date();
   }
 
   updateLastName(lastName: string | null): void {
+    if (lastName !== null) User.validateName(lastName, 'Last name');
     this.props.lastName = lastName;
     this.props.updatedAt = new Date();
   }

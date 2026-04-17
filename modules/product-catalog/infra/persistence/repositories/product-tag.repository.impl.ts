@@ -9,7 +9,7 @@ import {
   ProductTagId,
 } from "../../../domain/entities/product-tag.entity";
 
-export class ProductTagRepository implements IProductTagRepository {
+export class ProductTagRepositoryImpl implements IProductTagRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   // Helper to access productTag model with proper typing
@@ -23,12 +23,11 @@ export class ProductTagRepository implements IProductTagRepository {
   }
 
   async save(tag: ProductTag): Promise<void> {
-    await this.productTagModel.create({
-      data: {
-        id: tag.id.getValue(),
-        tag: tag.tag,
-        kind: tag.kind,
-      },
+    const data = { tag: tag.tag, kind: tag.kind };
+    await this.productTagModel.upsert({
+      where: { id: tag.id.getValue() },
+      create: { id: tag.id.getValue(), ...data },
+      update: data,
     });
   }
 
@@ -195,15 +194,6 @@ export class ProductTagRepository implements IProductTagRepository {
     }));
   }
 
-  async update(tag: ProductTag): Promise<void> {
-    await this.productTagModel.update({
-      where: { id: tag.id.getValue() },
-      data: {
-        tag: tag.tag,
-        kind: tag.kind,
-      },
-    });
-  }
 
   async delete(id: ProductTagId): Promise<void> {
     await this.productTagModel.delete({
@@ -301,15 +291,14 @@ export class ProductTagRepository implements IProductTagRepository {
       },
     });
 
-    // Get average tag length using raw query since Prisma doesn't support string length aggregation
-    const avgLengthQuery = await this.prisma.$queryRaw<
-      Array<{ avg_length: bigint | number | null }>
-    >`
-      SELECT AVG(LENGTH(tag)) as avg_length FROM product_catalog.product_tags
-    `;
+    const allTags = await this.productTagModel.findMany({
+      select: { tag: true },
+    });
 
-    const avgLengthResult = avgLengthQuery[0]?.avg_length;
-    const averageTagLength = avgLengthResult ? Number(avgLengthResult) : 0;
+    const averageTagLength =
+      allTags.length > 0
+        ? allTags.reduce((sum: number, t: any) => sum + t.tag.length, 0) / allTags.length
+        : 0;
 
     const tagsByKind = kindStats.map((stat: any) => ({
       kind: stat.kind,

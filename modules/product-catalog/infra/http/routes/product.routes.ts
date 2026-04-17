@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ProductController } from "../controllers/product.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -14,23 +19,66 @@ import {
   productParamsSchema,
   productSlugParamsSchema,
   productResponseSchema,
-  paginatedProductsResponseSchema,
 } from "../validation/product.schema";
 
-export async function registerProductRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function productRoutes(
   fastify: FastifyInstance,
   controller: ProductController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /products — List products (public)
   fastify.get(
     "/products",
     {
-      preHandler: [validateQuery(listProductsSchema)],
+      preValidation: [validateQuery(listProductsSchema)],
       schema: {
         description: "Get paginated list of products with filtering options",
         tags: ["Products"],
         summary: "List Products",
-        response: { 200: paginatedProductsResponseSchema },
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "integer", minimum: 1, default: 1 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            status: { type: "string", enum: ["draft", "published", "scheduled", "archived"] },
+            brand: { type: "string" },
+            categoryId: { type: "string", format: "uuid" },
+            search: { type: "string" },
+            includeDrafts: { type: "boolean", default: false },
+            sortBy: { type: "string", enum: ["title", "createdAt", "updatedAt", "publishAt"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: {
+                type: "object",
+                properties: {
+                  products: { type: "array", items: productResponseSchema },
+                  total: { type: "integer" },
+                  page: { type: "integer" },
+                  limit: { type: "integer" },
+                  totalPages: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
       },
     },
     (request, reply) =>
@@ -56,6 +104,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -85,6 +135,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -99,10 +151,8 @@ export async function registerProductRoutes(
   fastify.post(
     "/products",
     {
-      preHandler: [
-        validateBody(createProductSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(createProductSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new product",
         tags: ["Products"],
@@ -140,6 +190,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },
@@ -150,15 +202,12 @@ export async function registerProductRoutes(
       controller.createProduct(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /products/:productId — Update product (Admin only)
-  fastify.put(
+  // PATCH /products/:productId — Update product (Admin only)
+  fastify.patch(
     "/products/:productId",
     {
-      preValidation: [validateParams(productParamsSchema)],
-      preHandler: [
-        validateBody(updateProductSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(productParamsSchema), validateBody(updateProductSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update an existing product",
         tags: ["Products"],
@@ -200,6 +249,8 @@ export async function registerProductRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productResponseSchema,
             },
           },

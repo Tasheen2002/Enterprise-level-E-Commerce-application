@@ -1,15 +1,15 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { CategoryManagementService } from "../services/category-management.service";
 
-export interface ReorderCategoriesInput extends ICommand {
-  categoryOrders: Array<{ id: string; position: number }>;
+export interface ReorderCategoriesCommand extends ICommand {
+  readonly categoryOrders: Array<{ id: string; position: number }>;
 }
 
-export class ReorderCategoriesHandler implements ICommandHandler<ReorderCategoriesInput, CommandResult<void>> {
+export class ReorderCategoriesHandler implements ICommandHandler<ReorderCategoriesCommand, CommandResult<void>> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(input: ReorderCategoriesInput): Promise<CommandResult<void>> {
-    await this.categoryManagementService.reorderCategories(input.categoryOrders);
+  async handle(command: ReorderCategoriesCommand): Promise<CommandResult<void>> {
+    await this.categoryManagementService.reorderCategories(command.categoryOrders);
     return CommandResult.success(undefined);
   }
 }

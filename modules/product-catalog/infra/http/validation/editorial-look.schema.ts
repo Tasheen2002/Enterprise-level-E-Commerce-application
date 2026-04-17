@@ -3,16 +3,16 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const editorialLookParamsSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 export const editorialLookProductParamsSchema = z.object({
-  id: z.string().uuid(),
-  productId: z.string().uuid(),
+  id: z.uuid(),
+  productId: z.uuid(),
 });
 
 export const productLooksParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const listEditorialLooksSchema = z.object({
@@ -35,24 +35,24 @@ export const popularProductsQuerySchema = z.object({
 export const createEditorialLookSchema = z.object({
   title: z.string().min(1),
   storyHtml: z.string().optional(),
-  heroAssetId: z.string().uuid().optional(),
-  publishedAt: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
-  productIds: z.array(z.string().uuid()).optional().default([]),
+  heroAssetId: z.uuid().optional(),
+  publishedAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  productIds: z.array(z.uuid()).optional().default([]),
 });
 
 export const updateEditorialLookSchema = z.object({
   title: z.string().min(1).optional(),
   storyHtml: z.string().optional(),
-  heroAssetId: z.string().uuid().nullable().optional(),
-  publishedAt: z.string().datetime().nullable().optional().transform((v) => v === null ? null : v ? new Date(v) : undefined),
+  heroAssetId: z.uuid().nullable().optional(),
+  publishedAt: z.iso.datetime().nullable().optional().transform((v) => v === null ? null : v ? new Date(v) : undefined),
 });
 
 export const schedulePublicationSchema = z.object({
-  publishDate: z.string().datetime().transform((v) => new Date(v)),
+  publishDate: z.iso.datetime().transform((v) => new Date(v)),
 });
 
 export const setHeroImageSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.uuid(),
 });
 
 export const updateStoryContentSchema = z.object({
@@ -60,7 +60,7 @@ export const updateStoryContentSchema = z.object({
 });
 
 export const setLookProductsSchema = z.object({
-  productIds: z.array(z.string().uuid()),
+  productIds: z.array(z.uuid()),
 });
 
 export const duplicateEditorialLookSchema = z.object({
@@ -72,19 +72,19 @@ export const bulkCreateEditorialLooksSchema = z.object({
     z.object({
       title: z.string().min(1),
       storyHtml: z.string().optional(),
-      heroAssetId: z.string().uuid().optional(),
-      publishedAt: z.string().datetime().optional(),
-      productIds: z.array(z.string().uuid()).optional(),
+      heroAssetId: z.uuid().optional(),
+      publishedAt: z.iso.datetime().transform((v) => new Date(v)).optional(),
+      productIds: z.array(z.uuid()).optional(),
     }),
   ).min(1),
 });
 
 export const bulkPublishEditorialLooksSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1),
+  ids: z.array(z.uuid()).min(1),
 });
 
 export const bulkDeleteEditorialLooksSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(100),
+  ids: z.array(z.uuid()).min(1).max(100),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

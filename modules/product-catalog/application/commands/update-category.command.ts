@@ -1,20 +1,20 @@
-import { ICommand, ICommandHandler, CommandResult } from "@/api/src/shared/application";
+import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { CategoryDTO } from "../../domain/entities/category.entity";
 import { CategoryManagementService } from "../services/category-management.service";
 
-export interface UpdateCategoryInput extends ICommand {
-  categoryId: string;
-  name?: string;
-  slug?: string;
-  parentId?: string;
-  position?: number;
+export interface UpdateCategoryCommand extends ICommand {
+  readonly categoryId: string;
+  readonly name?: string;
+  readonly slug?: string;
+  readonly parentId?: string;
+  readonly position?: number;
 }
 
-export class UpdateCategoryHandler implements ICommandHandler<UpdateCategoryInput, CommandResult<CategoryDTO>> {
+export class UpdateCategoryHandler implements ICommandHandler<UpdateCategoryCommand, CommandResult<CategoryDTO>> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(input: UpdateCategoryInput): Promise<CommandResult<CategoryDTO>> {
-    const { categoryId, ...updates } = input;
+  async handle(command: UpdateCategoryCommand): Promise<CommandResult<CategoryDTO>> {
+    const { categoryId, ...updates } = command;
     const dto = await this.categoryManagementService.updateCategory(categoryId, updates);
     return CommandResult.success(dto);
   }

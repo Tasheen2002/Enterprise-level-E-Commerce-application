@@ -3,28 +3,14 @@ import { ProductId } from "../value-objects/product-id.vo";
 import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
 export interface IProductMediaRepository {
-  // Basic CRUD operations
+  // Core CRUD
   save(productMedia: ProductMedia): Promise<void>;
   findById(id: string): Promise<ProductMedia | null>;
-  update(productMedia: ProductMedia): Promise<void>;
   delete(id: string): Promise<void>;
-  exists(id: string): Promise<boolean>;
+  deleteByProductId(productId: ProductId): Promise<void>;
+  deleteByAssetId(assetId: MediaAssetId): Promise<void>;
 
-  // Association management
-  addMediaToProduct(
-    productId: ProductId,
-    assetId: MediaAssetId,
-    position?: number,
-    isCover?: boolean,
-  ): Promise<string>;
-  removeMediaFromProduct(
-    productId: ProductId,
-    assetId: MediaAssetId,
-  ): Promise<void>;
-  removeAllProductMedia(productId: ProductId): Promise<void>;
-  removeAllAssetReferences(assetId: MediaAssetId): Promise<void>;
-
-  // Query methods
+  // Queries
   findByProductId(
     productId: ProductId,
     options?: ProductMediaQueryOptions,
@@ -34,58 +20,11 @@ export interface IProductMediaRepository {
     productId: ProductId,
     assetId: MediaAssetId,
   ): Promise<ProductMedia | null>;
-  findAll(options?: ProductMediaQueryOptions): Promise<ProductMedia[]>;
 
-  // Cover image management
-  getProductCoverImage(productId: ProductId): Promise<ProductMedia | null>;
-  setProductCoverImage(
-    productId: ProductId,
-    assetId: MediaAssetId,
-  ): Promise<void>;
-  removeCoverImageFlag(productId: ProductId): Promise<void>;
-  updateCoverImage(
-    productId: ProductId,
-    newAssetId: MediaAssetId,
-  ): Promise<void>;
-
-  // Position and ordering management
-  reorderProductMedia(
-    productId: ProductId,
-    mediaOrdering: Array<{ assetId: MediaAssetId; position: number }>,
-  ): Promise<void>;
-  moveMediaPosition(
-    productId: ProductId,
-    assetId: MediaAssetId,
-    newPosition: number,
-  ): Promise<void>;
-  getNextPosition(productId: ProductId): Promise<number>;
-  compactPositions(productId: ProductId): Promise<void>;
-
-  // Bulk operations
-  setProductMedia(
-    productId: ProductId,
-    mediaData: Array<{
-      assetId: MediaAssetId;
-      position?: number;
-      isCover?: boolean;
-    }>,
-  ): Promise<void>;
-  duplicateProductMedia(
-    sourceProductId: ProductId,
-    targetProductId: ProductId,
-  ): Promise<void>;
-
-  // Analytics and utility methods
-  countProductMedia(productId: ProductId): Promise<number>;
+  // Utility queries
+  countByProductId(productId: ProductId): Promise<number>;
   countAssetUsage(assetId: MediaAssetId): Promise<number>;
-  count(options?: ProductMediaCountOptions): Promise<number>;
-
-  // Validation methods
-  isMediaAssociatedWithProduct(
-    productId: ProductId,
-    assetId: MediaAssetId,
-  ): Promise<boolean>;
-  hasProductCoverImage(productId: ProductId): Promise<boolean>;
+  getNextPosition(productId: ProductId): Promise<number>;
   getProductsUsingAsset(assetId: MediaAssetId): Promise<ProductId[]>;
 }
 

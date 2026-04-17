@@ -1,88 +1,30 @@
 import { FastifyInstance } from "fastify";
-import {
-  OrderShipmentController,
-  CreateShipmentRequest,
-  GetShipmentsRequest,
-  GetShipmentRequest,
-  MarkShippedRequest,
-  UpdateTrackingRequest,
-  MarkDeliveredRequest,
-} from "../controllers/order-shipment.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { OrderShipmentController } from "../controllers/order-shipment.controller";
 import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  orderShipmentsParamsSchema,
+  orderShipmentParamsSchema,
+  createShipmentSchema,
+  markShippedSchema,
+  updateShipmentTrackingSchema,
+  markDeliveredSchema,
+  shipmentResponseSchema,
+} from "../validation/order-shipment.schema";
 
 const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
-
-const shipmentDataSchema = {
-  type: "object",
-  additionalProperties: true,
-  properties: {
-    shipmentId: { type: "string", format: "uuid" },
-    orderId: { type: "string", format: "uuid" },
-    carrier: { type: "string" },
-    service: { type: "string" },
-    trackingNumber: { type: "string" },
-    giftReceipt: { type: "boolean" },
-    pickupLocationId: { type: "string", format: "uuid" },
-    shippedAt: { type: "string", format: "date-time", nullable: true },
-    deliveredAt: { type: "string", format: "date-time", nullable: true },
-    isShipped: { type: "boolean" },
-    isDelivered: { type: "boolean" },
-  },
-};
 
 export async function registerOrderShipmentRoutes(
   fastify: FastifyInstance,
   orderShipmentController: OrderShipmentController,
 ): Promise<void> {
   // Create shipment for an order
-  fastify.post<CreateShipmentRequest>(
+  fastify.post(
     "/orders/:orderId/shipments",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderShipmentsParamsSchema), validateBody(createShipmentSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description: "Create a new shipment for an order",
         tags: ["Order Shipments"],
@@ -90,59 +32,46 @@ export async function registerOrderShipmentRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         body: {
           type: "object",
           properties: {
-            carrier: {
-              type: "string",
-              description: "Carrier name (e.g., FedEx, UPS)",
-            },
-            service: {
-              type: "string",
-              description: "Service type (e.g., Express, Ground)",
-            },
-            trackingNumber: { type: "string", description: "Tracking number" },
-            giftReceipt: {
-              type: "boolean",
-              default: false,
-              description: "Include gift receipt",
-            },
-            pickupLocationId: {
-              type: "string",
-              format: "uuid",
-              description: "Pickup location ID",
-            },
+            carrier: { type: "string" },
+            service: { type: "string" },
+            trackingNumber: { type: "string" },
+            giftReceipt: { type: "boolean", default: false },
+            pickupLocationId: { type: "string", format: "uuid" },
           },
         },
         response: {
           201: {
-            description: "Shipment created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: shipmentDataSchema,
-              message: {
-                type: "string",
-                example: "Shipment created successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: shipmentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.createShipment.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.createShipment(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Get all shipments for an order
-  fastify.get<GetShipmentsRequest>(
+  fastify.get(
     "/orders/:orderId/shipments",
     {
+      preValidation: [validateParams(orderShipmentsParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get all shipments for an order",
@@ -151,34 +80,39 @@ export async function registerOrderShipmentRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         response: {
           200: {
-            description: "Shipments retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: { type: "object", additionalProperties: true },
+                items: shipmentResponseSchema,
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.getShipments.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.getShipments(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Get single shipment
-  fastify.get<GetShipmentRequest>(
+  fastify.get(
     "/orders/:orderId/shipments/:shipmentId",
     {
+      preValidation: [validateParams(orderShipmentParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get a specific shipment by ID",
@@ -187,81 +121,89 @@ export async function registerOrderShipmentRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "shipmentId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             shipmentId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "shipmentId"],
         },
         response: {
           200: {
-            description: "Shipment retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: shipmentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.getShipment.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.getShipment(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Mark shipment as shipped
-  fastify.post<MarkShippedRequest>(
+  fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markShippedSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
-          "Mark a shipment as shipped with carrier and tracking details (User/Staff/Admin)",
+          "Mark a shipment as shipped with carrier and tracking details",
         tags: ["Order Shipments"],
         summary: "Mark Shipment as Shipped",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "shipmentId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             shipmentId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "shipmentId"],
         },
         body: {
           type: "object",
           required: ["carrier", "service", "trackingNumber"],
           properties: {
-            carrier: { type: "string", description: "Carrier name" },
-            service: { type: "string", description: "Service type" },
-            trackingNumber: { type: "string", description: "Tracking number" },
+            carrier: { type: "string" },
+            service: { type: "string" },
+            trackingNumber: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Shipment marked as shipped successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Shipment marked as shipped successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: shipmentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.markShipped.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.markShipped(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Update shipment tracking
-  fastify.patch<UpdateTrackingRequest>(
+  fastify.patch(
     "/orders/:orderId/shipments/:shipmentId/tracking",
     {
-      preHandler: authenticateStaff,
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(updateShipmentTrackingSchema)],
+      preHandler: [
+        ...authenticateStaff,
+      ],
       schema: {
         description: "Update shipment tracking information (Staff/Admin only)",
         tags: ["Order Shipments"],
@@ -269,49 +211,47 @@ export async function registerOrderShipmentRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "shipmentId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             shipmentId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "shipmentId"],
         },
         body: {
           type: "object",
           required: ["trackingNumber"],
           properties: {
-            trackingNumber: {
-              type: "string",
-              description: "New tracking number",
-            },
-            carrier: { type: "string", description: "Carrier name" },
-            service: { type: "string", description: "Service type" },
+            trackingNumber: { type: "string" },
+            carrier: { type: "string" },
+            service: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Tracking information updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Shipment tracking updated successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: shipmentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.updateTracking.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.updateTracking(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 
   // Mark shipment as delivered
-  fastify.post<MarkDeliveredRequest>(
+  fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-delivered",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markDeliveredSchema)],
+      preHandler: [...authenticateStaff],
       schema: {
         description: "Mark a shipment as delivered (Staff/Admin only)",
         tags: ["Order Shipments"],
@@ -319,39 +259,35 @@ export async function registerOrderShipmentRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "shipmentId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             shipmentId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "shipmentId"],
         },
         body: {
           type: "object",
           properties: {
-            deliveredAt: {
-              type: "string",
-              format: "date-time",
-              description: "Delivery timestamp (defaults to now)",
-            },
+            deliveredAt: { type: "string", format: "date-time" },
           },
         },
         response: {
           200: {
-            description: "Shipment marked as delivered successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
-              message: {
-                type: "string",
-                example: "Shipment marked as delivered successfully",
-              },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: shipmentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderShipmentController.markDelivered.bind(orderShipmentController),
+    (request, reply) =>
+      orderShipmentController.markDelivered(
+        request as AuthenticatedRequest,
+        reply,
+      ),
   );
 }

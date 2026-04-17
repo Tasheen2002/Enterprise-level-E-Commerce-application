@@ -3,7 +3,7 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const locationParamsSchema = z.object({
-  locationId: z.string().uuid(),
+  locationId: z.uuid(),
 });
 
 export const listLocationsSchema = z.object({

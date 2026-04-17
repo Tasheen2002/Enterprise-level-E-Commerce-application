@@ -1,48 +1,45 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { NotificationTypeEnum } from "../enums/engagement.enums";
+
 export class NotificationType {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: NotificationTypeEnum) {}
 
-  static orderConfirm(): NotificationType {
-    return new NotificationType("order_confirm");
-  }
-
-  static shipped(): NotificationType {
-    return new NotificationType("shipped");
-  }
-
-  static restock(): NotificationType {
-    return new NotificationType("restock");
-  }
-
-  static reviewRequest(): NotificationType {
-    return new NotificationType("review_request");
-  }
-
-  static careGuide(): NotificationType {
-    return new NotificationType("care_guide");
-  }
-
-  static promo(): NotificationType {
-    return new NotificationType("promo");
+  static create(value: string): NotificationType {
+    return NotificationType.fromString(value);
   }
 
   static fromString(value: string): NotificationType {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "order_confirm":
-        return NotificationType.orderConfirm();
-      case "shipped":
-        return NotificationType.shipped();
-      case "restock":
-        return NotificationType.restock();
-      case "review_request":
-        return NotificationType.reviewRequest();
-      case "care_guide":
-        return NotificationType.careGuide();
-      case "promo":
-        return NotificationType.promo();
-      default:
-        throw new Error(`Invalid notification type: ${value}`);
+
+    if (!Object.values(NotificationTypeEnum).includes(normalized as NotificationTypeEnum)) {
+      throw new DomainValidationError(`Invalid notification type: ${value}`);
     }
+
+    return new NotificationType(normalized as NotificationTypeEnum);
+  }
+
+  static orderConfirm(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.ORDER_CONFIRM);
+  }
+
+  static shipped(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.SHIPPED);
+  }
+
+  static restock(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.RESTOCK);
+  }
+
+  static reviewRequest(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.REVIEW_REQUEST);
+  }
+
+  static careGuide(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.CARE_GUIDE);
+  }
+
+  static promo(): NotificationType {
+    return new NotificationType(NotificationTypeEnum.PROMO);
   }
 
   getValue(): string {
@@ -50,27 +47,27 @@ export class NotificationType {
   }
 
   isOrderConfirm(): boolean {
-    return this.value === "order_confirm";
+    return this.value === NotificationTypeEnum.ORDER_CONFIRM;
   }
 
   isShipped(): boolean {
-    return this.value === "shipped";
+    return this.value === NotificationTypeEnum.SHIPPED;
   }
 
   isRestock(): boolean {
-    return this.value === "restock";
+    return this.value === NotificationTypeEnum.RESTOCK;
   }
 
   isReviewRequest(): boolean {
-    return this.value === "review_request";
+    return this.value === NotificationTypeEnum.REVIEW_REQUEST;
   }
 
   isCareGuide(): boolean {
-    return this.value === "care_guide";
+    return this.value === NotificationTypeEnum.CARE_GUIDE;
   }
 
   isPromo(): boolean {
-    return this.value === "promo";
+    return this.value === NotificationTypeEnum.PROMO;
   }
 
   equals(other: NotificationType): boolean {

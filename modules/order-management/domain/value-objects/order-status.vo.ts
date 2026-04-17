@@ -1,18 +1,5 @@
 import { DomainValidationError } from "../errors/order-management.errors";
-
-export enum OrderStatusEnum {
-  CREATED = "created",
-  PENDING = "pending",
-  CONFIRMED = "confirmed",
-  PAID = "paid",
-  PROCESSING = "processing",
-  SHIPPED = "shipped",
-  DELIVERED = "delivered",
-  FULFILLED = "fulfilled", // Deprecating in favor of SHIPPED/DELIVERED
-  PARTIALLY_RETURNED = "partially_returned",
-  REFUNDED = "refunded",
-  CANCELLED = "cancelled",
-}
+import { OrderStatusEnum } from "../enums";
 
 export class OrderStatus {
   private readonly value: OrderStatusEnum;
@@ -39,8 +26,28 @@ export class OrderStatus {
     return new OrderStatus(OrderStatusEnum.CREATED);
   }
 
+  static pending(): OrderStatus {
+    return new OrderStatus(OrderStatusEnum.PENDING);
+  }
+
+  static confirmed(): OrderStatus {
+    return new OrderStatus(OrderStatusEnum.CONFIRMED);
+  }
+
   static paid(): OrderStatus {
     return new OrderStatus(OrderStatusEnum.PAID);
+  }
+
+  static processing(): OrderStatus {
+    return new OrderStatus(OrderStatusEnum.PROCESSING);
+  }
+
+  static shipped(): OrderStatus {
+    return new OrderStatus(OrderStatusEnum.SHIPPED);
+  }
+
+  static delivered(): OrderStatus {
+    return new OrderStatus(OrderStatusEnum.DELIVERED);
   }
 
   static fulfilled(): OrderStatus {
@@ -67,8 +74,28 @@ export class OrderStatus {
     return this.value === OrderStatusEnum.CREATED;
   }
 
+  isPending(): boolean {
+    return this.value === OrderStatusEnum.PENDING;
+  }
+
+  isConfirmed(): boolean {
+    return this.value === OrderStatusEnum.CONFIRMED;
+  }
+
   isPaid(): boolean {
     return this.value === OrderStatusEnum.PAID;
+  }
+
+  isProcessing(): boolean {
+    return this.value === OrderStatusEnum.PROCESSING;
+  }
+
+  isShipped(): boolean {
+    return this.value === OrderStatusEnum.SHIPPED;
+  }
+
+  isDelivered(): boolean {
+    return this.value === OrderStatusEnum.DELIVERED;
   }
 
   isFulfilled(): boolean {

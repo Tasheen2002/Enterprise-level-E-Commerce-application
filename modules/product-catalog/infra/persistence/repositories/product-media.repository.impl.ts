@@ -8,7 +8,7 @@ import { ProductMedia } from "../../../domain/entities/product-media.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
 
-export class ProductMediaRepository implements IProductMediaRepository {
+export class ProductMediaRepositoryImpl implements IProductMediaRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   // Helper to access productMedia model with proper typing
@@ -40,14 +40,19 @@ export class ProductMediaRepository implements IProductMediaRepository {
   }
 
   async save(productMedia: ProductMedia): Promise<void> {
-    await this.productMediaModel.create({
-      data: {
+    const updateData = {
+      position: productMedia.displayOrder,
+      isCover: productMedia.isPrimary,
+    };
+    await this.productMediaModel.upsert({
+      where: { id: productMedia.id },
+      create: {
         id: productMedia.id,
         productId: productMedia.productId.getValue(),
         assetId: productMedia.mediaAssetId.getValue(),
-        position: productMedia.displayOrder,
-        isCover: productMedia.isPrimary,
+        ...updateData,
       },
+      update: updateData,
     });
   }
 
@@ -63,15 +68,6 @@ export class ProductMediaRepository implements IProductMediaRepository {
     return this.hydrate(mediaData);
   }
 
-  async update(productMedia: ProductMedia): Promise<void> {
-    await this.productMediaModel.update({
-      where: { id: productMedia.id },
-      data: {
-        position: productMedia.displayOrder,
-        isCover: productMedia.isPrimary,
-      },
-    });
-  }
 
   async delete(id: string): Promise<void> {
     await this.productMediaModel.delete({

@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { VariantMediaController } from "../controllers/variant-media.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -30,10 +35,21 @@ import {
   validateVariantMediaResponseSchema,
 } from "../validation/variant-media.schema";
 
-export async function registerVariantMediaRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function variantMediaRoutes(
   fastify: FastifyInstance,
   controller: VariantMediaController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /variants/:variantId/media — Get media for a variant (public)
   fastify.get(
     "/variants/:variantId/media",
@@ -53,6 +69,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantMediaSummaryResponseSchema,
             },
           },
@@ -82,6 +100,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productVariantMediaResponseSchema,
             },
           },
@@ -113,6 +133,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantsUsingAssetResponseSchema,
             },
           },
@@ -144,6 +166,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: assetUsageCountResponseSchema,
             },
           },
@@ -158,10 +182,8 @@ export async function registerVariantMediaRoutes(
   fastify.get(
     "/variants/media/unused-assets",
     {
-      preHandler: [
-        validateQuery(unusedAssetsQuerySchema),
-        RolePermissions.STAFF_LEVEL,
-      ],
+      preValidation: [validateQuery(unusedAssetsQuerySchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get media assets not associated with any variant",
         tags: ["Variant Media"],
@@ -172,6 +194,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: unusedAssetsResponseSchema,
             },
           },
@@ -203,6 +227,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: variantMediaStatisticsResponseSchema,
             },
           },
@@ -239,6 +265,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: colorVariantMediaResponseSchema,
             },
           },
@@ -272,6 +300,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: sizeVariantMediaResponseSchema,
             },
           },
@@ -286,10 +316,8 @@ export async function registerVariantMediaRoutes(
   fastify.post(
     "/variants/media/copy",
     {
-      preHandler: [
-        validateBody(copyVariantMediaSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(copyVariantMediaSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Copy variant media from one product to another",
         tags: ["Variant Media"],
@@ -326,10 +354,8 @@ export async function registerVariantMediaRoutes(
   fastify.post(
     "/variants/media/bulk-assign",
     {
-      preHandler: [
-        validateBody(addMediaToMultipleVariantsSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(addMediaToMultipleVariantsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Add a single media asset to multiple variants",
         tags: ["Variant Media"],
@@ -352,6 +378,7 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
             },
           },
@@ -369,11 +396,8 @@ export async function registerVariantMediaRoutes(
   fastify.post(
     "/variants/:variantId/media/set",
     {
-      preValidation: [validateParams(variantMediaParamsSchema)],
-      preHandler: [
-        validateBody(setVariantMediaSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(variantMediaParamsSchema), validateBody(setVariantMediaSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Set (replace) all media assets for a variant",
         tags: ["Variant Media"],
@@ -410,11 +434,8 @@ export async function registerVariantMediaRoutes(
   fastify.post(
     "/variants/:variantId/media/bulk",
     {
-      preValidation: [validateParams(variantMediaParamsSchema)],
-      preHandler: [
-        validateBody(addMultipleMediaToVariantSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(variantMediaParamsSchema), validateBody(addMultipleMediaToVariantSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Add multiple media assets to a variant at once",
         tags: ["Variant Media"],
@@ -441,6 +462,7 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
             },
           },
@@ -489,11 +511,8 @@ export async function registerVariantMediaRoutes(
   fastify.post(
     "/variants/:variantId/media",
     {
-      preValidation: [validateParams(variantMediaParamsSchema)],
-      preHandler: [
-        validateBody(addMediaToVariantSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(variantMediaParamsSchema), validateBody(addMediaToVariantSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Add a media asset to a product variant",
         tags: ["Variant Media"],
@@ -514,6 +533,7 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
             },
           },
@@ -546,6 +566,8 @@ export async function registerVariantMediaRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: validateVariantMediaResponseSchema,
             },
           },

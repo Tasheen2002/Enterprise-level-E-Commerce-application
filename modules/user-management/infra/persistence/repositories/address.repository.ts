@@ -49,7 +49,7 @@ export class AddressRepository
     create: Prisma.UserAddressUncheckedCreateInput;
     update: Prisma.UserAddressUncheckedUpdateInput;
   } {
-    const addressData = address.addressValue.toData();
+    const addressData = address.addressValue.getValue();
 
     const create = {
       id: address.id.getValue(),

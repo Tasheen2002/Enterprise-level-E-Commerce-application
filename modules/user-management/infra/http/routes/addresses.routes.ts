@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { AddressesController } from "../controllers/addresses.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams } from "../validation/validator";
 import {
   addAddressSchema,
@@ -9,17 +14,27 @@ import {
   addressIdParamsSchema,
   addressResponseSchema,
 } from "../validation/address.schema";
-import { successResponseSchema } from "../validation/auth.schema";
 
-export async function registerAddressRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function addressRoutes(
   fastify: FastifyInstance,
   controller: AddressesController,
 ) {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /users/me/addresses
   fastify.get(
     "/users/me/addresses",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "List addresses",
@@ -53,13 +68,31 @@ export async function registerAddressRoutes(
   fastify.post(
     "/users/me/addresses",
     {
-      preHandler: [authenticate, validateBody(addAddressSchema)],
+      preValidation: [validateBody(addAddressSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Add a new address",
         description:
           "Save a new shipping or billing address for the authenticated user.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["type", "firstName", "lastName", "addressLine1", "city", "postalCode", "country"],
+          properties: {
+            type: { type: "string", enum: ["shipping", "billing"] },
+            firstName: { type: "string", minLength: 1, maxLength: 100 },
+            lastName: { type: "string", minLength: 1, maxLength: 100 },
+            phone: { type: "string" },
+            addressLine1: { type: "string", minLength: 1, maxLength: 255 },
+            addressLine2: { type: "string", maxLength: 255 },
+            city: { type: "string", minLength: 1, maxLength: 100 },
+            state: { type: "string", maxLength: 100 },
+            postalCode: { type: "string", minLength: 1, maxLength: 20 },
+            country: { type: "string", minLength: 2, maxLength: 2 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -81,14 +114,37 @@ export async function registerAddressRoutes(
   fastify.patch(
     "/users/me/addresses/:addressId",
     {
-      preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate, validateBody(updateAddressSchema)],
+      preValidation: [validateParams(addressIdParamsSchema), validateBody(updateAddressSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Update an address",
         description:
           "Partially update an existing address. All body fields are optional.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["addressId"],
+          properties: {
+            addressId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["shipping", "billing"] },
+            firstName: { type: "string", minLength: 1, maxLength: 100 },
+            lastName: { type: "string", minLength: 1, maxLength: 100 },
+            phone: { type: "string" },
+            addressLine1: { type: "string", minLength: 1, maxLength: 255 },
+            addressLine2: { type: "string", maxLength: 255 },
+            city: { type: "string", minLength: 1, maxLength: 100 },
+            state: { type: "string", maxLength: 100 },
+            postalCode: { type: "string", minLength: 1, maxLength: 20 },
+            country: { type: "string", minLength: 2, maxLength: 2 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -111,15 +167,25 @@ export async function registerAddressRoutes(
     "/users/me/addresses/:addressId",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Delete an address",
         description:
           "Permanently remove an address belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["addressId"],
+          properties: {
+            addressId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
-          200: successResponseSchema,
+          204: {
+            type: "null",
+            description: "Address deleted successfully",
+          },
         },
       },
     },
@@ -132,14 +198,29 @@ export async function registerAddressRoutes(
     "/users/me/addresses/:addressId/set-default",
     {
       preValidation: [validateParams(addressIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Addresses"],
         summary: "Set default address",
         description: "Mark an address as the user's default address.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["addressId"],
+          properties: {
+            addressId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },

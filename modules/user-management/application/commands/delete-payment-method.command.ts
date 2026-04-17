@@ -1,25 +1,21 @@
 import { PaymentMethodService } from '../services/payment-method.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface DeletePaymentMethodInput extends ICommand {
-  paymentMethodId: string;
-  userId: string;
+export interface DeletePaymentMethodCommand extends ICommand {
+  readonly paymentMethodId: string;
+  readonly userId: string;
 }
 
 export class DeletePaymentMethodHandler implements ICommandHandler<
-  DeletePaymentMethodInput,
+  DeletePaymentMethodCommand,
   CommandResult<void>
 > {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 
   async handle(
-    input: DeletePaymentMethodInput
+    command: DeletePaymentMethodCommand
   ): Promise<CommandResult<void>> {
-    await this.paymentMethodService.deletePaymentMethod(input.paymentMethodId, input.userId);
+    await this.paymentMethodService.deletePaymentMethod(command.paymentMethodId, command.userId);
     return CommandResult.success(undefined);
   }
 }

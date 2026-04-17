@@ -8,7 +8,6 @@ export interface ICheckoutRepository {
   save(checkout: Checkout): Promise<void>;
   findById(checkoutId: CheckoutId): Promise<Checkout | null>;
   findByCartId(cartId: CartId): Promise<Checkout | null>;
-  update(checkout: Checkout): Promise<void>;
   delete(checkoutId: CheckoutId): Promise<void>;
 
   findByCartOwnerId(userId: CartOwnerId): Promise<Checkout[]>;

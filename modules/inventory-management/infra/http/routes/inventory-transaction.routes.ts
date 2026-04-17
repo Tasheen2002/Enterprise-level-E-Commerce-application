@@ -1,7 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
-import { RolePermissions } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { InventoryTransactionController } from "../controllers/inventory-transaction.controller";
 import { validateParams, validateQuery } from "../validation/validator";
 import {
@@ -12,16 +16,27 @@ import {
   inventoryTransactionResponseSchema,
 } from "../validation/inventory-transaction.schema";
 
-export async function registerInventoryTransactionRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function inventoryTransactionRoutes(
   fastify: FastifyInstance,
   controller: InventoryTransactionController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // Get transaction by ID
   fastify.get(
     "/transactions/:transactionId",
     {
       preValidation: [validateParams(transactionParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get a single inventory transaction by ID",
         tags: ["Inventory Transactions"],
@@ -39,6 +54,8 @@ export async function registerInventoryTransactionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: inventoryTransactionResponseSchema,
             },
           },
@@ -52,8 +69,8 @@ export async function registerInventoryTransactionRoutes(
   fastify.get(
     "/transactions/variant/:variantId",
     {
-      preValidation: [validateParams(transactionVariantParamsSchema)],
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateQuery(transactionsByVariantSchema)],
+      preValidation: [validateParams(transactionVariantParamsSchema), validateQuery(transactionsByVariantSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get inventory transactions for a variant",
         tags: ["Inventory Transactions"],
@@ -79,6 +96,8 @@ export async function registerInventoryTransactionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: inventoryTransactionResponseSchema },
             },
           },
@@ -92,7 +111,8 @@ export async function registerInventoryTransactionRoutes(
   fastify.get(
     "/transactions",
     {
-      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateQuery(listTransactionsSchema)],
+      preValidation: [validateQuery(listTransactionsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all inventory transactions",
         tags: ["Inventory Transactions"],
@@ -113,6 +133,8 @@ export async function registerInventoryTransactionRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: inventoryTransactionResponseSchema },
             },
           },

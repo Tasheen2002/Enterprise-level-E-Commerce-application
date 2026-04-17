@@ -6,33 +6,25 @@ import {
   RemovePOItemHandler,
   GetPOItemsHandler,
 } from "../../../application";
-import { PurchaseOrderManagementService } from "../../../application/services/purchase-order-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class PurchaseOrderItemController {
-  private addPOItemHandler: AddPOItemHandler;
-  private updatePOItemHandler: UpdatePOItemHandler;
-  private removePOItemHandler: RemovePOItemHandler;
-  private getPOItemsHandler: GetPOItemsHandler;
-
-  constructor(poService: PurchaseOrderManagementService) {
-    this.addPOItemHandler = new AddPOItemHandler(poService);
-    this.updatePOItemHandler = new UpdatePOItemHandler(poService);
-    this.removePOItemHandler = new RemovePOItemHandler(poService);
-    this.getPOItemsHandler = new GetPOItemsHandler(poService);
-  }
+  constructor(
+    private readonly addPOItemHandler: AddPOItemHandler,
+    private readonly updatePOItemHandler: UpdatePOItemHandler,
+    private readonly removePOItemHandler: RemovePOItemHandler,
+    private readonly getPOItemsHandler: GetPOItemsHandler,
+  ) {}
 
   async getPOItems(
-    request: AuthenticatedRequest<{
-      Params: { poId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: { poId: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId } = request.params;
       const result = await this.getPOItemsHandler.handle({ poId });
-      return ResponseHelper.fromQuery(reply, result, "Purchase order items retrieved");
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Purchase order items retrieved", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -48,11 +40,8 @@ export class PurchaseOrderItemController {
       const { poId } = request.params;
       const { variantId, orderedQty } = request.body;
       const result = await this.addPOItemHandler.handle({ poId, variantId, orderedQty });
-      if (result.success && result.data) {
-        return ResponseHelper.created(reply, "Item added to purchase order successfully", result.data);
-      }
-      return ResponseHelper.badRequest(reply, result.error || "Failed to add item to purchase order");
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Item added to purchase order successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -68,26 +57,21 @@ export class PurchaseOrderItemController {
       const { poId, variantId } = request.params;
       const { orderedQty } = request.body;
       const result = await this.updatePOItemHandler.handle({ poId, variantId, orderedQty });
-      if (result.success && result.data) {
-        return ResponseHelper.ok(reply, "Purchase order item updated successfully", result.data);
-      }
-      return ResponseHelper.badRequest(reply, result.error || "Failed to update purchase order item");
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Purchase order item updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeItem(
-    request: AuthenticatedRequest<{
-      Params: { poId: string; variantId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: { poId: string; variantId: string } }>,
     reply: FastifyReply,
   ) {
     try {
       const { poId, variantId } = request.params;
       const result = await this.removePOItemHandler.handle({ poId, variantId });
       return ResponseHelper.fromCommand(reply, result, "Item removed from purchase order successfully", undefined, 204);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

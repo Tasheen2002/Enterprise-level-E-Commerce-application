@@ -3,7 +3,6 @@ import { OrderAddress } from "../entities/order-address.entity";
 export interface IOrderAddressRepository {
   // Basic CRUD
   save(orderAddress: OrderAddress): Promise<void>;
-  update(orderAddress: OrderAddress): Promise<void>;
   delete(orderId: string): Promise<void>;
 
   // Finders

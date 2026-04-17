@@ -9,18 +9,12 @@ import {
   MediaAssetId,
 } from "../../../domain/entities/media-asset.entity";
 
-export class MediaAssetRepository implements IMediaAssetRepository {
+export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private convertBigIntToNumber(value: bigint | null): number | null {
     if (value === null) return null;
-    const numberValue = Number(value);
-    if (numberValue > Number.MAX_SAFE_INTEGER) {
-      console.warn(
-        `BigInt value ${value} exceeds MAX_SAFE_INTEGER, potential precision loss`,
-      );
-    }
-    return numberValue;
+    return Number(value);
   }
 
   private mapRow(row: any): MediaAsset {
@@ -41,21 +35,22 @@ export class MediaAssetRepository implements IMediaAssetRepository {
   }
 
   async save(asset: MediaAsset): Promise<void> {
-    await this.prisma.mediaAsset.create({
-      data: {
-        id: asset.id.getValue(),
-        storageKey: asset.storageKey,
-        mime: asset.mime,
-        width: asset.width,
-        height: asset.height,
-        bytes: asset.bytes,
-        altText: asset.altText,
-        focalX: asset.focalX,
-        focalY: asset.focalY,
-        renditions: asset.renditions as any,
-        version: asset.version,
-        createdAt: asset.createdAt,
-      },
+    const updateData = {
+      storageKey: asset.storageKey,
+      mime: asset.mime,
+      width: asset.width,
+      height: asset.height,
+      bytes: asset.bytes,
+      altText: asset.altText,
+      focalX: asset.focalX,
+      focalY: asset.focalY,
+      renditions: asset.renditions as any,
+      version: asset.version,
+    };
+    await this.prisma.mediaAsset.upsert({
+      where: { id: asset.id.getValue() },
+      create: { id: asset.id.getValue(), createdAt: asset.createdAt, ...updateData },
+      update: updateData,
     });
   }
 
@@ -263,23 +258,6 @@ export class MediaAssetRepository implements IMediaAssetRepository {
     return assets.map((row) => this.mapRow(row));
   }
 
-  async update(asset: MediaAsset): Promise<void> {
-    await this.prisma.mediaAsset.update({
-      where: { id: asset.id.getValue() },
-      data: {
-        storageKey: asset.storageKey,
-        mime: asset.mime,
-        width: asset.width,
-        height: asset.height,
-        bytes: asset.bytes,
-        altText: asset.altText,
-        focalX: asset.focalX,
-        focalY: asset.focalY,
-        renditions: asset.renditions as any,
-        version: asset.version,
-      },
-    });
-  }
 
   async delete(id: MediaAssetId): Promise<void> {
     await this.prisma.mediaAsset.delete({

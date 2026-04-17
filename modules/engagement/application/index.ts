@@ -1,4 +1,3 @@
-// Barrel for application layer
-export * from "./services/index.js";
-export * from "./commands/index.js";
-export * from "./queries/index.js";
+export * from "./services/index";
+export * from "./commands/index";
+export * from "./queries/index";

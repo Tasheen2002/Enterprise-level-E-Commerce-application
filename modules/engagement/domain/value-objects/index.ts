@@ -1,4 +1,5 @@
 export * from "./wishlist-id.vo";
+export * from "./wishlist-item-id.vo";
 export * from "./reminder-id.vo";
 export * from "./notification-id.vo";
 export * from "./review-id.vo";

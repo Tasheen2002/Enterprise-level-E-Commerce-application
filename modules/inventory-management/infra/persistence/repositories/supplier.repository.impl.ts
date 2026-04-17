@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { Supplier } from "../../../domain/entities/supplier.entity";
 import { SupplierId } from "../../../domain/value-objects/supplier-id.vo";
 import { SupplierName } from "../../../domain/value-objects/supplier-name.vo";
@@ -12,8 +14,10 @@ interface SupplierDatabaseRow {
   contacts: any;
 }
 
-export class SupplierRepositoryImpl implements ISupplierRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class SupplierRepositoryImpl extends PrismaRepository<Supplier> implements ISupplierRepository {
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: SupplierDatabaseRow): Supplier {
     const contacts: SupplierContact[] = Array.isArray(row.contacts)
@@ -35,14 +39,16 @@ export class SupplierRepositoryImpl implements ISupplierRepository {
         supplierId: supplier.supplierId.getValue(),
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.toJSON()) as any,
+        contacts: supplier.contacts.map((c) => c.getValue()) as any,
       },
       update: {
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.toJSON()) as any,
+        contacts: supplier.contacts.map((c) => c.getValue()) as any,
       },
     });
+
+    await this.dispatchEvents(supplier);
   }
 
   async findById(supplierId: SupplierId): Promise<Supplier | null> {

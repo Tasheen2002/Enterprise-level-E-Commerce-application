@@ -7,10 +7,10 @@ import {
 import {
   SizeGuide,
   SizeGuideId,
-  Region,
 } from "../../../domain/entities/size-guide.entity";
+import { Region } from "../../../domain/enums/product-catalog.enums";
 
-export class SizeGuideRepository implements ISizeGuideRepository {
+export class SizeGuideRepositoryImpl implements ISizeGuideRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   private hydrate(row: {
@@ -30,14 +30,16 @@ export class SizeGuideRepository implements ISizeGuideRepository {
   }
 
   async save(sizeGuide: SizeGuide): Promise<void> {
-    await this.prisma.sizeGuide.create({
-      data: {
-        id: sizeGuide.id.getValue(),
-        title: sizeGuide.title,
-        bodyHtml: sizeGuide.bodyHtml,
-        region: sizeGuide.region,
-        category: sizeGuide.category,
-      },
+    const data = {
+      title: sizeGuide.title,
+      bodyHtml: sizeGuide.bodyHtml,
+      region: sizeGuide.region,
+      category: sizeGuide.category,
+    };
+    await this.prisma.sizeGuide.upsert({
+      where: { id: sizeGuide.id.getValue() },
+      create: { id: sizeGuide.id.getValue(), ...data },
+      update: data,
     });
   }
 
@@ -150,17 +152,6 @@ export class SizeGuideRepository implements ISizeGuideRepository {
     return rows.map((row) => this.hydrate(row));
   }
 
-  async update(sizeGuide: SizeGuide): Promise<void> {
-    await this.prisma.sizeGuide.update({
-      where: { id: sizeGuide.id.getValue() },
-      data: {
-        title: sizeGuide.title,
-        bodyHtml: sizeGuide.bodyHtml,
-        region: sizeGuide.region,
-        category: sizeGuide.category,
-      },
-    });
-  }
 
   async delete(id: SizeGuideId): Promise<void> {
     await this.prisma.sizeGuide.delete({

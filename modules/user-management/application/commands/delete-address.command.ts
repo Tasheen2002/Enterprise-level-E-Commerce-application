@@ -1,25 +1,21 @@
 import { AddressManagementService } from '../services/address-management.service';
-import {
-  ICommand,
-  ICommandHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { CommandResult } from '../../../../packages/core/src/application/command-result';
+import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
-export interface DeleteAddressInput extends ICommand {
-  addressId: string;
-  userId: string;
+export interface DeleteAddressCommand extends ICommand {
+  readonly addressId: string;
+  readonly userId: string;
 }
 
 export class DeleteAddressHandler implements ICommandHandler<
-  DeleteAddressInput,
+  DeleteAddressCommand,
   CommandResult<void>
 > {
   constructor(private readonly addressService: AddressManagementService) {}
 
   async handle(
-    input: DeleteAddressInput
+    command: DeleteAddressCommand
   ): Promise<CommandResult<void>> {
-    await this.addressService.deleteAddress(input.addressId, input.userId);
+    await this.addressService.deleteAddress(command.addressId, command.userId);
     return CommandResult.success(undefined);
   }
 }

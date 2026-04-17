@@ -1,30 +1,33 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { ReminderStatusEnum } from "../enums/engagement.enums";
+
 export class ReminderStatus {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: ReminderStatusEnum) {}
 
-  static pending(): ReminderStatus {
-    return new ReminderStatus("pending");
-  }
-
-  static sent(): ReminderStatus {
-    return new ReminderStatus("sent");
-  }
-
-  static unsubscribed(): ReminderStatus {
-    return new ReminderStatus("unsubscribed");
+  static create(value: string): ReminderStatus {
+    return ReminderStatus.fromString(value);
   }
 
   static fromString(value: string): ReminderStatus {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "pending":
-        return ReminderStatus.pending();
-      case "sent":
-        return ReminderStatus.sent();
-      case "unsubscribed":
-        return ReminderStatus.unsubscribed();
-      default:
-        throw new Error(`Invalid reminder status: ${value}`);
+
+    if (!Object.values(ReminderStatusEnum).includes(normalized as ReminderStatusEnum)) {
+      throw new DomainValidationError(`Invalid reminder status: ${value}`);
     }
+
+    return new ReminderStatus(normalized as ReminderStatusEnum);
+  }
+
+  static pending(): ReminderStatus {
+    return new ReminderStatus(ReminderStatusEnum.PENDING);
+  }
+
+  static sent(): ReminderStatus {
+    return new ReminderStatus(ReminderStatusEnum.SENT);
+  }
+
+  static unsubscribed(): ReminderStatus {
+    return new ReminderStatus(ReminderStatusEnum.UNSUBSCRIBED);
   }
 
   getValue(): string {
@@ -32,15 +35,15 @@ export class ReminderStatus {
   }
 
   isPending(): boolean {
-    return this.value === "pending";
+    return this.value === ReminderStatusEnum.PENDING;
   }
 
   isSent(): boolean {
-    return this.value === "sent";
+    return this.value === ReminderStatusEnum.SENT;
   }
 
   isUnsubscribed(): boolean {
-    return this.value === "unsubscribed";
+    return this.value === ReminderStatusEnum.UNSUBSCRIBED;
   }
 
   equals(other: ReminderStatus): boolean {

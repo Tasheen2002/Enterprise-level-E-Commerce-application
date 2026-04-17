@@ -3,22 +3,22 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const transactionParamsSchema = z.object({
-  transactionId: z.string().uuid(),
+  transactionId: z.uuid(),
 });
 
 export const transactionVariantParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 export const transactionsByVariantSchema = z.object({
-  locationId: z.string().uuid().optional(),
+  locationId: z.uuid().optional(),
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   offset: z.string().regex(/^\d+$/).optional().default("0").transform(Number),
 });
 
 export const listTransactionsSchema = z.object({
-  variantId: z.string().uuid(),
-  locationId: z.string().uuid().optional(),
+  variantId: z.uuid(),
+  locationId: z.uuid().optional(),
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   offset: z.string().regex(/^\d+$/).optional().default("0").transform(Number),
 });

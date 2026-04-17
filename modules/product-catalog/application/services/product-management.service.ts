@@ -5,29 +5,9 @@ import {
   ProductMediaEnrichment,
 } from "../../domain/repositories/product.repository";
 import { IProductTagRepository } from "../../domain/repositories/product-tag.repository";
-import {
-  Product,
-  ProductDTO,
-} from "../../domain/entities/product.entity";
-
-/** Input shape for creating/updating a product — mirrors Product.create() params */
-type CreateProductInput = {
-  title: string;
-  brand?: string;
-  shortDesc?: string;
-  longDescHtml?: string;
-  status?: import("../../domain/enums/product-catalog.enums").ProductStatus;
-  publishAt?: Date;
-  countryOfOrigin?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  price?: number;
-  priceSgd?: number;
-  priceUsd?: number;
-  compareAtPrice?: number;
-  categoryIds?: string[];
-  tags?: string[];
-};
+import { Product, ProductDTO } from "../../domain/entities/product.entity";
+import { ProductStatus } from "../../domain/enums/product-catalog.enums";
+import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import { Slug } from "../../domain/value-objects/slug.vo";
 import {
@@ -36,6 +16,25 @@ import {
   ProductNotFoundError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+/** Input shape for creating/updating a product — mirrors Product.create() params */
+type CreateProductInput = {
+  title: string;
+  brand?: string;
+  shortDesc?: string;
+  longDescHtml?: string;
+  status?: ProductStatus;
+  publishAt?: Date;
+  countryOfOrigin?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  price?: number;
+  priceSgd?: number | null;
+  priceUsd?: number | null;
+  compareAtPrice?: number | null;
+  categoryIds?: string[];
+  tags?: string[];
+};
 
 export class ProductManagementService {
   constructor(
@@ -72,7 +71,7 @@ export class ProductManagementService {
   }
 
   async getProductById(id: string): Promise<ProductDTO> {
-    return Product.toDTO(await this._getProduct(id));
+    return Product.toDTO(await this.getProduct(id));
   }
 
   async getProductBySlug(slug: string): Promise<ProductDTO> {
@@ -96,7 +95,7 @@ export class ProductManagementService {
       brand?: string;
       status?: string;
     },
-  ): Promise<{ items: ProductDTO[]; totalCount: number }> {
+  ): Promise<PaginatedResult<ProductDTO>> {
     const {
       page = 1,
       limit = 20,
@@ -126,24 +125,22 @@ export class ProductManagementService {
         categoryId,
         { sortBy, sortOrder, includeDrafts: effectiveIncludeDrafts },
       );
-
-      if (brand) {
-        products = categoryProducts.filter((p) => p.brand === brand);
-      } else {
-        products = categoryProducts;
-      }
+      products = brand ? categoryProducts.filter((p) => p.brand === brand) : categoryProducts;
     }
 
     if (status) {
       products = products.filter((p) => p.status.toString() === status);
     }
 
-    const totalCount = products.length;
+    const total = products.length;
     const paginatedProducts = products.slice(offset, offset + limit);
 
     return {
       items: paginatedProducts.map((p) => Product.toDTO(p)),
-      totalCount,
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
     };
   }
 
@@ -174,7 +171,10 @@ export class ProductManagementService {
       throw new DomainValidationError("Brand is required");
     }
 
-    const products = await this.productRepository.findByBrand(brand.trim(), options);
+    const products = await this.productRepository.findByBrand(
+      brand.trim(),
+      options,
+    );
     return products.map((p) => Product.toDTO(p));
   }
 
@@ -186,7 +186,10 @@ export class ProductManagementService {
       throw new DomainValidationError("Category ID is required");
     }
 
-    const products = await this.productRepository.findByCategory(categoryId, options);
+    const products = await this.productRepository.findByCategory(
+      categoryId,
+      options,
+    );
     return products.map((p) => Product.toDTO(p));
   }
 
@@ -194,7 +197,7 @@ export class ProductManagementService {
     id: string,
     data: Partial<CreateProductInput>,
   ): Promise<ProductDTO> {
-    const product = await this._getProduct(id);
+    const product = await this.getProduct(id);
 
     if (data.title !== undefined) {
       product.updateTitle(data.title);
@@ -252,13 +255,13 @@ export class ProductManagementService {
       await this.productTagRepository.associateProductTags(id, data.tags);
     }
 
-    await this.productRepository.update(product);
+    await this.productRepository.save(product);
 
     return Product.toDTO(product);
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await this._getProduct(id);
+    await this.getProduct(id);
     const productId = ProductId.fromString(id);
     await this.productRepository.delete(productId);
   }
@@ -281,7 +284,7 @@ export class ProductManagementService {
     return this.productRepository.findMediaEnrichment(productId);
   }
 
-  private async _getProduct(id: string): Promise<Product> {
+  private async getProduct(id: string): Promise<Product> {
     if (!id || id.trim().length === 0) {
       throw new DomainValidationError("Product ID is required");
     }

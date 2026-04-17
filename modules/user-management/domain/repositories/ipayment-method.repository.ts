@@ -19,9 +19,7 @@ export interface IPaymentMethodRepository {
   ): Promise<PaymentMethod[]>;
   findDefaultByUserId(userId: UserId): Promise<PaymentMethod | null>;
 
-  // Business operations
-  setAsDefault(paymentMethodId: PaymentMethodId, userId: UserId): Promise<void>;
-  removeDefault(userId: UserId): Promise<void>;
+  // Utility operations
   countByUserId(userId: UserId): Promise<number>;
 
   // Cleanup operations

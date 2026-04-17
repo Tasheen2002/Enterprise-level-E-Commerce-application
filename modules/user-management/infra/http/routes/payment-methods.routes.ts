@@ -1,7 +1,12 @@
 import { FastifyInstance } from "fastify";
 import { PaymentMethodsController } from "../controllers/payment-methods.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, validateParams } from "../validation/validator";
 import {
   addPaymentMethodSchema,
@@ -9,17 +14,28 @@ import {
   paymentMethodIdParamsSchema,
   paymentMethodResponseSchema,
 } from "../validation/payment-method.schema";
-import { successResponseSchema } from "../validation/auth.schema";
 
-export async function registerPaymentMethodRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+
+export async function paymentMethodRoutes(
   fastify: FastifyInstance,
   controller: PaymentMethodsController,
 ) {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /users/me/payment-methods
   fastify.get(
     "/users/me/payment-methods",
     {
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "List payment methods",
@@ -47,12 +63,27 @@ export async function registerPaymentMethodRoutes(
   fastify.post(
     "/users/me/payment-methods",
     {
-      preHandler: [authenticate, validateBody(addPaymentMethodSchema)],
+      preValidation: [validateBody(addPaymentMethodSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
         description: "Save a new payment method for the authenticated user.",
         security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["type"],
+          properties: {
+            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
+            provider: { type: "string", maxLength: 50 },
+            last4: { type: "string", pattern: "^\\d{4}$" },
+            brand: { type: "string", maxLength: 50 },
+            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expiryYear: { type: "integer" },
+            billingName: { type: "string", maxLength: 200 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           201: {
             type: "object",
@@ -74,14 +105,34 @@ export async function registerPaymentMethodRoutes(
   fastify.patch(
     "/users/me/payment-methods/:paymentMethodId",
     {
-      preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate, validateBody(updatePaymentMethodSchema)],
+      preValidation: [validateParams(paymentMethodIdParamsSchema), validateBody(updatePaymentMethodSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",
         description:
           "Partially update an existing payment method. All body fields are optional.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
+        body: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
+            provider: { type: "string", maxLength: 50 },
+            last4: { type: "string", pattern: "^\\d{4}$" },
+            brand: { type: "string", maxLength: 50 },
+            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expiryYear: { type: "integer" },
+            billingName: { type: "string", maxLength: 200 },
+            isDefault: { type: "boolean" },
+          },
+        },
         response: {
           200: {
             type: "object",
@@ -104,15 +155,25 @@ export async function registerPaymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Remove a payment method",
         description:
           "Permanently delete a payment method belonging to the authenticated user.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
-          200: successResponseSchema,
+          204: {
+            type: "null",
+            description: "Payment method deleted successfully",
+          },
         },
       },
     },
@@ -125,15 +186,30 @@ export async function registerPaymentMethodRoutes(
     "/users/me/payment-methods/:paymentMethodId/set-default",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Set default payment method",
         description:
           "Mark a payment method as the user's default for checkout.",
         security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["paymentMethodId"],
+          properties: {
+            paymentMethodId: { type: "string", format: "uuid" },
+          },
+        },
         response: {
-          200: successResponseSchema,
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
         },
       },
     },

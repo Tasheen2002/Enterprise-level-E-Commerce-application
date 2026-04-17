@@ -1,24 +1,27 @@
-import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
-import { Address, AddressDTO } from "../../domain/entities/address.entity";
-import { AddressId } from "../../domain/value-objects/address-id";
+import { IAddressRepository } from '../../domain/repositories/iaddress.repository';
+import { Address, AddressDTO } from '../../domain/entities/address.entity';
+import { AddressId } from '../../domain/value-objects/address-id';
 import {
   AddressType,
   AddressData,
-} from "../../domain/value-objects/address.vo";
-import { UserId } from "../../domain/value-objects/user-id.vo";
+} from '../../domain/value-objects/address.vo';
+import { UserId } from '../../domain/value-objects/user-id.vo';
+import {
+  AddressShippingService,
+} from '../../domain/services/address-shipping.service';
 import {
   AddressNotFoundError,
   InvalidOperationError,
-} from "../../domain/errors/user-management.errors";
+} from '../../domain/errors/user-management.errors';
 
-export interface AddAddressDto {
+interface AddAddressParams {
   userId: string;
   addressData: AddressData;
   type: AddressType;
   isDefault?: boolean;
 }
 
-export interface UpdateAddressDto {
+interface UpdateAddressParams {
   addressId: string;
   userId: string;
   addressData?: AddressData;
@@ -29,68 +32,72 @@ export interface UpdateAddressDto {
 export class AddressManagementService {
   constructor(private readonly addressRepository: IAddressRepository) {}
 
-  async addAddress(dto: AddAddressDto): Promise<AddressDTO> {
-    const userId = UserId.fromString(dto.userId);
+  async addAddress(params: AddAddressParams): Promise<AddressDTO> {
+    const userId = UserId.fromString(params.userId);
 
     const existingAddresses = await this.addressRepository.findByUserId(userId);
+    const shouldBeDefault = params.isDefault || existingAddresses.length === 0;
 
-    const shouldBeDefault = dto.isDefault || existingAddresses.length === 0;
-
+    // Conflict check: use domain equals on address VO
     const address = Address.create({
-      userId: dto.userId,
-      addressData: dto.addressData,
-      type: dto.type,
-      isDefault: shouldBeDefault,
+      userId: params.userId,
+      addressData: params.addressData,
+      type: params.type,
+      isDefault: false, // set default after de-defaulting others
     });
 
-    const conflictingAddress =
-      await this.addressRepository.findConflictingAddress(userId, address);
-    if (conflictingAddress) {
-      throw new InvalidOperationError(
-        "A similar address already exists for this user",
-      );
+    const isDuplicate = existingAddresses.some((a) => a.isSameAddress(address));
+    if (isDuplicate) {
+      throw new InvalidOperationError('A similar address already exists for this user');
     }
 
+    // De-default all existing addresses in-memory, then save each
     if (shouldBeDefault) {
-      await this.addressRepository.removeDefault(userId);
+      for (const existing of existingAddresses) {
+        if (existing.isDefault) {
+          existing.removeAsDefault();
+          await this.addressRepository.save(existing);
+        }
+      }
+      address.setAsDefault();
     }
-    await this.addressRepository.save(address);
 
-    const result = Address.toDTO(address);
-    return result;
+    await this.addressRepository.save(address);
+    return Address.toDTO(address);
   }
 
-  async updateAddress(dto: UpdateAddressDto): Promise<AddressDTO> {
-    const userId = UserId.fromString(dto.userId);
-    const addressId = AddressId.fromString(dto.addressId);
+  async updateAddress(params: UpdateAddressParams): Promise<AddressDTO> {
+    const userId = UserId.fromString(params.userId);
+    const addressId = AddressId.fromString(params.addressId);
     const address = await this.addressRepository.findById(addressId);
 
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
+    if (!address) throw new AddressNotFoundError();
     if (!address.belongsToUser(userId)) {
-      throw new InvalidOperationError("Address does not belong to user");
+      throw new InvalidOperationError('Address does not belong to user');
     }
 
-    if (dto.addressData) {
-      address.updateAddress(dto.addressData);
+    if (params.addressData) {
+      address.updateAddress(params.addressData);
     }
-    if (dto.type) {
-      address.changeType(dto.type);
+    if (params.type) {
+      address.changeType(params.type);
     }
 
-    if (dto.isDefault !== undefined) {
-      if (dto.isDefault) {
-        await this.addressRepository.removeDefault(userId);
-        address.setAsDefault();
-      } else {
-        address.removeAsDefault();
+    if (params.isDefault === true) {
+      // De-default all other addresses for this user
+      const allAddresses = await this.addressRepository.findByUserId(userId);
+      for (const existing of allAddresses) {
+        if (existing.isDefault && !existing.equals(address)) {
+          existing.removeAsDefault();
+          await this.addressRepository.save(existing);
+        }
       }
+      address.setAsDefault();
+    } else if (params.isDefault === false) {
+      address.removeAsDefault();
     }
 
     await this.addressRepository.save(address);
-
     return Address.toDTO(address);
   }
 
@@ -99,29 +106,20 @@ export class AddressManagementService {
     const addressIdVo = AddressId.fromString(addressId);
     const address = await this.addressRepository.findById(addressIdVo);
 
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
+    if (!address) throw new AddressNotFoundError();
     if (!address.belongsToUser(userIdVo)) {
-      throw new InvalidOperationError("Address does not belong to user");
+      throw new InvalidOperationError('Address does not belong to user');
     }
 
-    if (!address.canBeDeleted()) {
-      throw new InvalidOperationError("Address cannot be deleted");
-    }
-
+    const wasDefault = address.isDefault;
     await this.addressRepository.delete(addressIdVo);
 
-    // If this was the default address, we might want to set another as default
-    if (address.isDefault) {
-      const remainingAddresses =
-        await this.addressRepository.findByUserId(userIdVo);
-      if (remainingAddresses.length > 0) {
-        await this.addressRepository.setAsDefault(
-          remainingAddresses[0].id,
-          userIdVo,
-        );
+    // If this was the default, auto-assign a new default
+    if (wasDefault) {
+      const remaining = await this.addressRepository.findByUserId(userIdVo);
+      if (remaining.length > 0) {
+        remaining[0].setAsDefault();
+        await this.addressRepository.save(remaining[0]);
       }
     }
   }
@@ -129,31 +127,19 @@ export class AddressManagementService {
   async getUserAddresses(userId: string): Promise<AddressDTO[]> {
     const userIdVo = UserId.fromString(userId);
     const addresses = await this.addressRepository.findByUserId(userIdVo);
-
-    return addresses.map((address) => Address.toDTO(address));
+    return addresses.map((a) => Address.toDTO(a));
   }
 
-  async getUserAddressesByType(
-    userId: string,
-    type: AddressType,
-  ): Promise<AddressDTO[]> {
+  async getUserAddressesByType(userId: string, type: AddressType): Promise<AddressDTO[]> {
     const userIdVo = UserId.fromString(userId);
-    const addresses = await this.addressRepository.findByUserIdAndType(
-      userIdVo,
-      type,
-    );
-
-    return addresses.map((address) => Address.toDTO(address));
+    const addresses = await this.addressRepository.findByUserIdAndType(userIdVo, type);
+    return addresses.map((a) => Address.toDTO(a));
   }
 
   async getDefaultAddress(userId: string): Promise<AddressDTO> {
     const userIdVo = UserId.fromString(userId);
     const address = await this.addressRepository.findDefaultByUserId(userIdVo);
-
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
+    if (!address) throw new AddressNotFoundError();
     return Address.toDTO(address);
   }
 
@@ -162,15 +148,21 @@ export class AddressManagementService {
     const addressIdVo = AddressId.fromString(addressId);
     const address = await this.addressRepository.findById(addressIdVo);
 
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
+    if (!address) throw new AddressNotFoundError();
     if (!address.belongsToUser(userIdVo)) {
-      throw new InvalidOperationError("Address does not belong to user");
+      throw new InvalidOperationError('Address does not belong to user');
     }
 
-    await this.addressRepository.setAsDefault(addressIdVo, userIdVo);
+    const allAddresses = await this.addressRepository.findByUserId(userIdVo);
+    for (const existing of allAddresses) {
+      if (existing.isDefault && !existing.equals(address)) {
+        existing.removeAsDefault();
+        await this.addressRepository.save(existing);
+      }
+    }
+
+    address.setAsDefault();
+    await this.addressRepository.save(address);
   }
 
   async validateAddress(addressData: AddressData): Promise<{
@@ -182,83 +174,55 @@ export class AddressManagementService {
     const suggestions: string[] = [];
 
     try {
-      // Create a temporary address to validate structure
       const tempAddress = Address.create({
-        userId: "temp-user-id",
+        userId: 'temp-user-id',
         addressData,
         type: AddressType.SHIPPING,
       });
 
-      // Check if address is complete for shipping
       if (!tempAddress.isValidForShipping()) {
-        errors.push("Address is not complete for shipping");
+        errors.push('Address is not complete for shipping');
       }
-
-      // Check if address is complete for billing
       if (!tempAddress.isValidForBilling()) {
-        errors.push("Address is not complete for billing");
+        errors.push('Address is not complete for billing');
       }
     } catch (error) {
-      errors.push(
-        error instanceof Error ? error.message : "Invalid address format",
-      );
+      errors.push(error instanceof Error ? error.message : 'Invalid address format');
     }
 
-    // Add suggestions for common issues
-    if (
-      !addressData.postalCode &&
-      ["US", "CA", "UK"].includes(addressData.country)
-    ) {
-      suggestions.push("Postal code is recommended for this country");
+    if (!addressData.postalCode && ['US', 'CA', 'UK'].includes(addressData.country)) {
+      suggestions.push('Postal code is recommended for this country');
+    }
+    if (!addressData.state && addressData.country === 'US') {
+      suggestions.push('State is required for US addresses');
     }
 
-    if (!addressData.state && addressData.country === "US") {
-      suggestions.push("State is required for US addresses");
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      suggestions,
-    };
+    return { isValid: errors.length === 0, errors, suggestions };
   }
 
   async estimateDeliveryDays(addressId: string): Promise<number> {
     const addressIdVo = AddressId.fromString(addressId);
     const address = await this.addressRepository.findById(addressIdVo);
-
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
-    return address.estimateDeliveryDays();
+    if (!address) throw new AddressNotFoundError();
+    return AddressShippingService.estimateDeliveryDays(address);
   }
 
   async getShippingZone(addressId: string): Promise<string> {
     const addressIdVo = AddressId.fromString(addressId);
     const address = await this.addressRepository.findById(addressIdVo);
-
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
-    return address.calculateShippingZone();
+    if (!address) throw new AddressNotFoundError();
+    return AddressShippingService.calculateShippingZone(address).toString();
   }
 
   async requiresCustomsDeclaration(addressId: string): Promise<boolean> {
     const addressIdVo = AddressId.fromString(addressId);
     const address = await this.addressRepository.findById(addressIdVo);
-
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
-    return address.requiresCustomsDeclaration();
+    if (!address) throw new AddressNotFoundError();
+    return AddressShippingService.requiresCustomsDeclaration(address);
   }
 
   async bulkDeleteUserAddresses(userId: string): Promise<number> {
     const userIdVo = UserId.fromString(userId);
-    return await this.addressRepository.deleteByUserId(userIdVo);
+    return this.addressRepository.deleteByUserId(userIdVo);
   }
-
 }

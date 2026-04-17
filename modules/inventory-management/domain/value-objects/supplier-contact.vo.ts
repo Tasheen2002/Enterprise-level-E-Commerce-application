@@ -42,19 +42,19 @@ export class SupplierContact {
     });
   }
 
-  getName(): string | undefined {
+  get name(): string | undefined {
     return this.props.name;
   }
 
-  getEmail(): string | undefined {
+  get email(): string | undefined {
     return this.props.email;
   }
 
-  getPhone(): string | undefined {
+  get phone(): string | undefined {
     return this.props.phone;
   }
 
-  getRole(): string | undefined {
+  get role(): string | undefined {
     return this.props.role;
   }
 
@@ -67,7 +67,16 @@ export class SupplierContact {
     );
   }
 
-  toJSON(): SupplierContactProps {
+  getValue(): SupplierContactProps {
     return { ...this.props };
+  }
+
+  toString(): string {
+    const name = this.props.name ?? "";
+    const email = this.props.email ?? "";
+    if (name && email) return `${name} <${email}>`;
+    if (name) return name;
+    if (email) return email;
+    return "";
   }
 }

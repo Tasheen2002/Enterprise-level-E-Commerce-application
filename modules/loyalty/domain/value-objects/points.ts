@@ -1,17 +1,16 @@
-export class Points {
-  private readonly _value: number;
+import { InvalidFormatError } from '../../../../packages/core/src/domain/domain-error';
 
-  private constructor(value: number) {
-    this._value = value;
+export class Points {
+  private constructor(private readonly value: number) {
+    if (!Number.isInteger(value)) {
+      throw new InvalidFormatError('points', 'integer');
+    }
+    if (value < 0) {
+      throw new InvalidFormatError('points', 'non-negative integer');
+    }
   }
 
   static create(value: number): Points {
-    if (!Number.isInteger(value)) {
-      throw new Error('Points must be an integer');
-    }
-    if (value < 0) {
-      throw new Error('Points cannot be negative');
-    }
     return new Points(value);
   }
 
@@ -19,31 +18,31 @@ export class Points {
     return new Points(0);
   }
 
-  get value(): number {
-    return this._value;
+  getValue(): number {
+    return this.value;
   }
 
-  add(points: Points): Points {
-    return Points.create(this._value + points.value);
+  add(other: Points): Points {
+    return new Points(this.value + other.value);
   }
 
-  subtract(points: Points): Points {
-    const result = this._value - points.value;
+  subtract(other: Points): Points {
+    const result = this.value - other.value;
     if (result < 0) {
-      throw new Error('Insufficient points');
+      throw new InvalidFormatError('points', 'sufficient balance for subtraction');
     }
-    return Points.create(result);
+    return new Points(result);
   }
 
-  isGreaterThanOrEqual(points: Points): boolean {
-    return this._value >= points.value;
+  isGreaterThanOrEqual(other: Points): boolean {
+    return this.value >= other.value;
   }
 
-  equals(points: Points): boolean {
-    return this._value === points.value;
+  equals(other: Points): boolean {
+    return this.value === other.value;
   }
 
   toString(): string {
-    return this._value.toString();
+    return this.value.toString();
   }
 }

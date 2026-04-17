@@ -1,69 +1,37 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { EditorialLookManagementService } from "../../../application/services/editorial-look-management.service";
-import { CreateEditorialLookData } from "../../../domain/entities/editorial-look.entity";
-import { EditorialLookQueryOptions } from "../../../domain/repositories/editorial-look.repository";
-import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CreateEditorialLookHandler,
+  UpdateEditorialLookHandler,
+  DeleteEditorialLookHandler,
+  PublishEditorialLookHandler,
+  UnpublishEditorialLookHandler,
+  ScheduleEditorialLookPublicationHandler,
+  ProcessScheduledEditorialLookPublicationsHandler,
+  SetEditorialLookHeroImageHandler,
+  RemoveEditorialLookHeroImageHandler,
+  AddProductToEditorialLookHandler,
+  RemoveProductFromEditorialLookHandler,
+  SetEditorialLookProductsHandler,
+  UpdateEditorialLookStoryContentHandler,
+  ClearEditorialLookStoryContentHandler,
+  CreateBulkEditorialLooksHandler,
+  DeleteBulkEditorialLooksHandler,
+  PublishBulkEditorialLooksHandler,
+  DuplicateEditorialLookHandler,
+  ListEditorialLooksHandler,
+  GetEditorialLookHandler,
+  GetReadyToPublishEditorialLooksHandler,
+  GetEditorialLooksByHeroAssetHandler,
+  GetEditorialLookProductsHandler,
+  GetProductEditorialLooksHandler,
+  GetEditorialLooksByProductHandler,
+  GetEditorialLookStatsHandler,
+  GetPopularEditorialLookProductsHandler,
+  ValidateEditorialLookForPublicationHandler,
+} from "../../../application";
 import { EditorialLookDTO } from "../../../domain/entities/editorial-look.entity";
-
-export interface CreateEditorialLookRequest {
-  title: string;
-  storyHtml?: string;
-  heroAssetId?: string;
-  publishedAt?: string;
-  productIds?: string[];
-}
-
-export interface UpdateEditorialLookRequest {
-  title?: string;
-  storyHtml?: string;
-  heroAssetId?: string | null;
-  publishedAt?: string | null;
-}
-
-export interface EditorialLookQueryParams {
-  page?: number;
-  limit?: number;
-  published?: boolean;
-  scheduled?: boolean;
-  draft?: boolean;
-  hasContent?: boolean;
-  includeUnpublished?: boolean;
-  sortBy?: "title" | "publishedAt" | "id";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface BulkCreateEditorialLooksRequest {
-  looks: CreateEditorialLookRequest[];
-}
-
-export interface BulkDeleteEditorialLooksRequest {
-  ids: string[];
-}
-
-export interface BulkPublishEditorialLooksRequest {
-  ids: string[];
-}
-
-export interface SchedulePublicationRequest {
-  publishDate: string;
-}
-
-export interface SetHeroImageRequest {
-  assetId: string;
-}
-
-export interface UpdateStoryContentRequest {
-  storyHtml: string;
-}
-
-export interface SetLookProductsRequest {
-  productIds: string[];
-}
-
-export interface DuplicateEditorialLookRequest {
-  newTitle: string;
-}
+import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 function toLookResponse(look: EditorialLookDTO) {
   return {
@@ -78,60 +46,58 @@ function toLookResponse(look: EditorialLookDTO) {
 
 export class EditorialLookController {
   constructor(
-    private readonly editorialLookManagementService: EditorialLookManagementService,
+    private readonly createEditorialLookHandler: CreateEditorialLookHandler,
+    private readonly updateEditorialLookHandler: UpdateEditorialLookHandler,
+    private readonly deleteEditorialLookHandler: DeleteEditorialLookHandler,
+    private readonly publishEditorialLookHandler: PublishEditorialLookHandler,
+    private readonly unpublishEditorialLookHandler: UnpublishEditorialLookHandler,
+    private readonly scheduleEditorialLookPublicationHandler: ScheduleEditorialLookPublicationHandler,
+    private readonly processScheduledEditorialLookPublicationsHandler: ProcessScheduledEditorialLookPublicationsHandler,
+    private readonly setEditorialLookHeroImageHandler: SetEditorialLookHeroImageHandler,
+    private readonly removeEditorialLookHeroImageHandler: RemoveEditorialLookHeroImageHandler,
+    private readonly addProductToEditorialLookHandler: AddProductToEditorialLookHandler,
+    private readonly removeProductFromEditorialLookHandler: RemoveProductFromEditorialLookHandler,
+    private readonly setEditorialLookProductsHandler: SetEditorialLookProductsHandler,
+    private readonly updateEditorialLookStoryContentHandler: UpdateEditorialLookStoryContentHandler,
+    private readonly clearEditorialLookStoryContentHandler: ClearEditorialLookStoryContentHandler,
+    private readonly createBulkEditorialLooksHandler: CreateBulkEditorialLooksHandler,
+    private readonly deleteBulkEditorialLooksHandler: DeleteBulkEditorialLooksHandler,
+    private readonly publishBulkEditorialLooksHandler: PublishBulkEditorialLooksHandler,
+    private readonly duplicateEditorialLookHandler: DuplicateEditorialLookHandler,
+    private readonly listEditorialLooksHandler: ListEditorialLooksHandler,
+    private readonly getEditorialLookHandler: GetEditorialLookHandler,
+    private readonly getReadyToPublishEditorialLooksHandler: GetReadyToPublishEditorialLooksHandler,
+    private readonly getEditorialLooksByHeroAssetHandler: GetEditorialLooksByHeroAssetHandler,
+    private readonly getEditorialLookProductsHandler: GetEditorialLookProductsHandler,
+    private readonly getProductEditorialLooksHandler: GetProductEditorialLooksHandler,
+    private readonly getEditorialLooksByProductHandler: GetEditorialLooksByProductHandler,
+    private readonly getEditorialLookStatsHandler: GetEditorialLookStatsHandler,
+    private readonly getPopularEditorialLookProductsHandler: GetPopularEditorialLookProductsHandler,
+    private readonly validateEditorialLookForPublicationHandler: ValidateEditorialLookForPublicationHandler,
   ) {}
 
   async getEditorialLooks(
-    request: AuthenticatedRequest<{ Querystring: EditorialLookQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        published?: boolean;
+        scheduled?: boolean;
+        draft?: boolean;
+        hasContent?: boolean;
+        sortBy?: "title" | "publishedAt" | "id";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        published,
-        scheduled,
-        draft,
-        hasContent,
-        sortBy = "id",
-        sortOrder = "desc",
-      } = request.query;
-
-      const serviceOptions: EditorialLookQueryOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-      };
-
-      const pageOptions = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-      };
-
-      let looks: EditorialLookDTO[];
-
-      if (published === true) {
-        looks = await this.editorialLookManagementService.getPublishedLooks(serviceOptions);
-      } else if (scheduled === true) {
-        looks = await this.editorialLookManagementService.getScheduledLooks(serviceOptions);
-      } else if (draft === true) {
-        looks = await this.editorialLookManagementService.getDraftLooks(serviceOptions);
-      } else if (hasContent === true) {
-        looks = await this.editorialLookManagementService.getLooksWithContent(serviceOptions);
-      } else if (hasContent === false) {
-        looks = await this.editorialLookManagementService.getLooksWithoutContent(serviceOptions);
-      } else {
-        looks = await this.editorialLookManagementService.getAllEditorialLooks(serviceOptions);
-      }
-
+      const result = await this.listEditorialLooksHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Editorial looks retrieved successfully", {
-        looks: looks.map(toLookResponse),
-        meta: pageOptions,
+        looks: result.looks.map(toLookResponse),
+        meta: result.meta,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -141,52 +107,53 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.getEditorialLookById(request.params.id);
+      const look = await this.getEditorialLookHandler.handle({ id: request.params.id });
       return ResponseHelper.ok(reply, "Editorial look retrieved successfully", toLookResponse(look));
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createEditorialLook(
-    request: AuthenticatedRequest<{ Body: CreateEditorialLookRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { title: string; storyHtml?: string; heroAssetId?: string; publishedAt?: Date; productIds?: string[] };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const lookData = request.body;
-      const createData: CreateEditorialLookData = {
-        title: lookData.title,
-        storyHtml: lookData.storyHtml,
-        heroAssetId: lookData.heroAssetId,
-        publishedAt: lookData.publishedAt ? new Date(lookData.publishedAt) : undefined,
-        productIds: lookData.productIds,
-      };
-      const look = await this.editorialLookManagementService.createEditorialLook(createData);
-      return ResponseHelper.created(reply, "Editorial look created successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.createEditorialLookHandler.handle(request.body);
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look created successfully",
+          201,
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateEditorialLook(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: UpdateEditorialLookRequest }>,
+    request: AuthenticatedRequest<{
+      Params: { id: string };
+      Body: { title?: string; storyHtml?: string; heroAssetId?: string | null; publishedAt?: Date | null };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const updateData = request.body;
-      let publishedAt: Date | null | undefined;
-      if (updateData.publishedAt !== undefined) {
-        publishedAt = updateData.publishedAt === null ? null : new Date(updateData.publishedAt);
+      const result = await this.updateEditorialLookHandler.handle({ id: request.params.id, ...request.body });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look updated successfully",
+        );
       }
-      const look = await this.editorialLookManagementService.updateEditorialLook(id, {
-        title: updateData.title,
-        storyHtml: updateData.storyHtml,
-        heroAssetId: updateData.heroAssetId,
-        publishedAt,
-      });
-      return ResponseHelper.ok(reply, "Editorial look updated successfully", toLookResponse(look));
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Editorial look updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -196,9 +163,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.deleteEditorialLook(request.params.id);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.deleteEditorialLookHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Editorial look deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -208,9 +175,16 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.publishLook(request.params.id);
-      return ResponseHelper.ok(reply, "Editorial look published successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.publishEditorialLookHandler.handle({ id: request.params.id });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look published successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look published successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -220,57 +194,87 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.unpublishLook(request.params.id);
-      return ResponseHelper.ok(reply, "Editorial look unpublished successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.unpublishEditorialLookHandler.handle({ id: request.params.id });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look unpublished successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look unpublished successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async schedulePublication(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: SchedulePublicationRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { publishDate: Date } }>,
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.scheduleLookPublication(
-        request.params.id,
-        new Date(request.body.publishDate),
-      );
-      return ResponseHelper.ok(reply, "Editorial look scheduled for publication successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.scheduleEditorialLookPublicationHandler.handle({
+        id: request.params.id,
+        publishDate: request.body.publishDate,
+      });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look scheduled for publication successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look scheduled for publication successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getReadyToPublishLooks(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const looks = await this.editorialLookManagementService.getReadyToPublishLooks();
+      const looks = await this.getReadyToPublishEditorialLooksHandler.handle({});
       return ResponseHelper.ok(reply, "Ready to publish looks retrieved successfully", looks.map(toLookResponse));
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async processScheduledPublications(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.editorialLookManagementService.processScheduledPublications();
-      return ResponseHelper.ok(reply, `${result.published.length} editorial looks published successfully`, {
-        published: result.published.map(toLookResponse),
-        errors: result.errors,
-      });
-    } catch (error) {
+      const result = await this.processScheduledEditorialLookPublicationsHandler.handle({});
+      return ResponseHelper.fromCommand(
+        reply,
+        {
+          ...result,
+          data: result.data
+            ? { published: result.data.published.map(toLookResponse), errors: result.data.errors }
+            : undefined,
+        },
+        `${result.data?.published.length ?? 0} editorial looks published successfully`,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setHeroImage(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: SetHeroImageRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { assetId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.setHeroImage(request.params.id, request.body.assetId);
-      return ResponseHelper.ok(reply, "Hero image set successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.setEditorialLookHeroImageHandler.handle({
+        id: request.params.id,
+        assetId: request.body.assetId,
+      });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Hero image set successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Hero image set successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -280,9 +284,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.removeHeroImage(request.params.id);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.removeEditorialLookHeroImageHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Hero image removed successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -292,9 +296,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const looks = await this.editorialLookManagementService.getLooksByHeroAsset(request.params.assetId);
+      const looks = await this.getEditorialLooksByHeroAssetHandler.handle({ assetId: request.params.assetId });
       return ResponseHelper.ok(reply, "Looks by hero asset retrieved successfully", looks.map(toLookResponse));
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -304,9 +308,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.addProductToLook(request.params.id, request.params.productId);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.addProductToEditorialLookHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Product added to look successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -316,21 +320,31 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.removeProductFromLook(request.params.id, request.params.productId);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.removeProductFromEditorialLookHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Product removed from look successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async setLookProducts(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: SetLookProductsRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { productIds: string[] } }>,
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.setLookProducts(request.params.id, request.body.productIds);
-      return ResponseHelper.ok(reply, "Editorial look products updated successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.setEditorialLookProductsHandler.handle({
+        id: request.params.id,
+        productIds: request.body.productIds,
+      });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look products updated successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look products updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -340,9 +354,9 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const productIds = await this.editorialLookManagementService.getLookProducts(request.params.id);
+      const productIds = await this.getEditorialLookProductsHandler.handle({ id: request.params.id });
       return ResponseHelper.ok(reply, "Editorial look products retrieved successfully", productIds);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -352,43 +366,58 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const lookIds = await this.editorialLookManagementService.getProductLooks(request.params.productId);
+      const lookIds = await this.getProductEditorialLooksHandler.handle({ productId: request.params.productId });
       return ResponseHelper.ok(reply, "Product looks retrieved successfully", lookIds);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getLooksByProduct(
-    request: AuthenticatedRequest<{ Params: { productId: string }; Querystring: EditorialLookQueryParams }>,
+    request: AuthenticatedRequest<{
+      Params: { productId: string };
+      Querystring: {
+        page?: number;
+        limit?: number;
+        includeUnpublished?: boolean;
+        sortBy?: "title" | "publishedAt" | "id";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { page = 1, limit = 20, sortBy = "id", sortOrder = "desc", includeUnpublished = false } = request.query;
-      const serviceOptions: EditorialLookQueryOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy, sortOrder, includeUnpublished,
-      };
-      const looks = await this.editorialLookManagementService.getLooksByProduct(productId, serviceOptions);
-      return ResponseHelper.ok(reply, "Looks by product retrieved successfully", {
-        looks: looks.map(toLookResponse),
-        meta: { productId, page: Math.max(1, page), limit: Math.min(100, Math.max(1, limit)), includeUnpublished },
+      const result = await this.getEditorialLooksByProductHandler.handle({
+        productId: request.params.productId,
+        ...request.query,
       });
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Looks by product retrieved successfully", {
+        looks: result.looks.map(toLookResponse),
+        meta: result.meta,
+      });
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateStoryContent(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: UpdateStoryContentRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { storyHtml: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.updateStoryContent(request.params.id, request.body.storyHtml);
-      return ResponseHelper.ok(reply, "Story content updated successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.updateEditorialLookStoryContentHandler.handle({
+        id: request.params.id,
+        storyHtml: request.body.storyHtml,
+      });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Story content updated successfully",
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Story content updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -398,18 +427,18 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.clearStoryContent(request.params.id);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.clearEditorialLookStoryContentHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Story content cleared successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getEditorialLookStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const stats = await this.editorialLookManagementService.getEditorialLookStats();
+      const stats = await this.getEditorialLookStatsHandler.handle({});
       return ResponseHelper.ok(reply, "Editorial look statistics retrieved successfully", stats);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -419,54 +448,57 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const popularProducts = await this.editorialLookManagementService.getPopularProducts(
-        Math.min(50, Math.max(1, request.query.limit ?? 10)),
-      );
+      const popularProducts = await this.getPopularEditorialLookProductsHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Popular products retrieved successfully", popularProducts);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createBulkEditorialLooks(
-    request: AuthenticatedRequest<{ Body: BulkCreateEditorialLooksRequest }>,
+    request: AuthenticatedRequest<{
+      Body: {
+        looks: Array<{ title: string; storyHtml?: string; heroAssetId?: string; publishedAt?: Date; productIds?: string[] }>;
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const createData: CreateEditorialLookData[] = request.body.looks.map((look) => ({
-        title: look.title,
-        storyHtml: look.storyHtml,
-        heroAssetId: look.heroAssetId,
-        publishedAt: look.publishedAt ? new Date(look.publishedAt) : undefined,
-        productIds: look.productIds,
-      }));
-      const createdLooks = await this.editorialLookManagementService.createMultipleEditorialLooks(createData);
-      return ResponseHelper.created(reply, `${createdLooks.length} editorial looks created successfully`, createdLooks.map(toLookResponse));
-    } catch (error) {
+      const result = await this.createBulkEditorialLooksHandler.handle({ looks: request.body.looks });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: result.data.map(toLookResponse) },
+          "Editorial looks created successfully",
+          201,
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial looks created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteBulkEditorialLooks(
-    request: AuthenticatedRequest<{ Body: BulkDeleteEditorialLooksRequest }>,
+    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
     reply: FastifyReply,
   ) {
     try {
-      await this.editorialLookManagementService.deleteMultipleEditorialLooks(request.body.ids);
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.deleteBulkEditorialLooksHandler.handle({ ids: request.body.ids });
+      return ResponseHelper.fromCommand(reply, result, "Editorial looks deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async publishBulkEditorialLooks(
-    request: AuthenticatedRequest<{ Body: BulkPublishEditorialLooksRequest }>,
+    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.editorialLookManagementService.publishMultipleLooks(request.body.ids);
-      return ResponseHelper.ok(reply, `${result.published.length} editorial looks published successfully`, result);
-    } catch (error) {
+      const result = await this.publishBulkEditorialLooksHandler.handle({ ids: request.body.ids });
+      return ResponseHelper.fromCommand(reply, result, "Editorial looks published successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -476,21 +508,32 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const validation = await this.editorialLookManagementService.validateLookForPublication(request.params.id);
+      const validation = await this.validateEditorialLookForPublicationHandler.handle({ id: request.params.id });
       return ResponseHelper.ok(reply, "Editorial look validated for publication", validation);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async duplicateEditorialLook(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: DuplicateEditorialLookRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { newTitle: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const look = await this.editorialLookManagementService.duplicateEditorialLook(request.params.id, request.body.newTitle);
-      return ResponseHelper.created(reply, "Editorial look duplicated successfully", toLookResponse(look));
-    } catch (error) {
+      const result = await this.duplicateEditorialLookHandler.handle({
+        id: request.params.id,
+        newTitle: request.body.newTitle,
+      });
+      if (result.success && result.data) {
+        return ResponseHelper.fromCommand(
+          reply,
+          { ...result, data: toLookResponse(result.data) },
+          "Editorial look duplicated successfully",
+          201,
+        );
+      }
+      return ResponseHelper.fromCommand(reply, result, "Editorial look duplicated successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

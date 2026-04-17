@@ -13,8 +13,4 @@ export class OrderId extends UuidId {
   static fromString(value: string): OrderId {
     return new OrderId(value);
   }
-
-  equals(other: OrderId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

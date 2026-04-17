@@ -8,16 +8,17 @@ export interface IPurchaseOrderRepository {
   delete(poId: PurchaseOrderId): Promise<void>;
   findBySupplier(supplierId: string): Promise<PurchaseOrder[]>;
   findByStatus(status: PurchaseOrderStatus): Promise<PurchaseOrder[]>;
-
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-    status?: PurchaseOrderStatus;
-    supplierId?: string;
-    sortBy?: "createdAt" | "updatedAt" | "eta";
-    sortOrder?: "asc" | "desc";
-  }): Promise<{ purchaseOrders: PurchaseOrder[]; total: number }>;
+  findAll(options?: PurchaseOrderQueryOptions): Promise<{ purchaseOrders: PurchaseOrder[]; total: number }>;
   findOverduePurchaseOrders(): Promise<PurchaseOrder[]>;
   findPendingReceival(): Promise<PurchaseOrder[]>;
   exists(poId: PurchaseOrderId): Promise<boolean>;
+}
+
+export interface PurchaseOrderQueryOptions {
+  limit?: number;
+  offset?: number;
+  status?: PurchaseOrderStatus;
+  supplierId?: string;
+  sortBy?: "createdAt" | "updatedAt" | "eta";
+  sortOrder?: "asc" | "desc";
 }

@@ -3,52 +3,52 @@ import { z } from "zod";
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const variantMediaParamsSchema = z.object({
-  variantId: z.string().uuid(),
+  variantId: z.uuid(),
 });
 
 export const variantMediaAssetParamsSchema = z.object({
-  variantId: z.string().uuid(),
-  assetId: z.string().uuid(),
+  variantId: z.uuid(),
+  assetId: z.uuid(),
 });
 
 export const variantDuplicateParamsSchema = z.object({
-  sourceVariantId: z.string().uuid(),
-  targetVariantId: z.string().uuid(),
+  sourceVariantId: z.uuid(),
+  targetVariantId: z.uuid(),
 });
 
 export const assetParamsSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.uuid(),
 });
 
 export const productVariantMediaParamsSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.uuid(),
 });
 
 export const unusedAssetsQuerySchema = z.object({
-  productId: z.string().uuid().optional(),
+  productId: z.uuid().optional(),
 });
 
 export const addMediaToVariantSchema = z.object({
-  assetId: z.string().uuid(),
+  assetId: z.uuid(),
 });
 
 export const setVariantMediaSchema = z.object({
-  assetIds: z.array(z.string().uuid()),
+  assetIds: z.array(z.uuid()),
 });
 
 export const addMultipleMediaToVariantSchema = z.object({
-  assetIds: z.array(z.string().uuid()).min(1),
+  assetIds: z.array(z.uuid()).min(1),
 });
 
 export const addMediaToMultipleVariantsSchema = z.object({
-  variantIds: z.array(z.string().uuid()).min(1),
-  assetId: z.string().uuid(),
+  variantIds: z.array(z.uuid()).min(1),
+  assetId: z.uuid(),
 });
 
 export const copyVariantMediaSchema = z.object({
-  sourceProductId: z.string().uuid(),
-  targetProductId: z.string().uuid(),
-  variantMapping: z.record(z.string().uuid()),
+  sourceProductId: z.uuid(),
+  targetProductId: z.uuid(),
+  variantMapping: z.record(z.string(), z.uuid()),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

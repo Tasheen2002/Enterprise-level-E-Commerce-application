@@ -1,138 +1,66 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { SizeGuideManagementService } from "../../../application/services/size-guide-management.service";
-import { Region } from "../../../domain/entities/size-guide.entity";
-import { SizeGuideQueryOptions } from "../../../domain/repositories/size-guide.repository";
+import {
+  CreateSizeGuideHandler,
+  UpdateSizeGuideHandler,
+  DeleteSizeGuideHandler,
+  CreateRegionalSizeGuideHandler,
+  CreateCategorySizeGuideHandler,
+  UpdateSizeGuideContentHandler,
+  ClearSizeGuideContentHandler,
+  CreateBulkSizeGuidesHandler,
+  DeleteBulkSizeGuidesHandler,
+  ListSizeGuidesHandler,
+  GetSizeGuideHandler,
+  GetRegionalSizeGuidesHandler,
+  GetGeneralSizeGuidesHandler,
+  GetSizeGuideStatsHandler,
+  GetAvailableSizeGuideRegionsHandler,
+  GetAvailableSizeGuideCategoriesHandler,
+  ValidateSizeGuideUniquenessHandler,
+} from "../../../application";
+import { Region } from "../../../domain/enums/product-catalog.enums";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateSizeGuideRequest {
-  title: string;
-  bodyHtml?: string;
-  region: Region;
-  category?: string;
-}
-
-export interface UpdateSizeGuideRequest {
-  title?: string;
-  bodyHtml?: string;
-  region?: Region;
-  category?: string;
-}
-
-export interface SizeGuideQueryParams {
-  page?: number;
-  limit?: number;
-  region?: Region;
-  category?: string;
-  hasContent?: boolean;
-  sortBy?: "title" | "region" | "category";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface BulkCreateSizeGuidesRequest {
-  guides: CreateSizeGuideRequest[];
-}
-
-export interface BulkDeleteSizeGuidesRequest {
-  ids: string[];
-}
-
-export interface ValidateSizeGuideQueryParams {
-  region: string;
-  category?: string;
-}
-
-export interface RegionalSizeGuideRequest extends Omit<
-  CreateSizeGuideRequest,
-  "region"
-> {}
-
-export interface CategorySizeGuideRequest extends Omit<
-  CreateSizeGuideRequest,
-  "category" | "region"
-> {}
 
 export class SizeGuideController {
   constructor(
-    private readonly sizeGuideManagementService: SizeGuideManagementService,
+    private readonly createSizeGuideHandler: CreateSizeGuideHandler,
+    private readonly updateSizeGuideHandler: UpdateSizeGuideHandler,
+    private readonly deleteSizeGuideHandler: DeleteSizeGuideHandler,
+    private readonly createRegionalSizeGuideHandler: CreateRegionalSizeGuideHandler,
+    private readonly createCategorySizeGuideHandler: CreateCategorySizeGuideHandler,
+    private readonly updateSizeGuideContentHandler: UpdateSizeGuideContentHandler,
+    private readonly clearSizeGuideContentHandler: ClearSizeGuideContentHandler,
+    private readonly createBulkSizeGuidesHandler: CreateBulkSizeGuidesHandler,
+    private readonly deleteBulkSizeGuidesHandler: DeleteBulkSizeGuidesHandler,
+    private readonly listSizeGuidesHandler: ListSizeGuidesHandler,
+    private readonly getSizeGuideHandler: GetSizeGuideHandler,
+    private readonly getRegionalSizeGuidesHandler: GetRegionalSizeGuidesHandler,
+    private readonly getGeneralSizeGuidesHandler: GetGeneralSizeGuidesHandler,
+    private readonly getSizeGuideStatsHandler: GetSizeGuideStatsHandler,
+    private readonly getAvailableSizeGuideRegionsHandler: GetAvailableSizeGuideRegionsHandler,
+    private readonly getAvailableSizeGuideCategoriesHandler: GetAvailableSizeGuideCategoriesHandler,
+    private readonly validateSizeGuideUniquenessHandler: ValidateSizeGuideUniquenessHandler,
   ) {}
 
   async getSizeGuides(
-    request: AuthenticatedRequest<{ Querystring: SizeGuideQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        region?: Region;
+        category?: string;
+        hasContent?: boolean;
+        sortBy?: "title" | "region" | "category";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        region,
-        category,
-        hasContent,
-        sortBy = "title",
-        sortOrder = "desc",
-      } = request.query;
-
-      const serviceOptions: SizeGuideQueryOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-        hasContent,
-      };
-
-      const pageOptions = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-      };
-
-      let guides;
-
-      if (region && category) {
-        guides = [
-          await this.sizeGuideManagementService.getSizeGuideByRegionAndCategory(
-            region,
-            category,
-          ),
-        ].filter(Boolean);
-      } else if (region) {
-        guides = await this.sizeGuideManagementService.getSizeGuidesByRegion(
-          region,
-          serviceOptions,
-        );
-      } else if (category) {
-        guides = await this.sizeGuideManagementService.getSizeGuidesByCategory(
-          category,
-          serviceOptions,
-        );
-      } else if (hasContent !== undefined) {
-        guides = hasContent
-          ? await this.sizeGuideManagementService.getSizeGuidesWithContent(
-              serviceOptions,
-            )
-          : await this.sizeGuideManagementService.getSizeGuidesWithoutContent(
-              serviceOptions,
-            );
-      } else {
-        guides =
-          await this.sizeGuideManagementService.getAllSizeGuides(
-            serviceOptions,
-          );
-      }
-
-      const serializedGuides = Array.isArray(guides) ? guides.filter(Boolean) : guides;
-
-      return ResponseHelper.ok(reply, "Size guides retrieved successfully", {
-        sizeGuides: serializedGuides,
-        pagination: {
-          page: pageOptions.page,
-          limit: pageOptions.limit,
-          total: serializedGuides.length,
-          total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
-        },
-      });
-    } catch (error) {
+      const result = await this.listSizeGuidesHandler.handle(request.query);
+      return ResponseHelper.ok(reply, "Size guides retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -142,45 +70,23 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const guide = await this.sizeGuideManagementService.getSizeGuideById(id);
-
-      return ResponseHelper.ok(
-        reply,
-        "Size guide retrieved successfully",
-        guide,
-      );
-    } catch (error) {
+      const guide = await this.getSizeGuideHandler.handle({ id: request.params.id });
+      return ResponseHelper.ok(reply, "Size guide retrieved successfully", guide);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createSizeGuide(
-    request: AuthenticatedRequest<{ Body: CreateSizeGuideRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { title: string; bodyHtml?: string; region: Region; category?: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const guideData = request.body;
-
-      const guide = await this.sizeGuideManagementService.createSizeGuide(guideData);
-
-      return ResponseHelper.created(
-        reply,
-        "Size guide created successfully",
-        guide,
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
-        });
-      }
-
+      const result = await this.createSizeGuideHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Size guide created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -188,31 +94,14 @@ export class SizeGuideController {
   async updateSizeGuide(
     request: AuthenticatedRequest<{
       Params: { id: string };
-      Body: UpdateSizeGuideRequest;
+      Body: { title?: string; bodyHtml?: string; region?: Region; category?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const updateData = request.body;
-
-      const guide = await this.sizeGuideManagementService.updateSizeGuide(
-        id,
-        updateData,
-      );
-
-      return ResponseHelper.ok(reply, "Size guide updated successfully", guide);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
-        });
-      }
-
+      const result = await this.updateSizeGuideHandler.handle({ id: request.params.id, ...request.body });
+      return ResponseHelper.fromCommand(reply, result, "Size guide updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -222,12 +111,9 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      await this.sizeGuideManagementService.deleteSizeGuide(id);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.deleteSizeGuideHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Size guide deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -235,70 +121,24 @@ export class SizeGuideController {
   async getRegionalSizeGuides(
     request: AuthenticatedRequest<{
       Params: { region: string };
-      Querystring: Omit<SizeGuideQueryParams, "region">;
+      Querystring: {
+        page?: number;
+        limit?: number;
+        category?: string;
+        hasContent?: boolean;
+        sortBy?: "title" | "region" | "category";
+        sortOrder?: "asc" | "desc";
+      };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { region } = request.params;
-      const {
-        page = 1,
-        limit = 20,
-        category,
-        hasContent,
-        sortBy = "title",
-        sortOrder = "desc",
-      } = request.query;
-
-      const serviceOptions: SizeGuideQueryOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-        hasContent,
-      };
-
-      const pageOptions = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-      };
-
-      let guides;
-      if (category) {
-        const guide =
-          await this.sizeGuideManagementService.getSizeGuideByRegionAndCategory(
-            region as Region,
-            category,
-          );
-        guides = guide ? [guide] : [];
-      } else {
-        guides = await this.sizeGuideManagementService.getSizeGuidesByRegion(
-          region as Region,
-          serviceOptions,
-        );
-      }
-
-      const serializedGuides = Array.isArray(guides) ? guides.filter(Boolean) : [];
-
-      return ResponseHelper.ok(
-        reply,
-        "Regional size guides retrieved successfully",
-        {
-          sizeGuides: serializedGuides,
-          pagination: {
-            page: pageOptions.page,
-            limit: pageOptions.limit,
-            total: serializedGuides.length,
-            total_pages: Math.ceil(serializedGuides.length / pageOptions.limit),
-          },
-          meta: {
-            region,
-            page: pageOptions.page,
-            limit: pageOptions.limit,
-          },
-        },
-      );
-    } catch (error) {
+      const result = await this.getRegionalSizeGuidesHandler.handle({
+        region: request.params.region as Region,
+        ...request.query,
+      });
+      return ResponseHelper.ok(reply, "Regional size guides retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -306,36 +146,17 @@ export class SizeGuideController {
   async createRegionalSizeGuide(
     request: AuthenticatedRequest<{
       Params: { region: string };
-      Body: RegionalSizeGuideRequest;
+      Body: { title: string; bodyHtml?: string; category?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { region } = request.params;
-      const guideData = request.body;
-
-      const guide =
-        await this.sizeGuideManagementService.createRegionalSizeGuide(
-          region as Region,
-          guideData,
-        );
-
-      return ResponseHelper.created(
-        reply,
-        "Regional size guide created successfully",
-        guide,
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
-        });
-      }
-
+      const result = await this.createRegionalSizeGuideHandler.handle({
+        region: request.params.region as Region,
+        ...request.body,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Regional size guide created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -345,24 +166,9 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { region } = request.params;
-
-      const guides = await this.sizeGuideManagementService.getGeneralSizeGuides(
-        region as Region,
-      );
-
-      return ResponseHelper.ok(
-        reply,
-        "General size guides retrieved successfully",
-        {
-          guides,
-          meta: {
-            region,
-            count: guides.length,
-          },
-        },
-      );
-    } catch (error) {
+      const result = await this.getGeneralSizeGuidesHandler.handle({ region: request.params.region as Region });
+      return ResponseHelper.ok(reply, "General size guides retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -370,37 +176,18 @@ export class SizeGuideController {
   async createCategorySizeGuide(
     request: AuthenticatedRequest<{
       Params: { category: string; region: string };
-      Body: CategorySizeGuideRequest;
+      Body: { title: string; bodyHtml?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { category, region } = request.params;
-      const guideData = request.body;
-
-      const guide =
-        await this.sizeGuideManagementService.createCategorySizeGuide(
-          decodeURIComponent(category),
-          region as Region,
-          guideData,
-        );
-
-      return ResponseHelper.created(
-        reply,
-        "Category size guide created successfully",
-        guide,
-      );
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message:
-            "Size guide already exists for this region and category combination",
-        });
-      }
-
+      const result = await this.createCategorySizeGuideHandler.handle({
+        category: request.params.category,
+        region: request.params.region as Region,
+        ...request.body,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Category size guide created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -413,21 +200,12 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const { htmlContent } = request.body;
-
-      const guide =
-        await this.sizeGuideManagementService.updateSizeGuideContent(
-          id,
-          htmlContent,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Size guide content updated successfully",
-        guide,
-      );
-    } catch (error) {
+      const result = await this.updateSizeGuideContentHandler.handle({
+        id: request.params.id,
+        htmlContent: request.body.htmlContent,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Size guide content updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -437,40 +215,27 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      await this.sizeGuideManagementService.clearSizeGuideContent(id);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.clearSizeGuideContentHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Size guide content cleared successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getSizeGuideStats(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getSizeGuideStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const stats = await this.sizeGuideManagementService.getSizeGuideStats();
-      return ResponseHelper.ok(
-        reply,
-        "Size guide statistics retrieved successfully",
-        stats,
-      );
-    } catch (error) {
+      const stats = await this.getSizeGuideStatsHandler.handle({});
+      return ResponseHelper.ok(reply, "Size guide statistics retrieved successfully", stats);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getAvailableRegions(request: AuthenticatedRequest, reply: FastifyReply) {
+  async getAvailableRegions(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const regions =
-        await this.sizeGuideManagementService.getAvailableRegions();
-
-      return ResponseHelper.ok(
-        reply,
-        "Available regions retrieved successfully",
-        regions,
-      );
-    } catch (error) {
+      const regions = await this.getAvailableSizeGuideRegionsHandler.handle({});
+      return ResponseHelper.ok(reply, "Available regions retrieved successfully", regions);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -480,85 +245,54 @@ export class SizeGuideController {
     reply: FastifyReply,
   ) {
     try {
-      const { region } = request.query;
-
-      const categories =
-        await this.sizeGuideManagementService.getAvailableCategories(
-          region as Region,
-        );
-
-      return ResponseHelper.ok(
-        reply,
-        "Available categories retrieved successfully",
-        {
-          categories,
-          meta: {
-            region: region || "all",
-          },
-        },
-      );
-    } catch (error) {
+      const result = await this.getAvailableSizeGuideCategoriesHandler.handle({
+        region: request.query.region as Region | undefined,
+      });
+      return ResponseHelper.ok(reply, "Available categories retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createBulkSizeGuides(
-    request: AuthenticatedRequest<{ Body: BulkCreateSizeGuidesRequest }>,
+    request: AuthenticatedRequest<{
+      Body: { guides: Array<{ title: string; bodyHtml?: string; region: Region; category?: string }> };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { guides } = request.body;
-
-      const result =
-        await this.sizeGuideManagementService.createMultipleSizeGuides(guides);
-
-      return ResponseHelper.created(
-        reply,
-        `${result.created.length} size guides created successfully${result.skipped.length > 0 ? `, ${result.skipped.length} skipped` : ""}`,
-        result,
-      );
-    } catch (error) {
+      const result = await this.createBulkSizeGuidesHandler.handle({ guides: request.body.guides });
+      return ResponseHelper.fromCommand(reply, result, "Size guides created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteBulkSizeGuides(
-    request: AuthenticatedRequest<{ Body: BulkDeleteSizeGuidesRequest }>,
+    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { ids } = request.body;
-
-      await this.sizeGuideManagementService.deleteMultipleSizeGuides(ids);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.deleteBulkSizeGuidesHandler.handle({ ids: request.body.ids });
+      return ResponseHelper.fromCommand(reply, result, "Size guides deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async validateUniqueness(
     request: AuthenticatedRequest<{
-      Querystring: ValidateSizeGuideQueryParams;
+      Querystring: { region: string; category?: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { region, category } = request.query;
-
-      const isUnique =
-        await this.sizeGuideManagementService.validateSizeGuideUniqueness(
-          region as Region,
-          category || null,
-        );
-
-      return ResponseHelper.ok(reply, "Size guide uniqueness validated", {
-        region,
-        category: category || null,
-        isUnique,
-        available: isUnique,
+      const result = await this.validateSizeGuideUniquenessHandler.handle({
+        region: request.query.region as Region,
+        category: request.query.category,
       });
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Size guide uniqueness validated", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

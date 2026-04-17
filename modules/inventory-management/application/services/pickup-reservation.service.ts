@@ -1,17 +1,22 @@
 import { PickupReservation, PickupReservationDTO } from "../../domain/entities/pickup-reservation.entity";
+import { Stock } from "../../domain/entities/stock.entity";
+import { InventoryTransaction } from "../../domain/entities/inventory-transaction.entity";
 import { ReservationId } from "../../domain/value-objects/reservation-id.vo";
 import { IPickupReservationRepository } from "../../domain/repositories/pickup-reservation.repository";
-import { StockManagementService } from "./stock-management.service";
+import { IStockRepository } from "../../domain/repositories/stock.repository";
+import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
 import {
   DomainValidationError,
   PickupReservationNotFoundError,
   InvalidOperationError,
+  StockNotFoundError,
 } from "../../domain/errors/inventory-management.errors";
 
 export class PickupReservationService {
   constructor(
     private readonly pickupReservationRepository: IPickupReservationRepository,
-    private readonly stockManagementService: StockManagementService,
+    private readonly stockRepository: IStockRepository,
+    private readonly transactionRepository: IInventoryTransactionRepository,
   ) {}
 
   async createPickupReservation(
@@ -25,10 +30,15 @@ export class PickupReservationService {
       throw new DomainValidationError("Reservation quantity must be greater than zero");
     }
 
+    const stock = await this.stockRepository.findByVariantAndLocation(variantId, locationId);
+    if (!stock) {
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
+    }
+    stock.reserveStock(qty);
+    await this.stockRepository.save(stock);
+
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + expirationMinutes);
-
-    await this.stockManagementService.reserveStock(variantId, locationId, qty);
 
     const reservation = PickupReservation.create({ orderId, variantId, locationId, qty, expiresAt });
 
@@ -123,11 +133,23 @@ export class PickupReservationService {
       throw new InvalidOperationError("Can only fulfill active reservations");
     }
 
-    await this.stockManagementService.fulfillReservation(
+    const stock = await this.stockRepository.findByVariantAndLocation(
       reservation.variantId,
       reservation.locationId,
-      reservation.qty,
     );
+    if (!stock) {
+      throw new StockNotFoundError(`${reservation.variantId} at ${reservation.locationId}`);
+    }
+    stock.fulfillReservation(reservation.qty);
+    await this.stockRepository.save(stock);
+
+    const transaction = InventoryTransaction.create({
+      variantId: reservation.variantId,
+      locationId: reservation.locationId,
+      qtyDelta: -reservation.qty,
+      reason: "order",
+    });
+    await this.transactionRepository.save(transaction);
 
     reservation.fulfill();
     await this.pickupReservationRepository.save(reservation);

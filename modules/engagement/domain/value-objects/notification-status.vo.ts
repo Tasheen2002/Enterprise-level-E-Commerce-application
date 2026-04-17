@@ -1,42 +1,41 @@
+import { DomainValidationError } from "../errors/engagement.errors";
+import { NotificationStatusEnum } from "../enums/engagement.enums";
+
 export class NotificationStatus {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: NotificationStatusEnum) {}
 
-  static pending(): NotificationStatus {
-    return new NotificationStatus("pending");
-  }
-
-  static scheduled(): NotificationStatus {
-    return new NotificationStatus("scheduled");
-  }
-
-  static sending(): NotificationStatus {
-    return new NotificationStatus("sending");
-  }
-
-  static sent(): NotificationStatus {
-    return new NotificationStatus("sent");
-  }
-
-  static failed(): NotificationStatus {
-    return new NotificationStatus("failed");
+  static create(value: string): NotificationStatus {
+    return NotificationStatus.fromString(value);
   }
 
   static fromString(value: string): NotificationStatus {
     const normalized = value.toLowerCase().trim();
-    switch (normalized) {
-      case "pending":
-        return NotificationStatus.pending();
-      case "scheduled":
-        return NotificationStatus.scheduled();
-      case "sending":
-        return NotificationStatus.sending();
-      case "sent":
-        return NotificationStatus.sent();
-      case "failed":
-        return NotificationStatus.failed();
-      default:
-        throw new Error(`Invalid notification status: ${value}`);
+
+    if (!Object.values(NotificationStatusEnum).includes(normalized as NotificationStatusEnum)) {
+      throw new DomainValidationError(`Invalid notification status: ${value}`);
     }
+
+    return new NotificationStatus(normalized as NotificationStatusEnum);
+  }
+
+  static pending(): NotificationStatus {
+    return new NotificationStatus(NotificationStatusEnum.PENDING);
+  }
+
+  static scheduled(): NotificationStatus {
+    return new NotificationStatus(NotificationStatusEnum.SCHEDULED);
+  }
+
+  static sending(): NotificationStatus {
+    return new NotificationStatus(NotificationStatusEnum.SENDING);
+  }
+
+  static sent(): NotificationStatus {
+    return new NotificationStatus(NotificationStatusEnum.SENT);
+  }
+
+  static failed(): NotificationStatus {
+    return new NotificationStatus(NotificationStatusEnum.FAILED);
   }
 
   getValue(): string {
@@ -44,23 +43,23 @@ export class NotificationStatus {
   }
 
   isPending(): boolean {
-    return this.value === "pending";
+    return this.value === NotificationStatusEnum.PENDING;
   }
 
   isScheduled(): boolean {
-    return this.value === "scheduled";
+    return this.value === NotificationStatusEnum.SCHEDULED;
   }
 
   isSending(): boolean {
-    return this.value === "sending";
+    return this.value === NotificationStatusEnum.SENDING;
   }
 
   isSent(): boolean {
-    return this.value === "sent";
+    return this.value === NotificationStatusEnum.SENT;
   }
 
   isFailed(): boolean {
-    return this.value === "failed";
+    return this.value === NotificationStatusEnum.FAILED;
   }
 
   equals(other: NotificationStatus): boolean {

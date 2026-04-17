@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   SetOrderAddressesCommand,
@@ -7,9 +8,8 @@ import {
   UpdateBillingAddressCommandHandler,
   UpdateShippingAddressCommand,
   UpdateShippingAddressCommandHandler,
-  GetOrderAddressesQuery,
-  GetOrderAddressesHandler,
-  OrderManagementService,
+  GetOrderAddressQuery,
+  GetOrderAddressHandler,
 } from "../../../application";
 
 export interface AddressData {
@@ -48,118 +48,71 @@ export interface GetAddressesRequest {
 }
 
 export class OrderAddressController {
-  private setAddressesHandler: SetOrderAddressesCommandHandler;
-  private updateBillingAddressHandler: UpdateBillingAddressCommandHandler;
-  private updateShippingAddressHandler: UpdateShippingAddressCommandHandler;
-  private getAddressesHandler: GetOrderAddressesHandler;
-
-  constructor(orderManagementService: OrderManagementService) {
-    this.setAddressesHandler = new SetOrderAddressesCommandHandler(
-      orderManagementService,
-    );
-    this.updateBillingAddressHandler = new UpdateBillingAddressCommandHandler(
-      orderManagementService,
-    );
-    this.updateShippingAddressHandler = new UpdateShippingAddressCommandHandler(
-      orderManagementService,
-    );
-    this.getAddressesHandler = new GetOrderAddressesHandler(
-      orderManagementService,
-    );
-  }
+  constructor(
+    private readonly setAddressesHandler: SetOrderAddressesCommandHandler,
+    private readonly updateBillingAddressHandler: UpdateBillingAddressCommandHandler,
+    private readonly updateShippingAddressHandler: UpdateShippingAddressCommandHandler,
+    private readonly getAddressesHandler: GetOrderAddressHandler,
+  ) {}
 
   async setAddresses(
-    request: FastifyRequest<SetAddressesRequest>,
+    request: AuthenticatedRequest<SetAddressesRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-      const { billingAddress, shippingAddress } = request.body;
-
       const command: SetOrderAddressesCommand = {
-        orderId,
-        billingAddress,
-        shippingAddress,
+        orderId: request.params.orderId,
+        billingAddress: request.body.billingAddress,
+        shippingAddress: request.body.shippingAddress,
       };
-
       const result = await this.setAddressesHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Order addresses set successfully",
-        201,
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Order addresses set successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getAddresses(
-    request: FastifyRequest<GetAddressesRequest>,
+    request: AuthenticatedRequest<GetAddressesRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-
-      const query: GetOrderAddressesQuery = { orderId };
+      const query: GetOrderAddressQuery = { orderId: request.params.orderId };
       const result = await this.getAddressesHandler.handle(query);
-
-      return ResponseHelper.fromQuery(
-        reply,
-        result,
-        "Order addresses retrieved successfully",
-        "Order addresses not found",
-      );
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Order addresses retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateBillingAddress(
-    request: FastifyRequest<UpdateBillingAddressRequest>,
+    request: AuthenticatedRequest<UpdateBillingAddressRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-
       const command: UpdateBillingAddressCommand = {
-        orderId,
+        orderId: request.params.orderId,
         billingAddress: request.body,
       };
-
       const result = await this.updateBillingAddressHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Billing address updated successfully",
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Billing address updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateShippingAddress(
-    request: FastifyRequest<UpdateShippingAddressRequest>,
+    request: AuthenticatedRequest<UpdateShippingAddressRequest>,
     reply: FastifyReply,
   ): Promise<void> {
     try {
-      const { orderId } = request.params;
-
       const command: UpdateShippingAddressCommand = {
-        orderId,
+        orderId: request.params.orderId,
         shippingAddress: request.body,
       };
-
       const result = await this.updateShippingAddressHandler.handle(command);
-
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Shipping address updated successfully",
-      );
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Shipping address updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

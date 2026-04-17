@@ -1,68 +1,85 @@
 import { PrismaClient } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IReminderRepository,
   ReminderQueryOptions,
-  ReminderFilterOptions,
-} from "../../../domain/repositories/reminder.repository.js";
-import { Reminder } from "../../../domain/entities/reminder.entity.js";
+  ReminderFilters,
+} from "../../../domain/repositories/reminder.repository";
+import { Reminder } from "../../../domain/entities/reminder.entity";
 import {
   ReminderId,
   ReminderType,
+  ContactType,
+  ChannelType,
   ReminderStatus,
-} from "../../../domain/value-objects/index.js";
+} from "../../../domain/value-objects";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-export class ReminderRepositoryImpl implements IReminderRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+// ============================================================================
+// Database Row Interface
+// ============================================================================
+interface ReminderDatabaseRow {
+  id: string;
+  type: string;
+  variantId: string;
+  userId: string | null;
+  contact: string;
+  channel: string;
+  optInAt: Date | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-  private hydrate(record: any): Reminder {
-    return Reminder.fromDatabaseRow({
-      reminder_id: record.id,
-      type: record.type,
-      variant_id: record.variantId,
-      user_id: record.userId,
-      contact: record.contact,
-      channel: record.channel,
-      opt_in_at: record.optInAt,
-      status: record.status,
+// ============================================================================
+// Repository Implementation
+// ============================================================================
+export class ReminderRepositoryImpl
+  extends PrismaRepository<Reminder>
+  implements IReminderRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
+
+  private toEntity(row: ReminderDatabaseRow): Reminder {
+    return Reminder.fromPersistence({
+      id: ReminderId.fromString(row.id),
+      type: ReminderType.fromString(row.type),
+      variantId: row.variantId,
+      userId: row.userId || undefined,
+      contact: ContactType.fromString(row.contact),
+      channel: ChannelType.fromString(row.channel),
+      optInAt: row.optInAt || undefined,
+      status: ReminderStatus.fromString(row.status),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
-  }
-
-  private dehydrate(reminder: Reminder): any {
-    const row = reminder.toDatabaseRow();
-    return {
-      id: row.reminder_id,
-      type: row.type,
-      variantId: row.variant_id,
-      userId: row.user_id,
-      contact: row.contact,
-      channel: row.channel,
-      optInAt: row.opt_in_at,
-      status: row.status,
-    };
-  }
-
-  private buildOrderBy(options?: ReminderQueryOptions): any {
-    if (!options?.sortBy) {
-      return { optInAt: "desc" };
-    }
-
-    return {
-      [options.sortBy]: options.sortOrder || "asc",
-    };
   }
 
   async save(reminder: Reminder): Promise<void> {
-    const data = this.dehydrate(reminder);
-    await this.prisma.reminder.create({ data });
-  }
-
-  async update(reminder: Reminder): Promise<void> {
-    const data = this.dehydrate(reminder);
-    const { id, ...updateData } = data;
-    await this.prisma.reminder.update({
-      where: { id },
-      data: updateData,
+    await this.prisma.reminder.upsert({
+      where: { id: reminder.id.getValue() },
+      create: {
+        id: reminder.id.getValue(),
+        type: reminder.type.getValue() as any,
+        variantId: reminder.variantId,
+        userId: reminder.userId,
+        contact: reminder.contact.getValue() as any,
+        channel: reminder.channel.getValue() as any,
+        optInAt: reminder.optInAt,
+        status: reminder.status.getValue() as any,
+        createdAt: reminder.createdAt,
+        updatedAt: reminder.updatedAt,
+      },
+      update: {
+        status: reminder.status.getValue() as any,
+        optInAt: reminder.optInAt,
+        updatedAt: reminder.updatedAt,
+      },
     });
+    await this.dispatchEvents(reminder);
   }
 
   async delete(reminderId: ReminderId): Promise<void> {
@@ -76,132 +93,239 @@ export class ReminderRepositoryImpl implements IReminderRepository {
       where: { id: reminderId.getValue() },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as ReminderDatabaseRow) : null;
   }
 
   async findByUserId(
     userId: string,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      where: { userId },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { userId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByVariantId(
     variantId: string,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      where: { variantId },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { variantId };
+
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByStatus(
     status: ReminderStatus,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      where: { status: status.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: status.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByType(
     type: ReminderType,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      where: { type: type.getValue() as any },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { type: type.getValue() as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
-  async findAll(options?: ReminderQueryOptions): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+  async findAll(options?: ReminderQueryOptions): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count(),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findWithFilters(
-    filters: ReminderFilterOptions,
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
+    filters: ReminderFilters,
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
+
     const where: any = {};
+    if (filters.userId) where.userId = filters.userId;
+    if (filters.variantId) where.variantId = filters.variantId;
+    if (filters.type) where.type = filters.type.getValue() as any;
+    if (filters.status) where.status = filters.status.getValue() as any;
 
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
 
-    if (filters.variantId) {
-      where.variantId = filters.variantId;
-    }
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
-
-    const records = await this.prisma.reminder.findMany({
-      where,
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
-
-    return records.map((record) => this.hydrate(record));
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findPendingReminders(
-    options?: ReminderQueryOptions
-  ): Promise<Reminder[]> {
-    const records = await this.prisma.reminder.findMany({
-      where: { status: "pending" },
-      orderBy: this.buildOrderBy(options),
-      skip: options?.offset,
-      take: options?.limit,
-    });
+    options?: ReminderQueryOptions,
+  ): Promise<PaginatedResult<Reminder>> {
+    const {
+      limit = 50,
+      offset = 0,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = options || {};
 
-    return records.map((record) => this.hydrate(record));
+    const where = { status: "pending" as any };
+
+    const [records, total] = await Promise.all([
+      this.prisma.reminder.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [sortBy]: sortOrder as any },
+      }),
+      this.prisma.reminder.count({ where }),
+    ]);
+
+    return {
+      items: records.map((record) => this.toEntity(record as ReminderDatabaseRow)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + records.length < total,
+    };
   }
 
   async findByUserIdAndVariantId(
     userId: string,
-    variantId: string
+    variantId: string,
   ): Promise<Reminder | null> {
     const record = await this.prisma.reminder.findFirst({
-      where: {
-        userId,
-        variantId,
-      },
+      where: { userId, variantId },
     });
 
-    return record ? this.hydrate(record) : null;
+    return record ? this.toEntity(record as ReminderDatabaseRow) : null;
   }
 
   async countByStatus(status: ReminderStatus): Promise<number> {
@@ -228,28 +352,12 @@ export class ReminderRepositoryImpl implements IReminderRepository {
     });
   }
 
-  async count(filters?: ReminderFilterOptions): Promise<number> {
-    if (!filters) {
-      return await this.prisma.reminder.count();
-    }
-
+  async count(filters?: ReminderFilters): Promise<number> {
     const where: any = {};
-
-    if (filters.userId) {
-      where.userId = filters.userId;
-    }
-
-    if (filters.variantId) {
-      where.variantId = filters.variantId;
-    }
-
-    if (filters.type) {
-      where.type = filters.type.getValue() as any;
-    }
-
-    if (filters.status) {
-      where.status = filters.status.getValue() as any;
-    }
+    if (filters?.userId) where.userId = filters.userId;
+    if (filters?.variantId) where.variantId = filters.variantId;
+    if (filters?.type) where.type = filters.type.getValue() as any;
+    if (filters?.status) where.status = filters.status.getValue() as any;
 
     return await this.prisma.reminder.count({ where });
   }
@@ -264,13 +372,10 @@ export class ReminderRepositoryImpl implements IReminderRepository {
 
   async existsByUserIdAndVariantId(
     userId: string,
-    variantId: string
+    variantId: string,
   ): Promise<boolean> {
     const count = await this.prisma.reminder.count({
-      where: {
-        userId,
-        variantId,
-      },
+      where: { userId, variantId },
     });
 
     return count > 0;

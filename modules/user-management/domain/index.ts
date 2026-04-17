@@ -10,8 +10,6 @@ export type {
   AddressData as AddressVOData,
   FormattedAddress,
 } from "./value-objects/address.vo";
-export type { PasswordPolicy } from "./value-objects/password.vo";
-export { DEFAULT_PASSWORD_POLICY } from "./value-objects/password.vo";
 export * from "./repositories";
 export * from "./errors";
 export * from "./constants";

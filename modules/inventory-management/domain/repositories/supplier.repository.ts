@@ -6,10 +6,12 @@ export interface ISupplierRepository {
   findById(supplierId: SupplierId): Promise<Supplier | null>;
   delete(supplierId: SupplierId): Promise<void>;
   findByName(name: string): Promise<Supplier | null>;
-  findAll(options?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<{ suppliers: Supplier[]; total: number }>;
+  findAll(options?: SupplierQueryOptions): Promise<{ suppliers: Supplier[]; total: number }>;
   exists(supplierId: SupplierId): Promise<boolean>;
   existsByName(name: string): Promise<boolean>;
+}
+
+export interface SupplierQueryOptions {
+  limit?: number;
+  offset?: number;
 }

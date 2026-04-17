@@ -1,17 +1,24 @@
-import { DomainValidationError } from '../errors/user-management.errors';
+import {
+  EmptyFieldError,
+  InvalidFormatError,
+} from '../../../../packages/core/src/domain/domain-error';
 
 export class Email {
   private constructor(private readonly value: string) {}
 
   static create(email: string): Email {
-    if (!email) throw new DomainValidationError('Email is required');
+    if (!email || !email.trim()) throw new EmptyFieldError('Email');
 
     const trimmed = email.trim().toLowerCase();
 
-    if (!Email.isValidEmail(trimmed)) throw new DomainValidationError('Invalid email format');
-    if (trimmed.length > 254) throw new DomainValidationError('Email is too long (maximum 254 characters)');
+    if (!Email.isValidEmail(trimmed)) throw new InvalidFormatError('email', 'valid email address');
+    if (trimmed.length > 254) throw new InvalidFormatError('email', 'maximum 254 characters');
 
     return new Email(trimmed);
+  }
+
+  static fromString(value: string): Email {
+    return new Email(value);
   }
 
   private static isValidEmail(email: string): boolean {

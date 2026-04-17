@@ -14,11 +14,20 @@ export interface ProductMediaProps {
   updatedAt: Date;
 }
 
-export class ProductMedia {
-  private props: ProductMediaProps;
+export interface ProductMediaDTO {
+  id: string;
+  productId: string;
+  mediaAssetId: string;
+  displayOrder: number;
+  isPrimary: boolean;
+  alt: string | null;
+  caption: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  private constructor(props: ProductMediaProps) {
-    this.props = props;
+export class ProductMedia {
+  private constructor(private props: ProductMediaProps) {
   }
 
   static create(params: {
@@ -139,16 +148,4 @@ export class ProductMedia {
       updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface ProductMediaDTO {
-  id: string;
-  productId: string;
-  mediaAssetId: string;
-  displayOrder: number;
-  isPrimary: boolean;
-  alt: string | null;
-  caption: string | null;
-  createdAt: string;
-  updatedAt: string;
 }

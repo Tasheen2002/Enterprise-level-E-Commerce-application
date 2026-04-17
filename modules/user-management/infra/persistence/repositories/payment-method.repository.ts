@@ -135,32 +135,6 @@ export class PaymentMethodRepository
     return this.toDomain(paymentMethodData);
   }
 
-  async setAsDefault(paymentMethodId: PaymentMethodId, userId: UserId): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      // First, remove default flag from all payment methods for this user
-      await tx.paymentMethod.updateMany({
-        where: { userId: userId.getValue() },
-        data: { isDefault: false },
-      });
-
-      // Then set the specified payment method as default
-      await tx.paymentMethod.update({
-        where: { id: paymentMethodId.getValue() },
-        data: { isDefault: true },
-      });
-    });
-  }
-
-  async removeDefault(userId: UserId): Promise<void> {
-    await this.prisma.paymentMethod.updateMany({
-      where: {
-        userId: userId.getValue(),
-        isDefault: true,
-      },
-      data: { isDefault: false },
-    });
-  }
-
   async countByUserId(userId: UserId): Promise<number> {
     return await this.prisma.paymentMethod.count({
       where: { userId: userId.getValue() },

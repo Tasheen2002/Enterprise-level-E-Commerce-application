@@ -22,7 +22,6 @@ export interface OrderFilterOptions {
 export interface IOrderRepository {
   // Basic CRUD
   save(order: Order): Promise<void>;
-  update(order: Order): Promise<void>;
   delete(orderId: OrderId): Promise<void>;
 
   // Finders

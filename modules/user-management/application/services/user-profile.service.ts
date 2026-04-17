@@ -14,7 +14,7 @@ import {
   InvalidOperationError,
 } from '../../domain/errors/user-management.errors';
 
-export interface UpdateUserProfileParams {
+interface UpdateUserProfileParams {
   defaultAddressId?: string;
   defaultPaymentMethodId?: string;
   prefs?: Record<string, any>;
@@ -31,7 +31,7 @@ export interface UpdateUserProfileParams {
   nationality?: string;
 }
 
-export interface UserProfileWithDetails {
+interface UserProfileWithDetails {
   profile: UserProfileDTO;
   defaultAddress?: {
     id: string;
@@ -78,7 +78,7 @@ export class UserProfileService {
         AddressId.fromString(profileDTO.defaultAddressId),
       );
       if (address) {
-        const data = address.addressValue.toData();
+        const data = address.addressValue.getValue();
         result.defaultAddress = {
           id: address.id.getValue(),
           type: address.type.toString(),

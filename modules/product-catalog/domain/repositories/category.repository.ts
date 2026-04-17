@@ -16,7 +16,6 @@ export interface ICategoryRepository {
   findAncestors(categoryId: CategoryId): Promise<Category[]>;
   findDescendants(categoryId: CategoryId): Promise<Category[]>;
   findSiblings(categoryId: CategoryId): Promise<Category[]>;
-  update(category: Category): Promise<void>;
   delete(id: CategoryId): Promise<void>;
   exists(id: CategoryId): Promise<boolean>;
   existsBySlug(slug: Slug): Promise<boolean>;

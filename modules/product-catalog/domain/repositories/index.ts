@@ -42,6 +42,7 @@ export {
 } from "./editorial-look.repository";
 
 // Association repository interfaces
+export { IProductTagAssociationRepository } from "./iproduct-tag-association.repository";
 export {
   IProductMediaRepository,
   ProductMediaQueryOptions,

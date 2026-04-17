@@ -23,11 +23,18 @@ export interface PurchaseOrderItemDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PurchaseOrderItem {
-  private props: PurchaseOrderItemProps;
+  private constructor(private props: PurchaseOrderItemProps) {}
 
-  private constructor(props: PurchaseOrderItemProps) {
-    this.props = props;
-    this.validate();
+  private static validateQtys(orderedQty: number, receivedQty: number): void {
+    if (orderedQty <= 0) {
+      throw new DomainValidationError("Ordered quantity must be greater than zero");
+    }
+    if (receivedQty < 0) {
+      throw new DomainValidationError("Received quantity cannot be negative");
+    }
+    if (receivedQty > orderedQty) {
+      throw new DomainValidationError("Received quantity cannot exceed ordered quantity");
+    }
   }
 
   static create(params: {
@@ -36,28 +43,18 @@ export class PurchaseOrderItem {
     orderedQty: number;
     receivedQty?: number;
   }): PurchaseOrderItem {
+    const receivedQty = params.receivedQty ?? 0;
+    PurchaseOrderItem.validateQtys(params.orderedQty, receivedQty);
     return new PurchaseOrderItem({
       poId: params.poId,
       variantId: params.variantId,
       orderedQty: params.orderedQty,
-      receivedQty: params.receivedQty ?? 0,
+      receivedQty,
     });
   }
 
   static fromPersistence(props: PurchaseOrderItemProps): PurchaseOrderItem {
     return new PurchaseOrderItem(props);
-  }
-
-  private validate(): void {
-    if (this.props.orderedQty <= 0) {
-      throw new DomainValidationError("Ordered quantity must be greater than zero");
-    }
-    if (this.props.receivedQty < 0) {
-      throw new DomainValidationError("Received quantity cannot be negative");
-    }
-    if (this.props.receivedQty > this.props.orderedQty) {
-      throw new DomainValidationError("Received quantity cannot exceed ordered quantity");
-    }
   }
 
   // ── Getters ────────────────────────────────────────────────────────

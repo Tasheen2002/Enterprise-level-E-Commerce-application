@@ -1,10 +1,13 @@
 import { PurchaseOrder, PurchaseOrderDTO } from "../../domain/entities/purchase-order.entity";
 import { PurchaseOrderItem, PurchaseOrderItemDTO } from "../../domain/entities/purchase-order-item.entity";
+import { Stock } from "../../domain/entities/stock.entity";
+import { InventoryTransaction } from "../../domain/entities/inventory-transaction.entity";
 import { PurchaseOrderId } from "../../domain/value-objects/purchase-order-id.vo";
 import { PurchaseOrderStatus, PurchaseOrderStatusVO } from "../../domain/value-objects/purchase-order-status.vo";
 import { IPurchaseOrderRepository } from "../../domain/repositories/purchase-order.repository";
 import { IPurchaseOrderItemRepository } from "../../domain/repositories/purchase-order-item.repository";
-import { StockManagementService } from "./stock-management.service";
+import { IStockRepository } from "../../domain/repositories/stock.repository";
+import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
 import {
   PurchaseOrderNotFoundError,
   PurchaseOrderNotEditableError,
@@ -17,7 +20,8 @@ export class PurchaseOrderManagementService {
   constructor(
     private readonly purchaseOrderRepository: IPurchaseOrderRepository,
     private readonly purchaseOrderItemRepository: IPurchaseOrderItemRepository,
-    private readonly stockManagementService: StockManagementService,
+    private readonly stockRepository: IStockRepository,
+    private readonly transactionRepository: IInventoryTransactionRepository,
   ) {}
 
   async createPurchaseOrder(
@@ -183,7 +187,21 @@ export class PurchaseOrderManagementService {
       await this.purchaseOrderItemRepository.save(item);
       updatedItems.push(item);
 
-      await this.stockManagementService.addStock(variantId, locationId, receivedQty, "po");
+      let stock = await this.stockRepository.findByVariantAndLocation(variantId, locationId);
+      if (!stock) {
+        stock = Stock.create({ variantId, locationId, onHand: receivedQty, reserved: 0 });
+      } else {
+        stock.addStock(receivedQty);
+      }
+      await this.stockRepository.save(stock);
+
+      const transaction = InventoryTransaction.create({
+        variantId,
+        locationId,
+        qtyDelta: receivedQty,
+        reason: "po",
+      });
+      await this.transactionRepository.save(transaction);
     }
 
     const allItems = await this.purchaseOrderItemRepository.findByPurchaseOrder(

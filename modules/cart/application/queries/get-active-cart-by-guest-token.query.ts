@@ -1,15 +1,14 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { CartManagementService, CartDto } from "../services/cart-management.service";
 
 export interface GetActiveCartByGuestTokenQuery extends IQuery {
-  guestToken: string;
+  readonly guestToken: string;
 }
 
-export class GetActiveCartByGuestTokenHandler implements IQueryHandler<GetActiveCartByGuestTokenQuery, QueryResult<CartDto | null>> {
+export class GetActiveCartByGuestTokenHandler implements IQueryHandler<GetActiveCartByGuestTokenQuery, CartDto | null> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(query: GetActiveCartByGuestTokenQuery): Promise<QueryResult<CartDto | null>> {
-    const cart = await this.cartManagementService.getActiveCartByGuestToken(query.guestToken);
-    return QueryResult.success<CartDto | null>(cart);
+  async handle(query: GetActiveCartByGuestTokenQuery): Promise<CartDto | null> {
+    return this.cartManagementService.getActiveCartByGuestToken(query.guestToken);
   }
 }

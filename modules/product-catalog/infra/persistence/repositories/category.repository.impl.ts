@@ -8,18 +8,20 @@ import { Category } from "../../../domain/entities/category.entity";
 import { CategoryId } from "../../../domain/value-objects/category-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
 
-export class CategoryRepository implements ICategoryRepository {
+export class CategoryRepositoryImpl implements ICategoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(category: Category): Promise<void> {
-    await this.prisma.category.create({
-      data: {
-        id: category.id.getValue(),
-        name: category.name,
-        slug: category.slug.getValue(),
-        parentId: category.parentId?.getValue() ?? null,
-        position: category.position,
-      },
+    const data = {
+      name: category.name,
+      slug: category.slug.getValue(),
+      parentId: category.parentId?.getValue() ?? null,
+      position: category.position,
+    };
+    await this.prisma.category.upsert({
+      where: { id: category.id.getValue() },
+      create: { id: category.id.getValue(), ...data },
+      update: data,
     });
   }
 
@@ -199,17 +201,6 @@ export class CategoryRepository implements ICategoryRepository {
     }
   }
 
-  async update(category: Category): Promise<void> {
-    await this.prisma.category.update({
-      where: { id: category.id.getValue() },
-      data: {
-        name: category.name,
-        slug: category.slug.getValue(),
-        parentId: category.parentId?.getValue() ?? null,
-        position: category.position,
-      },
-    });
-  }
 
   async delete(id: CategoryId): Promise<void> {
     await this.prisma.category.delete({

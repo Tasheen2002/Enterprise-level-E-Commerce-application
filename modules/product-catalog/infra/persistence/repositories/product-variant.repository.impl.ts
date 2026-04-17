@@ -9,47 +9,52 @@ import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { SKU } from "../../../domain/value-objects/sku.vo";
 
-function mapRow(row: any): ProductVariant {
-  return ProductVariant.fromPersistence({
-    id: VariantId.fromString(row.id),
-    productId: ProductId.fromString(row.productId),
-    sku: SKU.fromString(row.sku),
-    size: row.size,
-    color: row.color,
-    barcode: row.barcode,
-    weightG: row.weightG,
-    dims: row.dims as any,
-    taxClass: row.taxClass,
-    allowBackorder: row.allowBackorder,
-    allowPreorder: row.allowPreorder,
-    restockEta: row.restockEta,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  });
-}
-
-export class ProductVariantRepository implements IProductVariantRepository {
+export class ProductVariantRepositoryImpl implements IProductVariantRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  private mapRow(row: any): ProductVariant {
+    return ProductVariant.fromPersistence({
+      id: VariantId.fromString(row.id),
+      productId: ProductId.fromString(row.productId),
+      sku: SKU.fromString(row.sku),
+      size: row.size,
+      color: row.color,
+      barcode: row.barcode,
+      weightG: row.weightG,
+      dims: row.dims as any,
+      taxClass: row.taxClass,
+      allowBackorder: row.allowBackorder,
+      allowPreorder: row.allowPreorder,
+      restockEta: row.restockEta,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  }
+
   async save(variant: ProductVariant): Promise<void> {
-    await this.prisma.productVariant.create({
-      data: {
+    const updateData = {
+      sku: variant.sku.getValue(),
+      size: variant.size,
+      color: variant.color,
+      barcode: variant.barcode,
+      weightG: variant.weightG,
+      dims: variant.dims as any,
+      taxClass: variant.taxClass,
+      allowBackorder: variant.allowBackorder,
+      allowPreorder: variant.allowPreorder,
+      restockEta: variant.restockEta,
+      updatedAt: variant.updatedAt,
+    };
+    await this.prisma.productVariant.upsert({
+      where: { id: variant.id.getValue() },
+      create: {
         id: variant.id.getValue(),
         productId: variant.productId.getValue(),
-        sku: variant.sku.getValue(),
         price: 0,
-        size: variant.size,
-        color: variant.color,
-        barcode: variant.barcode,
-        weightG: variant.weightG,
-        dims: variant.dims as any,
-        taxClass: variant.taxClass,
-        allowBackorder: variant.allowBackorder,
-        allowPreorder: variant.allowPreorder,
-        restockEta: variant.restockEta,
         createdAt: variant.createdAt,
-        updatedAt: variant.updatedAt,
+        ...updateData,
       },
+      update: updateData,
     });
   }
 
@@ -62,7 +67,7 @@ export class ProductVariantRepository implements IProductVariantRepository {
       return null;
     }
 
-    return mapRow(variantData);
+    return this.mapRow(variantData);
   }
 
   async findBySku(sku: SKU): Promise<ProductVariant | null> {
@@ -74,7 +79,7 @@ export class ProductVariantRepository implements IProductVariantRepository {
       return null;
     }
 
-    return mapRow(variantData);
+    return this.mapRow(variantData);
   }
 
   async findByProductId(productId: ProductId): Promise<ProductVariant[]> {
@@ -163,24 +168,6 @@ export class ProductVariantRepository implements IProductVariantRepository {
     return variants.map(mapRow);
   }
 
-  async update(variant: ProductVariant): Promise<void> {
-    await this.prisma.productVariant.update({
-      where: { id: variant.id.getValue() },
-      data: {
-        sku: variant.sku.getValue(),
-        size: variant.size,
-        color: variant.color,
-        barcode: variant.barcode,
-        weightG: variant.weightG,
-        dims: variant.dims as any,
-        taxClass: variant.taxClass,
-        allowBackorder: variant.allowBackorder,
-        allowPreorder: variant.allowPreorder,
-        restockEta: variant.restockEta,
-        updatedAt: variant.updatedAt,
-      },
-    });
-  }
 
   async delete(id: VariantId): Promise<void> {
     await this.prisma.productVariant.delete({

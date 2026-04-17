@@ -15,61 +15,32 @@ export interface ProductSnapshotData {
     width: number;
     height: number;
   };
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 export class ProductSnapshot {
-  private readonly productId: string;
-  private readonly variantId: string;
-  private readonly sku: string;
-  private readonly name: string;
-  private readonly variantName?: string;
-  private readonly price: number;
-  private readonly imageUrl?: string;
-  private readonly images?: Array<{ storageKey: string; url?: string }>;
-  private readonly weight?: number;
-  private readonly dimensions?: {
-    length: number;
-    width: number;
-    height: number;
-  };
-  private readonly attributes?: Record<string, any>;
+  private readonly props: ProductSnapshotData;
 
   private constructor(data: ProductSnapshotData) {
-    this.productId = data.productId;
-    this.variantId = data.variantId;
-    this.sku = data.sku;
-    this.name = data.name;
-    this.variantName = data.variantName;
-    this.price = data.price;
-    this.imageUrl = data.imageUrl;
-    this.images = data.images;
-    this.weight = data.weight;
-    this.dimensions = data.dimensions;
-    this.attributes = data.attributes;
+    this.props = { ...data };
   }
 
   static create(data: ProductSnapshotData): ProductSnapshot {
     if (!data.productId || data.productId.trim().length === 0) {
       throw new DomainValidationError("Product ID is required");
     }
-
     if (!data.variantId || data.variantId.trim().length === 0) {
       throw new DomainValidationError("Variant ID is required");
     }
-
     if (!data.sku || data.sku.trim().length === 0) {
       throw new DomainValidationError("SKU is required");
     }
-
     if (!data.name || data.name.trim().length === 0) {
       throw new DomainValidationError("Product name is required");
     }
-
     if (data.price < 0) {
       throw new DomainValidationError("Price cannot be negative");
     }
-
     if (data.weight !== undefined && data.weight < 0) {
       throw new DomainValidationError("Weight cannot be negative");
     }
@@ -77,85 +48,44 @@ export class ProductSnapshot {
     return new ProductSnapshot(data);
   }
 
-  getProductId(): string {
-    return this.productId;
+  get productId(): string { return this.props.productId; }
+  get variantId(): string { return this.props.variantId; }
+  get sku(): string { return this.props.sku; }
+  get name(): string { return this.props.name; }
+  get variantName(): string | undefined { return this.props.variantName; }
+  get fullName(): string {
+    return this.props.variantName
+      ? `${this.props.name} - ${this.props.variantName}`
+      : this.props.name;
+  }
+  get price(): number { return this.props.price; }
+  get imageUrl(): string | undefined { return this.props.imageUrl; }
+  get images(): Array<{ storageKey: string; url?: string }> | undefined { return this.props.images; }
+  get weight(): number | undefined { return this.props.weight; }
+  get dimensions(): { length: number; width: number; height: number } | undefined { return this.props.dimensions; }
+  get attributes(): Record<string, unknown> | undefined { return this.props.attributes; }
+
+  getValue(): ProductSnapshotData {
+    return { ...this.props };
   }
 
-  getVariantId(): string {
-    return this.variantId;
-  }
-
-  getSku(): string {
-    return this.sku;
-  }
-
-  getName(): string {
-    return this.name;
-  }
-
-  getVariantName(): string | undefined {
-    return this.variantName;
-  }
-
-  getFullName(): string {
-    return this.variantName ? `${this.name} - ${this.variantName}` : this.name;
-  }
-
-  getPrice(): number {
-    return this.price;
-  }
-
-  getImageUrl(): string | undefined {
-    return this.imageUrl;
-  }
-
-  getImages(): Array<{ storageKey: string; url?: string }> | undefined {
-    return this.images;
-  }
-
-  getWeight(): number | undefined {
-    return this.weight;
-  }
-
-  getDimensions():
-    | { length: number; width: number; height: number }
-    | undefined {
-    return this.dimensions;
-  }
-
-  getAttributes(): Record<string, any> | undefined {
-    return this.attributes;
-  }
-
-  toJSON(): ProductSnapshotData {
-    return {
-      productId: this.productId,
-      variantId: this.variantId,
-      sku: this.sku,
-      name: this.name,
-      variantName: this.variantName,
-      price: this.price,
-      imageUrl: this.imageUrl,
-      images: this.images,
-      weight: this.weight,
-      dimensions: this.dimensions,
-      attributes: this.attributes,
-    };
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 
   equals(other: ProductSnapshot): boolean {
     return (
-      this.productId === other.productId &&
-      this.variantId === other.variantId &&
-      this.sku === other.sku &&
-      this.name === other.name &&
-      this.variantName === other.variantName &&
-      this.price === other.price &&
-      this.imageUrl === other.imageUrl &&
-      JSON.stringify(this.images) === JSON.stringify(other.images) &&
-      this.weight === other.weight &&
-      JSON.stringify(this.dimensions) === JSON.stringify(other.dimensions) &&
-      JSON.stringify(this.attributes) === JSON.stringify(other.attributes)
+      this.props.productId === other.props.productId &&
+      this.props.variantId === other.props.variantId &&
+      this.props.sku === other.props.sku &&
+      this.props.name === other.props.name &&
+      this.props.variantName === other.props.variantName &&
+      this.props.price === other.props.price &&
+      this.props.imageUrl === other.props.imageUrl &&
+      JSON.stringify(this.props.images) === JSON.stringify(other.props.images) &&
+      this.props.weight === other.props.weight &&
+      JSON.stringify(this.props.dimensions) === JSON.stringify(other.props.dimensions) &&
+      JSON.stringify(this.props.attributes) === JSON.stringify(other.props.attributes)
     );
   }
 }

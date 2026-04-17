@@ -2,39 +2,23 @@ import { FastifyInstance } from "fastify";
 import { CartController } from "../controllers/cart.controller";
 import { ReservationController } from "../controllers/reservation.controller";
 import { CheckoutController } from "../controllers/checkout.controller";
-import { CartManagementService } from "../../../application/services/cart-management.service";
-import { ReservationService } from "../../../application/services/reservation.service";
-import { CheckoutService } from "../../../application/services/checkout.service";
-import { CheckoutOrderService } from "../../../application/services/checkout-order.service";
-import { registerCartRoutes } from "./cart.routes";
-import { registerCheckoutRoutes } from "./checkout.routes";
-import { registerReservationRoutes } from "./reservation.routes";
-
-export interface CartRouteServices {
-  cartManagementService: CartManagementService;
-  reservationService: ReservationService;
-  checkoutService: CheckoutService;
-  checkoutOrderService: CheckoutOrderService;
-}
+import { cartRoutes } from "./cart.routes";
+import { checkoutRoutes } from "./checkout.routes";
+import { reservationRoutes } from "./reservation.routes";
 
 export async function registerCartModuleRoutes(
   fastify: FastifyInstance,
-  services: CartRouteServices,
+  controllers: {
+    cartController: CartController;
+    reservationController: ReservationController;
+    checkoutController: CheckoutController;
+  },
 ): Promise<void> {
-  const cartController = new CartController(services.cartManagementService);
-  const reservationController = new ReservationController(
-    services.reservationService,
-  );
-  const checkoutController = new CheckoutController(
-    services.checkoutService,
-    services.checkoutOrderService,
-  );
-
   await fastify.register(
     async (instance) => {
-      await registerCartRoutes(instance, cartController);
-      await registerCheckoutRoutes(instance, checkoutController);
-      await registerReservationRoutes(instance, reservationController);
+      await cartRoutes(instance, controllers.cartController);
+      await checkoutRoutes(instance, controllers.checkoutController);
+      await reservationRoutes(instance, controllers.reservationController);
     },
     { prefix: "/api/v1" },
   );

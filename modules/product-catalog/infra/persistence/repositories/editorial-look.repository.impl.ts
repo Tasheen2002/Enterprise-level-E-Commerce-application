@@ -11,30 +11,31 @@ import {
 import { MediaAssetId } from "../../../domain/entities/media-asset.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 
-export class EditorialLookRepository implements IEditorialLookRepository {
+export class EditorialLookRepositoryImpl implements IEditorialLookRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(look: EditorialLook): Promise<void> {
     const lookId = look.id.getValue();
     const productIds = look.productIds.map((id) => id.getValue());
+    const lookData = {
+      title: look.title,
+      storyHtml: look.storyHtml,
+      heroAssetId: look.heroAssetId?.getValue() ?? null,
+      publishedAt: look.publishedAt,
+    };
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.editorialLook.create({
-        data: {
-          id: lookId,
-          title: look.title,
-          storyHtml: look.storyHtml,
-          heroAssetId: look.heroAssetId?.getValue() ?? null,
-          publishedAt: look.publishedAt,
-        },
+      await tx.editorialLook.upsert({
+        where: { id: lookId },
+        create: { id: lookId, ...lookData },
+        update: lookData,
       });
 
+      // Sync product associations
+      await tx.editorialLookProduct.deleteMany({ where: { lookId } });
       if (productIds.length > 0) {
         await tx.editorialLookProduct.createMany({
-          data: productIds.map((productId) => ({
-            lookId,
-            productId: productId,
-          })),
+          data: productIds.map((productId) => ({ lookId, productId })),
         });
       }
     });
@@ -393,37 +394,6 @@ export class EditorialLookRepository implements IEditorialLookRepository {
     });
   }
 
-  async update(look: EditorialLook): Promise<void> {
-    const lookId = look.id.getValue();
-    const productIds = look.productIds.map((id) => id.getValue());
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.editorialLook.update({
-        where: { id: lookId },
-        data: {
-          title: look.title,
-          storyHtml: look.storyHtml,
-          heroAssetId: look.heroAssetId?.getValue() ?? null,
-          publishedAt: look.publishedAt,
-        },
-      });
-
-      // Remove all existing product associations
-      await tx.editorialLookProduct.deleteMany({
-        where: { lookId },
-      });
-
-      // Add new product associations
-      if (productIds.length > 0) {
-        await tx.editorialLookProduct.createMany({
-          data: productIds.map((productId) => ({
-            lookId,
-            productId: productId,
-          })),
-        });
-      }
-    });
-  }
 
   async delete(id: EditorialLookId): Promise<void> {
     await this.prisma.editorialLook.delete({

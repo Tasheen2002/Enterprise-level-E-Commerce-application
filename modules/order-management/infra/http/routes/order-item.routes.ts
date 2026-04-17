@@ -1,154 +1,71 @@
 import { FastifyInstance } from "fastify";
-import {
-  OrderItemController,
-  AddItemRequest,
-  UpdateItemRequest,
-  RemoveItemRequest,
-  GetItemsRequest,
-  GetItemRequest,
-} from "../controllers/order-item.controller";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { OrderItemController } from "../controllers/order-item.controller";
 import { authenticateUser } from "@/api/src/shared/middleware";
-
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Validation failed" },
-      errors: { type: "array", items: { type: "string" } },
-    },
-  },
-  401: {
-    description: "Unauthorized - authentication required",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Authentication required" },
-    },
-  },
-  403: {
-    description: "Forbidden - insufficient permissions",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Insufficient permissions" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Resource not found" },
-    },
-  },
-  500: {
-    description: "Internal server error",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string", example: "Internal server error" },
-    },
-  },
-};
-
-const orderItemSchema = {
-  type: "object",
-  properties: {
-    orderItemId: { type: "string", format: "uuid" },
-    orderId: { type: "string", format: "uuid" },
-    variantId: { type: "string", format: "uuid" },
-    quantity: { type: "integer", minimum: 1 },
-    productSnapshot: {
-      type: "object",
-      properties: {
-        productId: { type: "string", format: "uuid" },
-        variantId: { type: "string", format: "uuid" },
-        sku: { type: "string" },
-        name: { type: "string" },
-        variantName: { type: "string" },
-        price: { type: "number" },
-        imageUrl: { type: "string" },
-        weight: { type: "number" },
-        dimensions: { type: "object" },
-        attributes: { type: "object" },
-      },
-    },
-    isGift: { type: "boolean" },
-    giftMessage: { type: "string", nullable: true },
-    subtotal: { type: "number" },
-  },
-};
+import { validateBody, validateParams } from "../validation/validator";
+import {
+  orderItemsParamsSchema,
+  orderItemParamsSchema,
+  addOrderItemSchema,
+  updateOrderItemSchema,
+  orderItemResponseSchema,
+} from "../validation/order-item.schema";
 
 export async function registerOrderItemRoutes(
   fastify: FastifyInstance,
   orderItemController: OrderItemController,
 ): Promise<void> {
   // Add item to order
-  fastify.post<AddItemRequest>(
+  fastify.post(
     "/orders/:orderId/items",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderItemsParamsSchema), validateBody(addOrderItemSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
-          "Add an item to an existing order. Order must be in 'created' status. Product details are automatically fetched from the database.",
+          "Add an item to an existing order. Order must be in 'created' status.",
         tags: ["Order Items"],
         summary: "Add Order Item",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         body: {
           type: "object",
           required: ["variantId", "quantity"],
           properties: {
-            variantId: {
-              type: "string",
-              format: "uuid",
-              description: "Product variant ID",
-            },
-            quantity: {
-              type: "integer",
-              minimum: 1,
-              description: "Quantity of items",
-            },
-            isGift: {
-              type: "boolean",
-              default: false,
-              description: "Whether this item is a gift",
-            },
-            giftMessage: {
-              type: "string",
-              maxLength: 500,
-              description: "Gift message (if isGift is true)",
-            },
+            variantId: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1 },
+            isGift: { type: "boolean", default: false },
+            giftMessage: { type: "string", maxLength: 500 },
           },
         },
         response: {
           201: {
-            description: "Item added successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              message: { type: "string", example: "Item added successfully" },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object", additionalProperties: true },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderItemController.addItem.bind(orderItemController),
+    (request, reply) =>
+      orderItemController.addItem(request as AuthenticatedRequest, reply),
   );
 
   // Get all items for an order
-  fastify.get<GetItemsRequest>(
+  fastify.get(
     "/orders/:orderId/items",
     {
+      preValidation: [validateParams(orderItemsParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get all items for a specific order",
@@ -157,34 +74,36 @@ export async function registerOrderItemRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
           },
-          required: ["orderId"],
         },
         response: {
           200: {
-            description: "Order items retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: orderItemSchema,
+                items: orderItemResponseSchema,
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderItemController.getItems.bind(orderItemController),
+    (request, reply) =>
+      orderItemController.getItems(request as AuthenticatedRequest, reply),
   );
 
   // Get single order item by ID
-  fastify.get<GetItemRequest>(
-    "/items/:itemId",
+  fastify.get(
+    "/orders/:orderId/items/:itemId",
     {
+      preValidation: [validateParams(orderItemParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description: "Get a specific order item by its ID",
@@ -193,32 +112,35 @@ export async function registerOrderItemRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "itemId"],
           properties: {
+            orderId: { type: "string", format: "uuid" },
             itemId: { type: "string", format: "uuid" },
           },
-          required: ["itemId"],
         },
         response: {
           200: {
-            description: "Order item retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: orderItemSchema,
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: orderItemResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderItemController.getItem.bind(orderItemController),
+    (request, reply) =>
+      orderItemController.getItem(request as AuthenticatedRequest, reply),
   );
 
   // Update order item
-  fastify.patch<UpdateItemRequest>(
+  fastify.patch(
     "/orders/:orderId/items/:itemId",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(orderItemParamsSchema), validateBody(updateOrderItemSchema)],
+      preHandler: [authenticateUser],
       schema: {
         description:
           "Update an order item. Can update quantity and/or gift status. Order must be in 'created' status.",
@@ -227,82 +149,63 @@ export async function registerOrderItemRoutes(
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "itemId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             itemId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "itemId"],
         },
         body: {
           type: "object",
           properties: {
-            quantity: {
-              type: "integer",
-              minimum: 1,
-              description: "New quantity",
-            },
-            isGift: {
-              type: "boolean",
-              description: "Whether this item is a gift",
-            },
-            giftMessage: {
-              type: "string",
-              maxLength: 500,
-              description: "Gift message",
-            },
+            quantity: { type: "integer", minimum: 1 },
+            isGift: { type: "boolean" },
+            giftMessage: { type: "string", maxLength: 500 },
           },
         },
         response: {
           200: {
-            description: "Item updated successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              message: { type: "string", example: "Item updated successfully" },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object", additionalProperties: true },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    orderItemController.updateItem.bind(orderItemController),
+    (request, reply) =>
+      orderItemController.updateItem(request as AuthenticatedRequest, reply),
   );
 
   // Remove item from order
-  fastify.delete<RemoveItemRequest>(
+  fastify.delete(
     "/orders/:orderId/items/:itemId",
     {
+      preValidation: [validateParams(orderItemParamsSchema)],
       preHandler: authenticateUser,
       schema: {
         description:
-          "Remove an item from an order. Order must be in 'created' status and must have at least one other item.",
+          "Remove an item from an order. Order must be in 'created' status.",
         tags: ["Order Items"],
         summary: "Remove Order Item",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
+          required: ["orderId", "itemId"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             itemId: { type: "string", format: "uuid" },
           },
-          required: ["orderId", "itemId"],
         },
         response: {
-          200: {
-            description: "Item removed successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean", example: true },
-              message: {
-                type: "string",
-                example: "Item removed successfully",
-              },
-            },
-          },
-          ...errorResponses,
+          204: { type: "null", description: "No Content" },
         },
       },
     },
-    orderItemController.removeItem.bind(orderItemController),
+    (request, reply) =>
+      orderItemController.removeItem(request as AuthenticatedRequest, reply),
   );
 }

@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { ICartRepository } from "../../../domain/repositories/cart.repository";
+import { ICartRepository, CartWithCheckoutInfo } from "../../../domain/repositories/cart.repository";
 import {
   ShoppingCart,
   ShoppingCartEntityData,
@@ -18,12 +18,12 @@ export class CartRepositoryImpl implements ICartRepository {
 
   // Core CRUD operations
   async save(cart: ShoppingCart): Promise<void> {
-    try {
-      const data = cart.toSnapshot();
-      console.log("Saving cart to database:", JSON.stringify(data, null, 2));
+    const data = cart.toSnapshot();
 
-      const result = await this.prisma.shoppingCart.create({
-        data: {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.shoppingCart.upsert({
+        where: { id: data.cartId },
+        create: {
           id: data.cartId,
           userId: data.userId ?? null,
           guestToken: data.guestToken ?? null,
@@ -31,48 +31,8 @@ export class CartRepositoryImpl implements ICartRepository {
           reservationExpiresAt: data.reservationExpiresAt,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
-          items: {
-            create:
-              data.items?.map((item) => ({
-                id: item.id,
-                variantId: item.variantId,
-                qty: item.quantity,
-                unitPriceSnapshot: item.unitPriceSnapshot,
-                appliedPromos: item.appliedPromos as any,
-                isGift: item.isGift,
-                giftMessage: item.giftMessage,
-              })) || [],
-          },
         },
-      });
-
-      console.log("Cart saved successfully:", result.id);
-    } catch (error) {
-      console.error("Error saving cart to database:", error);
-      throw error;
-    }
-  }
-
-  async findById(cartId: CartId): Promise<ShoppingCart | null> {
-    const cartData = await this.prisma.shoppingCart.findUnique({
-      where: { id: cartId.getValue() },
-      include: { items: true },
-    });
-
-    if (!cartData) {
-      return null;
-    }
-
-    return this.mapPrismaToEntity(cartData);
-  }
-
-  async update(cart: ShoppingCart): Promise<void> {
-    const data = cart.toSnapshot();
-
-    await this.prisma.$transaction(async (tx) => {
-      await tx.shoppingCart.update({
-        where: { id: data.cartId },
-        data: {
+        update: {
           userId: data.userId ?? null,
           guestToken: data.guestToken ?? null,
           currency: data.currency,
@@ -101,6 +61,19 @@ export class CartRepositoryImpl implements ICartRepository {
         });
       }
     });
+  }
+
+  async findById(cartId: CartId): Promise<ShoppingCart | null> {
+    const cartData = await this.prisma.shoppingCart.findUnique({
+      where: { id: cartId.getValue() },
+      include: { items: true },
+    });
+
+    if (!cartData) {
+      return null;
+    }
+
+    return this.mapPrismaToEntity(cartData);
   }
 
   async delete(cartId: CartId): Promise<void> {
@@ -225,7 +198,7 @@ export class CartRepositoryImpl implements ICartRepository {
 
     // Transfer ownership by updating the cart
     await this.prisma.shoppingCart.update({
-      where: { id: guestCart.getCartId().getValue() },
+      where: { id: guestCart.cartId.getValue() },
       data: {
         userId: userId.getValue(),
         guestToken: null,
@@ -233,7 +206,7 @@ export class CartRepositoryImpl implements ICartRepository {
       },
     });
 
-    return this.findById(guestCart.getCartId()) as Promise<ShoppingCart>;
+    return this.findById(guestCart.cartId) as Promise<ShoppingCart>;
   }
 
   async mergeGuestCartIntoUserCart(
@@ -266,8 +239,8 @@ export class CartRepositoryImpl implements ICartRepository {
     }
 
     // Save updated user cart and delete guest cart
-    await this.update(userCart);
-    await this.delete(guestCart.getCartId());
+    await this.save(userCart);
+    await this.delete(guestCart.cartId);
 
     return userCart;
   }
@@ -563,18 +536,20 @@ export class CartRepositoryImpl implements ICartRepository {
     minValue: number,
     currency: Currency,
   ): Promise<ShoppingCart[]> {
-    // This requires a more complex query to calculate cart totals
     const carts = await this.prisma.shoppingCart.findMany({
       where: { currency: currency.getValue() },
       include: { items: true },
     });
 
-    return carts
-      .map((cart) => this.mapPrismaToEntity(cart))
-      .filter(async (cart) => {
-        const total = await this.getCartTotal(cart.getCartId());
-        return total >= minValue;
-      });
+    const results: ShoppingCart[] = [];
+    for (const cart of carts) {
+      const entity = this.mapPrismaToEntity(cart);
+      const total = await this.getCartTotal(entity.cartId);
+      if (total >= minValue) {
+        results.push(entity);
+      }
+    }
+    return results;
   }
 
   // Cleanup operations
@@ -706,7 +681,7 @@ export class CartRepositoryImpl implements ICartRepository {
     if (criteria.minValue !== undefined || criteria.maxValue !== undefined) {
       const filteredResults = [];
       for (const cart of results) {
-        const total = await this.getCartTotal(cart.getCartId());
+        const total = await this.getCartTotal(cart.cartId);
         if (criteria.minValue !== undefined && total < criteria.minValue)
           continue;
         if (criteria.maxValue !== undefined && total > criteria.maxValue)
@@ -907,7 +882,7 @@ export class CartRepositoryImpl implements ICartRepository {
     });
   }
 
-  async getCartWithCheckoutInfo(cartId: string): Promise<any> {
+  async getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null> {
     return await this.prisma.shoppingCart.findUnique({
       where: { id: cartId },
       include: { items: true },
@@ -915,37 +890,26 @@ export class CartRepositoryImpl implements ICartRepository {
   }
 
   private mapPrismaToEntity(cartData: any): ShoppingCart {
-    // Debug invalid state
-    if (cartData.userId && cartData.guestToken) {
-      console.warn(
-        `[CartRepository] DETECTED CORRUPTED CART: ${cartData.id}. Has BOTH userId (${cartData.userId}) AND guestToken (${cartData.guestToken}). Auto-correcting by ignoring guestToken.`,
-      );
-    }
-
     const entityData: ShoppingCartEntityData = {
       cartId: cartData.id,
-      userId: cartData.userId,
+      userId: cartData.userId ?? undefined,
       // If both userId and guestToken exist (invalid state), prioritize userId
-      guestToken: cartData.userId ? null : cartData.guestToken,
+      guestToken: cartData.userId ? undefined : (cartData.guestToken ?? undefined),
       currency: cartData.currency,
-      reservationExpiresAt: cartData.reservationExpiresAt,
+      reservationExpiresAt: cartData.reservationExpiresAt ?? undefined,
       createdAt: cartData.createdAt,
       updatedAt: cartData.updatedAt,
-      items:
-        cartData.items?.map(
-          (item: any): CartItemEntityData => ({
-            id: item.id,
-            cartId: item.cartId,
-            variantId: item.variantId,
-            quantity: item.qty,
-            unitPriceSnapshot: item.unitPriceSnapshot.toNumber(),
-            appliedPromos: item.appliedPromos,
-            isGift: item.isGift,
-            giftMessage: item.giftMessage,
-          }),
-        ) || [],
+      items: (cartData.items ?? []).map((item: any): CartItemEntityData => ({
+        id: item.id,
+        cartId: item.cartId,
+        variantId: item.variantId,
+        quantity: item.qty,
+        unitPriceSnapshot: item.unitPriceSnapshot,
+        appliedPromos: item.appliedPromos ?? [],
+        isGift: item.isGift,
+        giftMessage: item.giftMessage ?? undefined,
+      })),
     };
-
-    return ShoppingCart.reconstitute(entityData);
+    return ShoppingCart.fromPersistence(entityData);
   }
 }

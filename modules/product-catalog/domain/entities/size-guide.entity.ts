@@ -4,8 +4,6 @@ import { DomainValidationError } from '../errors';
 import { SizeGuideId } from '../value-objects/size-guide-id.vo';
 import { Region } from '../enums/product-catalog.enums';
 
-export { SizeGuideId, Region };
-
 // Domain Events
 export class SizeGuideCreatedEvent extends DomainEvent {
   constructor(public readonly sizeGuideId: string, public readonly title: string) {
@@ -37,14 +35,23 @@ export interface SizeGuideProps {
   bodyHtml: string | null;
   region: Region;
   category: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SizeGuideDTO {
+  id: string;
+  title: string;
+  bodyHtml: string | null;
+  region: Region;
+  category: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class SizeGuide extends AggregateRoot {
-  private props: SizeGuideProps;
-
-  private constructor(props: SizeGuideProps) {
+  private constructor(private props: SizeGuideProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {
@@ -55,12 +62,15 @@ export class SizeGuide extends AggregateRoot {
   }): SizeGuide {
     const sizeGuideId = SizeGuideId.create();
 
+    const now = new Date();
     const sizeGuide = new SizeGuide({
       id: sizeGuideId,
       title: params.title,
       bodyHtml: params.bodyHtml || null,
       region: params.region,
       category: params.category || null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     sizeGuide.addDomainEvent(new SizeGuideCreatedEvent(sizeGuideId.getValue(), params.title));
@@ -93,6 +103,14 @@ export class SizeGuide extends AggregateRoot {
     return this.props.category;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   // Business logic methods
   updateTitle(newTitle: string): void {
     if (!newTitle || newTitle.trim().length === 0) {
@@ -104,16 +122,19 @@ export class SizeGuide extends AggregateRoot {
     }
 
     this.props.title = newTitle.trim();
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
   }
 
   updateBodyHtml(newBodyHtml: string | null): void {
     this.props.bodyHtml = newBodyHtml?.trim() || null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
   }
 
   updateRegion(newRegion: Region): void {
     this.props.region = newRegion;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -123,6 +144,7 @@ export class SizeGuide extends AggregateRoot {
     }
 
     this.props.category = newCategory?.trim() || null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -171,14 +193,8 @@ export class SizeGuide extends AggregateRoot {
       bodyHtml: entity.props.bodyHtml,
       region: entity.props.region,
       category: entity.props.category,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
-}
-
-export interface SizeGuideDTO {
-  id: string;
-  title: string;
-  bodyHtml: string | null;
-  region: Region;
-  category: string | null;
 }

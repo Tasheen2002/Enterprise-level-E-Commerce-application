@@ -3,22 +3,29 @@ import {
   ProductTagQueryOptions,
   ProductTagCountOptions,
 } from "../../domain/repositories/product-tag.repository";
+import { IProductTagAssociationRepository } from "../../domain/repositories/iproduct-tag-association.repository";
 import {
   ProductTag,
   ProductTagDTO,
   ProductTagId,
 } from "../../domain/entities/product-tag.entity";
-
-type CreateProductTagData = { tag: string; kind?: string };
+import { ProductTagAssociation } from "../../domain/entities/product-tag-association.entity";
+import { ProductId } from "../../domain/value-objects/product-id.vo";
 import {
   ProductTagNotFoundError,
   ProductTagAlreadyExistsError,
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors";
+import { randomUUID } from 'crypto';
+
+type CreateProductTagData = { tag: string; kind?: string };
 
 export class ProductTagManagementService {
-  constructor(private readonly productTagRepository: IProductTagRepository) {}
+  constructor(
+    private readonly productTagRepository: IProductTagRepository,
+    private readonly tagAssociationRepository: IProductTagAssociationRepository,
+  ) {}
 
   // Core CRUD operations
   async createTag(data: CreateProductTagData): Promise<ProductTagDTO> {
@@ -118,7 +125,7 @@ export class ProductTagManagementService {
       tag.updateKind(updates.kind);
     }
 
-    await this.productTagRepository.update(tag);
+    await this.productTagRepository.save(tag);
     return ProductTag.toDTO(tag);
   }
 
@@ -287,7 +294,13 @@ export class ProductTagManagementService {
 
   // Product Tag Association Methods
   async getProductTags(productId: string): Promise<ProductTagDTO[]> {
-    const tags = await this.productTagRepository.findByProductId(productId);
+    const productIdVo = ProductId.fromString(productId);
+    const associations = await this.tagAssociationRepository.findByProductId(productIdVo);
+    const tags: ProductTag[] = [];
+    for (const assoc of associations) {
+      const tag = await this.productTagRepository.findById(assoc.tagId);
+      if (tag) tags.push(tag);
+    }
     return tags.map((t) => ProductTag.toDTO(t));
   }
 
@@ -295,38 +308,40 @@ export class ProductTagManagementService {
     productId: string,
     tagIds: string[],
   ): Promise<void> {
-    // Validate that all tags exist
+    const productIdVo = ProductId.fromString(productId);
     for (const tagId of tagIds) {
-      await this.getTagById(tagId);
+      await this.getTagById(tagId); // validate tag exists
+      const tagIdVo = ProductTagId.fromString(tagId);
+      const alreadyLinked = await this.tagAssociationRepository.exists(productIdVo, tagIdVo);
+      if (!alreadyLinked) {
+        const association = ProductTagAssociation.create({
+          id: randomUUID(),
+          productId,
+          tagId,
+        });
+        await this.tagAssociationRepository.save(association);
+      }
     }
-
-    await this.productTagRepository.associateProductTags(productId, tagIds);
   }
 
   async removeProductTag(productId: string, tagId: string): Promise<void> {
-    // Validate that the association exists
-    const exists = await this.productTagRepository.isTagAssociatedWithProduct(
-      productId,
-      tagId,
-    );
+    const productIdVo = ProductId.fromString(productId);
+    const tagIdVo = ProductTagId.fromString(tagId);
+    const exists = await this.tagAssociationRepository.exists(productIdVo, tagIdVo);
     if (!exists) {
       throw new InvalidOperationError(`Tag association not found`);
     }
-
-    await this.productTagRepository.removeProductTag(productId, tagId);
+    await this.tagAssociationRepository.delete(productIdVo, tagIdVo);
   }
 
   async getTagProducts(
     tagId: string,
     options?: { limit?: number; offset?: number },
-  ): Promise<{
-    products: any[];
-    total: number;
-  }> {
-    // Validate that tag exists
-    await this.getTagById(tagId);
-
-    return await this.productTagRepository.findProductsByTagId(tagId, options);
+  ): Promise<string[]> {
+    await this.getTagById(tagId); // validate tag exists
+    const tagIdVo = ProductTagId.fromString(tagId);
+    const associations = await this.tagAssociationRepository.findByTagId(tagIdVo, options);
+    return associations.map((a) => a.productId.getValue());
   }
 
   // Private helper — returns domain entity for internal mutation

@@ -1,17 +1,30 @@
 import {
   IProductReviewRepository,
   ProductReviewQueryOptions,
-  ProductReviewFilterOptions,
-} from "../../domain/repositories/product-review.repository.js";
-import { ProductReview } from "../../domain/entities/product-review.entity.js";
+  ProductReviewFilters,
+} from "../../domain/repositories/product-review.repository";
 import {
-  ReviewId,
-  ReviewStatus,
-} from "../../domain/value-objects/index.js";
+  ProductReview,
+  ReviewDTO,
+} from "../../domain/entities/product-review.entity";
+import { ReviewId, ReviewStatus, Rating } from "../../domain/value-objects";
+import {
+  ProductReviewNotFoundError,
+  ProductReviewAlreadyExistsError,
+} from "../../domain/errors/engagement.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
+
+export interface PaginatedReviewResult {
+  items: ReviewDTO[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
 
 export class ProductReviewService {
   constructor(
-    private readonly reviewRepository: IProductReviewRepository
+    private readonly reviewRepository: IProductReviewRepository,
   ) {}
 
   async createReview(data: {
@@ -20,227 +33,190 @@ export class ProductReviewService {
     rating: number;
     title?: string;
     body?: string;
-  }): Promise<ProductReview> {
-    // Check if user already reviewed this product
+  }): Promise<ReviewDTO> {
     const existingReview = await this.reviewRepository.findByUserIdAndProductId(
       data.userId,
-      data.productId
+      data.productId,
     );
-
     if (existingReview) {
-      throw new Error("User has already reviewed this product");
+      throw new ProductReviewAlreadyExistsError(data.productId, data.userId);
     }
 
     const review = ProductReview.create({
       productId: data.productId,
       userId: data.userId,
-      rating: data.rating,
+      rating: Rating.create(data.rating),
       title: data.title,
       body: data.body,
     });
 
     await this.reviewRepository.save(review);
-    return review;
+    return ProductReview.toDTO(review);
   }
 
-  async getReview(reviewId: string): Promise<ProductReview | null> {
-    return await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+  async getReviewById(reviewId: string): Promise<ReviewDTO | null> {
+    const entity = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    return entity ? ProductReview.toDTO(entity) : null;
   }
 
   async updateReviewRating(reviewId: string, rating: number): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.updateRating(rating);
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async updateReviewTitle(reviewId: string, title?: string): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.updateTitle(title);
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async updateReviewBody(reviewId: string, body?: string): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.updateBody(body);
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async approveReview(reviewId: string): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.approve();
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async rejectReview(reviewId: string): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.reject();
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async flagReview(reviewId: string): Promise<void> {
-    const review = await this.reviewRepository.findById(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!review) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
     review.flag();
-    await this.reviewRepository.update(review);
+    await this.reviewRepository.save(review);
   }
 
   async deleteReview(reviewId: string): Promise<void> {
-    const exists = await this.reviewRepository.exists(
-      ReviewId.fromString(reviewId)
-    );
-
-    if (!exists) {
-      throw new Error(`Review with ID ${reviewId} not found`);
-    }
-
-    await this.reviewRepository.delete(ReviewId.fromString(reviewId));
+    const review = await this.reviewRepository.findById(ReviewId.fromString(reviewId));
+    if (!review) throw new ProductReviewNotFoundError(reviewId);
+    await this.reviewRepository.delete(review.id);
   }
 
   async getReviewsByProduct(
     productId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findByProductId(productId, options);
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findByProductId(productId, options);
+    return this.mapPaginated(result);
   }
 
   async getReviewsByUser(
     userId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findByUserId(userId, options);
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findByUserId(userId, options);
+    return this.mapPaginated(result);
   }
 
   async getReviewsByStatus(
-    status: ReviewStatus,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findByStatus(status, options);
+    status: string,
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findByStatus(
+      ReviewStatus.fromString(status),
+      options,
+    );
+    return this.mapPaginated(result);
   }
 
   async getApprovedReviewsByProduct(
     productId: string,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findApprovedByProductId(
-      productId,
-      options
-    );
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findApprovedByProductId(productId, options);
+    return this.mapPaginated(result);
   }
 
   async getPendingReviews(
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findPendingReviews(options);
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findPendingReviews(options);
+    return this.mapPaginated(result);
   }
 
   async getRecentReviewsByProduct(
     productId: string,
-    limit?: number
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findRecentByProductId(productId, limit);
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findRecentByProductId(productId, options);
+    return this.mapPaginated(result);
   }
 
   async getReviewByUserAndProduct(
     userId: string,
-    productId: string
-  ): Promise<ProductReview | null> {
-    return await this.reviewRepository.findByUserIdAndProductId(
-      userId,
-      productId
-    );
+    productId: string,
+  ): Promise<ReviewDTO | null> {
+    const entity = await this.reviewRepository.findByUserIdAndProductId(userId, productId);
+    return entity ? ProductReview.toDTO(entity) : null;
   }
 
   async getReviewsWithFilters(
-    filters: ProductReviewFilterOptions,
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findWithFilters(filters, options);
+    filters: ProductReviewFilters,
+    options?: ProductReviewQueryOptions,
+  ): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findWithFilters(filters, options);
+    return this.mapPaginated(result);
   }
 
-  async getAllReviews(
-    options?: ProductReviewQueryOptions
-  ): Promise<ProductReview[]> {
-    return await this.reviewRepository.findAll(options);
+  async getAllReviews(options?: ProductReviewQueryOptions): Promise<PaginatedReviewResult> {
+    const result = await this.reviewRepository.findAll(options);
+    return this.mapPaginated(result);
   }
 
-  async countReviews(filters?: ProductReviewFilterOptions): Promise<number> {
-    return await this.reviewRepository.count(filters);
+  async countReviews(filters?: ProductReviewFilters): Promise<number> {
+    return this.reviewRepository.count(filters);
   }
 
   async countReviewsByProduct(productId: string): Promise<number> {
-    return await this.reviewRepository.countByProductId(productId);
+    return this.reviewRepository.countByProductId(productId);
   }
 
   async countReviewsByUser(userId: string): Promise<number> {
-    return await this.reviewRepository.countByUserId(userId);
+    return this.reviewRepository.countByUserId(userId);
   }
 
-  async countReviewsByStatus(status: ReviewStatus): Promise<number> {
-    return await this.reviewRepository.countByStatus(status);
+  async countReviewsByStatus(status: string): Promise<number> {
+    return this.reviewRepository.countByStatus(ReviewStatus.fromString(status));
   }
 
   async getAverageRating(productId: string): Promise<number> {
-    return await this.reviewRepository.getAverageRating(productId);
+    return this.reviewRepository.getAverageRating(productId);
   }
 
-  async getRatingDistribution(
-    productId: string
-  ): Promise<Record<number, number>> {
-    return await this.reviewRepository.getRatingDistribution(productId);
+  async getRatingDistribution(productId: string): Promise<Record<number, number>> {
+    return this.reviewRepository.getRatingDistribution(productId);
   }
 
   async reviewExists(reviewId: string): Promise<boolean> {
-    return await this.reviewRepository.exists(ReviewId.fromString(reviewId));
+    return this.reviewRepository.exists(ReviewId.fromString(reviewId));
   }
 
-  async hasUserReviewedProduct(
-    userId: string,
-    productId: string
-  ): Promise<boolean> {
-    return await this.reviewRepository.existsByUserIdAndProductId(
-      userId,
-      productId
-    );
+  async hasUserReviewedProduct(userId: string, productId: string): Promise<boolean> {
+    return this.reviewRepository.existsByUserIdAndProductId(userId, productId);
+  }
+
+  private mapPaginated(result: PaginatedResult<ProductReview>): PaginatedReviewResult {
+    return {
+      items: result.items.map(ProductReview.toDTO),
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+      hasMore: result.hasMore,
+    };
   }
 }

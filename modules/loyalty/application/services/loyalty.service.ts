@@ -1,15 +1,14 @@
-import { randomUUID } from 'crypto';
 import { LoyaltyAccount } from '../../domain/entities/loyalty-account.entity';
-import { LoyaltyTransaction, TransactionType, TransactionReason } from '../../domain/entities/loyalty-transaction.entity';
+import { LoyaltyTransaction } from '../../domain/entities/loyalty-transaction.entity';
 import { Points } from '../../domain/value-objects/points';
-import { Tier } from '../../domain/value-objects/tier';
+import { LoyaltyTransactionType, LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
 import { ILoyaltyAccountRepository } from '../../domain/repositories/loyalty-account.repository';
 import { ILoyaltyTransactionRepository } from '../../domain/repositories/loyalty-transaction.repository';
 
 export interface EarnPointsData {
   userId: string;
   points: number;
-  reason: TransactionReason;
+  reason: LoyaltyTransactionReason;
   description?: string;
   referenceId?: string;
   orderId?: string;
@@ -18,7 +17,7 @@ export interface EarnPointsData {
 export interface RedeemPointsData {
   userId: string;
   points: number;
-  reason: TransactionReason;
+  reason: LoyaltyTransactionReason;
   description?: string;
   referenceId?: string;
 }
@@ -32,7 +31,7 @@ export interface AdjustPointsData {
 }
 
 export interface LoyaltyAccountData {
-  accountId: string;
+  id: string;
   userId: string;
   currentBalance: number;
   totalPointsEarned: number;
@@ -47,7 +46,7 @@ export interface LoyaltyAccountData {
 }
 
 export interface LoyaltyTransactionData {
-  transactionId: string;
+  id: string;
   type: string;
   points: number;
   reason: string;
@@ -57,51 +56,40 @@ export interface LoyaltyTransactionData {
   createdAt: Date;
 }
 
-// Loyalty configuration constants
 const POINTS_PER_DOLLAR = 1;
 const POINTS_EXPIRY_DAYS = 365;
 const SIGNUP_BONUS_POINTS = 500;
-const REVIEW_POINTS = 100;
-const STYLE_QUIZ_POINTS = 200;
-const OUTFIT_PHOTO_POINTS = 150;
-const SOCIAL_SHARE_POINTS = 50;
-const BIRTHDAY_BONUS_POINTS = 500;
-const REFERRAL_BONUS_POINTS = 1000;
+
+const TIER_THRESHOLDS: Record<string, number> = {
+  STYLE_LOVER: 0,
+  FASHION_FAN: 5000,
+  STYLE_INSIDER: 15000,
+  VIP_STYLIST: 30000,
+};
+
+const TIER_ORDER = ['STYLE_LOVER', 'FASHION_FAN', 'STYLE_INSIDER', 'VIP_STYLIST'];
 
 export class LoyaltyService {
   constructor(
     private readonly accountRepository: ILoyaltyAccountRepository,
-    private readonly transactionRepository: ILoyaltyTransactionRepository
+    private readonly transactionRepository: ILoyaltyTransactionRepository,
   ) {}
 
   async getOrCreateAccount(userId: string): Promise<LoyaltyAccount> {
     let account = await this.accountRepository.findByUserId(userId);
 
     if (!account) {
-      account = LoyaltyAccount.create({
-        accountId: randomUUID(),
-        userId,
-        currentBalance: Points.zero(),
-        totalPointsEarned: Points.zero(),
-        totalPointsRedeemed: Points.zero(),
-        lifetimePoints: Points.zero(),
-        tier: Tier.default(),
-        joinedAt: new Date(),
-        lastActivityAt: null
-      });
+      account = LoyaltyAccount.create({ userId, joinedAt: new Date() });
+      await this.accountRepository.save(account);
 
-      account = await this.accountRepository.create(account);
-
-      // Award signup bonus
-      await this.earnPoints({
+      await this._earnPoints(account, {
         userId,
         points: SIGNUP_BONUS_POINTS,
-        reason: TransactionReason.SIGNUP,
-        description: 'Welcome bonus for joining our loyalty program'
+        reason: LoyaltyTransactionReason.SIGNUP,
+        description: 'Welcome bonus for joining our loyalty program',
       });
 
-      // Refresh account to get updated balance
-      account = await this.accountRepository.findByUserId(userId) as LoyaltyAccount;
+      account = (await this.accountRepository.findByUserId(userId))!;
     }
 
     return account;
@@ -109,136 +97,119 @@ export class LoyaltyService {
 
   async earnPoints(data: EarnPointsData): Promise<LoyaltyTransaction> {
     const account = await this.getOrCreateAccount(data.userId);
+    return this._earnPoints(account, data);
+  }
 
-    const points = Points.create(data.points);
-
-    // Apply tier multiplier
+  private async _earnPoints(account: LoyaltyAccount, data: EarnPointsData): Promise<LoyaltyTransaction> {
     const multipliedPoints = Points.create(
-      Math.floor(data.points * account.tier.pointsMultiplier)
+      Math.floor(data.points * account.tier.pointsMultiplier),
     );
 
-    // Calculate expiration date (1 year from now)
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + POINTS_EXPIRY_DAYS);
 
-    // Update account
     account.earnPoints(multipliedPoints);
     await this.accountRepository.update(account);
 
-    // Create transaction
     const transaction = LoyaltyTransaction.create({
-      transactionId: randomUUID(),
-      accountId: account.accountId,
-      type: TransactionType.EARN,
+      accountId: account.id.getValue(),
+      type: LoyaltyTransactionType.EARN,
       points: multipliedPoints,
       reason: data.reason,
-      description: data.description || null,
-      referenceId: data.referenceId || null,
-      orderId: data.orderId || null,
+      description: data.description ?? null,
+      referenceId: data.referenceId ?? null,
+      orderId: data.orderId ?? null,
       createdBy: null,
       expiresAt,
-      balanceAfter: account.currentBalance.value
+      balanceAfter: account.currentBalance.getValue(),
     });
 
-    return this.transactionRepository.create(transaction);
+    await this.transactionRepository.save(transaction);
+    return transaction;
   }
 
   async earnPointsFromPurchase(userId: string, orderTotal: number, orderId: string): Promise<LoyaltyTransaction> {
     const points = Math.floor(orderTotal * POINTS_PER_DOLLAR);
-
     return this.earnPoints({
       userId,
       points,
-      reason: TransactionReason.PURCHASE,
+      reason: LoyaltyTransactionReason.PURCHASE,
       description: `Earned ${points} points from order`,
-      orderId
+      orderId,
     });
   }
 
   async redeemPoints(data: RedeemPointsData): Promise<LoyaltyTransaction> {
     const account = await this.getOrCreateAccount(data.userId);
-
     const points = Points.create(data.points);
 
-    if (!account.currentBalance.isGreaterThanOrEqual(points)) {
-      throw new Error('Insufficient points balance');
-    }
-
-    // Update account
     account.redeemPoints(points);
     await this.accountRepository.update(account);
 
-    // Create transaction
     const transaction = LoyaltyTransaction.create({
-      transactionId: randomUUID(),
-      accountId: account.accountId,
-      type: TransactionType.REDEEM,
+      accountId: account.id.getValue(),
+      type: LoyaltyTransactionType.REDEEM,
       points,
       reason: data.reason,
-      description: data.description || null,
-      referenceId: data.referenceId || null,
+      description: data.description ?? null,
+      referenceId: data.referenceId ?? null,
       orderId: null,
       createdBy: null,
       expiresAt: null,
-      balanceAfter: account.currentBalance.value
+      balanceAfter: account.currentBalance.getValue(),
     });
 
-    return this.transactionRepository.create(transaction);
+    await this.transactionRepository.save(transaction);
+    return transaction;
   }
 
   async adjustPoints(data: AdjustPointsData): Promise<LoyaltyTransaction> {
     const account = await this.getOrCreateAccount(data.userId);
-
     const points = Points.create(data.points);
 
-    // Update account
     account.adjustPoints(points, data.isAddition);
     await this.accountRepository.update(account);
 
-    // Create transaction
     const transaction = LoyaltyTransaction.create({
-      transactionId: randomUUID(),
-      accountId: account.accountId,
-      type: TransactionType.ADJUST,
+      accountId: account.id.getValue(),
+      type: LoyaltyTransactionType.ADJUST,
       points,
-      reason: TransactionReason.ADMIN_ADJUSTMENT,
+      reason: LoyaltyTransactionReason.ADMIN_ADJUSTMENT,
       description: data.reason,
       referenceId: null,
       orderId: null,
       createdBy: data.createdBy,
       expiresAt: null,
-      balanceAfter: account.currentBalance.value
+      balanceAfter: account.currentBalance.getValue(),
     });
 
-    return this.transactionRepository.create(transaction);
+    await this.transactionRepository.save(transaction);
+    return transaction;
   }
 
   async expirePoints(userId: string): Promise<void> {
     const account = await this.getOrCreateAccount(userId);
 
-    const expiredTransactions = await this.transactionRepository.findExpiredTransactions(account.accountId);
+    const expiredTransactions = await this.transactionRepository.findExpiredByAccountId(account.id);
 
     for (const expiredTx of expiredTransactions) {
       if (expiredTx.isExpired()) {
-        // Expire the points
         account.expirePoints(expiredTx.points);
 
-        // Create expiration transaction
         const expiryTransaction = LoyaltyTransaction.create({
-          transactionId: randomUUID(),
-          accountId: account.accountId,
-          type: TransactionType.EXPIRE,
+          accountId: account.id.getValue(),
+          type: LoyaltyTransactionType.EXPIRE,
           points: expiredTx.points,
-          reason: TransactionReason.EXPIRY,
+          reason: LoyaltyTransactionReason.EXPIRY,
           description: `Points expired from ${expiredTx.reason}`,
-          referenceId: expiredTx.transactionId,
+          referenceId: expiredTx.id.getValue(),
           orderId: null,
           createdBy: null,
           expiresAt: null,
-          balanceAfter: account.currentBalance.value
+          balanceAfter: account.currentBalance.getValue(),
         });
 
-        await this.transactionRepository.create(expiryTransaction);
+        await this.transactionRepository.save(expiryTransaction);
       }
     }
 
@@ -248,60 +219,49 @@ export class LoyaltyService {
   async getAccountDetails(userId: string): Promise<LoyaltyAccountData> {
     const account = await this.getOrCreateAccount(userId);
 
-    const nextTier = this.getNextTier(account.tier);
-    const pointsToNextTier = nextTier
-      ? nextTier.requiredLifetimePoints - account.lifetimePoints.value
+    const currentTierName = account.tier.toString();
+    const currentIndex = TIER_ORDER.indexOf(currentTierName);
+    const nextTierName = currentIndex < TIER_ORDER.length - 1 ? TIER_ORDER[currentIndex + 1] : null;
+    const pointsToNextTier = nextTierName
+      ? TIER_THRESHOLDS[nextTierName] - account.lifetimePoints.getValue()
       : null;
 
     return {
-      accountId: account.accountId,
+      id: account.id.getValue(),
       userId: account.userId,
-      currentBalance: account.currentBalance.value,
-      totalPointsEarned: account.totalPointsEarned.value,
-      totalPointsRedeemed: account.totalPointsRedeemed.value,
-      lifetimePoints: account.lifetimePoints.value,
-      tier: account.tier.toString(),
+      currentBalance: account.currentBalance.getValue(),
+      totalPointsEarned: account.totalPointsEarned.getValue(),
+      totalPointsRedeemed: account.totalPointsRedeemed.getValue(),
+      lifetimePoints: account.lifetimePoints.getValue(),
+      tier: currentTierName,
       tierMultiplier: account.tier.pointsMultiplier,
-      nextTier: nextTier ? nextTier.toString() : null,
+      nextTier: nextTierName,
       pointsToNextTier,
       joinedAt: account.joinedAt,
-      lastActivityAt: account.lastActivityAt
+      lastActivityAt: account.lastActivityAt,
     };
   }
 
-  async getTransactionHistory(userId: string, limit: number = 50, offset: number = 0): Promise<LoyaltyTransactionData[]> {
-    const transactions = await this.transactionRepository.findByUserId(userId, limit, offset);
+  async getTransactionHistory(userId: string, limit = 50, offset = 0): Promise<LoyaltyTransactionData[]> {
+    const account = await this.getOrCreateAccount(userId);
+    const result = await this.transactionRepository.findWithFilters(
+      { accountId: account.id },
+      { limit, offset },
+    );
 
-    return transactions.map(tx => ({
-      transactionId: tx.transactionId,
+    return result.items.map((tx) => ({
+      id: tx.id.getValue(),
       type: tx.type,
-      points: tx.points.value,
+      points: tx.points.getValue(),
       reason: tx.reason,
       description: tx.description,
       balanceAfter: tx.balanceAfter,
       expiresAt: tx.expiresAt,
-      createdAt: tx.createdAt
+      createdAt: tx.createdAt,
     }));
   }
 
   calculatePointsForAmount(amount: number): number {
     return Math.floor(amount * POINTS_PER_DOLLAR);
-  }
-
-  private getNextTier(currentTier: Tier): Tier | null {
-    const tiers = [
-      Tier.create('STYLE_LOVER'),
-      Tier.create('FASHION_FAN'),
-      Tier.create('STYLE_INSIDER'),
-      Tier.create('VIP_STYLIST')
-    ];
-
-    const currentIndex = tiers.findIndex(t => t.equals(currentTier));
-
-    if (currentIndex === -1 || currentIndex === tiers.length - 1) {
-      return null;
-    }
-
-    return tiers[currentIndex + 1];
   }
 }

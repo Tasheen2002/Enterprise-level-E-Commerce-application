@@ -1,63 +1,66 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  ProductMediaManagementService,
+  AddMediaToProductHandler,
+  RemoveMediaFromProductHandler,
+  RemoveAllProductMediaHandler,
+  SetProductCoverImageHandler,
+  RemoveCoverImageHandler,
+  ReorderProductMediaHandler,
+  MoveMediaPositionHandler,
+  SetProductMediaHandler,
+  DuplicateProductMediaHandler,
+  CompactProductMediaPositionsHandler,
+  GetProductMediaHandler,
+  GetProductsUsingAssetHandler,
+  GetProductMediaAssetUsageCountHandler,
+  ValidateProductMediaHandler,
+  GetProductMediaStatisticsHandler,
+} from "../../../application";
+import {
   ProductMediaServiceQueryOptions,
   ProductMediaData,
   ProductMediaReorderData,
 } from "../../../application/services/product-media-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
-export interface AddMediaToProductRequest {
-  assetId: string;
-  position?: number;
-  isCover?: boolean;
-}
-
-export interface SetProductCoverImageRequest {
-  assetId: string;
-}
-
-export interface ReorderProductMediaRequest {
-  reorderData: ProductMediaReorderData[];
-}
-
-interface MoveMediaPositionRequest {
-  assetId: string;
-  newPosition: number;
-}
-
-interface SetProductMediaRequest {
-  mediaData: ProductMediaData[];
-}
-
-interface ProductMediaQueryParams extends ProductMediaServiceQueryOptions {}
-
 export class ProductMediaController {
   constructor(
-    private readonly productMediaManagementService: ProductMediaManagementService,
+    private readonly addMediaToProductHandler: AddMediaToProductHandler,
+    private readonly removeMediaFromProductHandler: RemoveMediaFromProductHandler,
+    private readonly removeAllProductMediaHandler: RemoveAllProductMediaHandler,
+    private readonly setProductCoverImageHandler: SetProductCoverImageHandler,
+    private readonly removeCoverImageHandler: RemoveCoverImageHandler,
+    private readonly reorderProductMediaHandler: ReorderProductMediaHandler,
+    private readonly moveMediaPositionHandler: MoveMediaPositionHandler,
+    private readonly setProductMediaHandler: SetProductMediaHandler,
+    private readonly duplicateProductMediaHandler: DuplicateProductMediaHandler,
+    private readonly compactProductMediaPositionsHandler: CompactProductMediaPositionsHandler,
+    private readonly getProductMediaHandler: GetProductMediaHandler,
+    private readonly getProductsUsingAssetHandler: GetProductsUsingAssetHandler,
+    private readonly getProductMediaAssetUsageCountHandler: GetProductMediaAssetUsageCountHandler,
+    private readonly validateProductMediaHandler: ValidateProductMediaHandler,
+    private readonly getProductMediaStatisticsHandler: GetProductMediaStatisticsHandler,
   ) {}
 
   async getProductMedia(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Querystring: ProductMediaQueryParams;
+      Querystring: ProductMediaServiceQueryOptions;
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const options = request.query;
-
-      const productMedia =
-        await this.productMediaManagementService.getProductMedia(
-          productId,
-          options,
-        );
-
-      return ResponseHelper.ok(reply, "Product media retrieved successfully", productMedia);
-    } catch (error) {
-
+      const productMedia = await this.getProductMediaHandler.handle({
+        productId: request.params.productId,
+        options: request.query,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Product media retrieved successfully",
+        productMedia,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -65,56 +68,44 @@ export class ProductMediaController {
   async addMediaToProduct(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: AddMediaToProductRequest;
+      Body: { assetId: string; position?: number; isCover?: boolean };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { assetId, position, isCover } = request.body;
-
-      const productMediaId =
-        await this.productMediaManagementService.addMediaToProduct(
-          productId,
-          assetId,
-          position,
-          isCover,
-        );
-
-      return ResponseHelper.created(reply, "Media added to product successfully", { productMediaId });
-    } catch (error) {
-
-      if (
-        error instanceof Error &&
-        error.message.includes("already associated")
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: error.message,
-        });
-      }
-
+      const result = await this.addMediaToProductHandler.handle({
+        productId: request.params.productId,
+        ...request.body,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Media added to product successfully",
+        201,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeMediaFromProduct(
-    request: AuthenticatedRequest<{ Params: { productId: string; assetId: string } }>,
+    request: AuthenticatedRequest<{
+      Params: { productId: string; assetId: string };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId, assetId } = request.params;
-
-      await this.productMediaManagementService.removeMediaFromProduct(
-        productId,
-        assetId,
+      const result = await this.removeMediaFromProductHandler.handle(
+        request.params,
       );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Media removed from product successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -124,13 +115,17 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      await this.productMediaManagementService.removeAllProductMedia(productId);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.removeAllProductMediaHandler.handle({
+        productId: request.params.productId,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "All product media removed successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -138,22 +133,23 @@ export class ProductMediaController {
   async setProductCoverImage(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: SetProductCoverImageRequest;
+      Body: { assetId: string };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { assetId } = request.body;
-
-      await this.productMediaManagementService.setProductCoverImage(
-        productId,
-        assetId,
+      const result = await this.setProductCoverImageHandler.handle({
+        productId: request.params.productId,
+        assetId: request.body.assetId,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cover image set successfully",
+        undefined,
+        204,
       );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -163,13 +159,17 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      await this.productMediaManagementService.removeCoverImage(productId);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+      const result = await this.removeCoverImageHandler.handle({
+        productId: request.params.productId,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cover image removed successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -177,22 +177,23 @@ export class ProductMediaController {
   async reorderProductMedia(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: ReorderProductMediaRequest;
+      Body: { reorderData: ProductMediaReorderData[] };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { reorderData } = request.body;
-
-      await this.productMediaManagementService.reorderProductMedia(
-        productId,
-        reorderData,
+      const result = await this.reorderProductMediaHandler.handle({
+        productId: request.params.productId,
+        reorderData: request.body.reorderData,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product media reordered successfully",
+        undefined,
+        204,
       );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -200,23 +201,21 @@ export class ProductMediaController {
   async moveMediaPosition(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: MoveMediaPositionRequest;
+      Body: { assetId: string; newPosition: number };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { assetId, newPosition } = request.body;
-
-      await this.productMediaManagementService.moveMediaPosition(
-        productId,
-        assetId,
-        newPosition,
+      const result = await this.moveMediaPositionHandler.handle({
+        productId: request.params.productId,
+        ...request.body,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Media position updated successfully",
       );
-
-      return ResponseHelper.ok(reply, "Media position updated successfully");
-    } catch (error) {
-
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -224,22 +223,21 @@ export class ProductMediaController {
   async setProductMedia(
     request: AuthenticatedRequest<{
       Params: { productId: string };
-      Body: SetProductMediaRequest;
+      Body: { mediaData: ProductMediaData[] };
     }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { mediaData } = request.body;
-
-      await this.productMediaManagementService.setProductMedia(
-        productId,
-        mediaData,
+      const result = await this.setProductMediaHandler.handle({
+        productId: request.params.productId,
+        mediaData: request.body.mediaData,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product media set successfully",
       );
-
-      return ResponseHelper.ok(reply, "Product media set successfully");
-    } catch (error) {
-
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -251,16 +249,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { sourceProductId, targetProductId } = request.params;
-
-      await this.productMediaManagementService.duplicateProductMedia(
-        sourceProductId,
-        targetProductId,
+      const result = await this.duplicateProductMediaHandler.handle(
+        request.params,
       );
-
-      return ResponseHelper.ok(reply, "Product media duplicated successfully");
-    } catch (error) {
-
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product media duplicated successfully",
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -270,14 +267,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { assetId } = request.params;
-
-      const productIds =
-        await this.productMediaManagementService.getProductsUsingAsset(assetId);
-
-      return ResponseHelper.ok(reply, "Products using asset retrieved successfully", productIds);
-    } catch (error) {
-
+      const productIds = await this.getProductsUsingAssetHandler.handle({
+        assetId: request.params.assetId,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Products using asset retrieved successfully",
+        productIds,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -287,14 +285,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { assetId } = request.params;
-
-      const usageCount =
-        await this.productMediaManagementService.getAssetUsageCount(assetId);
-
-      return ResponseHelper.ok(reply, "Asset usage count retrieved successfully", { assetId, usageCount });
-    } catch (error) {
-
+      const result = await this.getProductMediaAssetUsageCountHandler.handle({
+        assetId: request.params.assetId,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Asset usage count retrieved successfully",
+        result,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -304,15 +303,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      await this.productMediaManagementService.compactProductMediaPositions(
-        productId,
+      const result = await this.compactProductMediaPositionsHandler.handle({
+        productId: request.params.productId,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Product media positions compacted successfully",
       );
-
-      return ResponseHelper.ok(reply, "Product media positions compacted successfully");
-    } catch (error) {
-
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -322,16 +321,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      const validation =
-        await this.productMediaManagementService.validateProductMedia(
-          productId,
-        );
-
-      return ResponseHelper.ok(reply, "Product media validated successfully", validation);
-    } catch (error) {
-
+      const validation = await this.validateProductMediaHandler.handle({
+        productId: request.params.productId,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Product media validated successfully",
+        validation,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -341,16 +339,15 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      const statistics =
-        await this.productMediaManagementService.getProductMediaStatistics(
-          productId,
-        );
-
-      return ResponseHelper.ok(reply, "Product media statistics retrieved successfully", statistics);
-    } catch (error) {
-
+      const statistics = await this.getProductMediaStatisticsHandler.handle({
+        productId: request.params.productId,
+      });
+      return ResponseHelper.ok(
+        reply,
+        "Product media statistics retrieved successfully",
+        statistics,
+      );
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

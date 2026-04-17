@@ -7,23 +7,16 @@ import {
   GetLocationHandler,
   ListLocationsHandler,
 } from "../../../application";
-import { LocationManagementService } from "../../../application/services/location-management.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 
 export class LocationController {
-  private createLocationHandler: CreateLocationHandler;
-  private updateLocationHandler: UpdateLocationHandler;
-  private deleteLocationHandler: DeleteLocationHandler;
-  private getLocationHandler: GetLocationHandler;
-  private listLocationsHandler: ListLocationsHandler;
-
-  constructor(locationService: LocationManagementService) {
-    this.createLocationHandler = new CreateLocationHandler(locationService);
-    this.updateLocationHandler = new UpdateLocationHandler(locationService);
-    this.deleteLocationHandler = new DeleteLocationHandler(locationService);
-    this.getLocationHandler = new GetLocationHandler(locationService);
-    this.listLocationsHandler = new ListLocationsHandler(locationService);
-  }
+  constructor(
+    private readonly createLocationHandler: CreateLocationHandler,
+    private readonly updateLocationHandler: UpdateLocationHandler,
+    private readonly deleteLocationHandler: DeleteLocationHandler,
+    private readonly getLocationHandler: GetLocationHandler,
+    private readonly listLocationsHandler: ListLocationsHandler,
+  ) {}
 
   async getLocation(
     request: AuthenticatedRequest<{ Params: { locationId: string } }>,
@@ -32,8 +25,8 @@ export class LocationController {
     try {
       const { locationId } = request.params;
       const result = await this.getLocationHandler.handle({ locationId });
-      return ResponseHelper.fromQuery(reply, result, "Location retrieved", "Location not found");
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Location retrieved", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -45,34 +38,9 @@ export class LocationController {
     reply: FastifyReply,
   ) {
     try {
-      const { limit, offset, type } = request.query;
-      const result = await this.listLocationsHandler.handle({
-        limit: limit ? Number(limit) : undefined,
-        offset: offset ? Number(offset) : undefined,
-        type,
-      });
-      if (result.success && result.data) {
-        const mappedLocations = result.data.locations.map((loc) => ({
-          locationId: loc.locationId,
-          type: loc.type,
-          name: loc.name,
-          address: loc.address
-            ? {
-                street: loc.address.addressLine1 || undefined,
-                city: loc.address.city || undefined,
-                state: loc.address.state || undefined,
-                postalCode: loc.address.postalCode || undefined,
-                country: loc.address.country || undefined,
-              }
-            : null,
-        }));
-        return ResponseHelper.ok(reply, "Locations retrieved", {
-          locations: mappedLocations,
-          total: result.data.total,
-        });
-      }
-      return ResponseHelper.badRequest(reply, result.error || "Failed to list locations");
-    } catch (error) {
+      const result = await this.listLocationsHandler.handle(request.query);
+      return ResponseHelper.ok(reply, "Locations retrieved", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -108,17 +76,8 @@ export class LocationController {
             }
           : undefined,
       });
-      if (result.success && result.data) {
-        const location = result.data;
-        return ResponseHelper.created(reply, "Location created successfully", {
-          locationId: location.locationId,
-          type: location.type,
-          name: location.name,
-          address: location.address ?? null,
-        });
-      }
-      return ResponseHelper.badRequest(reply, result.error || "Location creation failed");
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Location created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -134,17 +93,8 @@ export class LocationController {
       const { locationId } = request.params;
       const { name, address } = request.body;
       const result = await this.updateLocationHandler.handle({ locationId, name, address });
-      if (result.success && result.data) {
-        const location = result.data;
-        return ResponseHelper.ok(reply, "Location updated successfully", {
-          locationId: location.locationId,
-          type: location.type,
-          name: location.name,
-          address: location.address ?? null,
-        });
-      }
-      return ResponseHelper.badRequest(reply, result.error || "Location update failed");
-    } catch (error) {
+      return ResponseHelper.fromCommand(reply, result, "Location updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -157,7 +107,7 @@ export class LocationController {
       const { locationId } = request.params;
       const result = await this.deleteLocationHandler.handle({ locationId });
       return ResponseHelper.fromCommand(reply, result, "Location deleted successfully", undefined, 204);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

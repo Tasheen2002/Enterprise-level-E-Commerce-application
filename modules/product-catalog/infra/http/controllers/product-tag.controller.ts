@@ -1,85 +1,59 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { ProductTagManagementService } from "../../../application/services/product-tag-management.service";
-import { ProductTagQueryOptions } from "../../../domain/repositories/product-tag.repository";
+import {
+  CreateProductTagHandler,
+  UpdateProductTagHandler,
+  DeleteProductTagHandler,
+  CreateBulkProductTagsHandler,
+  DeleteBulkProductTagsHandler,
+  AssociateProductTagsHandler,
+  RemoveProductTagAssociationHandler,
+  ListProductTagsHandler,
+  GetProductTagHandler,
+  GetProductTagSuggestionsHandler,
+  GetProductTagStatsHandler,
+  GetMostUsedProductTagsHandler,
+  ValidateProductTagHandler,
+  GetProductTagsHandler,
+  GetTagProductsHandler,
+} from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateTagRequest {
-  tag: string;
-  kind?: string;
-}
-
-export interface UpdateTagRequest extends Partial<CreateTagRequest> {}
-
-interface TagQueryParams {
-  page?: number;
-  limit?: number;
-  kind?: string;
-  sortBy?: "tag" | "kind";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface BulkCreateTagsRequest {
-  tags: CreateTagRequest[];
-}
-
-export interface BulkDeleteTagsRequest {
-  ids: string[];
-}
 
 export class ProductTagController {
   constructor(
-    private readonly productTagManagementService: ProductTagManagementService,
+    private readonly createProductTagHandler: CreateProductTagHandler,
+    private readonly updateProductTagHandler: UpdateProductTagHandler,
+    private readonly deleteProductTagHandler: DeleteProductTagHandler,
+    private readonly createBulkProductTagsHandler: CreateBulkProductTagsHandler,
+    private readonly deleteBulkProductTagsHandler: DeleteBulkProductTagsHandler,
+    private readonly associateProductTagsHandler: AssociateProductTagsHandler,
+    private readonly removeProductTagAssociationHandler: RemoveProductTagAssociationHandler,
+    private readonly listProductTagsHandler: ListProductTagsHandler,
+    private readonly getProductTagHandler: GetProductTagHandler,
+    private readonly getProductTagSuggestionsHandler: GetProductTagSuggestionsHandler,
+    private readonly getProductTagStatsHandler: GetProductTagStatsHandler,
+    private readonly getMostUsedProductTagsHandler: GetMostUsedProductTagsHandler,
+    private readonly validateProductTagHandler: ValidateProductTagHandler,
+    private readonly getProductTagsHandler: GetProductTagsHandler,
+    private readonly getTagProductsHandler: GetTagProductsHandler,
   ) {}
 
   async getTags(
-    request: AuthenticatedRequest<{ Querystring: TagQueryParams }>,
+    request: AuthenticatedRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        kind?: string;
+        sortBy?: "tag" | "kind";
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
     reply: FastifyReply,
   ) {
     try {
-      const {
-        page = 1,
-        limit = 20,
-        kind,
-        sortBy = "tag",
-        sortOrder = "asc",
-      } = request.query;
-
-      const serviceOptions: ProductTagQueryOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-      };
-
-      const pageOptions = {
-        page: Math.max(1, page),
-        limit: Math.min(100, Math.max(1, limit)),
-        sortBy,
-        sortOrder,
-      };
-
-      let tags;
-      if (kind) {
-        tags = await this.productTagManagementService.getTagsByKind(
-          kind,
-          serviceOptions,
-        );
-      } else {
-        tags =
-          await this.productTagManagementService.getAllTags(serviceOptions);
-      }
-
-      return ResponseHelper.ok(reply, "Tags retrieved successfully", {
-        tags: tags.tags || tags,
-        pagination: {
-          page: pageOptions.page,
-          limit: pageOptions.limit,
-          total: tags.total || 0,
-          total_pages: Math.ceil((tags.total || 0) / pageOptions.limit),
-        },
-      });
-    } catch (error) {
+      const result = await this.listProductTagsHandler.handle(request.query);
+      return ResponseHelper.ok(reply, "Tags retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -89,12 +63,9 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      const tag = await this.productTagManagementService.getTagById(id);
-
+      const tag = await this.getProductTagHandler.handle({ id: request.params.id });
       return ResponseHelper.ok(reply, "Tag retrieved successfully", tag);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -104,66 +75,33 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { name } = request.params;
-
-      const tag = await this.productTagManagementService.getTagByName(
-        decodeURIComponent(name),
-      );
-
+      const tag = await this.getProductTagHandler.handle({ name: decodeURIComponent(request.params.name) });
       return ResponseHelper.ok(reply, "Tag retrieved successfully", tag);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createTag(
-    request: AuthenticatedRequest<{ Body: CreateTagRequest }>,
+    request: AuthenticatedRequest<{ Body: { tag: string; kind?: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const tagData = request.body;
-
-      const tag = await this.productTagManagementService.createTag(tagData);
-
-      return ResponseHelper.created(reply, "Tag created successfully", tag);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Tag with this name already exists",
-        });
-      }
-
+      const result = await this.createProductTagHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Tag created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateTag(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: UpdateTagRequest }>,
+    request: AuthenticatedRequest<{ Params: { id: string }; Body: { tag?: string; kind?: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-      const updateData = request.body;
-
-      const tag = await this.productTagManagementService.updateTag(
-        id,
-        updateData,
-      );
-
-      return ResponseHelper.ok(reply, "Tag updated successfully", tag);
-    } catch (error) {
-      if (error instanceof Error && error.message.includes("already exists")) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Tag with this name already exists",
-        });
-      }
-
+      const result = await this.updateProductTagHandler.handle({ id: request.params.id, ...request.body });
+      return ResponseHelper.fromCommand(reply, result, "Tag updated successfully");
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -173,25 +111,9 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { id } = request.params;
-
-      await this.productTagManagementService.deleteTag(id);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.includes("constraint") ||
-          error.message.includes("foreign key"))
-      ) {
-        return reply.status(409).send({
-          success: false,
-          statusCode: 409,
-          error: "Conflict",
-          message: "Cannot delete tag with existing product associations",
-        });
-      }
-
+      const result = await this.deleteProductTagHandler.handle({ id: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Tag deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -201,25 +123,18 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { query, limit = 10 } = request.query;
-
-      const suggestions =
-        await this.productTagManagementService.getTagSuggestions(
-          query.trim(),
-          Math.min(50, Math.max(1, limit)),
-        );
-
+      const suggestions = await this.getProductTagSuggestionsHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Tag suggestions retrieved successfully", suggestions);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async getTagStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const stats = await this.productTagManagementService.getTagStats();
+      const stats = await this.getProductTagStatsHandler.handle({});
       return ResponseHelper.ok(reply, "Tag statistics retrieved successfully", stats);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -229,49 +144,33 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { limit = 10 } = request.query;
-
-      const mostUsed = await this.productTagManagementService.getMostUsedTags(
-        Math.min(50, Math.max(1, limit)),
-      );
-
+      const mostUsed = await this.getMostUsedProductTagsHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Most used tags retrieved successfully", mostUsed);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async createBulkTags(
-    request: AuthenticatedRequest<{ Body: BulkCreateTagsRequest }>,
+    request: AuthenticatedRequest<{ Body: { tags: Array<{ tag: string; kind?: string }> } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { tags } = request.body;
-
-      const createdTags =
-        await this.productTagManagementService.createMultipleTags(tags);
-
-      return ResponseHelper.created(
-        reply,
-        `${createdTags.length} tags created successfully`,
-        createdTags,
-      );
-    } catch (error) {
+      const result = await this.createBulkProductTagsHandler.handle({ tags: request.body.tags });
+      return ResponseHelper.fromCommand(reply, result, "Tags created successfully", 201);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async deleteBulkTags(
-    request: AuthenticatedRequest<{ Body: BulkDeleteTagsRequest }>,
+    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { ids } = request.body;
-
-      await this.productTagManagementService.deleteMultipleTags(ids);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.deleteBulkProductTagsHandler.handle({ ids: request.body.ids });
+      return ResponseHelper.fromCommand(reply, result, "Tags deleted successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -281,35 +180,21 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { name } = request.params;
-
-      const isValid = await this.productTagManagementService.validateTag(
-        decodeURIComponent(name),
-      );
-
-      return ResponseHelper.ok(reply, "Tag validation completed", {
-        tagName: name,
-        isValid,
-        available: isValid,
-      });
-    } catch (error) {
+      const validation = await this.validateProductTagHandler.handle({ name: request.params.name });
+      return ResponseHelper.ok(reply, "Tag validation completed", validation);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  // Product Tag Association Methods
   async getProductTags(
     request: AuthenticatedRequest<{ Params: { productId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-
-      const tags =
-        await this.productTagManagementService.getProductTags(productId);
-
+      const tags = await this.getProductTagsHandler.handle({ productId: request.params.productId });
       return ResponseHelper.ok(reply, "Product tags retrieved successfully", tags);
-    } catch (error) {
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -322,33 +207,24 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const { tagIds } = request.body;
-
-      await this.productTagManagementService.associateProductTags(
-        productId,
-        tagIds,
-      );
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.associateProductTagsHandler.handle({
+        productId: request.params.productId,
+        tagIds: request.body.tagIds,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Product tags associated successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async removeProductTag(
-    request: AuthenticatedRequest<{
-      Params: { productId: string; tagId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: { productId: string; tagId: string } }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId, tagId } = request.params;
-
-      await this.productTagManagementService.removeProductTag(productId, tagId);
-
-      return ResponseHelper.noContent(reply);
-    } catch (error) {
+      const result = await this.removeProductTagAssociationHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Product tag removed successfully", undefined, 204);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
@@ -361,31 +237,12 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const { tagId } = request.params;
-      const { page = 1, limit = 20 } = request.query;
-
-      const serviceOptions = {
-        limit: Math.min(100, Math.max(1, limit)),
-        offset: (Math.max(1, page) - 1) * Math.min(100, Math.max(1, limit)),
-      };
-
-      const result = await this.productTagManagementService.getTagProducts(
-        tagId,
-        serviceOptions,
-      );
-
-      return ResponseHelper.ok(reply, "Tag products retrieved successfully", {
-        products: result.products || result,
-        pagination: {
-          page: Math.max(1, page),
-          limit: Math.min(100, Math.max(1, limit)),
-          total: result.total || 0,
-          total_pages: Math.ceil(
-            (result.total || 0) / Math.min(100, Math.max(1, limit)),
-          ),
-        },
+      const result = await this.getTagProductsHandler.handle({
+        tagId: request.params.tagId,
+        ...request.query,
       });
-    } catch (error) {
+      return ResponseHelper.ok(reply, "Tag products retrieved successfully", result);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

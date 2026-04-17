@@ -1,163 +1,219 @@
-import {
-  AppointmentId,
-  AppointmentType,
-} from "../value-objects/index.js";
+// ============================================================================
+// 1. Imports
+// ============================================================================
+import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
+import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
+import { AppointmentId, AppointmentType } from "../value-objects";
+import { DomainValidationError } from "../errors/engagement.errors";
 
-export interface CreateAppointmentData {
-  userId: string;
-  type: AppointmentType;
-  locationId?: string;
-  startAt: Date;
-  endAt: Date;
-  notes?: string;
+// ============================================================================
+// 2. Domain Events
+// ============================================================================
+export class AppointmentCreatedEvent extends DomainEvent {
+  constructor(
+    public readonly appointmentId: string,
+    public readonly userId: string,
+    public readonly type: string,
+    public readonly startAt: string,
+    public readonly endAt: string
+  ) {
+    super(appointmentId, "Appointment");
+  }
+
+  get eventType(): string {
+    return "appointment.created";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      appointmentId: this.appointmentId,
+      userId: this.userId,
+      type: this.type,
+      startAt: this.startAt,
+      endAt: this.endAt,
+    };
+  }
 }
 
-export interface AppointmentEntityData {
-  apptId: string;
-  userId: string;
-  type: AppointmentType;
-  locationId?: string;
-  startAt: Date;
-  endAt: Date;
-  notes?: string;
+export class AppointmentRescheduledEvent extends DomainEvent {
+  constructor(
+    public readonly appointmentId: string,
+    public readonly oldStartAt: string,
+    public readonly oldEndAt: string,
+    public readonly newStartAt: string,
+    public readonly newEndAt: string
+  ) {
+    super(appointmentId, "Appointment");
+  }
+
+  get eventType(): string {
+    return "appointment.rescheduled";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      appointmentId: this.appointmentId,
+      oldStartAt: this.oldStartAt,
+      oldEndAt: this.oldEndAt,
+      newStartAt: this.newStartAt,
+      newEndAt: this.newEndAt,
+    };
+  }
 }
 
-export interface AppointmentDatabaseRow {
-  appt_id: string;
-  user_id: string;
+// ============================================================================
+// 3. Props Interface
+// ============================================================================
+export interface AppointmentProps {
+  id: AppointmentId;
+  userId: string;
+  type: AppointmentType;
+  startAt: Date;
+  endAt: Date;
+  locationId?: string;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+export interface AppointmentDTO {
+  id: string;
+  userId: string;
   type: string;
-  location_id: string | null;
-  start_at: Date;
-  end_at: Date;
-  notes: string | null;
+  startAt: string;
+  endAt: string;
+  locationId?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export class Appointment {
-  private constructor(
-    private readonly apptId: AppointmentId,
-    private readonly userId: string,
-    private readonly type: AppointmentType,
-    private startAt: Date,
-    private endAt: Date,
-    private locationId?: string,
-    private notes?: string
-  ) {}
-
-  // Factory methods
-  static create(data: CreateAppointmentData): Appointment {
-    const apptId = AppointmentId.create();
-
-    if (!data.userId) {
-      throw new Error("User ID is required");
-    }
-
-    if (!data.startAt) {
-      throw new Error("Start time is required");
-    }
-
-    if (!data.endAt) {
-      throw new Error("End time is required");
-    }
-
-    if (data.startAt >= data.endAt) {
-      throw new Error("End time must be after start time");
-    }
-
-    if (data.startAt < new Date()) {
-      throw new Error("Start time cannot be in the past");
-    }
-
-    return new Appointment(
-      apptId,
-      data.userId,
-      data.type,
-      data.startAt,
-      data.endAt,
-      data.locationId,
-      data.notes
-    );
+// ============================================================================
+// 5. Entity Class
+// ============================================================================
+export class Appointment extends AggregateRoot {
+  private constructor(private props: AppointmentProps) {
+    super();
   }
 
-  static reconstitute(data: AppointmentEntityData): Appointment {
-    const apptId = AppointmentId.fromString(data.apptId);
+  static create(
+    params: Omit<AppointmentProps, "id" | "createdAt" | "updatedAt">
+  ): Appointment {
+    Appointment.validateTimes(params.startAt, params.endAt);
+    Appointment.validateUserId(params.userId);
 
-    return new Appointment(
-      apptId,
-      data.userId,
-      data.type,
-      data.startAt,
-      data.endAt,
-      data.locationId,
-      data.notes
+    const entity = new Appointment({
+      ...params,
+      id: AppointmentId.create(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    entity.addDomainEvent(
+      new AppointmentCreatedEvent(
+        entity.props.id.getValue(),
+        entity.props.userId,
+        entity.props.type.getValue(),
+        entity.props.startAt.toISOString(),
+        entity.props.endAt.toISOString()
+      )
     );
+
+    return entity;
   }
 
-  static fromDatabaseRow(row: AppointmentDatabaseRow): Appointment {
-    return new Appointment(
-      AppointmentId.fromString(row.appt_id),
-      row.user_id,
-      AppointmentType.fromString(row.type),
-      row.start_at,
-      row.end_at,
-      row.location_id || undefined,
-      row.notes || undefined
-    );
+  static fromPersistence(props: AppointmentProps): Appointment {
+    return new Appointment(props);
+  }
+
+  private static validateTimes(startAt: Date, endAt: Date): void {
+    if (!startAt) {
+      throw new DomainValidationError("Start time is required");
+    }
+    if (!endAt) {
+      throw new DomainValidationError("End time is required");
+    }
+    if (startAt >= endAt) {
+      throw new DomainValidationError("End time must be after start time");
+    }
+    if (startAt < new Date()) {
+      throw new DomainValidationError("Start time cannot be in the past");
+    }
+  }
+
+  private static validateUserId(userId: string): void {
+    if (!userId || userId.trim().length === 0) {
+      throw new DomainValidationError("User ID is required");
+    }
   }
 
   // Getters
-  getApptId(): AppointmentId {
-    return this.apptId;
+  get id(): AppointmentId {
+    return this.props.id;
   }
-
-  getUserId(): string {
-    return this.userId;
+  get userId(): string {
+    return this.props.userId;
   }
-
-  getType(): AppointmentType {
-    return this.type;
+  get type(): AppointmentType {
+    return this.props.type;
   }
-
-  getLocationId(): string | undefined {
-    return this.locationId;
+  get startAt(): Date {
+    return this.props.startAt;
   }
-
-  getStartAt(): Date {
-    return this.startAt;
+  get endAt(): Date {
+    return this.props.endAt;
   }
-
-  getEndAt(): Date {
-    return this.endAt;
+  get locationId(): string | undefined {
+    return this.props.locationId;
   }
-
-  getNotes(): string | undefined {
-    return this.notes;
+  get notes(): string | undefined {
+    return this.props.notes;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   // Business methods
   reschedule(startAt: Date, endAt: Date): void {
-    if (startAt >= endAt) {
-      throw new Error("End time must be after start time");
-    }
+    Appointment.validateTimes(startAt, endAt);
 
-    if (startAt < new Date()) {
-      throw new Error("Cannot reschedule to a past time");
-    }
+    const oldStartAt = this.props.startAt.toISOString();
+    const oldEndAt = this.props.endAt.toISOString();
 
-    this.startAt = startAt;
-    this.endAt = endAt;
+    this.props.startAt = startAt;
+    this.props.endAt = endAt;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new AppointmentRescheduledEvent(
+        this.props.id.getValue(),
+        oldStartAt,
+        oldEndAt,
+        startAt.toISOString(),
+        endAt.toISOString()
+      )
+    );
   }
 
   updateNotes(notes?: string): void {
-    this.notes = notes?.trim();
+    this.props.notes = notes?.trim();
+    this.props.updatedAt = new Date();
   }
 
   updateLocation(locationId?: string): void {
-    this.locationId = locationId;
+    this.props.locationId = locationId;
+    this.props.updatedAt = new Date();
   }
 
   // Helper methods
   getDuration(): number {
-    return this.endAt.getTime() - this.startAt.getTime();
+    return this.props.endAt.getTime() - this.props.startAt.getTime();
   }
 
   getDurationInMinutes(): number {
@@ -169,60 +225,62 @@ export class Appointment {
   }
 
   isPast(): boolean {
-    return this.endAt < new Date();
+    return this.props.endAt < new Date();
   }
 
   isUpcoming(): boolean {
-    return this.startAt > new Date();
+    return this.props.startAt > new Date();
   }
 
   isOngoing(): boolean {
     const now = new Date();
-    return this.startAt <= now && this.endAt >= now;
+    return this.props.startAt <= now && this.props.endAt >= now;
   }
 
   isStylistAppointment(): boolean {
-    return this.type.isStylist();
+    return this.props.type.isStylist();
   }
 
   isInStoreAppointment(): boolean {
-    return this.type.isInStore();
+    return this.props.type.isInStore();
   }
 
   conflictsWith(other: Appointment): boolean {
     return (
-      (this.startAt >= other.startAt && this.startAt < other.endAt) ||
-      (this.endAt > other.startAt && this.endAt <= other.endAt) ||
-      (this.startAt <= other.startAt && this.endAt >= other.endAt)
+      (this.props.startAt >= other.startAt &&
+        this.props.startAt < other.endAt) ||
+      (this.props.endAt > other.startAt && this.props.endAt <= other.endAt) ||
+      (this.props.startAt <= other.startAt && this.props.endAt >= other.endAt)
     );
   }
 
-  // Convert to data for persistence
-  toData(): AppointmentEntityData {
-    return {
-      apptId: this.apptId.getValue(),
-      userId: this.userId,
-      type: this.type,
-      locationId: this.locationId,
-      startAt: this.startAt,
-      endAt: this.endAt,
-      notes: this.notes,
-    };
-  }
-
-  toDatabaseRow(): AppointmentDatabaseRow {
-    return {
-      appt_id: this.apptId.getValue(),
-      user_id: this.userId,
-      type: this.type.getValue(),
-      location_id: this.locationId || null,
-      start_at: this.startAt,
-      end_at: this.endAt,
-      notes: this.notes || null,
-    };
-  }
-
   equals(other: Appointment): boolean {
-    return this.apptId.equals(other.apptId);
+    return this.props.id.equals(other.props.id);
   }
+
+  static toDTO(entity: Appointment): AppointmentDTO {
+    return {
+      id: entity.props.id.getValue(),
+      userId: entity.props.userId,
+      type: entity.props.type.getValue(),
+      startAt: entity.props.startAt.toISOString(),
+      endAt: entity.props.endAt.toISOString(),
+      locationId: entity.props.locationId,
+      notes: entity.props.notes,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
+    };
+  }
+}
+
+// ============================================================================
+// 6. Supporting input types
+// ============================================================================
+export interface CreateAppointmentData {
+  userId: string;
+  type: AppointmentType;
+  locationId?: string;
+  startAt: Date;
+  endAt: Date;
+  notes?: string;
 }

@@ -2,12 +2,7 @@ import {
   ICategoryRepository,
   CategoryQueryOptions,
 } from "../../domain/repositories/category.repository";
-import {
-  Category,
-  CategoryDTO,
-} from "../../domain/entities/category.entity";
-
-type CreateCategoryData = { name: string; parentId?: string; position?: number };
+import { Category, CategoryDTO } from "../../domain/entities/category.entity";
 import { CategoryId } from "../../domain/value-objects/category-id.vo";
 import { Slug } from "../../domain/value-objects/slug.vo";
 import {
@@ -16,6 +11,12 @@ import {
   CategoryDeletionError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+type CreateCategoryData = {
+  name: string;
+  parentId?: string;
+  position?: number;
+};
 
 export interface CategoryQueryServiceOptions {
   page?: number;
@@ -38,9 +39,7 @@ export interface CategoryReorderItem {
 }
 
 export class CategoryManagementService {
-  constructor(
-    private readonly categoryRepository: ICategoryRepository,
-  ) {}
+  constructor(private readonly categoryRepository: ICategoryRepository) {}
 
   async createCategory(data: CreateCategoryData): Promise<CategoryDTO> {
     if (data.parentId) {
@@ -62,7 +61,8 @@ export class CategoryManagementService {
       const parentId = data.parentId
         ? CategoryId.fromString(data.parentId)
         : undefined;
-      const maxPosition = await this.categoryRepository.getMaxPosition(parentId);
+      const maxPosition =
+        await this.categoryRepository.getMaxPosition(parentId);
       position = maxPosition + 1;
     }
 
@@ -72,7 +72,7 @@ export class CategoryManagementService {
   }
 
   async getCategoryById(id: string): Promise<CategoryDTO> {
-    return Category.toDTO(await this._getCategory(id));
+    return Category.toDTO(await this.getCategory(id));
   }
 
   async getCategoryBySlug(slug: string): Promise<CategoryDTO> {
@@ -86,10 +86,10 @@ export class CategoryManagementService {
 
   async getCategories(
     options: CategoryQueryServiceOptions = {},
-  ): Promise<CategoryDTO[]> {
+  ): Promise<{ categories: CategoryDTO[]; total: number }> {
     const {
       page = 1,
-      limit = 50,
+      limit = 20,
       parentId,
       includeChildren = false,
       sortBy = "position",
@@ -108,7 +108,8 @@ export class CategoryManagementService {
     if (parentId) {
       const parentCategoryId = CategoryId.fromString(parentId);
       if (includeChildren) {
-        categories = await this.categoryRepository.findDescendants(parentCategoryId);
+        categories =
+          await this.categoryRepository.findDescendants(parentCategoryId);
       } else {
         categories = await this.categoryRepository.findByParentId(
           parentCategoryId,
@@ -119,11 +120,12 @@ export class CategoryManagementService {
       if (includeChildren) {
         categories = await this.categoryRepository.findAll(repositoryOptions);
       } else {
-        categories = await this.categoryRepository.findRootCategories(repositoryOptions);
+        categories =
+          await this.categoryRepository.findRootCategories(repositoryOptions);
       }
     }
 
-    return categories.map((c) => Category.toDTO(c));
+    return { categories: categories.map((c) => Category.toDTO(c)), total: categories.length };
   }
 
   async getAllCategories(
@@ -208,11 +210,12 @@ export class CategoryManagementService {
     updateData: Partial<CreateCategoryData>,
   ): Promise<CategoryDTO> {
     const categoryId = CategoryId.fromString(id);
-    const category = await this._getCategory(id);
+    const category = await this.getCategory(id);
 
     if (updateData.name !== undefined) {
       const newSlug = Slug.create(updateData.name);
-      const existingCategory = await this.categoryRepository.findBySlug(newSlug);
+      const existingCategory =
+        await this.categoryRepository.findBySlug(newSlug);
       if (existingCategory && !existingCategory.id.equals(categoryId)) {
         throw new CategoryAlreadyExistsError(newSlug.getValue());
       }
@@ -227,7 +230,8 @@ export class CategoryManagementService {
           throw new InvalidOperationError("Category cannot be its own parent");
         }
 
-        const descendants = await this.categoryRepository.findDescendants(categoryId);
+        const descendants =
+          await this.categoryRepository.findDescendants(categoryId);
         const wouldCreateCircularRef = descendants.some((desc) =>
           desc.id.equals(newParentId),
         );
@@ -250,13 +254,13 @@ export class CategoryManagementService {
       category.updatePosition(updateData.position);
     }
 
-    await this.categoryRepository.update(category);
+    await this.categoryRepository.save(category);
     return Category.toDTO(category);
   }
 
   async deleteCategory(id: string): Promise<void> {
     const categoryId = CategoryId.fromString(id);
-    await this._getCategory(id);
+    await this.getCategory(id);
 
     const children = await this.categoryRepository.findChildren(categoryId);
     if (children.length > 0) {
@@ -282,7 +286,7 @@ export class CategoryManagementService {
       const category = await this.categoryRepository.findById(categoryId);
       if (category) {
         category.updatePosition(orderItem.position);
-        await this.categoryRepository.update(category);
+        await this.categoryRepository.save(category);
       }
     }
   }
@@ -314,7 +318,8 @@ export class CategoryManagementService {
       totalCategories: allCategories.length,
       rootCategories: rootCategories.length,
       maxDepth,
-      averageChildrenPerCategory: Math.round(averageChildrenPerCategory * 100) / 100,
+      averageChildrenPerCategory:
+        Math.round(averageChildrenPerCategory * 100) / 100,
     };
   }
 
@@ -347,7 +352,7 @@ export class CategoryManagementService {
     return !wouldCreateCircularRef;
   }
 
-  private async _getCategory(id: string): Promise<Category> {
+  private async getCategory(id: string): Promise<Category> {
     const categoryId = CategoryId.fromString(id);
     const category = await this.categoryRepository.findById(categoryId);
     if (!category) {

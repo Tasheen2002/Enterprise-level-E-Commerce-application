@@ -1,6 +1,11 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { authenticate } from "@/api/src/shared/middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { PickupReservationController } from "../controllers/pickup-reservation.controller";
 import { validateBody, validateParams, validateQuery } from "../validation/validator";
 import {
@@ -10,15 +15,29 @@ import {
   pickupReservationResponseSchema,
 } from "../validation/pickup-reservation.schema";
 
-export async function registerPickupReservationRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+
+
+export async function pickupReservationRoutes(
   fastify: FastifyInstance,
   controller: PickupReservationController,
 ): Promise<void> {
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // List reservations
   fastify.get(
     "/pickup-reservations",
     {
-      preHandler: [authenticate, validateQuery(listPickupReservationsSchema)],
+      preValidation: [validateQuery(listPickupReservationsSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "List pickup reservations",
         tags: ["Pickup Reservations"],
@@ -37,6 +56,8 @@ export async function registerPickupReservationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: pickupReservationResponseSchema },
             },
           },
@@ -51,7 +72,7 @@ export async function registerPickupReservationRoutes(
     "/pickup-reservations/:reservationId",
     {
       preValidation: [validateParams(reservationParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get reservation by ID",
         tags: ["Pickup Reservations"],
@@ -69,6 +90,8 @@ export async function registerPickupReservationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: pickupReservationResponseSchema,
             },
           },
@@ -82,7 +105,8 @@ export async function registerPickupReservationRoutes(
   fastify.post(
     "/pickup-reservations",
     {
-      preHandler: [authenticate, validateBody(createPickupReservationSchema)],
+      preValidation: [validateBody(createPickupReservationSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create pickup reservation",
         tags: ["Pickup Reservations"],
@@ -104,6 +128,8 @@ export async function registerPickupReservationRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: pickupReservationResponseSchema,
             },
           },
@@ -118,7 +144,7 @@ export async function registerPickupReservationRoutes(
     "/pickup-reservations/:reservationId",
     {
       preValidation: [validateParams(reservationParamsSchema)],
-      preHandler: [authenticate],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Cancel pickup reservation",
         tags: ["Pickup Reservations"],

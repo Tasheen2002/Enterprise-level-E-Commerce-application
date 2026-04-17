@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { EditorialLookController } from "../controllers/editorial-look.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
   validateBody,
   validateParams,
   validateQuery,
@@ -31,17 +36,28 @@ import {
   productLooksResponseSchema,
 } from "../validation/editorial-look.schema";
 
-export async function registerEditorialLookRoutes(
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+export async function editorialLookRoutes(
   fastify: FastifyInstance,
   controller: EditorialLookController,
 ): Promise<void> {
   const lookSchema = editorialLookResponseSchema;
 
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
   // GET /editorial-looks — List editorial looks (public)
   fastify.get(
     "/editorial-looks",
     {
-      preHandler: [validateQuery(listEditorialLooksSchema)],
+      preValidation: [validateQuery(listEditorialLooksSchema)],
       schema: {
         description:
           "Get paginated list of editorial looks with filtering options",
@@ -75,6 +91,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "object",
                 properties: {
@@ -106,6 +124,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: editorialLookStatsResponseSchema,
             },
           },
@@ -131,6 +151,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: readyToPublishLooksResponseSchema,
             },
           },
@@ -145,7 +167,7 @@ export async function registerEditorialLookRoutes(
   fastify.get(
     "/editorial-looks/popular-products",
     {
-      preHandler: [validateQuery(popularProductsQuerySchema)],
+      preValidation: [validateQuery(popularProductsQuerySchema)],
       schema: {
         description: "Get products most frequently featured in editorial looks",
         tags: ["Editorial Looks"],
@@ -161,6 +183,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: popularProductsResponseSchema,
             },
           },
@@ -188,7 +212,12 @@ export async function registerEditorialLookRoutes(
         response: {
           200: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: lookSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: lookSchema,
+            },
           },
         },
       },
@@ -216,6 +245,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: lookProductsResponseSchema,
             },
           },
@@ -245,6 +276,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: productLooksResponseSchema,
             },
           },
@@ -259,10 +292,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/bulk",
     {
-      preHandler: [
-        validateBody(bulkCreateEditorialLooksSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(bulkCreateEditorialLooksSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Bulk create editorial looks",
         tags: ["Editorial Looks"],
@@ -297,6 +328,8 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: { type: "array", items: lookSchema },
             },
           },
@@ -314,10 +347,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/bulk/publish",
     {
-      preHandler: [
-        validateBody(bulkPublishEditorialLooksSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(bulkPublishEditorialLooksSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Publish multiple editorial looks at once",
         tags: ["Editorial Looks"],
@@ -339,6 +370,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: {
                 type: "object",
@@ -375,6 +407,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: {
                 type: "object",
@@ -399,10 +432,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks",
     {
-      preHandler: [
-        validateBody(createEditorialLookSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(createEditorialLookSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new editorial look",
         tags: ["Editorial Looks"],
@@ -427,8 +458,9 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: lookSchema,
+              statusCode: { type: "number" },
               message: { type: "string" },
+              data: lookSchema,
             },
           },
         },
@@ -459,6 +491,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -491,6 +524,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -506,11 +540,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/schedule",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(schedulePublicationSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(schedulePublicationSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Schedule an editorial look for future publication",
         tags: ["Editorial Looks"],
@@ -531,6 +562,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -546,11 +578,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/duplicate",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(duplicateEditorialLookSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(duplicateEditorialLookSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Duplicate an editorial look",
         tags: ["Editorial Looks"],
@@ -568,7 +597,12 @@ export async function registerEditorialLookRoutes(
         response: {
           201: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: lookSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: lookSchema,
+            },
           },
         },
       },
@@ -581,11 +615,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/hero",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(setHeroImageSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(setHeroImageSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Set the hero image for an editorial look",
         tags: ["Editorial Looks"],
@@ -606,6 +637,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -621,11 +653,8 @@ export async function registerEditorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/products",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(setLookProductsSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(setLookProductsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Set (replace) all products featured in an editorial look",
         tags: ["Editorial Looks"],
@@ -651,6 +680,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -693,15 +723,12 @@ export async function registerEditorialLookRoutes(
       controller.addProductToLook(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /editorial-looks/:id/story — Update story content (Admin only)
-  fastify.put(
+  // PATCH /editorial-looks/:id/story — Update story content (Admin only)
+  fastify.patch(
     "/editorial-looks/:id/story",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(updateStoryContentSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(updateStoryContentSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update the story HTML content of an editorial look",
         tags: ["Editorial Looks"],
@@ -722,6 +749,7 @@ export async function registerEditorialLookRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
+              statusCode: { type: "number" },
               message: { type: "string" },
               data: lookSchema,
             },
@@ -733,15 +761,12 @@ export async function registerEditorialLookRoutes(
       controller.updateStoryContent(request as AuthenticatedRequest, reply),
   );
 
-  // PUT /editorial-looks/:id — Update editorial look (Admin only)
-  fastify.put(
+  // PATCH /editorial-looks/:id — Update editorial look (Admin only)
+  fastify.patch(
     "/editorial-looks/:id",
     {
-      preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [
-        validateBody(updateEditorialLookSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateParams(editorialLookParamsSchema), validateBody(updateEditorialLookSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update an existing editorial look",
         tags: ["Editorial Looks"],
@@ -768,7 +793,12 @@ export async function registerEditorialLookRoutes(
         response: {
           200: {
             type: "object",
-            properties: { success: { type: "boolean" }, data: lookSchema },
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: lookSchema,
+            },
           },
         },
       },
@@ -781,10 +811,8 @@ export async function registerEditorialLookRoutes(
   fastify.delete(
     "/editorial-looks/bulk",
     {
-      preHandler: [
-        validateBody(bulkDeleteEditorialLooksSchema),
-        RolePermissions.ADMIN_ONLY,
-      ],
+      preValidation: [validateBody(bulkDeleteEditorialLooksSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Bulk delete editorial looks",
         tags: ["Editorial Looks"],
