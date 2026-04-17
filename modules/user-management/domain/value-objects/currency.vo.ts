@@ -10,7 +10,7 @@ export class Currency {
 
     const normalizedCurrency = currency.trim().toUpperCase();
 
-    if (!this.isValidCurrency(normalizedCurrency)) {
+    if (!Currency.isValidCurrency(normalizedCurrency)) {
       throw new DomainValidationError(
         `Invalid currency code: ${currency}. Must be a valid ISO 4217 code`,
       );
@@ -19,7 +19,7 @@ export class Currency {
     this.value = normalizedCurrency;
   }
 
-  private isValidCurrency(currency: string): boolean {
+  private static isValidCurrency(currency: string): boolean {
     // ISO 4217 currency codes for e-commerce platform
     const validCurrencies = [
       "USD",
