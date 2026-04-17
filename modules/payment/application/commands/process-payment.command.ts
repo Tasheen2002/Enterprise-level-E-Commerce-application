@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { PaymentService, PaymentIntentDto } from '../services/payment.service';
+import { PaymentService } from '../services/payment.service';
+import { PaymentIntentDTO } from '../../domain/entities/payment-intent.entity';
 
 export interface ProcessPaymentCommand extends ICommand {
   readonly intentId: string;
@@ -13,18 +14,18 @@ export interface ProcessPaymentCommand extends ICommand {
 
 export class ProcessPaymentHandler implements ICommandHandler<
   ProcessPaymentCommand,
-  CommandResult<PaymentIntentDto>
+  CommandResult<PaymentIntentDTO>
 > {
   constructor(private readonly paymentService: PaymentService) {}
 
-  async handle(command: ProcessPaymentCommand): Promise<CommandResult<PaymentIntentDto>> {
+  async handle(command: ProcessPaymentCommand): Promise<CommandResult<PaymentIntentDTO>> {
     const authorized = await this.paymentService.authorizePayment({
       intentId: command.intentId,
       pspReference: command.pspReference,
       userId: command.userId,
     });
     const captured = await this.paymentService.capturePayment(
-      authorized.intentId,
+      authorized.id,
       command.pspReference,
       command.userId,
     );

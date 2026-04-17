@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { PaymentWebhookService, PaymentWebhookEventDto } from '../services/payment-webhook.service';
+import { PaymentWebhookService } from '../services/payment-webhook.service';
+import { PaymentWebhookEventDTO } from '../../domain/entities/payment-webhook-event.entity';
 import { WebhookEventData } from '../../domain/entities/payment-webhook-event.entity';
 
 export interface ProcessWebhookEventCommand extends ICommand {
@@ -15,11 +16,11 @@ export interface ProcessWebhookEventCommand extends ICommand {
 
 export class ProcessWebhookEventHandler implements ICommandHandler<
   ProcessWebhookEventCommand,
-  CommandResult<PaymentWebhookEventDto>
+  CommandResult<PaymentWebhookEventDTO>
 > {
   constructor(private readonly webhookService: PaymentWebhookService) {}
 
-  async handle(command: ProcessWebhookEventCommand): Promise<CommandResult<PaymentWebhookEventDto>> {
+  async handle(command: ProcessWebhookEventCommand): Promise<CommandResult<PaymentWebhookEventDTO>> {
     const event = await this.webhookService.recordWebhookEvent({
       provider: command.provider,
       eventType: command.eventType,

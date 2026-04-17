@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { BnplTransactionService, BnplTransactionDto } from '../services/bnpl-transaction.service';
+import { BnplTransactionService } from '../services/bnpl-transaction.service';
+import { BnplTransactionDTO } from '../../domain/entities/bnpl-transaction.entity';
 
 type BnplAction = 'approve' | 'reject' | 'activate' | 'complete' | 'cancel';
 
@@ -15,12 +16,12 @@ export interface ProcessBnplPaymentCommand extends ICommand {
 
 export class ProcessBnplPaymentHandler implements ICommandHandler<
   ProcessBnplPaymentCommand,
-  CommandResult<BnplTransactionDto>
+  CommandResult<BnplTransactionDTO>
 > {
   constructor(private readonly bnplService: BnplTransactionService) {}
 
-  async handle(command: ProcessBnplPaymentCommand): Promise<CommandResult<BnplTransactionDto>> {
-    let result: BnplTransactionDto;
+  async handle(command: ProcessBnplPaymentCommand): Promise<CommandResult<BnplTransactionDTO>> {
+    let result: BnplTransactionDTO;
 
     switch (command.action) {
       case 'approve':

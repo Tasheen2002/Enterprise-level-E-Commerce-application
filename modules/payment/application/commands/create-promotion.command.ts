@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { PromotionService, PromotionDto } from '../services/promotion.service';
+import { PromotionService } from '../services/promotion.service';
+import { PromotionDTO } from '../../domain/entities/promotion.entity';
 import { PromotionRule } from '../../domain/entities/promotion.entity';
 
 export interface CreatePromotionCommand extends ICommand {
@@ -16,11 +17,11 @@ export interface CreatePromotionCommand extends ICommand {
 
 export class CreatePromotionHandler implements ICommandHandler<
   CreatePromotionCommand,
-  CommandResult<PromotionDto>
+  CommandResult<PromotionDTO>
 > {
   constructor(private readonly promotionService: PromotionService) {}
 
-  async handle(command: CreatePromotionCommand): Promise<CommandResult<PromotionDto>> {
+  async handle(command: CreatePromotionCommand): Promise<CommandResult<PromotionDTO>> {
     const promotion = await this.promotionService.createPromotion({
       code: command.code,
       rule: command.rule,

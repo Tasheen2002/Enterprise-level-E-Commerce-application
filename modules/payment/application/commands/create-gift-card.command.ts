@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { GiftCardService, GiftCardDto } from '../services/gift-card.service';
+import { GiftCardService } from '../services/gift-card.service';
+import { GiftCardDTO } from '../../domain/entities/gift-card.entity';
 
 export interface CreateGiftCardCommand extends ICommand {
   readonly code: string;
@@ -17,11 +18,11 @@ export interface CreateGiftCardCommand extends ICommand {
 
 export class CreateGiftCardHandler implements ICommandHandler<
   CreateGiftCardCommand,
-  CommandResult<GiftCardDto>
+  CommandResult<GiftCardDTO>
 > {
   constructor(private readonly giftCardService: GiftCardService) {}
 
-  async handle(command: CreateGiftCardCommand): Promise<CommandResult<GiftCardDto>> {
+  async handle(command: CreateGiftCardCommand): Promise<CommandResult<GiftCardDTO>> {
     const giftCard = await this.giftCardService.createGiftCard({
       code: command.code,
       initialBalance: command.initialBalance,

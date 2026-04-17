@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { PromotionService, PromotionUsageDto } from '../services/promotion.service';
+import { PromotionService } from '../services/promotion.service';
+import { PromotionUsageDTO } from '../../domain/entities/promotion-usage.entity';
 
 export interface RecordPromotionUsageCommand extends ICommand {
   readonly promoId: string;
@@ -14,11 +15,11 @@ export interface RecordPromotionUsageCommand extends ICommand {
 
 export class RecordPromotionUsageHandler implements ICommandHandler<
   RecordPromotionUsageCommand,
-  CommandResult<PromotionUsageDto>
+  CommandResult<PromotionUsageDTO>
 > {
   constructor(private readonly promotionService: PromotionService) {}
 
-  async handle(command: RecordPromotionUsageCommand): Promise<CommandResult<PromotionUsageDto>> {
+  async handle(command: RecordPromotionUsageCommand): Promise<CommandResult<PromotionUsageDTO>> {
     const usage = await this.promotionService.recordPromotionUsage({
       promoId: command.promoId,
       orderId: command.orderId,
