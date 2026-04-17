@@ -1,15 +1,14 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ReservationService, ReservationDto } from "../services/reservation.service";
 
 export interface GetVariantReservationsQuery extends IQuery {
   readonly variantId: string;
 }
 
-export class GetVariantReservationsHandler implements IQueryHandler<GetVariantReservationsQuery, QueryResult<ReservationDto[]>> {
+export class GetVariantReservationsHandler implements IQueryHandler<GetVariantReservationsQuery, ReservationDto[]> {
   constructor(private readonly reservationService: ReservationService) {}
 
-  async handle(query: GetVariantReservationsQuery): Promise<QueryResult<ReservationDto[]>> {
-    const reservations = await this.reservationService.getVariantReservations(query.variantId);
-    return QueryResult.success<ReservationDto[]>(reservations);
+  async handle(query: GetVariantReservationsQuery): Promise<ReservationDto[]> {
+    return this.reservationService.getVariantReservations(query.variantId);
   }
 }

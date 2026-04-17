@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ReservationService, AvailabilityDto } from "../services/reservation.service";
 
 export interface CheckAvailabilityQuery extends IQuery {
@@ -6,14 +6,13 @@ export interface CheckAvailabilityQuery extends IQuery {
   readonly requestedQuantity: number;
 }
 
-export class CheckAvailabilityHandler implements IQueryHandler<CheckAvailabilityQuery, QueryResult<AvailabilityDto>> {
+export class CheckAvailabilityHandler implements IQueryHandler<CheckAvailabilityQuery, AvailabilityDto> {
   constructor(private readonly reservationService: ReservationService) {}
 
-  async handle(query: CheckAvailabilityQuery): Promise<QueryResult<AvailabilityDto>> {
-    const availability = await this.reservationService.checkAvailability(
+  async handle(query: CheckAvailabilityQuery): Promise<AvailabilityDto> {
+    return this.reservationService.checkAvailability(
       query.variantId,
       query.requestedQuantity,
     );
-    return QueryResult.success<AvailabilityDto>(availability);
   }
 }

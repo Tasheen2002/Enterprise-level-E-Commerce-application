@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { CartManagementService } from "../services/cart-management.service";
 
 export interface CartStatisticsDto {
@@ -12,11 +12,10 @@ export interface CartStatisticsDto {
 
 export interface GetCartStatisticsQuery extends IQuery {}
 
-export class GetCartStatisticsHandler implements IQueryHandler<GetCartStatisticsQuery, QueryResult<CartStatisticsDto>> {
+export class GetCartStatisticsHandler implements IQueryHandler<GetCartStatisticsQuery, CartStatisticsDto> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(_query: GetCartStatisticsQuery): Promise<QueryResult<CartStatisticsDto>> {
-    const statistics = await this.cartManagementService.getCartStatistics();
-    return QueryResult.success<CartStatisticsDto>(statistics);
+  async handle(): Promise<CartStatisticsDto> {
+    return this.cartManagementService.getCartStatistics();
   }
 }
