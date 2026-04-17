@@ -1,74 +1,57 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
-  ProcessWebhookEventCommand,
   ProcessWebhookEventHandler,
-  GetWebhookEventsQuery,
   GetWebhookEventsHandler,
 } from "../../../application";
-import { PaymentWebhookService } from "../../../application/services/payment-webhook.service";
 import { WebhookEventData } from "../../../domain/entities/payment-webhook-event.entity";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface ProcessWebhookRequest {
-  provider: string;
-  eventType: string;
-  eventData: WebhookEventData;
-}
 
 export interface WebhookFilterParams {
   provider?: string;
   eventType?: string;
-  limit?: number;
-  offset?: number;
 }
 
 export class PaymentWebhookController {
-  private processHandler: ProcessWebhookEventHandler;
-  private listHandler: GetWebhookEventsHandler;
+  constructor(
+    private readonly processHandler: ProcessWebhookEventHandler,
+    private readonly listHandler: GetWebhookEventsHandler,
+  ) {}
 
-  constructor(private readonly webhookService: PaymentWebhookService) {
-    this.processHandler = new ProcessWebhookEventHandler(webhookService);
-    this.listHandler = new GetWebhookEventsHandler(webhookService);
-  }
-
-  /**
-   * POST /webhooks/:provider
-   * Process incoming webhook event from payment provider
-   */
   async processWebhook(
-    request: FastifyRequest<{ Params: { provider: string }; Body: any }>,
+    request: FastifyRequest<{ Params: { provider: string }; Body: WebhookEventData }>,
     reply: FastifyReply,
   ) {
-    const { provider } = request.params;
-    const eventData = request.body as any;
-    const signature = request.headers["stripe-signature"] as string | undefined;
+    try {
+      const { provider } = request.params;
+      const eventData = request.body;
+      const signature = request.headers["stripe-signature"] as string | undefined;
 
-    const cmd: ProcessWebhookEventCommand = {
-      provider,
-      eventType: eventData?.type || eventData?.event_type || "unknown",
-      eventData: eventData as WebhookEventData,
-      signature,
-      timestamp: new Date(),
-    };
-    const result = await this.processHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Webhook event processed");
+      const result = await this.processHandler.handle({
+        provider,
+        eventType: (eventData as any)?.type || (eventData as any)?.event_type || "unknown",
+        eventData,
+        signature,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Webhook event processed");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 
-  /**
-   * GET /webhooks
-   * List webhook events with optional filters
-   */
   async listWebhookEvents(
     request: FastifyRequest<{ Querystring: WebhookFilterParams }>,
     reply: FastifyReply,
   ) {
-    const { provider, eventType } = request.query;
-    const query: GetWebhookEventsQuery = {
-      provider,
-      eventType,
-      timestamp: new Date(),
-    };
-    const result = await this.listHandler.handle(query);
-    return ResponseHelper.fromQuery(reply, result, "Webhook events retrieved");
+    try {
+      const result = await this.listHandler.handle({
+        provider: request.query.provider,
+        eventType: request.query.eventType,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Webhook events retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }
