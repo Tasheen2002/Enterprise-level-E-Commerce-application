@@ -181,7 +181,12 @@ export class PaymentMethod extends AggregateRoot {
   updateExpiry(month: number, year: number): void {
     if (this.props.expMonth === month && this.props.expYear === year) return;
     PaymentMethod.validateExpiry(month, year, this.props.type);
-    if (year < new Date().getFullYear()) throw new DomainValidationError('Expiry year cannot be in the past');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+      throw new DomainValidationError('Expiry date cannot be in the past');
+    }
     this.props.expMonth = month;
     this.props.expYear = year;
     this.props.updatedAt = new Date();
@@ -253,7 +258,14 @@ export class PaymentMethod extends AggregateRoot {
   }
 
   canBeDeleted(): boolean {
+    // Expired payment methods can always be deleted regardless of default status
+    if (this.isExpired()) return true;
+    // Active default methods can be deleted — the service layer reassigns the default afterward
     return true;
+  }
+
+  canBeUsedAsOnlyPaymentMethod(): boolean {
+    return !this.isExpired();
   }
 
   requiresBillingAddress(): boolean {

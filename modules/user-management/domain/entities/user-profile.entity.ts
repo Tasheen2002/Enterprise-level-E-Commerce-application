@@ -1,7 +1,7 @@
-import { UserId } from '../value-objects/user-id.vo';
-import { Currency } from '../value-objects/currency.vo';
-import { Locale } from '../value-objects/locale.vo';
-import { InvalidOperationError } from '../errors/user-management.errors';
+import { UserId } from "../value-objects/user-id.vo";
+import { Currency } from "../value-objects/currency.vo";
+import { Locale } from "../value-objects/locale.vo";
+import { InvalidOperationError } from "../errors/user-management.errors";
 
 // ============================================================================
 // Props Interface
@@ -31,6 +31,13 @@ export interface UserProfileDTO {
   currency: string | null;
   stylePreferences: StylePreferences;
   preferredSizes: PreferredSizes;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  title?: string | null;
+  dateOfBirth?: string | null;
+  residentOf?: string | null;
+  nationality?: string | null;
 }
 
 // ============================================================================
@@ -38,8 +45,7 @@ export interface UserProfileDTO {
 // ============================================================================
 
 export class UserProfile {
-  private constructor(private props: UserProfileProps) {
-  }
+  private constructor(private props: UserProfileProps) {}
 
   // --- Static factories ---
 
@@ -73,19 +79,35 @@ export class UserProfile {
 
   // --- Native getters ---
 
-  get userId(): UserId { return this.props.userId; }
-  get defaultAddressId(): string | null { return this.props.defaultAddressId; }
-  get defaultPaymentMethodId(): string | null { return this.props.defaultPaymentMethodId; }
-  get preferences(): UserPreferences { return { ...this.props.preferences }; }
-  get locale(): Locale | null { return this.props.locale; }
-  get currency(): Currency | null { return this.props.currency; }
-  get stylePreferences(): StylePreferences { return { ...this.props.stylePreferences }; }
-  get preferredSizes(): PreferredSizes { return { ...this.props.preferredSizes }; }
+  get userId(): UserId {
+    return this.props.userId;
+  }
+  get defaultAddressId(): string | null {
+    return this.props.defaultAddressId;
+  }
+  get defaultPaymentMethodId(): string | null {
+    return this.props.defaultPaymentMethodId;
+  }
+  get preferences(): UserPreferences {
+    return { ...this.props.preferences };
+  }
+  get locale(): Locale | null {
+    return this.props.locale;
+  }
+  get currency(): Currency | null {
+    return this.props.currency;
+  }
+  get stylePreferences(): StylePreferences {
+    return { ...this.props.stylePreferences };
+  }
+  get preferredSizes(): PreferredSizes {
+    return { ...this.props.preferredSizes };
+  }
 
   // --- Business methods ---
 
   setDefaultAddress(addressId: string): void {
-    if (!addressId) throw new InvalidOperationError('Address ID is required');
+    if (!addressId) throw new InvalidOperationError("Address ID is required");
     this.props.defaultAddressId = addressId;
   }
 
@@ -98,7 +120,8 @@ export class UserProfile {
   }
 
   setDefaultPaymentMethod(paymentMethodId: string): void {
-    if (!paymentMethodId) throw new InvalidOperationError('Payment method ID is required');
+    if (!paymentMethodId)
+      throw new InvalidOperationError("Payment method ID is required");
     this.props.defaultPaymentMethodId = paymentMethodId;
   }
 
@@ -119,7 +142,7 @@ export class UserProfile {
   }
 
   updatePreference(key: string, value: unknown): void {
-    if (!key) throw new InvalidOperationError('Preference key is required');
+    if (!key) throw new InvalidOperationError("Preference key is required");
     this.props.preferences = { ...this.props.preferences, [key]: value };
   }
 
@@ -128,7 +151,7 @@ export class UserProfile {
   }
 
   removePreference(key: string): void {
-    if (!key) throw new InvalidOperationError('Preference key is required');
+    if (!key) throw new InvalidOperationError("Preference key is required");
     const { [key]: _removed, ...rest } = this.props.preferences;
     this.props.preferences = rest;
   }
@@ -138,8 +161,12 @@ export class UserProfile {
   }
 
   updateStylePreference(category: string, preferences: unknown): void {
-    if (!category) throw new InvalidOperationError('Style category is required');
-    this.props.stylePreferences = { ...this.props.stylePreferences, [category]: preferences };
+    if (!category)
+      throw new InvalidOperationError("Style category is required");
+    this.props.stylePreferences = {
+      ...this.props.stylePreferences,
+      [category]: preferences,
+    };
   }
 
   setStylePreferences(stylePreferences: StylePreferences): void {
@@ -150,16 +177,32 @@ export class UserProfile {
     return this.props.stylePreferences[category];
   }
 
-  setFavoriteColors(colors: string[]): void { this.updateStylePreference('favoriteColors', colors); }
-  getFavoriteColors(): string[] { return (this.getStylePreference('favoriteColors') as string[]) || []; }
-  setFavoriteBrands(brands: string[]): void { this.updateStylePreference('favoriteBrands', brands); }
-  getFavoriteBrands(): string[] { return (this.getStylePreference('favoriteBrands') as string[]) || []; }
-  setStyleTypes(styles: string[]): void { this.updateStylePreference('styleTypes', styles); }
-  getStyleTypes(): string[] { return (this.getStylePreference('styleTypes') as string[]) || []; }
+  setFavoriteColors(colors: string[]): void {
+    this.updateStylePreference("favoriteColors", colors);
+  }
+  getFavoriteColors(): string[] {
+    return (this.getStylePreference("favoriteColors") as string[]) || [];
+  }
+  setFavoriteBrands(brands: string[]): void {
+    this.updateStylePreference("favoriteBrands", brands);
+  }
+  getFavoriteBrands(): string[] {
+    return (this.getStylePreference("favoriteBrands") as string[]) || [];
+  }
+  setStyleTypes(styles: string[]): void {
+    this.updateStylePreference("styleTypes", styles);
+  }
+  getStyleTypes(): string[] {
+    return (this.getStylePreference("styleTypes") as string[]) || [];
+  }
 
   updatePreferredSize(category: string, size: string): void {
-    if (!category || !size) throw new InvalidOperationError('Category and size are required');
-    this.props.preferredSizes = { ...this.props.preferredSizes, [category]: size };
+    if (!category || !size)
+      throw new InvalidOperationError("Category and size are required");
+    this.props.preferredSizes = {
+      ...this.props.preferredSizes,
+      [category]: size,
+    };
   }
 
   setPreferredSizes(preferredSizes: PreferredSizes): void {
@@ -170,14 +213,30 @@ export class UserProfile {
     return this.props.preferredSizes[category] as string | undefined;
   }
 
-  setShirtSize(size: string): void { this.updatePreferredSize('shirt', size); }
-  setPantSize(size: string): void { this.updatePreferredSize('pants', size); }
-  setShoeSize(size: string): void { this.updatePreferredSize('shoes', size); }
-  setSuitSize(size: string): void { this.updatePreferredSize('suit', size); }
-  getShirtSize(): string | undefined { return this.getPreferredSize('shirt'); }
-  getPantSize(): string | undefined { return this.getPreferredSize('pants'); }
-  getShoeSize(): string | undefined { return this.getPreferredSize('shoes'); }
-  getSuitSize(): string | undefined { return this.getPreferredSize('suit'); }
+  setShirtSize(size: string): void {
+    this.updatePreferredSize("shirt", size);
+  }
+  setPantSize(size: string): void {
+    this.updatePreferredSize("pants", size);
+  }
+  setShoeSize(size: string): void {
+    this.updatePreferredSize("shoes", size);
+  }
+  setSuitSize(size: string): void {
+    this.updatePreferredSize("suit", size);
+  }
+  getShirtSize(): string | undefined {
+    return this.getPreferredSize("shirt");
+  }
+  getPantSize(): string | undefined {
+    return this.getPreferredSize("pants");
+  }
+  getShoeSize(): string | undefined {
+    return this.getPreferredSize("shoes");
+  }
+  getSuitSize(): string | undefined {
+    return this.getPreferredSize("suit");
+  }
 
   isComplete(): boolean {
     return !!(
@@ -269,4 +328,4 @@ export interface PreferredSizes {
   shoesSizeSystem?: SizeSystem;
 }
 
-export type SizeSystem = 'US' | 'EU' | 'UK' | 'Asian';
+export type SizeSystem = "US" | "EU" | "UK" | "Asian";
