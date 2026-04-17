@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { StockAlertResult } from "./get-stock-alert.query";
 import { StockAlertService } from "../services/stock-alert.service";
 
@@ -15,16 +15,16 @@ export interface ListStockAlertsResult {
 
 export class ListStockAlertsHandler implements IQueryHandler<
   ListStockAlertsQuery,
-  QueryResult<ListStockAlertsResult>
+  ListStockAlertsResult
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
-  async handle(query: ListStockAlertsQuery): Promise<QueryResult<ListStockAlertsResult>> {
+  async handle(query: ListStockAlertsQuery): Promise<ListStockAlertsResult> {
     const result = await this.stockAlertService.listStockAlerts({
       limit: query.limit,
       offset: query.offset,
       includeResolved: query.includeResolved,
     });
-    return QueryResult.success({ alerts: result.alerts, total: result.total });
+    return { alerts: result.alerts, total: result.total };
   }
 }

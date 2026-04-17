@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { StockAlertDTO } from "../../domain/entities/stock-alert.entity";
 import { StockAlertService } from "../services/stock-alert.service";
 
@@ -10,12 +10,11 @@ export type StockAlertResult = StockAlertDTO;
 
 export class GetStockAlertHandler implements IQueryHandler<
   GetStockAlertQuery,
-  QueryResult<StockAlertResult>
+  StockAlertResult
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
-  async handle(query: GetStockAlertQuery): Promise<QueryResult<StockAlertResult>> {
-    const alert = await this.stockAlertService.getStockAlert(query.alertId);
-    return QueryResult.success(alert);
+  async handle(query: GetStockAlertQuery): Promise<StockAlertResult> {
+    return this.stockAlertService.getStockAlert(query.alertId);
   }
 }

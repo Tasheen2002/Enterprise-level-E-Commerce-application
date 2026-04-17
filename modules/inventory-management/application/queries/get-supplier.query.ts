@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { SupplierDTO } from "../../domain/entities/supplier.entity";
 import { SupplierManagementService } from "../services/supplier-management.service";
 
@@ -10,12 +10,11 @@ export type SupplierResult = SupplierDTO;
 
 export class GetSupplierHandler implements IQueryHandler<
   GetSupplierQuery,
-  QueryResult<SupplierResult>
+  SupplierResult
 > {
   constructor(private readonly supplierService: SupplierManagementService) {}
 
-  async handle(query: GetSupplierQuery): Promise<QueryResult<SupplierResult>> {
-    const supplier = await this.supplierService.getSupplier(query.supplierId);
-    return QueryResult.success(supplier);
+  async handle(query: GetSupplierQuery): Promise<SupplierResult> {
+    return this.supplierService.getSupplier(query.supplierId);
   }
 }

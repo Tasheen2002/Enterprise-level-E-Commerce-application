@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderItemDTO } from "../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderManagementService } from "../services/purchase-order-management.service";
 
@@ -10,12 +10,11 @@ export type POItemResult = PurchaseOrderItemDTO;
 
 export class GetPOItemsHandler implements IQueryHandler<
   GetPOItemsQuery,
-  QueryResult<POItemResult[]>
+  POItemResult[]
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(query: GetPOItemsQuery): Promise<QueryResult<POItemResult[]>> {
-    const items = await this.poService.getPurchaseOrderItems(query.poId);
-    return QueryResult.success(items);
+  async handle(query: GetPOItemsQuery): Promise<POItemResult[]> {
+    return this.poService.getPurchaseOrderItems(query.poId);
   }
 }

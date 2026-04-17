@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PickupReservationDTO } from "../../domain/entities/pickup-reservation.entity";
 import { PickupReservationService } from "../services/pickup-reservation.service";
 
@@ -10,12 +10,11 @@ export type PickupReservationResult = PickupReservationDTO;
 
 export class GetPickupReservationHandler implements IQueryHandler<
   GetPickupReservationQuery,
-  QueryResult<PickupReservationResult>
+  PickupReservationResult
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
-  async handle(query: GetPickupReservationQuery): Promise<QueryResult<PickupReservationResult>> {
-    const reservation = await this.reservationService.getPickupReservation(query.reservationId);
-    return QueryResult.success(reservation);
+  async handle(query: GetPickupReservationQuery): Promise<PickupReservationResult> {
+    return this.reservationService.getPickupReservation(query.reservationId);
   }
 }

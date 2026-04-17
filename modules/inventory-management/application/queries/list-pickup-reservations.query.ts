@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PickupReservationResult } from "./get-pickup-reservation.query";
 import { PickupReservationService } from "../services/pickup-reservation.service";
 
@@ -10,23 +10,19 @@ export interface ListPickupReservationsQuery extends IQuery {
 
 export class ListPickupReservationsHandler implements IQueryHandler<
   ListPickupReservationsQuery,
-  QueryResult<PickupReservationResult[]>
+  PickupReservationResult[]
 > {
   constructor(private readonly reservationService: PickupReservationService) {}
 
-  async handle(query: ListPickupReservationsQuery): Promise<QueryResult<PickupReservationResult[]>> {
-    let reservations: PickupReservationResult[];
-
+  async handle(query: ListPickupReservationsQuery): Promise<PickupReservationResult[]> {
     if (query.orderId) {
-      reservations = await this.reservationService.getReservationsByOrder(query.orderId);
+      return this.reservationService.getReservationsByOrder(query.orderId);
     } else if (query.locationId) {
-      reservations = await this.reservationService.getReservationsByLocation(query.locationId);
+      return this.reservationService.getReservationsByLocation(query.locationId);
     } else if (query.activeOnly) {
-      reservations = await this.reservationService.getActiveReservations();
+      return this.reservationService.getActiveReservations();
     } else {
-      reservations = await this.reservationService.getAllReservations();
+      return this.reservationService.getAllReservations();
     }
-
-    return QueryResult.success(reservations);
   }
 }

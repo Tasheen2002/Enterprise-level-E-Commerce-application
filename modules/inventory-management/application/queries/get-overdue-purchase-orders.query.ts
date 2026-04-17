@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderResult } from "./get-purchase-order.query";
 import { PurchaseOrderManagementService } from "../services/purchase-order-management.service";
 
@@ -6,12 +6,11 @@ export interface GetOverduePurchaseOrdersQuery extends IQuery {}
 
 export class GetOverduePurchaseOrdersHandler implements IQueryHandler<
   GetOverduePurchaseOrdersQuery,
-  QueryResult<PurchaseOrderResult[]>
+  PurchaseOrderResult[]
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(_query: GetOverduePurchaseOrdersQuery): Promise<QueryResult<PurchaseOrderResult[]>> {
-    const purchaseOrders = await this.poService.getOverduePurchaseOrders();
-    return QueryResult.success(purchaseOrders);
+  async handle(): Promise<PurchaseOrderResult[]> {
+    return this.poService.getOverduePurchaseOrders();
   }
 }

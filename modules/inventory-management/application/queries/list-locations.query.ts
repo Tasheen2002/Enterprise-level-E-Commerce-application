@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { LocationResult } from "./get-location.query";
 import { LocationManagementService } from "../services/location-management.service";
 
@@ -15,16 +15,16 @@ export interface ListLocationsResult {
 
 export class ListLocationsHandler implements IQueryHandler<
   ListLocationsQuery,
-  QueryResult<ListLocationsResult>
+  ListLocationsResult
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
-  async handle(query: ListLocationsQuery): Promise<QueryResult<ListLocationsResult>> {
+  async handle(query: ListLocationsQuery): Promise<ListLocationsResult> {
     const result = await this.locationService.listLocations({
       limit: query.limit,
       offset: query.offset,
       type: query.type,
     });
-    return QueryResult.success({ locations: result.locations, total: result.total });
+    return { locations: result.locations, total: result.total };
   }
 }

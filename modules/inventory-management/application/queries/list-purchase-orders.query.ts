@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PurchaseOrderResult } from "./get-purchase-order.query";
 import { PurchaseOrderManagementService } from "../services/purchase-order-management.service";
 
@@ -18,11 +18,11 @@ export interface ListPurchaseOrdersResult {
 
 export class ListPurchaseOrdersHandler implements IQueryHandler<
   ListPurchaseOrdersQuery,
-  QueryResult<ListPurchaseOrdersResult>
+  ListPurchaseOrdersResult
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(query: ListPurchaseOrdersQuery): Promise<QueryResult<ListPurchaseOrdersResult>> {
+  async handle(query: ListPurchaseOrdersQuery): Promise<ListPurchaseOrdersResult> {
     const result = await this.poService.listPurchaseOrders({
       limit: query.limit,
       offset: query.offset,
@@ -31,6 +31,6 @@ export class ListPurchaseOrdersHandler implements IQueryHandler<
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });
-    return QueryResult.success({ purchaseOrders: result.purchaseOrders, total: result.total });
+    return { purchaseOrders: result.purchaseOrders, total: result.total };
   }
 }

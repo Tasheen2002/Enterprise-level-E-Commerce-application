@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { StockResult } from "./get-stock.query";
 import { StockManagementService } from "../services/stock-management.service";
 
@@ -19,11 +19,11 @@ export interface ListStocksResult {
 
 export class ListStocksHandler implements IQueryHandler<
   ListStocksQuery,
-  QueryResult<ListStocksResult>
+  ListStocksResult
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(query: ListStocksQuery): Promise<QueryResult<ListStocksResult>> {
+  async handle(query: ListStocksQuery): Promise<ListStocksResult> {
     const result = await this.stockService.listStocks({
       limit: query.limit,
       offset: query.offset,
@@ -33,6 +33,6 @@ export class ListStocksHandler implements IQueryHandler<
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });
-    return QueryResult.success({ stocks: result.stocks, total: result.total });
+    return { stocks: result.stocks, total: result.total };
   }
 }
