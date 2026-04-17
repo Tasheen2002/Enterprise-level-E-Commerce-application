@@ -218,7 +218,7 @@ export class AuthController {
       let isAlreadyVerified = false;
       try {
         const queryResult = await this.getUserByEmailHandler.handle({ email });
-        if (queryResult.data?.emailVerified) {
+        if (queryResult?.emailVerified) {
           isAlreadyVerified = true;
         }
       } catch {

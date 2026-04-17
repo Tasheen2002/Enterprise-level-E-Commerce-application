@@ -27,7 +27,7 @@ export class UsersController {
     try {
       const query = { userId: request.params.userId };
       const result = await this.getUserDetailsHandler.handle(query);
-      return ResponseHelper.ok(reply, 'User retrieved', result.data);
+      return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -40,7 +40,7 @@ export class UsersController {
     try {
       const query = { userId: request.user.userId };
       const result = await this.getUserDetailsHandler.handle(query);
-      return ResponseHelper.ok(reply, 'User retrieved', result.data);
+      return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -76,7 +76,7 @@ export class UsersController {
       };
 
       const result = await this.listUsersHandler.handle(query);
-      return ResponseHelper.ok(reply, 'Users retrieved', result.data);
+      return ResponseHelper.ok(reply, 'Users retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

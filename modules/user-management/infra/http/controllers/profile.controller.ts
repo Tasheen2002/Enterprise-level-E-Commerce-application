@@ -19,7 +19,7 @@ export class ProfileController {
         userId: request.user.userId,
       };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.ok(reply, "Profile retrieved", result.data);
+      return ResponseHelper.ok(reply, "Profile retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -97,7 +97,7 @@ export class ProfileController {
       const { userId } = request.params;
       const query = { userId };
       const result = await this.getProfileHandler.handle(query);
-      return ResponseHelper.ok(reply, "Profile retrieved", result.data);
+      return ResponseHelper.ok(reply, "Profile retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -159,4 +159,13 @@ export class ProfileController {
         title,
         dateOfBirth,
         residentOf,
-        national
+        nationality,
+      };
+
+      const result = await this.updateProfileHandler.handle(command);
+      return ResponseHelper.fromCommand(reply, result, "Profile updated");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+}
