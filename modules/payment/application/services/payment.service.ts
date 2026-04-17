@@ -1,18 +1,18 @@
-import * as crypto from "crypto";
 import { IPaymentIntentRepository } from "../../domain/repositories/payment-intent.repository";
 import { IPaymentTransactionRepository } from "../../domain/repositories/payment-transaction.repository";
 import { IExternalOrderQueryPort } from "../../domain/external-services";
-import { PaymentIntent } from "../../domain/entities/payment-intent.entity";
-import { PaymentTransaction } from "../../domain/entities/payment-transaction.entity";
+import { PaymentIntent, PaymentIntentDTO } from "../../domain/entities/payment-intent.entity";
+import { PaymentTransaction, PaymentTransactionDTO } from "../../domain/entities/payment-transaction.entity";
+import { PaymentIntentId } from "../../domain/value-objects/payment-intent-id.vo";
+import { PaymentTransactionId } from "../../domain/value-objects/payment-transaction-id.vo";
 import { Money } from "../../domain/value-objects/money.vo";
 import { PaymentTransactionType } from "../../domain/value-objects/payment-transaction-type.vo";
 import {
   PaymentIntentNotFoundError,
   InvalidOperationError,
-  DomainValidationError,
 } from "../../domain/errors/payment-loyalty.errors";
 
-export interface CreatePaymentIntentDto {
+interface CreatePaymentIntentParams {
   orderId?: string;
   checkoutId?: string;
   provider: string;
@@ -21,189 +21,128 @@ export interface CreatePaymentIntentDto {
   idempotencyKey?: string;
   clientSecret?: string;
   userId?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
-export interface ProcessPaymentDto {
+interface AuthorizePaymentParams {
   intentId: string;
   pspReference?: string;
   userId?: string;
 }
 
-export interface RefundPaymentDto {
+interface RefundPaymentParams {
   intentId: string;
-  amount?: number; // Partial refund amount (if not provided, full refund)
+  amount?: number;
   reason?: string;
   userId?: string;
 }
 
-export interface VoidPaymentDto {
+interface VoidPaymentParams {
   intentId: string;
   pspReference?: string;
   userId?: string;
-}
-
-export interface PaymentIntentDto {
-  intentId: string;
-  orderId?: string;
-  checkoutId?: string;
-  provider: string;
-  amount: number;
-  currency: string;
-  status: string;
-  idempotencyKey?: string;
-  clientSecret?: string;
-  metadata?: any;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface PaymentTransactionDto {
-  txnId: string;
-  intentId: string;
-  type: string;
-  amount: number;
-  currency: string;
-  status: string;
-  pspReference: string | null;
-  failureReason: string | null;
-  createdAt: Date;
 }
 
 export class PaymentService {
   constructor(
     private readonly orderQueryPort: IExternalOrderQueryPort,
-    private readonly paymentIntentRepo: IPaymentIntentRepository,
-    private readonly paymentTxnRepo: IPaymentTransactionRepository,
+    private readonly paymentIntentRepository: IPaymentIntentRepository,
+    private readonly paymentTransactionRepository: IPaymentTransactionRepository,
   ) {}
 
-  private async assertOrderOwnership(
-    orderId: string,
-    userId?: string,
-  ): Promise<void> {
+  private async assertOrderOwnership(orderId: string, userId?: string): Promise<void> {
     const order = await this.orderQueryPort.findOrderOwner(orderId);
-
-    if (!order) {
-      // Order might not exist yet during checkout - this is OK
-      // We'll validate ownership when the order is created
-      return;
-    }
-
+    if (!order) return;
     if (userId && order.userId && order.userId !== userId) {
       throw new InvalidOperationError("Forbidden: you do not own this order");
     }
   }
 
-  async createPaymentIntent(
-    dto: CreatePaymentIntentDto,
-  ): Promise<PaymentIntentDto> {
-    // Only validate order ownership if orderId is provided and user is authenticated
-    if (dto.orderId && dto.userId) {
-      await this.assertOrderOwnership(dto.orderId, dto.userId);
+  async createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentDTO> {
+    if (params.orderId && params.userId) {
+      await this.assertOrderOwnership(params.orderId, params.userId);
     }
 
-    // Check if payment intent already exists for this checkout
-    if (dto.checkoutId) {
-      const existing = await this.paymentIntentRepo.findByCheckoutId(
-        dto.checkoutId,
-      );
-      if (existing) {
-        // Return existing payment intent instead of creating a new one
-        return this.toPaymentIntentDto(existing);
-      }
+    if (params.checkoutId) {
+      const existing = await this.paymentIntentRepository.findByCheckoutId(params.checkoutId);
+      if (existing) return PaymentIntent.toDTO(existing);
     }
 
     const intent = PaymentIntent.create({
-      orderId: dto.orderId,
-      checkoutId: dto.checkoutId,
-      provider: dto.provider,
-      amount: dto.amount,
-      currency: dto.currency || "USD",
-      idempotencyKey: dto.idempotencyKey,
-      clientSecret: dto.clientSecret,
-      metadata: dto.metadata,
+      orderId: params.orderId,
+      checkoutId: params.checkoutId,
+      provider: params.provider,
+      amount: params.amount,
+      currency: params.currency ?? "USD",
+      idempotencyKey: params.idempotencyKey,
+      clientSecret: params.clientSecret,
+      metadata: params.metadata,
     });
 
-    await this.paymentIntentRepo.save(intent);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.save(intent);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async authorizePayment(dto: ProcessPaymentDto): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(dto.intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(dto.intentId);
+  async authorizePayment(params: AuthorizePaymentParams): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(params.intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
+
+    if (intent.orderIdOrNull && params.userId) {
+      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
     }
 
-    // Only validate order ownership if orderId exists
-    if (intent.orderIdOrNull && dto.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, dto.userId);
-    }
-
-    // Authorize the payment
     intent.authorize();
 
-    // Create authorization transaction record
     const transaction = PaymentTransaction.create({
-      txnId: crypto.randomUUID(),
-      intentId: intent.intentId.getValue(),
+      intentId: PaymentIntentId.fromString(params.intentId),
       type: PaymentTransactionType.auth(),
       amount: intent.amount,
       status: "SUCCESS",
-      pspReference: dto.pspReference || null,
+      pspReference: params.pspReference ?? null,
       failureReason: null,
     });
 
-    await this.paymentIntentRepo.update(intent);
-    await this.paymentTxnRepo.save(transaction);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    await this.paymentTransactionRepository.save(transaction);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async capturePayment(
-    intentId: string,
-    pspReference?: string,
-    userId?: string,
-  ): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+  async capturePayment(intentId: string, pspReference?: string, userId?: string): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
-    // Only validate order ownership if orderId exists
     if (intent.orderIdOrNull && userId) {
       await this.assertOrderOwnership(intent.orderIdOrNull, userId);
     }
 
-    // Capture the payment
     intent.capture();
 
-    // Create capture transaction record
     const transaction = PaymentTransaction.create({
-      txnId: crypto.randomUUID(),
-      intentId: intent.intentId.getValue(),
+      intentId: PaymentIntentId.fromString(intentId),
       type: PaymentTransactionType.capture(),
       amount: intent.amount,
       status: "SUCCESS",
-      pspReference: pspReference || null,
+      pspReference: pspReference ?? null,
       failureReason: null,
     });
 
-    await this.paymentIntentRepo.update(intent);
-    await this.paymentTxnRepo.save(transaction);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    await this.paymentTransactionRepository.save(transaction);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async refundPayment(dto: RefundPaymentDto): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(dto.intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(dto.intentId);
-    }
+  async refundPayment(params: RefundPaymentParams): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(params.intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    // Only validate order ownership if orderId exists
-    if (intent.orderIdOrNull && dto.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, dto.userId);
+    if (intent.orderIdOrNull && params.userId) {
+      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
     }
 
     if (!intent.isCaptured()) {
@@ -212,15 +151,12 @@ export class PaymentService {
       );
     }
 
-    // Determine refund amount
-    const refundAmount = dto.amount
-      ? Money.fromAmount(dto.amount, intent.amount.getCurrency())
+    const refundAmount = params.amount
+      ? Money.fromAmount(params.amount, intent.amount.getCurrency())
       : intent.amount;
 
-    // Create refund transaction
-    const refundTransaction = PaymentTransaction.create({
-      txnId: crypto.randomUUID(),
-      intentId: intent.intentId.getValue(),
+    const transaction = PaymentTransaction.create({
+      intentId: PaymentIntentId.fromString(params.intentId),
       type: PaymentTransactionType.refund(),
       amount: refundAmount,
       status: "SUCCESS",
@@ -228,202 +164,136 @@ export class PaymentService {
       failureReason: null,
     });
 
-    // Note: PaymentIntent doesn't have a refund() method in the entity
-    // In a real implementation, we might cancel it or track refunds separately
     intent.cancel();
-
-    await this.paymentIntentRepo.update(intent);
-    await this.paymentTxnRepo.save(refundTransaction);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    await this.paymentTransactionRepository.save(transaction);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async cancelPayment(intentId: string): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+  async cancelPayment(intentId: string): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
     intent.cancel();
-
-    await this.paymentIntentRepo.update(intent);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async voidPayment(dto: VoidPaymentDto): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(dto.intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(dto.intentId);
-    }
+  async voidPayment(params: VoidPaymentParams): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(params.intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    // Only validate order ownership if orderId exists
-    if (intent.orderIdOrNull && dto.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, dto.userId);
+    if (intent.orderIdOrNull && params.userId) {
+      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
     }
 
     if (intent.isCaptured()) {
-      throw new InvalidOperationError(
-        "Cannot void a captured payment; use refund instead",
-      );
+      throw new InvalidOperationError("Cannot void a captured payment; use refund instead");
     }
 
-    // Mark intent as cancelled (voided)
     intent.cancel();
 
-    // Record void transaction
     const transaction = PaymentTransaction.create({
-      txnId: crypto.randomUUID(),
-      intentId: intent.intentId.getValue(),
+      intentId: PaymentIntentId.fromString(params.intentId),
       type: PaymentTransactionType.void(),
       amount: intent.amount,
       status: "SUCCESS",
-      pspReference: dto.pspReference || null,
+      pspReference: params.pspReference ?? null,
       failureReason: null,
     });
 
-    await this.paymentIntentRepo.update(intent);
-    await this.paymentTxnRepo.save(transaction);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    await this.paymentTransactionRepository.save(transaction);
+    return PaymentIntent.toDTO(intent);
   }
 
   async updatePaymentIntent(
     intentId: string,
-    data: { clientSecret?: string; idempotencyKey?: string },
-  ): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+    data: { clientSecret?: string },
+  ): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
     if (data.clientSecret) {
-      // Use the entity's method to update clientSecret
       intent.updateClientSecret(data.clientSecret);
     }
 
-    if (data.idempotencyKey) {
-      // Idempotency key is read-only in the constructor, so we can't update it easily
-      // unless we add a method. But for now, let's just ignore it or assume it's not needed for this flow.
-      // (intent as any).idempotencyKey = data.idempotencyKey;
-    }
-
-    await this.paymentIntentRepo.update(intent);
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async failPayment(
-    intentId: string,
-    failureReason: string,
-  ): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+  async failPayment(intentId: string, failureReason: string): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
     intent.fail();
 
-    // Create failed transaction record
     const transaction = PaymentTransaction.create({
-      txnId: crypto.randomUUID(),
-      intentId: intent.intentId.getValue(),
+      intentId: PaymentIntentId.fromString(intentId),
       type: PaymentTransactionType.capture(),
       amount: intent.amount,
       status: "FAILED",
       pspReference: null,
-      failureReason: failureReason,
+      failureReason,
     });
 
-    await this.paymentIntentRepo.update(intent);
-    await this.paymentTxnRepo.save(transaction);
-
-    return this.toPaymentIntentDto(intent);
+    await this.paymentIntentRepository.update(intent);
+    await this.paymentTransactionRepository.save(transaction);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async getPaymentIntent(
-    intentId: string,
-    userId?: string,
-  ): Promise<PaymentIntentDto> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+  async getPaymentIntent(intentId: string, userId?: string): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
     if (intent.orderIdOrNull && userId) {
       await this.assertOrderOwnership(intent.orderIdOrNull, userId);
     }
-    return this.toPaymentIntentDto(intent);
+    return PaymentIntent.toDTO(intent);
   }
 
-  async getPaymentIntentByClientSecret(
-    clientSecret: string,
-  ): Promise<PaymentIntentDto> {
-    const intent =
-      await this.paymentIntentRepo.findByClientSecret(clientSecret);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(clientSecret);
-    }
-    return this.toPaymentIntentDto(intent);
+  async getPaymentIntentByClientSecret(clientSecret: string): Promise<PaymentIntentDTO> {
+    const intent = await this.paymentIntentRepository.findByClientSecret(clientSecret);
+    if (!intent) throw new PaymentIntentNotFoundError(clientSecret);
+    return PaymentIntent.toDTO(intent);
   }
-  async getPaymentIntentByOrderId(
-    orderId: string,
-    userId?: string,
-  ): Promise<PaymentIntentDto> {
-    const intents = await this.paymentIntentRepo.findByOrderId(orderId);
-    if (intents.length === 0) {
-      throw new PaymentIntentNotFoundError(orderId);
-    }
+
+  async getPaymentIntentByOrderId(orderId: string, userId?: string): Promise<PaymentIntentDTO> {
+    const result = await this.paymentIntentRepository.findByOrderId(orderId);
+    if (result.length === 0) throw new PaymentIntentNotFoundError(orderId);
     await this.assertOrderOwnership(orderId, userId);
-    return this.toPaymentIntentDto(intents[0]);
+    return PaymentIntent.toDTO(result[0]);
   }
 
-  async getPaymentTransactions(
-    intentId: string,
-    userId?: string,
-  ): Promise<PaymentTransactionDto[]> {
-    const intent = await this.paymentIntentRepo.findById(intentId);
-    if (!intent) {
-      throw new PaymentIntentNotFoundError(intentId);
-    }
+  async getPaymentTransaction(txnId: string): Promise<PaymentTransactionDTO | null> {
+    const transaction = await this.paymentTransactionRepository.findById(
+      PaymentTransactionId.fromString(txnId),
+    );
+    return transaction ? PaymentTransaction.toDTO(transaction) : null;
+  }
 
-    // Only validate order ownership if orderId exists
+  async getPaymentTransactions(intentId: string, userId?: string): Promise<PaymentTransactionDTO[]> {
+    const intent = await this.paymentIntentRepository.findById(
+      PaymentIntentId.fromString(intentId),
+    );
+    if (!intent) throw new PaymentIntentNotFoundError(intentId);
+
     if (intent.orderIdOrNull && userId) {
       await this.assertOrderOwnership(intent.orderIdOrNull, userId);
     }
 
-    const transactions = await this.paymentTxnRepo.findByIntentId(intentId);
-    return transactions.map((txn) => this.toPaymentTransactionDto(txn));
-  }
-
-  private toPaymentIntentDto(intent: PaymentIntent): PaymentIntentDto {
-    return {
-      intentId: intent.intentId.getValue(),
-      orderId: intent.orderIdOrNull ?? undefined,
-      checkoutId: intent.checkoutId ?? undefined,
-      provider: intent.provider,
-      amount: intent.amount.getAmount(),
-      currency: intent.amount.getCurrency().getValue(),
-      status: intent.status.getValue(),
-      idempotencyKey: intent.idempotencyKey,
-      clientSecret: intent.clientSecret,
-      metadata: intent.metadata,
-      createdAt: intent.createdAt,
-      updatedAt: intent.updatedAt,
-    };
-  }
-
-  private toPaymentTransactionDto(
-    txn: PaymentTransaction,
-  ): PaymentTransactionDto {
-    return {
-      txnId: txn.txnId,
-      intentId: txn.intentId,
-      type: txn.type.getValue(),
-      amount: txn.amount.getAmount(),
-      currency: txn.amount.getCurrency().getValue(),
-      status: txn.status,
-      pspReference: txn.pspReference,
-      failureReason: txn.failureReason,
-      createdAt: txn.createdAt,
-    };
+    const transactions = await this.paymentTransactionRepository.findByIntentId(
+      PaymentIntentId.fromString(intentId),
+    );
+    return transactions.map((txn) => PaymentTransaction.toDTO(txn));
   }
 }
