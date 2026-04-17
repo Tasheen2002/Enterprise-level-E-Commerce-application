@@ -3,8 +3,6 @@ import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-
 import { DomainValidationError } from "../errors";
 import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 
-export { MediaAssetId };
-
 // ── Domain Events ──────────────────────────────────────────────────────
 
 export class MediaAssetCreatedEvent extends DomainEvent {

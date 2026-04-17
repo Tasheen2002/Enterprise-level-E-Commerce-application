@@ -2,7 +2,10 @@ import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-ro
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { SupplierId } from "../value-objects/supplier-id.vo";
 import { SupplierName } from "../value-objects/supplier-name.vo";
-import { SupplierContact, SupplierContactProps } from "../value-objects/supplier-contact.vo";
+import {
+  SupplierContact,
+  SupplierContactProps,
+} from "../value-objects/supplier-contact.vo";
 import { DomainValidationError } from "../errors";
 
 // ── Domain Events ──────────────────────────────────────────────────────
@@ -71,7 +74,12 @@ export interface SupplierDTO {
 export class Supplier extends AggregateRoot {
   private constructor(private props: SupplierProps) {
     super();
-    this.validate();
+  }
+
+  private static validateLeadTimeDays(leadTimeDays: number | undefined): void {
+    if (leadTimeDays !== undefined && leadTimeDays < 0) {
+      throw new DomainValidationError("Lead time days cannot be negative");
+    }
   }
 
   static create(params: {
@@ -79,6 +87,7 @@ export class Supplier extends AggregateRoot {
     leadTimeDays?: number;
     contacts?: SupplierContactProps[];
   }): Supplier {
+    Supplier.validateLeadTimeDays(params.leadTimeDays);
     const now = new Date();
     const supplier = new Supplier({
       supplierId: SupplierId.create(),
@@ -99,12 +108,6 @@ export class Supplier extends AggregateRoot {
 
   static fromPersistence(props: SupplierProps): Supplier {
     return new Supplier(props);
-  }
-
-  private validate(): void {
-    if (this.props.leadTimeDays !== undefined && this.props.leadTimeDays < 0) {
-      throw new DomainValidationError("Lead time days cannot be negative");
-    }
   }
 
   // ── Getters ────────────────────────────────────────────────────────
@@ -139,9 +142,7 @@ export class Supplier extends AggregateRoot {
   }
 
   updateLeadTimeDays(leadTimeDays: number): void {
-    if (leadTimeDays < 0) {
-      throw new DomainValidationError("Lead time days cannot be negative");
-    }
+    Supplier.validateLeadTimeDays(leadTimeDays);
     this.props.leadTimeDays = leadTimeDays;
     this.props.updatedAt = new Date();
     this.addDomainEvent(

@@ -55,11 +55,8 @@ export interface StockAlertDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class StockAlert extends AggregateRoot {
-  private props: StockAlertProps;
-
-  private constructor(props: StockAlertProps) {
+  private constructor(private props: StockAlertProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {

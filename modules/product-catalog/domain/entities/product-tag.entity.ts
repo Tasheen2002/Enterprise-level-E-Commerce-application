@@ -3,8 +3,6 @@ import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-
 import { DomainValidationError } from '../errors';
 import { ProductTagId } from '../value-objects/product-tag-id.vo';
 
-export { ProductTagId };
-
 // Domain Events
 export class TagCreatedEvent extends DomainEvent {
   constructor(public readonly tagId: string, public readonly tag: string) {
@@ -34,12 +32,16 @@ export interface ProductTagProps {
   id: ProductTagId;
   tag: string;
   kind: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ProductTagDTO {
   id: string;
   tag: string;
   kind: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class ProductTag extends AggregateRoot {
@@ -49,11 +51,14 @@ export class ProductTag extends AggregateRoot {
 
   static create(params: { tag: string; kind?: string }): ProductTag {
     const tagId = ProductTagId.create();
+    const now = new Date();
 
     const productTag = new ProductTag({
       id: tagId,
       tag: params.tag,
       kind: params.kind || null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     productTag.addDomainEvent(new TagCreatedEvent(tagId.getValue(), params.tag));
@@ -78,6 +83,14 @@ export class ProductTag extends AggregateRoot {
     return this.props.kind;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   // Business logic methods
   updateTag(newTag: string): void {
     if (!newTag || newTag.trim().length === 0) {
@@ -89,6 +102,7 @@ export class ProductTag extends AggregateRoot {
     }
 
     this.props.tag = newTag.trim();
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new TagUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -98,6 +112,7 @@ export class ProductTag extends AggregateRoot {
     }
 
     this.props.kind = newKind?.trim() || null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new TagUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -143,6 +158,8 @@ export class ProductTag extends AggregateRoot {
       id: entity.props.id.getValue(),
       tag: entity.props.tag,
       kind: entity.props.kind,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

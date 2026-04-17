@@ -35,6 +35,8 @@ export interface CategoryProps {
   slug: Slug;
   parentId: CategoryId | null;
   position: number | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface CategoryDTO {
@@ -43,6 +45,8 @@ export interface CategoryDTO {
   slug: string;
   parentId: string | null;
   position: number | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class Category extends AggregateRoot {
@@ -58,12 +62,15 @@ export class Category extends AggregateRoot {
     const categoryId = CategoryId.create();
     const slug = Slug.create(params.name);
 
+    const now = new Date();
     const category = new Category({
       id: categoryId,
       name: params.name,
       slug,
       parentId: params.parentId ? CategoryId.fromString(params.parentId) : null,
       position: params.position || null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     category.addDomainEvent(new CategoryCreatedEvent(categoryId.getValue(), params.name));
@@ -96,6 +103,14 @@ export class Category extends AggregateRoot {
     return this.props.position;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   // Business logic methods
   updateName(newName: string): void {
     if (!newName || newName.trim().length === 0) {
@@ -104,12 +119,14 @@ export class Category extends AggregateRoot {
 
     this.props.name = newName.trim();
     this.props.slug = Slug.create(newName);
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
   updateSlug(newSlug: string): void {
     const slug = Slug.fromString(newSlug);
     this.props.slug = slug;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -126,6 +143,7 @@ export class Category extends AggregateRoot {
     } else {
       this.props.parentId = null;
     }
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -134,6 +152,7 @@ export class Category extends AggregateRoot {
       throw new DomainValidationError('Position cannot be negative');
     }
     this.props.position = newPosition;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new CategoryUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -165,6 +184,8 @@ export class Category extends AggregateRoot {
       slug: entity.props.slug.getValue(),
       parentId: entity.props.parentId?.getValue() || null,
       position: entity.props.position,
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

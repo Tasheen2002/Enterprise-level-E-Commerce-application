@@ -47,12 +47,14 @@ export interface InventoryTransactionDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class InventoryTransaction extends AggregateRoot {
-  private props: InventoryTransactionProps;
-
-  private constructor(props: InventoryTransactionProps) {
+  private constructor(private props: InventoryTransactionProps) {
     super();
-    this.props = props;
-    this.validate();
+  }
+
+  private static validateQtyDelta(qtyDelta: number): void {
+    if (qtyDelta === 0) {
+      throw new DomainValidationError("Transaction quantity delta cannot be zero");
+    }
   }
 
   static create(params: {
@@ -62,6 +64,7 @@ export class InventoryTransaction extends AggregateRoot {
     reason: string;
     referenceId?: string;
   }): InventoryTransaction {
+    InventoryTransaction.validateQtyDelta(params.qtyDelta);
     const txn = new InventoryTransaction({
       invTxnId: TransactionId.create(),
       variantId: params.variantId,
@@ -85,12 +88,6 @@ export class InventoryTransaction extends AggregateRoot {
 
   static fromPersistence(props: InventoryTransactionProps): InventoryTransaction {
     return new InventoryTransaction(props);
-  }
-
-  private validate(): void {
-    if (this.props.qtyDelta === 0) {
-      throw new DomainValidationError("Transaction quantity delta cannot be zero");
-    }
   }
 
   // ── Getters ────────────────────────────────────────────────────────

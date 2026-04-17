@@ -79,11 +79,8 @@ export interface PurchaseOrderDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PurchaseOrder extends AggregateRoot {
-  private props: PurchaseOrderProps;
-
-  private constructor(props: PurchaseOrderProps) {
+  private constructor(private props: PurchaseOrderProps) {
     super();
-    this.props = props;
   }
 
   static create(params: {

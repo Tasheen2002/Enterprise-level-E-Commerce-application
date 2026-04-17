@@ -45,6 +45,8 @@ export interface EditorialLookProps {
   heroAssetId: MediaAssetId | null;
   publishedAt: Date | null;
   productIds: Set<ProductId>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface EditorialLookDTO {
@@ -54,6 +56,8 @@ export interface EditorialLookDTO {
   heroAssetId: string | null;
   publishedAt: string | null;
   productIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export class EditorialLook extends AggregateRoot {
@@ -70,6 +74,7 @@ export class EditorialLook extends AggregateRoot {
   }): EditorialLook {
     const lookId = EditorialLookId.create();
 
+    const now = new Date();
     const look = new EditorialLook({
       id: lookId,
       title: params.title,
@@ -77,6 +82,8 @@ export class EditorialLook extends AggregateRoot {
       heroAssetId: params.heroAssetId ? MediaAssetId.fromString(params.heroAssetId) : null,
       publishedAt: params.publishedAt || null,
       productIds: new Set(params.productIds?.map((id) => ProductId.fromString(id)) || []),
+      createdAt: now,
+      updatedAt: now,
     });
 
     look.addDomainEvent(new EditorialLookCreatedEvent(lookId.getValue(), params.title));
@@ -117,6 +124,14 @@ export class EditorialLook extends AggregateRoot {
     return this.props.productIds.size;
   }
 
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
   // Business logic methods
   updateTitle(newTitle: string): void {
     if (!newTitle || newTitle.trim().length === 0) {
@@ -128,22 +143,26 @@ export class EditorialLook extends AggregateRoot {
     }
 
     this.props.title = newTitle.trim();
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
   updateStoryHtml(newStoryHtml: string | null): void {
     this.props.storyHtml = newStoryHtml?.trim() || null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
   setHeroAsset(assetId: string | null): void {
     this.props.heroAssetId = assetId ? MediaAssetId.fromString(assetId) : null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
   addProduct(productId: string): void {
     const productIdVo = ProductId.fromString(productId);
     this.props.productIds.add(productIdVo);
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -154,11 +173,13 @@ export class EditorialLook extends AggregateRoot {
         break;
       }
     }
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
   clearProducts(): void {
     this.props.productIds.clear();
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -167,6 +188,7 @@ export class EditorialLook extends AggregateRoot {
     productIds.forEach((id) => {
       this.props.productIds.add(ProductId.fromString(id));
     });
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -176,16 +198,19 @@ export class EditorialLook extends AggregateRoot {
     }
 
     this.props.publishedAt = new Date();
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookPublishedEvent(this.props.id.getValue()));
   }
 
   unpublish(): void {
     this.props.publishedAt = null;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
   schedulePublication(publishDate: Date): void {
     this.props.publishedAt = publishDate;
+    this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));
   }
 
@@ -239,6 +264,8 @@ export class EditorialLook extends AggregateRoot {
       heroAssetId: entity.props.heroAssetId?.getValue() || null,
       publishedAt: entity.props.publishedAt?.toISOString() || null,
       productIds: Array.from(entity.props.productIds).map((id) => id.getValue()),
+      createdAt: entity.props.createdAt.toISOString(),
+      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

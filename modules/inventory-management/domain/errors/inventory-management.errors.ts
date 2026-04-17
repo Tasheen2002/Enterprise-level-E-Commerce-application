@@ -1,4 +1,5 @@
 import { DomainError } from "../../../../packages/core/src/domain/domain-error";
+export { EmptyFieldError } from "../../../../packages/core/src/domain/domain-error";
 
 // ─── Validation Errors (400) ─────────────────────────────────────────────────
 

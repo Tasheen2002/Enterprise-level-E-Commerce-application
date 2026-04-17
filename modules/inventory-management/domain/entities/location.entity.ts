@@ -3,7 +3,7 @@ import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-
 import { LocationId } from "../value-objects/location-id.vo";
 import { LocationTypeVO } from "../value-objects/location-type.vo";
 import { LocationAddress, LocationAddressProps } from "../value-objects/location-address.vo";
-import { DomainValidationError } from "../errors";
+import { EmptyFieldError } from "../errors";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -65,7 +65,12 @@ export interface LocationDTO {
 export class Location extends AggregateRoot {
   private constructor(private props: LocationProps) {
     super();
-    this.validate();
+  }
+
+  private static validateName(name: string): void {
+    if (!name || name.trim().length === 0) {
+      throw new EmptyFieldError('name');
+    }
   }
 
   static create(params: {
@@ -73,6 +78,7 @@ export class Location extends AggregateRoot {
     name: string;
     address?: LocationAddressProps;
   }): Location {
+    Location.validateName(params.name);
     const now = new Date();
     const location = new Location({
       locationId: LocationId.create(),
@@ -95,12 +101,6 @@ export class Location extends AggregateRoot {
     return new Location(props);
   }
 
-  private validate(): void {
-    if (!this.props.name || this.props.name.trim().length === 0) {
-      throw new DomainValidationError("Location name is required");
-    }
-  }
-
   // ── Getters ────────────────────────────────────────────────────────
 
   get locationId(): LocationId { return this.props.locationId; }
@@ -113,9 +113,7 @@ export class Location extends AggregateRoot {
   // ── Business Logic ─────────────────────────────────────────────────
 
   updateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new DomainValidationError("Location name is required");
-    }
+    Location.validateName(name);
     this.props.name = name;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
