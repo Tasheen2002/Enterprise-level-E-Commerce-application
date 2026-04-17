@@ -31,7 +31,7 @@ export class UserRepository
   async save(user: User): Promise<void> {
     const data = this.toPersistence(user);
 
-    await (this.prisma.user as any).upsert({
+    await this.prisma.user.upsert({
       where: { id: user.id.getValue() },
       create: data.create,
       update: data.update,
