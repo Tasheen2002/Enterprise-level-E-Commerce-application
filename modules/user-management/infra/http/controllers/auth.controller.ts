@@ -12,7 +12,7 @@ import {
   ResetPasswordHandler,
   VerifyEmailHandler,
   DeleteAccountHandler,
-  GetUserByEmailHandler,
+  ResendVerificationHandler,
 } from '../../../application';
 import { UserRole } from '../../../domain/enums/user-role.enum';
 
@@ -27,8 +27,8 @@ export class AuthController {
     private readonly initiatePasswordResetHandler: InitiatePasswordResetHandler,
     private readonly resetPasswordHandler: ResetPasswordHandler,
     private readonly verifyEmailHandler: VerifyEmailHandler,
-    private readonly getUserByEmailHandler: GetUserByEmailHandler,
     private readonly deleteAccountHandler: DeleteAccountHandler,
+    private readonly resendVerificationHandler: ResendVerificationHandler,
   ) {}
 
   async register(
@@ -215,29 +215,18 @@ export class AuthController {
     try {
       const { email } = request.body;
 
-      let isAlreadyVerified = false;
+      // Silently handle all cases to prevent email enumeration
       try {
-        const queryResult = await this.getUserByEmailHandler.handle({ email });
-        if (queryResult?.emailVerified) {
-          isAlreadyVerified = true;
-        }
+        await this.resendVerificationHandler.handle({ email });
       } catch {
-        // Do not reveal whether the email exists
+        // Do not reveal whether the email exists or any other error
       }
 
-      if (isAlreadyVerified) {
-        return ResponseHelper.ok(
-          reply,
-          'If an account with that email exists, verification email has been sent.',
-          { action: 'verification_sent' },
-        );
-      }
-
-      await this.initiatePasswordResetHandler.handle({ email });
-
-      return ResponseHelper.ok(reply, 'Verification email has been sent.', {
-        action: 'verification_sent',
-      });
+      return ResponseHelper.ok(
+        reply,
+        'If an account with that email exists and is unverified, a verification email has been sent.',
+        { action: 'verification_sent' },
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
