@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { OrderItemManagementService } from "../services/order-item-management.service";
 import { OrderItem, OrderItemDTO } from "../../domain/entities/order-item.entity";
 
@@ -6,11 +6,11 @@ export interface GetOrderItemQuery extends IQuery {
   readonly itemId: string;
 }
 
-export class GetOrderItemHandler implements IQueryHandler<GetOrderItemQuery, QueryResult<OrderItemDTO>> {
+export class GetOrderItemHandler implements IQueryHandler<GetOrderItemQuery, OrderItemDTO> {
   constructor(private readonly orderItemService: OrderItemManagementService) {}
 
-  async handle(query: GetOrderItemQuery): Promise<QueryResult<OrderItemDTO>> {
+  async handle(query: GetOrderItemQuery): Promise<OrderItemDTO> {
     const item = await this.orderItemService.getOrderItemById(query.itemId);
-    return QueryResult.success(OrderItem.toDTO(item));
+    return OrderItem.toDTO(item);
   }
 }

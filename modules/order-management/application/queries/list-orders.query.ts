@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
@@ -15,10 +15,10 @@ export interface ListOrdersQuery extends IQuery {
   readonly sortOrder?: "asc" | "desc";
 }
 
-export class ListOrdersHandler implements IQueryHandler<ListOrdersQuery, QueryResult<PaginatedResult<OrderDTO>>> {
+export class ListOrdersHandler implements IQueryHandler<ListOrdersQuery, PaginatedResult<OrderDTO>> {
   constructor(private readonly orderService: OrderManagementService) {}
 
-  async handle(query: ListOrdersQuery): Promise<QueryResult<PaginatedResult<OrderDTO>>> {
+  async handle(query: ListOrdersQuery): Promise<PaginatedResult<OrderDTO>> {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
     const result = await this.orderService.findOrders(
@@ -35,12 +35,12 @@ export class ListOrdersHandler implements IQueryHandler<ListOrdersQuery, QueryRe
         sortOrder: query.sortOrder ?? "desc",
       },
     );
-    return QueryResult.success<PaginatedResult<OrderDTO>>({
+    return {
       items: result.items,
       total: result.total,
       limit,
       offset,
       hasMore: offset + result.items.length < result.total,
-    });
+    };
   }
 }

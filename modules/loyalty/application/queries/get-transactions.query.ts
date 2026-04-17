@@ -1,7 +1,6 @@
 import {
   IQuery,
   IQueryHandler,
-  QueryResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { LoyaltyService, LoyaltyTransactionData } from '../services/loyalty.service';
 
@@ -19,11 +18,11 @@ export interface TransactionHistoryResult {
 
 export class GetTransactionsHandler implements IQueryHandler<
   GetTransactionsQuery,
-  QueryResult<TransactionHistoryResult>
+  TransactionHistoryResult
 > {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
-  async handle(query: GetTransactionsQuery): Promise<QueryResult<TransactionHistoryResult>> {
+  async handle(query: GetTransactionsQuery): Promise<TransactionHistoryResult> {
     const limit = query.limit ?? 50;
     const offset = query.offset ?? 0;
 
@@ -33,6 +32,6 @@ export class GetTransactionsHandler implements IQueryHandler<
       offset,
     );
 
-    return QueryResult.success({ transactions, limit, offset });
+    return { transactions, limit, offset };
   }
 }

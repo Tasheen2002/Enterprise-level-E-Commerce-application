@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { PreorderManagementService } from "../services/preorder-management.service";
 import { Preorder, PreorderDTO } from "../../domain/entities/preorder.entity";
@@ -12,10 +12,10 @@ export interface ListPreordersQuery extends IQuery {
   readonly filterType?: "all" | "notified" | "unnotified" | "released";
 }
 
-export class ListPreordersHandler implements IQueryHandler<ListPreordersQuery, QueryResult<PaginatedResult<PreorderDTO>>> {
+export class ListPreordersHandler implements IQueryHandler<ListPreordersQuery, PaginatedResult<PreorderDTO>> {
   constructor(private readonly preorderService: PreorderManagementService) {}
 
-  async handle(query: ListPreordersQuery): Promise<QueryResult<PaginatedResult<PreorderDTO>>> {
+  async handle(query: ListPreordersQuery): Promise<PaginatedResult<PreorderDTO>> {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
     const filterType = query.filterType ?? "all";
@@ -47,12 +47,12 @@ export class ListPreordersHandler implements IQueryHandler<ListPreordersQuery, Q
         total = await this.preorderService.getPreorderCount();
     }
 
-    return QueryResult.success<PaginatedResult<PreorderDTO>>({
+    return {
       items: preorders.map(Preorder.toDTO),
       total,
       limit,
       offset,
       hasMore: offset + preorders.length < total,
-    });
+    };
   }
 }

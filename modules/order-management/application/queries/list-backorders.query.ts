@@ -1,4 +1,4 @@
-import { IQuery, IQueryHandler, QueryResult } from "../../../../packages/core/src/application/cqrs";
+import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { BackorderManagementService } from "../services/backorder-management.service";
 import { Backorder, BackorderDTO } from "../../domain/entities/backorder.entity";
@@ -12,10 +12,10 @@ export interface ListBackordersQuery extends IQuery {
   readonly filterType?: "all" | "notified" | "unnotified" | "overdue";
 }
 
-export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery, QueryResult<PaginatedResult<BackorderDTO>>> {
+export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery, PaginatedResult<BackorderDTO>> {
   constructor(private readonly backorderService: BackorderManagementService) {}
 
-  async handle(query: ListBackordersQuery): Promise<QueryResult<PaginatedResult<BackorderDTO>>> {
+  async handle(query: ListBackordersQuery): Promise<PaginatedResult<BackorderDTO>> {
     const limit = query.limit ?? 20;
     const offset = query.offset ?? 0;
     const filterType = query.filterType ?? "all";
@@ -47,12 +47,12 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
         total = await this.backorderService.getBackorderCount();
     }
 
-    return QueryResult.success<PaginatedResult<BackorderDTO>>({
+    return {
       items: backorders.map(Backorder.toDTO),
       total,
       limit,
       offset,
       hasMore: offset + backorders.length < total,
-    });
+    };
   }
 }
