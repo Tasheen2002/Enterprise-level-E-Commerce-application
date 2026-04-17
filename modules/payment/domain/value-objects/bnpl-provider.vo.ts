@@ -1,21 +1,28 @@
-import { EmptyFieldError } from "../../../../packages/core/src/domain/domain-error";
+import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
+import { BnplProviderEnum } from "../enums";
 
 export class BnplProvider {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: BnplProviderEnum) {}
 
   static create(value: string): BnplProvider {
-    if (!value || value.trim().length === 0) {
-      throw new EmptyFieldError("BNPL provider");
-    }
-    return new BnplProvider(value.trim().toLowerCase());
+    return BnplProvider.fromString(value);
   }
 
   static fromString(value: string): BnplProvider {
-    return new BnplProvider(value);
+    const enumValue = Object.values(BnplProviderEnum).find((v) => v === value);
+    if (!enumValue) {
+      throw new InvalidFormatError("BNPL provider", Object.values(BnplProviderEnum).join(" | "));
+    }
+    return new BnplProvider(enumValue);
   }
 
-  static readonly KOKO = new BnplProvider("koko");
-  static readonly MINTPAY = new BnplProvider("mintpay");
+  static koko(): BnplProvider {
+    return new BnplProvider(BnplProviderEnum.KOKO);
+  }
+
+  static mintpay(): BnplProvider {
+    return new BnplProvider(BnplProviderEnum.MINTPAY);
+  }
 
   getValue(): string {
     return this.value;
@@ -27,5 +34,13 @@ export class BnplProvider {
 
   toString(): string {
     return this.value;
+  }
+
+  isKoko(): boolean {
+    return this.value === BnplProviderEnum.KOKO;
+  }
+
+  isMintpay(): boolean {
+    return this.value === BnplProviderEnum.MINTPAY;
   }
 }

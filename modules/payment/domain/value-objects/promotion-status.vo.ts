@@ -1,17 +1,35 @@
-import { EmptyFieldError } from "../../../../packages/core/src/domain/domain-error";
+import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
+import { PromotionStatusEnum } from "../enums";
 
 export class PromotionStatus {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: PromotionStatusEnum) {}
 
   static create(value: string): PromotionStatus {
-    if (!value || value.trim().length === 0) {
-      throw new EmptyFieldError("Promotion status");
-    }
-    return new PromotionStatus(value.trim());
+    return PromotionStatus.fromString(value);
   }
 
   static fromString(value: string): PromotionStatus {
-    return new PromotionStatus(value);
+    const enumValue = Object.values(PromotionStatusEnum).find((v) => v === value);
+    if (!enumValue) {
+      throw new InvalidFormatError("promotion status", Object.values(PromotionStatusEnum).join(" | "));
+    }
+    return new PromotionStatus(enumValue);
+  }
+
+  static active(): PromotionStatus {
+    return new PromotionStatus(PromotionStatusEnum.ACTIVE);
+  }
+
+  static inactive(): PromotionStatus {
+    return new PromotionStatus(PromotionStatusEnum.INACTIVE);
+  }
+
+  static expired(): PromotionStatus {
+    return new PromotionStatus(PromotionStatusEnum.EXPIRED);
+  }
+
+  static scheduled(): PromotionStatus {
+    return new PromotionStatus(PromotionStatusEnum.SCHEDULED);
   }
 
   getValue(): string {
@@ -26,36 +44,19 @@ export class PromotionStatus {
     return this.value;
   }
 
-  // Common status helpers
-  static active(): PromotionStatus {
-    return new PromotionStatus("active");
-  }
-
-  static inactive(): PromotionStatus {
-    return new PromotionStatus("inactive");
-  }
-
-  static expired(): PromotionStatus {
-    return new PromotionStatus("expired");
-  }
-
-  static scheduled(): PromotionStatus {
-    return new PromotionStatus("scheduled");
-  }
-
   isActive(): boolean {
-    return this.value.toLowerCase() === "active";
+    return this.value === PromotionStatusEnum.ACTIVE;
   }
 
   isInactive(): boolean {
-    return this.value.toLowerCase() === "inactive";
+    return this.value === PromotionStatusEnum.INACTIVE;
   }
 
   isExpired(): boolean {
-    return this.value.toLowerCase() === "expired";
+    return this.value === PromotionStatusEnum.EXPIRED;
   }
 
   isScheduled(): boolean {
-    return this.value.toLowerCase() === "scheduled";
+    return this.value === PromotionStatusEnum.SCHEDULED;
   }
 }
