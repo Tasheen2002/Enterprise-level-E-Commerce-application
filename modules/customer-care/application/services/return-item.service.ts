@@ -3,7 +3,7 @@ import {
   ReturnItemFilterOptions,
 } from "../../domain/repositories/return-item.repository.js";
 import { IReturnRequestRepository } from "../../domain/repositories/return-request.repository.js";
-import { OrderManagementService } from "../../../order-management/application/services/order-management.service.js";
+import { IExternalOrderQueryPort } from "../../domain/external-services.js";
 import { ReturnItem } from "../../domain/entities/return-item.entity.js";
 import {
   ItemCondition,
@@ -16,7 +16,7 @@ export class ReturnItemService {
   constructor(
     private readonly itemRepository: IReturnItemRepository,
     private readonly returnRequestRepository: IReturnRequestRepository,
-    private readonly orderManagementService: OrderManagementService
+    private readonly orderQueryPort: IExternalOrderQueryPort,
   ) {}
 
   async createItem(data: {
@@ -41,18 +41,12 @@ export class ReturnItemService {
     const orderId = returnRequest.getOrderId();
 
     // Validate that the orderItemId belongs to the order associated with this RMA
-    const order = await this.orderManagementService.getOrderById(orderId);
-    if (!order) {
+    const orderItemIds = await this.orderQueryPort.findOrderItemIds(orderId);
+    if (!orderItemIds) {
       throw new Error("Order not found");
     }
 
-    // Check if the orderItemId exists in this order
-    const orderItems = order.getItems();
-    const orderItem = orderItems.find(
-      (item) => item.getOrderItemId() === data.orderItemId
-    );
-
-    if (!orderItem) {
+    if (!orderItemIds.includes(data.orderItemId)) {
       throw new Error(
         `Order item ${data.orderItemId} does not belong to order ${orderId}. This action is not allowed.`
       );

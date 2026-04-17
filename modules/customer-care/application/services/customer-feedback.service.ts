@@ -6,13 +6,13 @@ import {
 import { CustomerFeedback } from "../../domain/entities/customer-feedback.entity.js";
 import { FeedbackId } from "../../domain/value-objects/index.js";
 import { SupportTicketService } from "./support-ticket.service.js";
-import { OrderManagementService } from "../../../order-management/application/services/order-management.service.js";
+import { IExternalOrderQueryPort } from "../../domain/external-services.js";
 
 export class CustomerFeedbackService {
   constructor(
     private readonly feedbackRepository: ICustomerFeedbackRepository,
     private readonly supportTicketService?: SupportTicketService,
-    private readonly orderManagementService?: OrderManagementService
+    private readonly orderQueryPort?: IExternalOrderQueryPort,
   ) {}
 
   async createFeedback(data: {
@@ -45,16 +45,13 @@ export class CustomerFeedbackService {
       }
     }
 
-    if (data.userId && data.orderId && this.orderManagementService) {
-      const order = await this.orderManagementService.getOrderById(
-        data.orderId
-      );
+    if (data.userId && data.orderId && this.orderQueryPort) {
+      const order = await this.orderQueryPort.findOrderOwner(data.orderId);
       if (!order) {
         throw new Error(`Order with ID ${data.orderId} not found`);
       }
 
-      // Check if the order belongs to the user
-      if (order.getUserId() !== data.userId) {
+      if (order.userId && order.userId !== data.userId) {
         throw new Error(
           `Order ${data.orderId} does not belong to user ${data.userId}`
         );
