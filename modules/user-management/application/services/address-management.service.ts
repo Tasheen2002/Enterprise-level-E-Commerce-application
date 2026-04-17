@@ -183,7 +183,7 @@ export class AddressManagementService {
       errors.push('Country is required');
     }
 
-    if (!addressData.postalCode && ['US', 'CA', 'UK'].includes(addressData.country)) {
+    if (!addressData.postalCode && ['US', 'CA', 'GB'].includes(addressData.country)) {
       suggestions.push('Postal code is recommended for this country');
     }
     if (!addressData.state && addressData.country === 'US') {

@@ -1,4 +1,5 @@
 import * as bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { DomainValidationError } from "../../domain/errors/user-management.errors";
 
 export interface IPasswordHasherService {
@@ -72,12 +73,11 @@ export class PasswordHasherService implements IPasswordHasherService {
   generateTemporaryPassword(length: number = 12): string {
     const charset =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+    const bytes = randomBytes(length);
     let password = "";
-
     for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
+      password += charset[bytes[i] % charset.length];
     }
-
     return password;
   }
 
@@ -162,12 +162,7 @@ export class PasswordHasherService implements IPasswordHasherService {
    * Generates a secure password reset token (different from temporary password)
    */
   generateResetToken(): string {
-    const timestamp = Date.now().toString(36);
-    const randomBytes = Array.from({ length: 32 }, () =>
-      Math.floor(Math.random() * 36).toString(36),
-    ).join("");
-
-    return `${timestamp}_${randomBytes}`;
+    return randomBytes(32).toString("hex");
   }
 
   /**

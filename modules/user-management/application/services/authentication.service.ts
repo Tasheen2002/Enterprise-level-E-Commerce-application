@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import { IUserRepository } from '../../domain/repositories/iuser.repository';
-import { IPasswordHasherService } from './password-hasher.service';
-import { IJwtService } from './ijwt.service';
-import { Email } from '../../domain/value-objects/email.vo';
-import { UserId } from '../../domain/value-objects/user-id.vo';
-import { User } from '../../domain/entities/user.entity';
+import crypto from "crypto";
+import { IUserRepository } from "../../domain/repositories/iuser.repository";
+import { IPasswordHasherService } from "./password-hasher.service";
+import { IJwtService } from "./ijwt.service";
+import { Email } from "../../domain/value-objects/email.vo";
+import { UserId } from "../../domain/value-objects/user-id.vo";
+import { User } from "../../domain/entities/user.entity";
 import {
   UserNotFoundError,
   UserAlreadyExistsError,
@@ -15,8 +15,8 @@ import {
   EmailAlreadyVerifiedError,
   DomainValidationError,
   InvalidOperationError,
-} from '../../domain/errors/user-management.errors';
-import { UserStatus } from '../../domain/enums/user-status.enum';
+} from "../../domain/errors/user-management.errors";
+import { UserStatus } from "../../domain/enums/user-status.enum";
 
 // ============================================================================
 // Local param types
@@ -107,12 +107,16 @@ export class AuthenticationService {
       if (existingUser) {
         user = existingUser;
       } else {
-        user = User.create({ email, passwordHash: '', isGuest: true });
+        user = User.create({ email, passwordHash: "", isGuest: true });
         await this.userRepository.save(user);
       }
     } else {
       const guestEmail = this.generateGuestEmail();
-      user = User.create({ email: guestEmail, passwordHash: '', isGuest: true });
+      user = User.create({
+        email: guestEmail,
+        passwordHash: "",
+        isGuest: true,
+      });
       await this.userRepository.save(user);
     }
 
@@ -124,14 +128,16 @@ export class AuthenticationService {
     try {
       payload = this.jwtService.verifyRefresh(refreshToken);
     } catch {
-      throw new DomainValidationError('Invalid refresh token');
+      throw new DomainValidationError("Invalid refresh token");
     }
 
-    if (payload.type !== 'refresh') {
-      throw new DomainValidationError('Invalid token type');
+    if (payload.type !== "refresh") {
+      throw new DomainValidationError("Invalid token type");
     }
 
-    const user = await this.userRepository.findById(UserId.fromString(payload.userId));
+    const user = await this.userRepository.findById(
+      UserId.fromString(payload.userId),
+    );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
 
@@ -155,33 +161,35 @@ export class AuthenticationService {
     try {
       payload = this.jwtService.verifyAccess(token);
     } catch {
-      throw new DomainValidationError('Invalid access token');
+      throw new DomainValidationError("Invalid access token");
     }
 
-    if (payload.type !== 'access') {
-      throw new DomainValidationError('Invalid token type');
+    if (payload.type !== "access") {
+      throw new DomainValidationError("Invalid token type");
     }
 
-    const user = await this.userRepository.findById(UserId.fromString(payload.userId));
+    const user = await this.userRepository.findById(
+      UserId.fromString(payload.userId),
+    );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
 
     return user;
   }
 
-  async logout(userId: string, refreshToken?: string): Promise<void> {
+  async logout(userId: string, accessToken?: string): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
 
-    if (refreshToken) {
+    if (accessToken) {
       let payload;
       try {
-        payload = this.jwtService.verifyRefresh(refreshToken);
+        payload = this.jwtService.verifyAccess(accessToken);
       } catch {
-        throw new DomainValidationError('Invalid refresh token');
+        payload = null;
       }
-      if (payload.type !== 'refresh' || payload.userId !== userId) {
-        throw new DomainValidationError('Invalid refresh token');
+      if (payload && payload.userId !== userId) {
+        throw new DomainValidationError("Token does not belong to this user");
       }
     }
 
@@ -196,8 +204,10 @@ export class AuthenticationService {
   ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.isGuest) throw new InvalidOperationError('Guest users cannot change password');
-    if (!user.passwordHash) throw new InvalidOperationError('User has no password set');
+    if (user.isGuest)
+      throw new InvalidOperationError("Guest users cannot change password");
+    if (!user.passwordHash)
+      throw new InvalidOperationError("User has no password set");
 
     const isCurrentPasswordValid = await this.passwordHasher.verify(
       currentPassword,
@@ -205,27 +215,38 @@ export class AuthenticationService {
     );
     if (!isCurrentPasswordValid) throw new InvalidCredentialsError();
 
-    const validation = this.passwordHasher.validatePasswordStrength(newPassword);
+    const validation =
+      this.passwordHasher.validatePasswordStrength(newPassword);
     if (!validation.isValid) {
       throw new InvalidPasswordError(
-        `Password is not strong enough: ${validation.feedback.join(', ')}`,
+        `Password is not strong enough: ${validation.feedback.join(", ")}`,
       );
     }
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
-    if (!newPasswordHash) throw new InvalidOperationError('Failed to hash password');
+    if (!newPasswordHash)
+      throw new InvalidOperationError("Failed to hash password");
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
   }
 
-  async changeEmail(userId: string, newEmail: string, password: string): Promise<void> {
+  async changeEmail(
+    userId: string,
+    newEmail: string,
+    password: string,
+  ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.isGuest) throw new InvalidOperationError('Guest users cannot change email');
-    if (!user.passwordHash) throw new InvalidOperationError('User has no password set');
+    if (user.isGuest)
+      throw new InvalidOperationError("Guest users cannot change email");
+    if (!user.passwordHash)
+      throw new InvalidOperationError("User has no password set");
 
-    const isPasswordValid = await this.passwordHasher.verify(password, user.passwordHash);
+    const isPasswordValid = await this.passwordHasher.verify(
+      password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) throw new InvalidCredentialsError();
 
     const emailVo = Email.create(newEmail);
@@ -241,9 +262,13 @@ export class AuthenticationService {
   async verifyUserPassword(userId: string, password: string): Promise<User> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (!user.passwordHash) throw new InvalidOperationError('User has no password set');
+    if (!user.passwordHash)
+      throw new InvalidOperationError("User has no password set");
 
-    const isPasswordValid = await this.passwordHasher.verify(password, user.passwordHash);
+    const isPasswordValid = await this.passwordHasher.verify(
+      password,
+      user.passwordHash,
+    );
     if (!isPasswordValid) throw new InvalidCredentialsError();
 
     return user;
@@ -257,15 +282,18 @@ export class AuthenticationService {
       throw new UserAlreadyExistsError(userData.email);
     }
 
-    const validation = this.passwordHasher.validatePasswordStrength(userData.password);
+    const validation = this.passwordHasher.validatePasswordStrength(
+      userData.password,
+    );
     if (!validation.isValid) {
       throw new InvalidPasswordError(
-        `Password is not strong enough: ${validation.feedback.join(', ')}`,
+        `Password is not strong enough: ${validation.feedback.join(", ")}`,
       );
     }
 
     const passwordHash = await this.passwordHasher.hash(userData.password);
-    if (!passwordHash) throw new InvalidOperationError('Failed to hash password');
+    if (!passwordHash)
+      throw new InvalidOperationError("Failed to hash password");
 
     let user: User;
     if (existingUser && existingUser.isGuest) {
@@ -294,7 +322,7 @@ export class AuthenticationService {
     const user = await this.userRepository.findByEmail(emailVo);
     if (!user || user.isGuest) return { exists: false };
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     return { exists: true, resetToken, userId: user.id.getValue() };
   }
 
@@ -302,23 +330,28 @@ export class AuthenticationService {
     const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
     if (!user) throw new UserNotFoundError(email);
-    if (user.isGuest) throw new InvalidOperationError('Guest users cannot reset password');
+    if (user.isGuest)
+      throw new InvalidOperationError("Guest users cannot reset password");
 
-    const validation = this.passwordHasher.validatePasswordStrength(newPassword);
+    const validation =
+      this.passwordHasher.validatePasswordStrength(newPassword);
     if (!validation.isValid) {
       throw new InvalidPasswordError(
-        `Password is not strong enough: ${validation.feedback.join(', ')}`,
+        `Password is not strong enough: ${validation.feedback.join(", ")}`,
       );
     }
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
-    if (!newPasswordHash) throw new InvalidOperationError('Failed to hash password');
+    if (!newPasswordHash)
+      throw new InvalidOperationError("Failed to hash password");
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
   }
 
-  async getUserByEmail(email: string): Promise<{ userId: string; emailVerified: boolean }> {
+  async getUserByEmail(
+    email: string,
+  ): Promise<{ userId: string; emailVerified: boolean }> {
     const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
     if (!user || user.isGuest) throw new UserNotFoundError();
@@ -373,5 +406,4 @@ export class AuthenticationService {
     user.markAsDeleted();
     await this.userRepository.delete(user.id);
   }
-
 }

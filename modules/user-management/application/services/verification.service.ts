@@ -1,3 +1,5 @@
+import { randomBytes } from "crypto";
+import { USER_MANAGEMENT_CONSTANTS } from "../../domain/constants/user-management.constants";
 import { IUserRepository } from "../../domain/repositories/iuser.repository";
 import { IVerificationTokenRepository } from "../../domain/repositories/iverification-token.repository";
 import { IVerificationRateLimitRepository } from "../../domain/repositories/iverification-rate-limit.repository";
@@ -31,10 +33,10 @@ export interface VerificationContext {
 }
 
 export class VerificationService {
-  private readonly EMAIL_TOKEN_EXPIRY_HOURS = 24;
-  private readonly PASSWORD_RESET_EXPIRY_HOURS = 1;
-  private readonly MAX_ATTEMPTS_PER_HOUR = 5;
-  private readonly RATE_LIMIT_RESET_HOURS = 1;
+  private readonly EMAIL_TOKEN_EXPIRY_MS = USER_MANAGEMENT_CONSTANTS.EMAIL_VERIFICATION_EXPIRY_MS;
+  private readonly PASSWORD_RESET_EXPIRY_MS = USER_MANAGEMENT_CONSTANTS.PASSWORD_RESET_EXPIRY_MS;
+  private readonly MAX_ATTEMPTS = USER_MANAGEMENT_CONSTANTS.MAX_VERIFICATION_ATTEMPTS;
+  private readonly RATE_LIMIT_RESET_MS = USER_MANAGEMENT_CONSTANTS.VERIFICATION_LOCKOUT_DURATION_MS;
 
   constructor(
     private readonly userRepository: IUserRepository,
@@ -103,7 +105,7 @@ export class VerificationService {
 
     const token = this.generateEmailToken();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + this.EMAIL_TOKEN_EXPIRY_HOURS);
+    expiresAt.setTime(expiresAt.getTime() + this.EMAIL_TOKEN_EXPIRY_MS);
 
     const verificationToken = VerificationToken.create({
       userId,
@@ -308,7 +310,7 @@ export class VerificationService {
 
     const token = this.generateEmailToken();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + this.PASSWORD_RESET_EXPIRY_HOURS);
+    expiresAt.setTime(expiresAt.getTime() + this.PASSWORD_RESET_EXPIRY_MS);
 
     const verificationToken = VerificationToken.create({
       userId,
@@ -421,16 +423,7 @@ export class VerificationService {
   }
 
   private generateEmailToken(): string {
-    // Generate a secure random token for email verification
-    const charset =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let token = "";
-
-    for (let i = 0; i < 32; i++) {
-      token += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-
-    return token;
+    return randomBytes(32).toString("hex");
   }
 
   private async checkRateLimit(
@@ -455,7 +448,7 @@ export class VerificationService {
       return { allowed: true };
     }
 
-    if (rateLimit.attempts >= this.MAX_ATTEMPTS_PER_HOUR) {
+    if (rateLimit.attempts >= this.MAX_ATTEMPTS) {
       const resetAt = rateLimit.resetAt;
       const now = new Date();
       const resetInMinutes = Math.ceil(
@@ -484,7 +477,7 @@ export class VerificationService {
 
     if (!rateLimit || rateLimit.isExpired()) {
       const resetAt = new Date();
-      resetAt.setHours(resetAt.getHours() + this.RATE_LIMIT_RESET_HOURS);
+      resetAt.setTime(resetAt.getTime() + this.RATE_LIMIT_RESET_MS);
 
       rateLimit = VerificationRateLimit.create({
         userId,
