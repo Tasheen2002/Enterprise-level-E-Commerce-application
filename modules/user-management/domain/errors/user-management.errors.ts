@@ -74,18 +74,6 @@ export class InvalidPasswordError extends DomainError {
   }
 }
 
-export class TwoFactorRequiredError extends DomainError {
-  constructor() {
-    super('Two-factor authentication is required', 'TWO_FACTOR_REQUIRED', 401);
-  }
-}
-
-export class InvalidTwoFactorCodeError extends DomainError {
-  constructor() {
-    super('Invalid two-factor authentication code', 'INVALID_TWO_FACTOR_CODE', 401);
-  }
-}
-
 export class AddressNotFoundError extends DomainError {
   constructor(addressId?: string) {
     super(
