@@ -1,4 +1,5 @@
-import { ProductTag, ProductTagId } from "../entities/product-tag.entity";
+import { ProductTag } from "../entities/product-tag.entity";
+import { ProductTagId } from "../value-objects/product-tag-id.vo";
 
 export interface IProductTagRepository {
   save(tag: ProductTag): Promise<void>;
