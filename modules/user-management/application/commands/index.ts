@@ -20,3 +20,4 @@ export { ToggleUserEmailVerifiedHandler } from "./toggle-user-email-verified.com
 export { LogoutHandler } from "./logout.command";
 export { RefreshTokenHandler } from "./refresh-token.command";
 export { DeleteAccountHandler } from "./delete-account.command";
+export { ResendVerificationHandler } from "./resend-verification.command";
