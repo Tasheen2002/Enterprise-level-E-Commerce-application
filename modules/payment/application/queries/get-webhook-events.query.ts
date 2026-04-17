@@ -2,7 +2,8 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { PaymentWebhookService, PaymentWebhookEventDto } from '../services/payment-webhook.service';
+import { PaymentWebhookService } from '../services/payment-webhook.service';
+import { PaymentWebhookEventDTO } from '../../domain/entities/payment-webhook-event.entity';
 
 export interface GetWebhookEventsQuery extends IQuery {
   readonly provider?: string;
@@ -13,14 +14,13 @@ export interface GetWebhookEventsQuery extends IQuery {
 
 export class GetWebhookEventsHandler implements IQueryHandler<
   GetWebhookEventsQuery,
-  PaymentWebhookEventDto[]
+  PaymentWebhookEventDTO[]
 > {
   constructor(private readonly webhookService: PaymentWebhookService) {}
 
-  async handle(query: GetWebhookEventsQuery): Promise<PaymentWebhookEventDto[]> {
-    return this.webhookService.getWebhookEventsWithFilters({
+  async handle(query: GetWebhookEventsQuery): Promise<PaymentWebhookEventDTO[]> {
+    return this.webhookService.getWebhookEvents({
       provider: query.provider,
-      eventType: query.eventType,
       createdAfter: query.createdAfter,
       createdBefore: query.createdBefore,
     });

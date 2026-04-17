@@ -2,7 +2,8 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { BnplTransactionService, BnplTransactionDto } from '../services/bnpl-transaction.service';
+import { BnplTransactionService } from '../services/bnpl-transaction.service';
+import { BnplTransactionDTO } from '../../domain/entities/bnpl-transaction.entity';
 
 export interface GetBnplTransactionsQuery extends IQuery {
   readonly bnplId?: string;
@@ -13,11 +14,11 @@ export interface GetBnplTransactionsQuery extends IQuery {
 
 export class GetBnplTransactionsHandler implements IQueryHandler<
   GetBnplTransactionsQuery,
-  BnplTransactionDto[]
+  BnplTransactionDTO[]
 > {
   constructor(private readonly bnplService: BnplTransactionService) {}
 
-  async handle(query: GetBnplTransactionsQuery): Promise<BnplTransactionDto[]> {
+  async handle(query: GetBnplTransactionsQuery): Promise<BnplTransactionDTO[]> {
     if (!query.bnplId && !query.intentId && !query.orderId) {
       throw new Error('At least one of bnplId, intentId, or orderId is required');
     }

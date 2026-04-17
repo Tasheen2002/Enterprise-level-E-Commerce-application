@@ -2,7 +2,8 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { GiftCardService, GiftCardTransactionDto } from '../services/gift-card.service';
+import { GiftCardService } from '../services/gift-card.service';
+import { GiftCardTransactionDTO } from '../../domain/entities/gift-card-transaction.entity';
 
 export interface GetGiftCardTransactionsQuery extends IQuery {
   readonly giftCardId: string;
@@ -10,11 +11,11 @@ export interface GetGiftCardTransactionsQuery extends IQuery {
 
 export class GetGiftCardTransactionsHandler implements IQueryHandler<
   GetGiftCardTransactionsQuery,
-  GiftCardTransactionDto[]
+  GiftCardTransactionDTO[]
 > {
   constructor(private readonly giftCardService: GiftCardService) {}
 
-  async handle(query: GetGiftCardTransactionsQuery): Promise<GiftCardTransactionDto[]> {
+  async handle(query: GetGiftCardTransactionsQuery): Promise<GiftCardTransactionDTO[]> {
     return this.giftCardService.getGiftCardTransactions(query.giftCardId);
   }
 }

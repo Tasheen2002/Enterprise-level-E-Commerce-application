@@ -2,7 +2,8 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { PaymentService, PaymentTransactionDto } from '../services/payment.service';
+import { PaymentService } from '../services/payment.service';
+import { PaymentTransactionDTO } from '../../domain/entities/payment-transaction.entity';
 
 export interface GetPaymentTransactionsQuery extends IQuery {
   readonly intentId: string;
@@ -11,11 +12,11 @@ export interface GetPaymentTransactionsQuery extends IQuery {
 
 export class GetPaymentTransactionsHandler implements IQueryHandler<
   GetPaymentTransactionsQuery,
-  PaymentTransactionDto[]
+  PaymentTransactionDTO[]
 > {
   constructor(private readonly paymentService: PaymentService) {}
 
-  async handle(query: GetPaymentTransactionsQuery): Promise<PaymentTransactionDto[]> {
+  async handle(query: GetPaymentTransactionsQuery): Promise<PaymentTransactionDTO[]> {
     return this.paymentService.getPaymentTransactions(query.intentId, query.userId);
   }
 }

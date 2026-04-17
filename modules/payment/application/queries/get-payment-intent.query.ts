@@ -2,7 +2,8 @@ import {
   IQuery,
   IQueryHandler,
 } from '../../../../packages/core/src/application/cqrs';
-import { PaymentService, PaymentIntentDto } from '../services/payment.service';
+import { PaymentService } from '../services/payment.service';
+import { PaymentIntentDTO } from '../../domain/entities/payment-intent.entity';
 
 export interface GetPaymentIntentQuery extends IQuery {
   readonly intentId?: string;
@@ -12,11 +13,11 @@ export interface GetPaymentIntentQuery extends IQuery {
 
 export class GetPaymentIntentHandler implements IQueryHandler<
   GetPaymentIntentQuery,
-  PaymentIntentDto
+  PaymentIntentDTO
 > {
   constructor(private readonly paymentService: PaymentService) {}
 
-  async handle(query: GetPaymentIntentQuery): Promise<PaymentIntentDto> {
+  async handle(query: GetPaymentIntentQuery): Promise<PaymentIntentDTO> {
     if (!query.intentId && !query.orderId) {
       throw new Error('Either intentId or orderId is required');
     }
