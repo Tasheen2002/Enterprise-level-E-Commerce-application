@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { AuthenticationService } from '../services/authentication.service';
 import { ITokenBlacklistService } from '../services/itoken-blacklist.service';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
@@ -23,7 +24,7 @@ export class ResendVerificationHandler
     }
 
     // Generate a fresh verification token and store it
-    const token = require('crypto').randomBytes(32).toString('hex');
+    const token = randomBytes(32).toString('hex');
     this.tokenBlacklistService.storeVerificationToken(token, result.userId, command.email);
 
     // TODO: trigger email notification event with the token

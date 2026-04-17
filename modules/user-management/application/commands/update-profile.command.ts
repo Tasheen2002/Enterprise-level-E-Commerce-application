@@ -1,16 +1,21 @@
 import { UserProfileService } from '../services/user-profile.service';
-import { UserProfileDTO } from '../../domain/entities/user-profile.entity';
+import {
+  UserProfileDTO,
+  UserPreferences,
+  StylePreferences,
+  PreferredSizes,
+} from '../../domain/entities/user-profile.entity';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface UpdateProfileCommand extends ICommand {
   readonly userId: string;
   readonly defaultAddressId?: string;
   readonly defaultPaymentMethodId?: string;
-  readonly prefs?: Record<string, any>;
+  readonly prefs?: UserPreferences;
   readonly locale?: string;
   readonly currency?: string;
-  readonly stylePreferences?: Record<string, any>;
-  readonly preferredSizes?: Record<string, any>;
+  readonly stylePreferences?: StylePreferences;
+  readonly preferredSizes?: PreferredSizes;
   readonly firstName?: string;
   readonly lastName?: string;
   readonly phone?: string;
