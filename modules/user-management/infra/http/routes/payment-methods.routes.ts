@@ -214,6 +214,6 @@ export async function paymentMethodRoutes(
       },
     },
     (request, reply) =>
-      controller.setDefaultPaymentMethod(request as AuthenticatedRequest, reply),
+      controller.setDefaultCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 }
