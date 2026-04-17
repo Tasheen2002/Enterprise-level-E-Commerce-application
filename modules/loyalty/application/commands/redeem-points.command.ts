@@ -1,67 +1,34 @@
-import { LoyaltyService, RedeemPointsData, LoyaltyTransactionData } from '../services/loyalty.service';
-import { TransactionReason } from '../../domain/entities/loyalty-transaction.entity';
-import { ICommand, ICommandHandler, CommandResult } from './earn-points.command';
+import {
+  ICommand,
+  ICommandHandler,
+  CommandResult,
+} from '../../../../packages/core/src/application/cqrs';
+import { LoyaltyService } from '../services/loyalty.service';
+import { LoyaltyTransaction, LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
+import { LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
 
 export interface RedeemPointsCommand extends ICommand {
-  userId: string;
-  points: number;
-  reason: TransactionReason;
-  description?: string;
-  referenceId?: string;
+  readonly userId: string;
+  readonly points: number;
+  readonly reason: LoyaltyTransactionReason;
+  readonly description?: string;
+  readonly referenceId?: string;
 }
 
-export class RedeemPointsHandler implements ICommandHandler<RedeemPointsCommand, CommandResult<LoyaltyTransactionData>> {
+export class RedeemPointsHandler implements ICommandHandler<
+  RedeemPointsCommand,
+  CommandResult<LoyaltyTransactionDTO>
+> {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
-  async handle(command: RedeemPointsCommand): Promise<CommandResult<LoyaltyTransactionData>> {
-    try {
-      if (!command.userId || !command.reason) {
-        return CommandResult.failure<LoyaltyTransactionData>(
-          'User ID and reason are required',
-          ['userId', 'reason']
-        );
-      }
-
-      if (!command.points || command.points <= 0) {
-        return CommandResult.failure<LoyaltyTransactionData>(
-          'Points must be a positive number',
-          ['points']
-        );
-      }
-
-      const redeemData: RedeemPointsData = {
-        userId: command.userId,
-        points: command.points,
-        reason: command.reason,
-        description: command.description,
-        referenceId: command.referenceId
-      };
-
-      const transaction = await this.loyaltyService.redeemPoints(redeemData);
-
-      const result: LoyaltyTransactionData = {
-        transactionId: transaction.transactionId,
-        type: transaction.type,
-        points: transaction.points.value,
-        reason: transaction.reason,
-        description: transaction.description,
-        balanceAfter: transaction.balanceAfter,
-        expiresAt: transaction.expiresAt,
-        createdAt: transaction.createdAt
-      };
-
-      return CommandResult.success<LoyaltyTransactionData>(result);
-    } catch (error) {
-      if (error instanceof Error) {
-        return CommandResult.failure<LoyaltyTransactionData>(
-          'Failed to redeem points',
-          [error.message]
-        );
-      }
-
-      return CommandResult.failure<LoyaltyTransactionData>(
-        'An unexpected error occurred while redeeming points'
-      );
-    }
+  async handle(command: RedeemPointsCommand): Promise<CommandResult<LoyaltyTransactionDTO>> {
+    const transaction = await this.loyaltyService.redeemPoints({
+      userId: command.userId,
+      points: command.points,
+      reason: command.reason,
+      description: command.description,
+      referenceId: command.referenceId,
+    });
+    return CommandResult.success(LoyaltyTransaction.toDTO(transaction));
   }
 }
