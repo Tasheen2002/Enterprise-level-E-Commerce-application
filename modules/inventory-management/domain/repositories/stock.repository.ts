@@ -1,3 +1,4 @@
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { Stock } from "../entities/stock.entity";
 
 export interface IStockRepository {
@@ -9,9 +10,7 @@ export interface IStockRepository {
   delete(variantId: string, locationId: string): Promise<void>;
   findByVariant(variantId: string): Promise<Stock[]>;
   findByLocation(locationId: string): Promise<Stock[]>;
-  findAll(
-    options?: StockQueryOptions,
-  ): Promise<{ stocks: Stock[]; total: number }>;
+  findAll(options?: StockQueryOptions): Promise<PaginatedResult<Stock>>;
   findLowStockItems(): Promise<Stock[]>;
   findOutOfStockItems(): Promise<Stock[]>;
   getTotalAvailableStock(variantId: string): Promise<number>;
