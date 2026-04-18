@@ -97,6 +97,6 @@ export class SupplierManagementService {
     offset?: number;
   }): Promise<{ suppliers: SupplierDTO[]; total: number }> {
     const result = await this.supplierRepository.findAll(options);
-    return { suppliers: result.suppliers.map(Supplier.toDTO), total: result.total };
+    return { suppliers: result.items.map(Supplier.toDTO), total: result.total };
   }
 }

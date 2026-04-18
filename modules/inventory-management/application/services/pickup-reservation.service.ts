@@ -59,6 +59,15 @@ export class PickupReservationService {
       throw new InvalidOperationError("Can only cancel active reservations");
     }
 
+    const stock = await this.stockRepository.findByVariantAndLocation(
+      reservation.variantId,
+      reservation.locationId,
+    );
+    if (stock) {
+      stock.unreserveStock(reservation.qty);
+      await this.stockRepository.save(stock);
+    }
+
     reservation.cancel();
     await this.pickupReservationRepository.save(reservation);
 

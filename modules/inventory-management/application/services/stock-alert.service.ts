@@ -52,15 +52,14 @@ export class StockAlertService {
   }
 
   async deleteStockAlert(alertId: string): Promise<void> {
-    const alert = await this.stockAlertRepository.findById(
-      AlertId.fromString(alertId),
-    );
+    const alertIdVO = AlertId.fromString(alertId);
+    const alert = await this.stockAlertRepository.findById(alertIdVO);
 
     if (!alert) {
       throw new StockAlertNotFoundError(alertId);
     }
 
-    await this.stockAlertRepository.delete(AlertId.fromString(alertId));
+    await this.stockAlertRepository.delete(alertIdVO);
   }
 
   async checkAndCreateAlerts(variantId: string): Promise<StockAlertDTO[]> {
@@ -166,6 +165,6 @@ export class StockAlertService {
     includeResolved?: boolean;
   }): Promise<{ alerts: StockAlertDTO[]; total: number }> {
     const result = await this.stockAlertRepository.findAll(options);
-    return { alerts: result.alerts.map(StockAlert.toDTO), total: result.total };
+    return { alerts: result.items.map(StockAlert.toDTO), total: result.total };
   }
 }
