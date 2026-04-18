@@ -282,9 +282,6 @@ export class OrderController {
 
       return ResponseHelper.ok(reply, "Order tracking retrieved successfully", result);
     } catch (error: unknown) {
-      if (error instanceof Error && error.message === "CONTACT_MISMATCH") {
-        return ResponseHelper.forbidden(reply, "The email or phone number does not match our records for this order.");
-      }
       return ResponseHelper.error(reply, error);
     }
   }
