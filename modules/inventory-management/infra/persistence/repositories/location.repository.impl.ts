@@ -10,24 +10,30 @@ import {
 import { LocationAddress } from "../../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../../domain/repositories/location.repository";
 
-interface LocationDatabaseRow {
-  id: string;
-  type: string;
-  name: string;
-  address?: any;
-}
-
-export class LocationRepositoryImpl extends PrismaRepository<Location> implements ILocationRepository {
+export class LocationRepositoryImpl
+  extends PrismaRepository<Location>
+  implements ILocationRepository
+{
   constructor(prisma: PrismaClient, eventBus?: IEventBus) {
     super(prisma, eventBus);
   }
 
-  private toEntity(row: LocationDatabaseRow): Location {
+  private toEntity(row: {
+    id: string;
+    type: string;
+    name: string;
+    address: unknown;
+  }): Location {
+    const fallbackDate = new Date(0);
     return Location.fromPersistence({
       locationId: LocationId.fromString(row.id),
       type: LocationTypeVO.create(row.type),
       name: row.name,
-      address: row.address ? LocationAddress.create(row.address) : undefined,
+      address: row.address
+        ? LocationAddress.create(row.address as any)
+        : undefined,
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     });
   }
 
@@ -51,43 +57,43 @@ export class LocationRepositoryImpl extends PrismaRepository<Location> implement
   }
 
   async findById(locationId: LocationId): Promise<Location | null> {
-    const location = await this.prisma.location.findUnique({
+    const row = await this.prisma.location.findUnique({
       where: { id: locationId.getValue() },
     });
 
-    if (!location) {
-      return null;
-    }
-
-    return this.toEntity(location as LocationDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async delete(locationId: LocationId): Promise<void> {
+    const row = await this.prisma.location.findUnique({
+      where: { id: locationId.getValue() },
+    });
+
+    if (row) {
+      const location = this.toEntity(row);
+      location.markDeleted();
+      await this.dispatchEvents(location);
+    }
+
     await this.prisma.location.delete({
       where: { id: locationId.getValue() },
     });
   }
 
   async findByType(type: LocationType): Promise<Location[]> {
-    const locations = await this.prisma.location.findMany({
+    const rows = await this.prisma.location.findMany({
       where: { type: type as any },
     });
 
-    return locations.map((location) =>
-      this.toEntity(location as LocationDatabaseRow),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findByName(name: string): Promise<Location | null> {
-    const location = await this.prisma.location.findFirst({
+    const row = await this.prisma.location.findFirst({
       where: { name },
     });
 
-    if (!location) {
-      return null;
-    }
-
-    return this.toEntity(location as LocationDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async findAll(options?: {
@@ -96,7 +102,7 @@ export class LocationRepositoryImpl extends PrismaRepository<Location> implement
   }): Promise<{ locations: Location[]; total: number }> {
     const { limit = 50, offset = 0 } = options || {};
 
-    const [locations, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.location.findMany({
         take: limit,
         skip: offset,
@@ -106,9 +112,7 @@ export class LocationRepositoryImpl extends PrismaRepository<Location> implement
     ]);
 
     return {
-      locations: locations.map((location) =>
-        this.toEntity(location as LocationDatabaseRow),
-      ),
+      locations: rows.map((r) => this.toEntity(r)),
       total,
     };
   }
