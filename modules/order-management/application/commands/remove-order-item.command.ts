@@ -7,7 +7,7 @@ export interface RemoveOrderItemCommand extends ICommand {
   readonly itemId: string;
 }
 
-export class RemoveOrderItemCommandHandler implements ICommandHandler<
+export class RemoveOrderItemHandler implements ICommandHandler<
   RemoveOrderItemCommand,
   CommandResult<OrderDTO>
 > {

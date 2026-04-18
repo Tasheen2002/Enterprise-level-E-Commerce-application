@@ -15,7 +15,7 @@ export interface UpdateOrderTotalsCommand extends ICommand {
   };
 }
 
-export class UpdateOrderTotalsCommandHandler implements ICommandHandler<
+export class UpdateOrderTotalsHandler implements ICommandHandler<
   UpdateOrderTotalsCommand,
   CommandResult<OrderDTO>
 > {

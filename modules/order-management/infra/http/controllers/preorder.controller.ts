@@ -3,13 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreatePreorderCommand,
-  CreatePreorderCommandHandler,
+  CreatePreorderHandler,
   UpdatePreorderReleaseDateCommand,
-  UpdatePreorderReleaseDateCommandHandler,
+  UpdatePreorderReleaseDateHandler,
   MarkPreorderNotifiedCommand,
-  MarkPreorderNotifiedCommandHandler,
+  MarkPreorderNotifiedHandler,
   DeletePreorderCommand,
-  DeletePreorderCommandHandler,
+  DeletePreorderHandler,
   GetPreorderQuery,
   GetPreorderHandler,
   ListPreordersQuery,
@@ -54,10 +54,10 @@ export interface ListPreordersRequest {
 
 export class PreorderController {
   constructor(
-    private readonly createHandler: CreatePreorderCommandHandler,
-    private readonly updateReleaseDateHandler: UpdatePreorderReleaseDateCommandHandler,
-    private readonly markNotifiedHandler: MarkPreorderNotifiedCommandHandler,
-    private readonly deleteHandler: DeletePreorderCommandHandler,
+    private readonly createHandler: CreatePreorderHandler,
+    private readonly updateReleaseDateHandler: UpdatePreorderReleaseDateHandler,
+    private readonly markNotifiedHandler: MarkPreorderNotifiedHandler,
+    private readonly deleteHandler: DeletePreorderHandler,
     private readonly getPreorderHandler: GetPreorderHandler,
     private readonly listPreordersHandler: ListPreordersHandler,
   ) {}

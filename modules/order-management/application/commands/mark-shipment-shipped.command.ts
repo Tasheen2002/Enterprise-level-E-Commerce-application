@@ -10,7 +10,7 @@ export interface MarkShipmentShippedCommand extends ICommand {
   readonly trackingNumber: string;
 }
 
-export class MarkShipmentShippedCommandHandler implements ICommandHandler<
+export class MarkShipmentShippedHandler implements ICommandHandler<
   MarkShipmentShippedCommand,
   CommandResult<OrderShipmentDTO>
 > {

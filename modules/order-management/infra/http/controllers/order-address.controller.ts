@@ -3,11 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   SetOrderAddressesCommand,
-  SetOrderAddressesCommandHandler,
+  SetOrderAddressesHandler,
   UpdateBillingAddressCommand,
-  UpdateBillingAddressCommandHandler,
+  UpdateBillingAddressHandler,
   UpdateShippingAddressCommand,
-  UpdateShippingAddressCommandHandler,
+  UpdateShippingAddressHandler,
   GetOrderAddressQuery,
   GetOrderAddressHandler,
 } from "../../../application";
@@ -49,9 +49,9 @@ export interface GetAddressesRequest {
 
 export class OrderAddressController {
   constructor(
-    private readonly setAddressesHandler: SetOrderAddressesCommandHandler,
-    private readonly updateBillingAddressHandler: UpdateBillingAddressCommandHandler,
-    private readonly updateShippingAddressHandler: UpdateShippingAddressCommandHandler,
+    private readonly setAddressesHandler: SetOrderAddressesHandler,
+    private readonly updateBillingAddressHandler: UpdateBillingAddressHandler,
+    private readonly updateShippingAddressHandler: UpdateShippingAddressHandler,
     private readonly getAddressesHandler: GetOrderAddressHandler,
   ) {}
 

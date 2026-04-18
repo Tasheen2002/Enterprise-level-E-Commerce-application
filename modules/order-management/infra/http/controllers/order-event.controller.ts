@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   LogOrderEventCommand,
-  LogOrderEventCommandHandler,
+  LogOrderEventHandler,
   ListOrderEventsQuery,
   ListOrderEventsHandler,
   GetOrderEventQuery,
@@ -38,7 +38,7 @@ export interface GetEventRequest {
 
 export class OrderEventController {
   constructor(
-    private readonly logEventHandler: LogOrderEventCommandHandler,
+    private readonly logEventHandler: LogOrderEventHandler,
     private readonly listOrderEventsHandler: ListOrderEventsHandler,
     private readonly getOrderEventHandler: GetOrderEventHandler,
   ) {}

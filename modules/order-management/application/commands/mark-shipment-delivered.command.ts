@@ -8,7 +8,7 @@ export interface MarkShipmentDeliveredCommand extends ICommand {
   readonly deliveredAt?: Date;
 }
 
-export class MarkShipmentDeliveredCommandHandler implements ICommandHandler<
+export class MarkShipmentDeliveredHandler implements ICommandHandler<
   MarkShipmentDeliveredCommand,
   CommandResult<OrderShipmentDTO>
 > {

@@ -6,7 +6,7 @@ export interface MarkPreorderNotifiedCommand extends ICommand {
   readonly orderItemId: string;
 }
 
-export class MarkPreorderNotifiedCommandHandler implements ICommandHandler<
+export class MarkPreorderNotifiedHandler implements ICommandHandler<
   MarkPreorderNotifiedCommand,
   CommandResult<PreorderDTO>
 > {

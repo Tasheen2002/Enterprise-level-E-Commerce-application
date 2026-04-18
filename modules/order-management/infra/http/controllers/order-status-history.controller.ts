@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   LogOrderStatusChangeCommand,
-  LogOrderStatusChangeCommandHandler,
+  LogOrderStatusChangeHandler,
   GetOrderStatusHistoryQuery,
   GetOrderStatusHistoryHandler,
 } from "../../../application";
@@ -27,7 +27,7 @@ export interface GetStatusHistoryRequest {
 
 export class OrderStatusHistoryController {
   constructor(
-    private readonly logStatusChangeHandler: LogOrderStatusChangeCommandHandler,
+    private readonly logStatusChangeHandler: LogOrderStatusChangeHandler,
     private readonly getStatusHistoryHandler: GetOrderStatusHistoryHandler,
   ) {}
 

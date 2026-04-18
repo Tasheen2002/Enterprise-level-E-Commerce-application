@@ -9,7 +9,7 @@ export interface LogOrderStatusChangeCommand extends ICommand {
   readonly changedBy?: string;
 }
 
-export class LogOrderStatusChangeCommandHandler implements ICommandHandler<
+export class LogOrderStatusChangeHandler implements ICommandHandler<
   LogOrderStatusChangeCommand,
   CommandResult<OrderStatusHistoryDTO>
 > {

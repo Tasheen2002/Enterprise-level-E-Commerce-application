@@ -34,7 +34,7 @@ export interface CreateOrderCommand extends ICommand {
   readonly currency?: string;
 }
 
-export class CreateOrderCommandHandler implements ICommandHandler<
+export class CreateOrderHandler implements ICommandHandler<
   CreateOrderCommand,
   CommandResult<OrderDTO>
 > {

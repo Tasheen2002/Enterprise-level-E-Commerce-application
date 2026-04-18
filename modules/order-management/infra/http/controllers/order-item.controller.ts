@@ -3,11 +3,11 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   AddOrderItemCommand,
-  AddOrderItemCommandHandler,
+  AddOrderItemHandler,
   UpdateOrderItemCommand,
-  UpdateOrderItemCommandHandler,
+  UpdateOrderItemHandler,
   RemoveOrderItemCommand,
-  RemoveOrderItemCommandHandler,
+  RemoveOrderItemHandler,
   ListOrderItemsQuery,
   ListOrderItemsHandler,
   GetOrderItemQuery,
@@ -47,9 +47,9 @@ export interface GetItemRequest {
 
 export class OrderItemController {
   constructor(
-    private readonly addOrderItemHandler: AddOrderItemCommandHandler,
-    private readonly updateOrderItemHandler: UpdateOrderItemCommandHandler,
-    private readonly removeOrderItemHandler: RemoveOrderItemCommandHandler,
+    private readonly addOrderItemHandler: AddOrderItemHandler,
+    private readonly updateOrderItemHandler: UpdateOrderItemHandler,
+    private readonly removeOrderItemHandler: RemoveOrderItemHandler,
     private readonly listOrderItemsHandler: ListOrderItemsHandler,
     private readonly getOrderItemHandler: GetOrderItemHandler,
   ) {}

@@ -7,7 +7,7 @@ export interface UpdateOrderStatusCommand extends ICommand {
   readonly status: string;
 }
 
-export class UpdateOrderStatusCommandHandler implements ICommandHandler<
+export class UpdateOrderStatusHandler implements ICommandHandler<
   UpdateOrderStatusCommand,
   CommandResult<OrderDTO>
 > {

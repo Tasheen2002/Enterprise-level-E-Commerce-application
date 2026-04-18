@@ -9,7 +9,7 @@ export interface DeletePreorderCommand extends ICommand {
   readonly orderItemId: string;
 }
 
-export class DeletePreorderCommandHandler implements ICommandHandler<
+export class DeletePreorderHandler implements ICommandHandler<
   DeletePreorderCommand,
   CommandResult<void>
 > {

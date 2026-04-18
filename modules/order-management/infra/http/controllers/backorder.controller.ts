@@ -3,13 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateBackorderCommand,
-  CreateBackorderCommandHandler,
+  CreateBackorderHandler,
   UpdateBackorderEtaCommand,
-  UpdateBackorderEtaCommandHandler,
+  UpdateBackorderEtaHandler,
   MarkBackorderNotifiedCommand,
-  MarkBackorderNotifiedCommandHandler,
+  MarkBackorderNotifiedHandler,
   DeleteBackorderCommand,
-  DeleteBackorderCommandHandler,
+  DeleteBackorderHandler,
   GetBackorderQuery,
   GetBackorderHandler,
   ListBackordersQuery,
@@ -54,10 +54,10 @@ export interface ListBackordersRequest {
 
 export class BackorderController {
   constructor(
-    private readonly createHandler: CreateBackorderCommandHandler,
-    private readonly updateEtaHandler: UpdateBackorderEtaCommandHandler,
-    private readonly markNotifiedHandler: MarkBackorderNotifiedCommandHandler,
-    private readonly deleteHandler: DeleteBackorderCommandHandler,
+    private readonly createHandler: CreateBackorderHandler,
+    private readonly updateEtaHandler: UpdateBackorderEtaHandler,
+    private readonly markNotifiedHandler: MarkBackorderNotifiedHandler,
+    private readonly deleteHandler: DeleteBackorderHandler,
     private readonly getBackorderHandler: GetBackorderHandler,
     private readonly listBackordersHandler: ListBackordersHandler,
   ) {}

@@ -3,13 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateShipmentCommand,
-  CreateShipmentCommandHandler,
+  CreateShipmentHandler,
   UpdateShipmentTrackingCommand,
-  UpdateShipmentTrackingCommandHandler,
+  UpdateShipmentTrackingHandler,
   MarkShipmentShippedCommand,
-  MarkShipmentShippedCommandHandler,
+  MarkShipmentShippedHandler,
   MarkShipmentDeliveredCommand,
-  MarkShipmentDeliveredCommandHandler,
+  MarkShipmentDeliveredHandler,
   ListOrderShipmentsQuery,
   ListOrderShipmentsHandler,
   GetShipmentQuery,
@@ -62,10 +62,10 @@ export interface GetShipmentRequest {
 
 export class OrderShipmentController {
   constructor(
-    private readonly createShipmentHandler: CreateShipmentCommandHandler,
-    private readonly updateTrackingHandler: UpdateShipmentTrackingCommandHandler,
-    private readonly markShippedHandler: MarkShipmentShippedCommandHandler,
-    private readonly markDeliveredHandler: MarkShipmentDeliveredCommandHandler,
+    private readonly createShipmentHandler: CreateShipmentHandler,
+    private readonly updateTrackingHandler: UpdateShipmentTrackingHandler,
+    private readonly markShippedHandler: MarkShipmentShippedHandler,
+    private readonly markDeliveredHandler: MarkShipmentDeliveredHandler,
     private readonly listOrderShipmentsHandler: ListOrderShipmentsHandler,
     private readonly getShipmentHandler: GetShipmentHandler,
   ) {}
