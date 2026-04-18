@@ -100,7 +100,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
           ? { shippedAt: sortOrder }
           : sortBy === "deliveredAt"
             ? { deliveredAt: sortOrder }
-            : undefined,
+            : { createdAt: sortOrder },
     });
 
     return shipments.map((shipment) => this.toEntity(shipment as any));
@@ -140,7 +140,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
           ? { shippedAt: sortOrder }
           : sortBy === "deliveredAt"
             ? { deliveredAt: sortOrder }
-            : undefined,
+            : { createdAt: sortOrder },
     });
 
     return shipments.map((shipment) => this.toEntity(shipment as any));

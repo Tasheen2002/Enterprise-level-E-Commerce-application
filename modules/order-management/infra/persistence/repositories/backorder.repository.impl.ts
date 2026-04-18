@@ -159,6 +159,17 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
     });
   }
 
+  async countByPromisedEtaBefore(date: Date): Promise<number> {
+    return await this.prisma.backorder.count({
+      where: {
+        promisedEta: {
+          not: null,
+          lte: date,
+        },
+      },
+    });
+  }
+
   async exists(orderItemId: string): Promise<boolean> {
     const count = await this.prisma.backorder.count({
       where: { orderItemId },

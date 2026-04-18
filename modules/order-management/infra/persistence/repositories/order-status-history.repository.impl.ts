@@ -11,8 +11,7 @@ interface OrderStatusHistoryDatabaseRow {
   orderId: string;
   fromStatus: string | null;
   toStatus: string;
-  createdAt: Date;
-  updatedAt: Date;
+  changedAt: Date;
   changedBy: string | null;
 }
 
@@ -28,8 +27,8 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
         : undefined,
       toStatus: OrderStatus.fromString(row.toStatus),
       changedBy: row.changedBy || undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      createdAt: row.changedAt,
+      updatedAt: row.changedAt,
     });
   }
 
@@ -80,7 +79,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       where: { orderId },
       take: limit,
       skip: offset,
-      orderBy: { createdAt: sortOrder },
+      orderBy: { changedAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -96,7 +95,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       where: { toStatus: status.getValue() as any },
       take: limit,
       skip: offset,
-      orderBy: { createdAt: sortOrder },
+      orderBy: { changedAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -112,7 +111,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       where: { changedBy },
       take: limit,
       skip: offset,
-      orderBy: { createdAt: sortOrder },
+      orderBy: { changedAt: sortOrder },
     });
 
     return histories.map((history) => this.toEntity(history as any));
@@ -129,7 +128,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
   ): Promise<OrderStatusHistory | null> {
     const history = await this.prisma.orderStatusHistory.findFirst({
       where: { orderId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { changedAt: "desc" },
     });
 
     if (!history) {

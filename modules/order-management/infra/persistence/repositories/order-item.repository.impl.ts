@@ -113,7 +113,7 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
           ? undefined // Can't directly sort by price in snapshot JSON
           : sortBy === "quantity"
             ? { qty: sortOrder }
-            : undefined,
+            : { createdAt: sortOrder },
     });
 
     return items.map((item) => this.toEntity(item as any));
@@ -134,7 +134,7 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
       where: { variantId },
       take: limit,
       skip: offset,
-      orderBy: sortBy === "quantity" ? { qty: sortOrder } : undefined,
+      orderBy: sortBy === "quantity" ? { qty: sortOrder } : { createdAt: sortOrder },
     });
 
     return items.map((item) => this.toEntity(item as any));
