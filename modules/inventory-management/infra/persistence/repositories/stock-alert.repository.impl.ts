@@ -30,6 +30,8 @@ export class StockAlertRepositoryImpl
       type: AlertTypeVO.create(row.type),
       triggeredAt: row.triggeredAt,
       resolvedAt: row.resolvedAt ?? undefined,
+      createdAt: row.triggeredAt,
+      updatedAt: row.resolvedAt ?? row.triggeredAt,
     });
   }
 

@@ -1,17 +1,12 @@
 import { PrismaClient } from "@prisma/client";
-import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PurchaseOrderItem } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { IPurchaseOrderItemRepository } from "../../../domain/repositories/purchase-order-item.repository";
 
 export class PurchaseOrderItemRepositoryImpl
-  extends PrismaRepository<PurchaseOrderItem>
   implements IPurchaseOrderItemRepository
 {
-  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
-    super(prisma, eventBus);
-  }
+  constructor(private readonly prisma: PrismaClient) {}
 
   private toEntity(row: {
     poId: string;
@@ -46,8 +41,6 @@ export class PurchaseOrderItemRepositoryImpl
         receivedQty: item.receivedQty,
       },
     });
-
-    await this.dispatchEvents(item);
   }
 
   async findByPoAndVariant(

@@ -25,11 +25,14 @@ export class SupplierRepositoryImpl
       ? row.contacts.map((c: any) => SupplierContact.create(c))
       : [];
 
+    const fallbackDate = new Date(0);
     return Supplier.fromPersistence({
       supplierId: SupplierId.fromString(row.supplierId),
       name: SupplierName.create(row.name),
       leadTimeDays: row.leadTimeDays ?? undefined,
       contacts,
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     });
   }
 
