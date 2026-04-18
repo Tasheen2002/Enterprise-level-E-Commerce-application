@@ -1,6 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { OrderItemManagementService } from "../services/order-item-management.service";
-import { OrderItem, OrderItemDTO } from "../../domain/entities/order-item.entity";
+import { OrderItemDTO } from "../../domain/entities/order-item.entity";
+import { OrderItemNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface GetOrderItemQuery extends IQuery {
   readonly itemId: string;
@@ -11,6 +12,7 @@ export class GetOrderItemHandler implements IQueryHandler<GetOrderItemQuery, Ord
 
   async handle(query: GetOrderItemQuery): Promise<OrderItemDTO> {
     const item = await this.orderItemService.getOrderItemById(query.itemId);
-    return OrderItem.toDTO(item);
+    if (!item) throw new OrderItemNotFoundError(query.itemId);
+    return item;
   }
 }

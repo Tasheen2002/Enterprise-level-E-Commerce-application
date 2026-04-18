@@ -1,7 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { PreorderManagementService } from "../services/preorder-management.service";
-import { Preorder, PreorderDTO } from "../../domain/entities/preorder.entity";
+import { PreorderDTO } from "../../domain/entities/preorder.entity";
 import { PreorderQueryOptions } from "../../domain/repositories/preorder.repository";
 
 export interface ListPreordersQuery extends IQuery {
@@ -26,29 +26,37 @@ export class ListPreordersHandler implements IQueryHandler<ListPreordersQuery, P
       sortOrder: query.sortOrder ?? "asc",
     };
 
-    let preorders: Preorder[];
+    let preorders: PreorderDTO[];
     let total: number;
 
     switch (filterType) {
       case "notified":
-        preorders = await this.preorderService.getNotifiedPreorders(options);
-        total = await this.preorderService.getNotifiedCount();
+        [preorders, total] = await Promise.all([
+          this.preorderService.getNotifiedPreorders(options),
+          this.preorderService.getNotifiedCount(),
+        ]);
         break;
       case "unnotified":
-        preorders = await this.preorderService.getUnnotifiedPreorders(options);
-        total = await this.preorderService.getUnnotifiedCount();
+        [preorders, total] = await Promise.all([
+          this.preorderService.getUnnotifiedPreorders(options),
+          this.preorderService.getUnnotifiedCount(),
+        ]);
         break;
       case "released":
-        preorders = await this.preorderService.getReleasedPreorders(options);
-        total = await this.preorderService.getReleasedCount();
+        [preorders, total] = await Promise.all([
+          this.preorderService.getReleasedPreorders(options),
+          this.preorderService.getReleasedCount(),
+        ]);
         break;
       default:
-        preorders = await this.preorderService.getAllPreorders(options);
-        total = await this.preorderService.getPreorderCount();
+        [preorders, total] = await Promise.all([
+          this.preorderService.getAllPreorders(options),
+          this.preorderService.getPreorderCount(),
+        ]);
     }
 
     return {
-      items: preorders.map(Preorder.toDTO),
+      items: preorders,
       total,
       limit,
       offset,

@@ -1,6 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ShipmentManagementService } from "../services/shipment-management.service";
-import { OrderShipment, OrderShipmentDTO } from "../../domain/entities/order-shipment.entity";
+import { OrderShipmentDTO } from "../../domain/entities/order-shipment.entity";
+import { OrderShipmentNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface GetShipmentQuery extends IQuery {
   readonly orderId: string;
@@ -12,6 +13,7 @@ export class GetShipmentHandler implements IQueryHandler<GetShipmentQuery, Order
 
   async handle(query: GetShipmentQuery): Promise<OrderShipmentDTO> {
     const shipment = await this.shipmentService.getShipmentById(query.shipmentId);
-    return OrderShipment.toDTO(shipment);
+    if (!shipment) throw new OrderShipmentNotFoundError(query.shipmentId);
+    return shipment;
   }
 }

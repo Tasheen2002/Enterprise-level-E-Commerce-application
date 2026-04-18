@@ -1,7 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { BackorderManagementService } from "../services/backorder-management.service";
-import { Backorder, BackorderDTO } from "../../domain/entities/backorder.entity";
+import { BackorderDTO } from "../../domain/entities/backorder.entity";
 import { BackorderQueryOptions } from "../../domain/repositories/backorder.repository";
 
 export interface ListBackordersQuery extends IQuery {
@@ -26,7 +26,7 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
       sortOrder: query.sortOrder ?? "asc",
     };
 
-    let backorders: Backorder[];
+    let backorders: BackorderDTO[];
     let total: number;
 
     switch (filterType) {
@@ -39,8 +39,10 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
         total = await this.backorderService.getUnnotifiedCount();
         break;
       case "overdue":
-        backorders = await this.backorderService.getBackordersOverdue(options);
-        total = (await this.backorderService.getBackordersOverdue()).length;
+        [backorders, total] = await Promise.all([
+          this.backorderService.getBackordersOverdue(options),
+          this.backorderService.getOverdueCount(),
+        ]);
         break;
       default:
         backorders = await this.backorderService.getAllBackorders(options);
@@ -48,7 +50,7 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
     }
 
     return {
-      items: backorders.map(Backorder.toDTO),
+      items: backorders,
       total,
       limit,
       offset,

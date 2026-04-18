@@ -1,6 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { BackorderManagementService } from "../services/backorder-management.service";
-import { Backorder, BackorderDTO } from "../../domain/entities/backorder.entity";
+import { BackorderDTO } from "../../domain/entities/backorder.entity";
+import { BackorderNotFoundError } from "../../domain/errors/order-management.errors";
 
 export interface GetBackorderQuery extends IQuery {
   readonly orderItemId: string;
@@ -11,6 +12,7 @@ export class GetBackorderHandler implements IQueryHandler<GetBackorderQuery, Bac
 
   async handle(query: GetBackorderQuery): Promise<BackorderDTO> {
     const backorder = await this.backorderService.getBackorderByOrderItemId(query.orderItemId);
-    return Backorder.toDTO(backorder);
+    if (!backorder) throw new BackorderNotFoundError(query.orderItemId);
+    return backorder;
   }
 }
