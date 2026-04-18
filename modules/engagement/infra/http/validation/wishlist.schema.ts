@@ -46,6 +46,17 @@ export const addToWishlistSchema = z.object({
 
 // ── JSON Schema for Swagger docs ─────────────────────────────────────────────
 
+export const wishlistItemResponseSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", format: "uuid" },
+    wishlistId: { type: "string", format: "uuid" },
+    variantId: { type: "string", format: "uuid" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 export const wishlistResponseSchema = {
   type: "object",
   properties: {
