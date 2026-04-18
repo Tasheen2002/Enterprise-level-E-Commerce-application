@@ -8,6 +8,13 @@ import {
   GetVariantHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  VariantParams,
+  VariantByProductParams,
+  ListVariantsQuery,
+  CreateVariantBody,
+  UpdateVariantBody,
+} from "../validation/variant.schema";
 
 export class VariantController {
   constructor(
@@ -19,18 +26,7 @@ export class VariantController {
   ) {}
 
   async getVariants(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Querystring: {
-        page?: number;
-        limit?: number;
-        size?: string;
-        color?: string;
-        inStock?: boolean;
-        sortBy?: "sku" | "createdAt" | "size" | "color";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantByProductParams; Querystring: ListVariantsQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -45,7 +41,7 @@ export class VariantController {
   }
 
   async getVariant(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -57,27 +53,12 @@ export class VariantController {
   }
 
   async createVariant(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Body: {
-        sku: string;
-        size?: string;
-        color?: string;
-        barcode?: string;
-        weightG?: number;
-        dims?: Record<string, any>;
-        taxClass?: string;
-        allowBackorder?: boolean;
-        allowPreorder?: boolean;
-        restockEta?: Date;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantByProductParams; Body: CreateVariantBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
       const result = await this.createVariantHandler.handle({
-        productId,
+        productId: request.params.productId,
         ...request.body,
       });
       return ResponseHelper.fromCommand(reply, result, "Variant created successfully", 201);
@@ -87,21 +68,7 @@ export class VariantController {
   }
 
   async updateVariant(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string };
-      Body: {
-        sku?: string;
-        size?: string;
-        color?: string;
-        barcode?: string;
-        weightG?: number;
-        dims?: Record<string, any>;
-        taxClass?: string;
-        allowBackorder?: boolean;
-        allowPreorder?: boolean;
-        restockEta?: Date;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantParams; Body: UpdateVariantBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -116,7 +83,7 @@ export class VariantController {
   }
 
   async deleteVariant(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
