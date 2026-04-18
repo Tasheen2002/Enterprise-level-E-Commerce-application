@@ -138,7 +138,6 @@ export class OrderStatus {
         OrderStatusEnum.CONFIRMED, // Correction
         OrderStatusEnum.PROCESSING,
         OrderStatusEnum.SHIPPED,
-        OrderStatusEnum.DELIVERED, // Added for testing purposes
         OrderStatusEnum.FULFILLED,
         OrderStatusEnum.REFUNDED,
         OrderStatusEnum.CANCELLED,
@@ -167,13 +166,7 @@ export class OrderStatus {
       ],
       [OrderStatusEnum.PARTIALLY_RETURNED]: [OrderStatusEnum.REFUNDED],
       [OrderStatusEnum.REFUNDED]: [],
-      [OrderStatusEnum.CANCELLED]: [
-        OrderStatusEnum.CREATED,
-        OrderStatusEnum.PENDING,
-        OrderStatusEnum.CONFIRMED,
-        OrderStatusEnum.PAID,
-        OrderStatusEnum.PROCESSING,
-      ],
+      [OrderStatusEnum.CANCELLED]: [],
     };
 
     return transitions[this.value].includes(newStatus.value);

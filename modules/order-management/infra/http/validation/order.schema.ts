@@ -55,7 +55,7 @@ export const createOrderSchema = z.object({
       }),
     )
     .min(1),
-  shippingAddress: addressSchema.optional(),
+  shippingAddress: addressSchema,
   source: z.enum(["web", "mobile"]).optional().default("web"),
   currency: z.string().optional().default("USD"),
 });

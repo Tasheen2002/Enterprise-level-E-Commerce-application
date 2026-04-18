@@ -31,12 +31,16 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
 
     switch (filterType) {
       case "notified":
-        backorders = await this.backorderService.getNotifiedBackorders(options);
-        total = await this.backorderService.getNotifiedCount();
+        [backorders, total] = await Promise.all([
+          this.backorderService.getNotifiedBackorders(options),
+          this.backorderService.getNotifiedCount(),
+        ]);
         break;
       case "unnotified":
-        backorders = await this.backorderService.getUnnotifiedBackorders(options);
-        total = await this.backorderService.getUnnotifiedCount();
+        [backorders, total] = await Promise.all([
+          this.backorderService.getUnnotifiedBackorders(options),
+          this.backorderService.getUnnotifiedCount(),
+        ]);
         break;
       case "overdue":
         [backorders, total] = await Promise.all([
