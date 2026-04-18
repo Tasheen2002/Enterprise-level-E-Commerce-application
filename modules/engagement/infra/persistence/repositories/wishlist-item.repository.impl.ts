@@ -43,11 +43,18 @@ export class WishlistItemRepositoryImpl
   }
 
   async save(item: WishlistItem): Promise<void> {
-    await this.prisma.wishlistItem.create({
-      data: {
+    await this.prisma.wishlistItem.upsert({
+      where: {
+        wishlistId_variantId: {
+          wishlistId: item.wishlistId.getValue(),
+          variantId: item.variantId,
+        },
+      },
+      create: {
         wishlistId: item.wishlistId.getValue(),
         variantId: item.variantId,
       },
+      update: {},
     });
     await this.dispatchEvents(item);
   }
@@ -83,7 +90,7 @@ export class WishlistItemRepositoryImpl
         where,
         take: limit,
         skip: offset,
-        orderBy: { wishlistId: sortOrder } as any,
+        orderBy: { createdAt: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count({ where }),
     ]);
@@ -114,7 +121,7 @@ export class WishlistItemRepositoryImpl
         where,
         take: limit,
         skip: offset,
-        orderBy: { variantId: sortOrder } as any,
+        orderBy: { createdAt: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count({ where }),
     ]);
@@ -141,7 +148,7 @@ export class WishlistItemRepositoryImpl
       this.prisma.wishlistItem.findMany({
         take: limit,
         skip: offset,
-        orderBy: { wishlistId: sortOrder } as any,
+        orderBy: { createdAt: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count(),
     ]);
