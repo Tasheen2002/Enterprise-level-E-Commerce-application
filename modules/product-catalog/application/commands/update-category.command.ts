@@ -6,7 +6,7 @@ export interface UpdateCategoryCommand extends ICommand {
   readonly categoryId: string;
   readonly name?: string;
   readonly slug?: string;
-  readonly parentId?: string;
+  readonly parentId?: string | null;
   readonly position?: number;
 }
 
