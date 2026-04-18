@@ -69,11 +69,11 @@ export async function productRoutes(
               data: {
                 type: "object",
                 properties: {
-                  products: { type: "array", items: productResponseSchema },
+                  items: { type: "array", items: productResponseSchema },
                   total: { type: "integer" },
-                  page: { type: "integer" },
                   limit: { type: "integer" },
-                  totalPages: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },
