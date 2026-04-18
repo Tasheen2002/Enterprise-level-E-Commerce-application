@@ -136,6 +136,18 @@ export class StockLevel {
     });
   }
 
+  unreserveStock(quantity: number): StockLevel {
+    if (quantity <= 0) {
+      throw new DomainValidationError("Quantity to unreserve must be positive");
+    }
+    if (this.props.reserved < quantity) {
+      throw new DomainValidationError(
+        "Cannot unreserve more than reserved quantity",
+      );
+    }
+    return new StockLevel({ ...this.props, reserved: this.props.reserved - quantity });
+  }
+
   updateThresholds(
     lowStockThreshold?: number | null,
     safetyStock?: number | null,
