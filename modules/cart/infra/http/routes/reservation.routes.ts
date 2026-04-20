@@ -31,6 +31,10 @@ import {
   createBulkReservationsSchema,
   reservationResponseSchema,
   availabilityResponseSchema,
+  reservedQuantityTotalResponseSchema,
+  reservedQuantityActiveResponseSchema,
+  reservationStatisticsResponseSchema,
+  bulkReservationResultResponseSchema,
 } from "../validation/reservation.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -52,8 +56,7 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations",
     {
-      preValidation: [validateBody(createReservationSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [validateBody(createReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Create a new reservation",
         tags: ["Reservations"],
@@ -125,8 +128,8 @@ export async function reservationRoutes(
   fastify.get(
     "/carts/:cartId/reservations",
     {
-      preValidation: [validateParams(cartIdParamsSchema), validateQuery(cartReservationsQuerySchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(cartIdParamsSchema)],
+      preHandler: [validateQuery(cartReservationsQuerySchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Get all reservations for a cart",
         tags: ["Reservations"],
@@ -199,8 +202,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/:reservationId/extend",
     {
-      preValidation: [validateParams(reservationIdParamsSchema), validateBody(extendReservationSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(reservationIdParamsSchema)],
+      preHandler: [validateBody(extendReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Extend reservation duration",
         tags: ["Reservations"],
@@ -271,7 +274,7 @@ export async function reservationRoutes(
   fastify.get(
     "/availability",
     {
-      preValidation: [validateQuery(checkAvailabilityQuerySchema)],
+      preHandler: [validateQuery(checkAvailabilityQuerySchema)],
       schema: {
         description: "Check variant availability",
         tags: ["Reservations"],
@@ -318,7 +321,7 @@ export async function reservationRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object", additionalProperties: true },
+              data: reservationStatisticsResponseSchema,
             },
           },
         },
@@ -368,8 +371,8 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/:reservationId/renew",
     {
-      preValidation: [validateParams(reservationIdParamsSchema), validateBody(renewReservationSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(reservationIdParamsSchema)],
+      preHandler: [validateBody(renewReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Renew an expired or expiring reservation",
         tags: ["Reservations"],
@@ -409,8 +412,8 @@ export async function reservationRoutes(
   fastify.patch(
     "/carts/:cartId/reservations/:variantId",
     {
-      preValidation: [validateParams(cartReservationParamsSchema), validateBody(adjustReservationSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preValidation: [validateParams(cartReservationParamsSchema)],
+      preHandler: [validateBody(adjustReservationSchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Adjust reservation quantity for a variant in a cart",
         tags: ["Reservations"],
@@ -471,13 +474,7 @@ export async function reservationRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  variantId: { type: "string", format: "uuid" },
-                  totalReserved: { type: "integer" },
-                },
-              },
+              data: reservedQuantityTotalResponseSchema,
             },
           },
         },
@@ -510,13 +507,7 @@ export async function reservationRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  variantId: { type: "string", format: "uuid" },
-                  activeReserved: { type: "integer" },
-                },
-              },
+              data: reservedQuantityActiveResponseSchema,
             },
           },
         },
@@ -530,8 +521,7 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/bulk",
     {
-      preValidation: [validateBody(createBulkReservationsSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [validateBody(createBulkReservationsSchema), requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Create reservations for multiple items at once",
         tags: ["Reservations"],
@@ -564,7 +554,7 @@ export async function reservationRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object", additionalProperties: true },
+              data: bulkReservationResultResponseSchema,
             },
           },
         },
@@ -578,8 +568,7 @@ export async function reservationRoutes(
   fastify.get(
     "/admin/reservations/by-status",
     {
-      preValidation: [validateQuery(reservationsByStatusQuerySchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [validateQuery(reservationsByStatusQuerySchema), RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get reservations filtered by status (admin only)",
         tags: ["Reservations Admin"],

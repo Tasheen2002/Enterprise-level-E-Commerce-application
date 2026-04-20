@@ -22,6 +22,7 @@ import {
   completeCheckoutWithOrderSchema,
   checkoutResponseSchema,
   checkoutOrderResponseSchema,
+  addressSchema,
 } from "../validation/checkout.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -43,8 +44,7 @@ export async function checkoutRoutes(
   fastify.post(
     "/checkout/initialize",
     {
-      preValidation: [validateBody(initializeCheckoutSchema)],
-      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
+      preHandler: [validateBody(initializeCheckoutSchema), optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
         description: "Initialize checkout from cart.",
         tags: ["Checkout"],
@@ -114,8 +114,8 @@ export async function checkoutRoutes(
   fastify.post(
     "/checkout/:checkoutId/complete",
     {
-      preValidation: [validateParams(checkoutIdParamsSchema), validateBody(completeCheckoutSchema)],
-      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
+      preValidation: [validateParams(checkoutIdParamsSchema)],
+      preHandler: [validateBody(completeCheckoutSchema), optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
         description: "Complete checkout with payment intent.",
         tags: ["Checkout"],
@@ -191,8 +191,8 @@ export async function checkoutRoutes(
   fastify.post(
     "/checkout/:checkoutId/complete-with-order",
     {
-      preValidation: [validateParams(checkoutIdParamsSchema), validateBody(completeCheckoutWithOrderSchema)],
-      preHandler: [optionalAuth, extractGuestToken, requireCartAuth],
+      preValidation: [validateParams(checkoutIdParamsSchema)],
+      preHandler: [validateBody(completeCheckoutWithOrderSchema), optionalAuth, extractGuestToken, requireCartAuth],
       schema: {
         description: "Complete checkout and create order in a single transaction.",
         tags: ["Checkout"],
@@ -210,22 +210,8 @@ export async function checkoutRoutes(
           required: ["paymentIntentId", "shippingAddress"],
           properties: {
             paymentIntentId: { type: "string" },
-            shippingAddress: {
-              type: "object",
-              required: ["firstName", "lastName", "addressLine1", "city", "country"],
-              properties: {
-                firstName: { type: "string" },
-                lastName: { type: "string" },
-                addressLine1: { type: "string" },
-                addressLine2: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                postalCode: { type: "string" },
-                country: { type: "string" },
-                phone: { type: "string" },
-              },
-            },
-            billingAddress: { type: "object", additionalProperties: true },
+            shippingAddress: addressSchema,
+            billingAddress: addressSchema,
           },
         },
         response: {
