@@ -163,15 +163,13 @@ export class PaymentIntent extends AggregateRoot {
   }
 
   get id(): PaymentIntentId { return this.props.id; }
+  get orderId(): string | null { return this.props.orderId; }
 
-  get orderId(): string {
+  requiresOrder(): void {
     if (!this.props.orderId) {
       throw new PaymentIntentNotLinkedToOrderError();
     }
-    return this.props.orderId;
   }
-
-  get orderIdOrNull(): string | null { return this.props.orderId; }
   get checkoutId(): string | null { return this.props.checkoutId; }
   get idempotencyKey(): string | undefined { return this.props.idempotencyKey; }
   get provider(): string { return this.props.provider; }

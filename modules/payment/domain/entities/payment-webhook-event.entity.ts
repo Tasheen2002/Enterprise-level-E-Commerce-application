@@ -10,7 +10,7 @@ export class PaymentWebhookEventReceivedEvent extends DomainEvent {
   constructor(
     public readonly eventId: string,
     public readonly provider: string,
-    public readonly eventType: string,
+    public readonly webhookEventType: string,
   ) {
     super(eventId, 'PaymentWebhookEvent');
   }
@@ -18,7 +18,7 @@ export class PaymentWebhookEventReceivedEvent extends DomainEvent {
   get eventType(): string { return 'payment_webhook_event.received'; }
 
   getPayload(): Record<string, unknown> {
-    return { eventId: this.eventId, provider: this.provider, eventType: this.eventType };
+    return { eventId: this.eventId, provider: this.provider, eventType: this.webhookEventType };
   }
 }
 
@@ -70,7 +70,7 @@ export class PaymentWebhookEvent extends AggregateRoot {
     entity.addDomainEvent(new PaymentWebhookEventReceivedEvent(
       entity.props.id.getValue(),
       entity.props.provider,
-      entity.props.eventType.getValue(),
+      entity.props.eventType.getValue(), // passed as webhookEventType
     ));
 
     return entity;
