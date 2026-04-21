@@ -1,15 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 import {
   IPromotionRepository,
-  PromotionFilterOptions,
+  PromotionFilters,
   PromotionQueryOptions,
 } from "../../../domain/repositories/promotion.repository";
 import {
   Promotion,
   PromotionRule,
 } from "../../../domain/entities/promotion.entity";
+import { PromotionId } from "../../../domain/value-objects/promotion-id.vo";
+import { PromotionStatus } from "../../../domain/value-objects/promotion-status.vo";
+import {
+  PaginatedResult,
+} from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class PromotionRepository implements IPromotionRepository {
+export class PromotionRepositoryImpl implements IPromotionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async save(promotion: Promotion): Promise<void> {
@@ -26,15 +31,15 @@ export class PromotionRepository implements IPromotionRepository {
     });
   }
 
-  async delete(promoId: string): Promise<void> {
+  async delete(id: PromotionId): Promise<void> {
     await (this.prisma as any).promotion.delete({
-      where: { promoId },
+      where: { promoId: id.getValue() },
     });
   }
 
-  async findById(promoId: string): Promise<Promotion | null> {
+  async findById(id: PromotionId): Promise<Promotion | null> {
     const record = await (this.prisma as any).promotion.findUnique({
-      where: { promoId },
+      where: { promoId: id.getValue() },
     });
     return record ? this.hydrate(record) : null;
   }
@@ -47,108 +52,101 @@ export class PromotionRepository implements IPromotionRepository {
   }
 
   async findActivePromotions(now?: Date): Promise<Promotion[]> {
-    const currentDate = now || new Date();
+    const currentDate = now ?? new Date();
     const records = await (this.prisma as any).promotion.findMany({
       where: {
         status: "active",
         OR: [{ startsAt: null }, { startsAt: { lte: currentDate } }],
-        AND: [
-          {
-            OR: [{ endsAt: null }, { endsAt: { gte: currentDate } }],
-          },
-        ],
+        AND: [{ OR: [{ endsAt: null }, { endsAt: { gte: currentDate } }] }],
       },
       orderBy: { startsAt: "desc" },
     });
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
   async findWithFilters(
-    filters: PromotionFilterOptions,
+    filters: PromotionFilters,
     options?: PromotionQueryOptions,
-  ): Promise<Promotion[]> {
+  ): Promise<PaginatedResult<Promotion>> {
     const where: any = {};
-
-    if (filters.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters.code) {
-      where.code = filters.code;
-    }
+    if (filters.status) where.status = filters.status.getValue();
+    if (filters.code) where.code = filters.code;
     if (filters.activeAt) {
       where.AND = [
-        {
-          OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }],
-        },
-        {
-          OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }],
-        },
+        { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
       ];
     }
 
-    const records = await (this.prisma as any).promotion.findMany({
-      where,
-      take: options?.limit,
-      skip: options?.offset,
-      orderBy: options?.sortBy
-        ? { [options.sortBy]: options.sortOrder || "desc" }
-        : { startsAt: "desc" },
-    });
+    const [records, total] = await Promise.all([
+      (this.prisma as any).promotion.findMany({
+        where,
+        take: options?.limit,
+        skip: options?.offset,
+        orderBy: options?.sortBy
+          ? { [options.sortBy]: options.sortOrder ?? "desc" }
+          : { createdAt: "desc" },
+      }),
+      (this.prisma as any).promotion.count({ where }),
+    ]);
 
-    return records.map((record: any) => this.hydrate(record));
+    const items = records.map((r: any) => this.hydrate(r));
+    const limit = options?.limit ?? total;
+    const offset = options?.offset ?? 0;
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    };
   }
 
-  async count(filters?: PromotionFilterOptions): Promise<number> {
+  async count(filters?: PromotionFilters): Promise<number> {
     const where: any = {};
-
-    if (filters?.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters?.code) {
-      where.code = filters.code;
-    }
+    if (filters?.status) where.status = filters.status.getValue();
+    if (filters?.code) where.code = filters.code;
     if (filters?.activeAt) {
       where.AND = [
-        {
-          OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }],
-        },
-        {
-          OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }],
-        },
+        { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
+        { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
       ];
     }
-
     return (this.prisma as any).promotion.count({ where });
   }
 
-  async exists(promoId: string): Promise<boolean> {
+  async exists(id: PromotionId): Promise<boolean> {
     const count = await (this.prisma as any).promotion.count({
-      where: { promoId },
+      where: { promoId: id.getValue() },
     });
     return count > 0;
   }
 
   private hydrate(record: any): Promotion {
-    return Promotion.reconstitute({
-      promoId: record.promoId,
-      code: record.code,
+    return Promotion.fromPersistence({
+      id: PromotionId.fromString(record.promoId),
+      code: record.code ?? null,
       rule: record.rule as PromotionRule,
-      startsAt: record.startsAt,
-      endsAt: record.endsAt,
-      usageLimit: record.usageLimit,
-      status: record.status,
+      startsAt: record.startsAt ?? null,
+      endsAt: record.endsAt ?? null,
+      usageLimit: record.usageLimit ?? null,
+      status: PromotionStatus.fromString(record.status),
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
     });
   }
 
   private dehydrate(promotion: Promotion): any {
     return {
-      promoId: promotion.promoId,
+      promoId: promotion.id.getValue(),
       code: promotion.code,
       rule: promotion.rule,
       startsAt: promotion.startsAt,
       endsAt: promotion.endsAt,
       usageLimit: promotion.usageLimit,
-      status: promotion.status,
+      status: promotion.status.getValue(),
+      createdAt: promotion.createdAt,
+      updatedAt: promotion.updatedAt,
     };
   }
 }
