@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IReservationRepository } from "../../../domain/repositories/reservation.repository";
 import {
   Reservation,
@@ -456,7 +456,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     status: "active" | "expiring_soon" | "expired" | "recently_expired",
   ): Promise<Reservation[]> {
     const now = new Date();
-    let whereClause: any = {};
+    let whereClause: Prisma.ReservationWhereInput = {};
 
     switch (status) {
       case "active":
@@ -551,63 +551,44 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     limit?: number;
     offset?: number;
   }): Promise<Reservation[]> {
-    const whereConditions: any = {};
+    const qtyFilter: { gte?: number; lte?: number } = {};
+    if (criteria.minQuantity !== undefined) qtyFilter.gte = criteria.minQuantity;
+    if (criteria.maxQuantity !== undefined) qtyFilter.lte = criteria.maxQuantity;
 
-    if (criteria.cartId) whereConditions.cartId = criteria.cartId;
-    if (criteria.variantId) whereConditions.variantId = criteria.variantId;
-    if (criteria.minQuantity !== undefined) {
-      whereConditions.qty = {
-        ...whereConditions.qty,
-        gte: criteria.minQuantity,
-      };
-    }
-    if (criteria.maxQuantity !== undefined) {
-      whereConditions.qty = {
-        ...whereConditions.qty,
-        lte: criteria.maxQuantity,
-      };
-    }
-    if (criteria.expiresAfter || criteria.expiresBefore) {
-      whereConditions.expiresAt = {};
-      if (criteria.expiresAfter)
-        whereConditions.expiresAt.gte = criteria.expiresAfter;
-      if (criteria.expiresBefore)
-        whereConditions.expiresAt.lte = criteria.expiresBefore;
-    }
+    const expiresAtFilter: { gte?: Date; lte?: Date; gt?: Date } = {};
+    if (criteria.expiresAfter) expiresAtFilter.gte = criteria.expiresAfter;
+    if (criteria.expiresBefore) expiresAtFilter.lte = criteria.expiresBefore;
 
-    // Handle status filter
     if (criteria.status) {
       const now = new Date();
       switch (criteria.status) {
         case "active":
-          whereConditions.expiresAt = { ...whereConditions.expiresAt, gt: now };
+          expiresAtFilter.gt = now;
           break;
         case "expiring_soon": {
           const soonThreshold = new Date(now.getTime() + 10 * 60 * 1000);
-          whereConditions.expiresAt = {
-            ...whereConditions.expiresAt,
-            gt: now,
-            lte: soonThreshold,
-          };
+          expiresAtFilter.gt = now;
+          expiresAtFilter.lte = soonThreshold;
           break;
         }
         case "expired":
-          whereConditions.expiresAt = {
-            ...whereConditions.expiresAt,
-            lte: now,
-          };
+          expiresAtFilter.lte = now;
           break;
         case "recently_expired": {
           const recentThreshold = new Date(now.getTime() - 60 * 60 * 1000);
-          whereConditions.expiresAt = {
-            ...whereConditions.expiresAt,
-            gte: recentThreshold,
-            lte: now,
-          };
+          expiresAtFilter.gte = recentThreshold;
+          expiresAtFilter.lte = now;
           break;
         }
       }
     }
+
+    const whereConditions: Prisma.ReservationWhereInput = {
+      ...(criteria.cartId ? { cartId: criteria.cartId } : {}),
+      ...(criteria.variantId ? { variantId: criteria.variantId } : {}),
+      ...(Object.keys(qtyFilter).length > 0 ? { qty: qtyFilter } : {}),
+      ...(Object.keys(expiresAtFilter).length > 0 ? { expiresAt: expiresAtFilter } : {}),
+    };
 
     const reservations = await this.prisma.reservation.findMany({
       where: whereConditions,
@@ -768,14 +749,11 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     quantity: number,
     excludeCartId?: CartId,
   ): Promise<Reservation[]> {
-    const whereClause: any = {
+    const whereClause: Prisma.ReservationWhereInput = {
       variantId: variantId.getValue(),
       expiresAt: { gt: new Date() },
+      ...(excludeCartId ? { cartId: { not: excludeCartId.getValue() } } : {}),
     };
-
-    if (excludeCartId) {
-      whereClause.cartId = { not: excludeCartId.getValue() };
-    }
 
     const reservations = await this.prisma.reservation.findMany({
       where: whereClause,
@@ -843,7 +821,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
   // Transaction support
   async saveWithTransaction(
     reservation: Reservation,
-    transactionContext?: any,
+    transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
       await this.saveWithPrismaClient(reservation, transactionContext);
@@ -854,7 +832,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
 
   async deleteWithTransaction(
     reservationId: string,
-    transactionContext?: any,
+    transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
       await transactionContext.reservation.delete({
@@ -867,7 +845,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
 
   async saveBulkWithTransaction(
     reservations: Reservation[],
-    transactionContext?: any,
+    transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
       const data = reservations.map((reservation) => {
@@ -939,7 +917,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
   // Private helper methods
   private async saveWithPrismaClient(
     reservation: Reservation,
-    prismaClient: any,
+    prismaClient: Prisma.TransactionClient,
   ): Promise<void> {
     const data = reservation.toSnapshot();
 
@@ -954,15 +932,16 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     });
   }
 
-  private mapPrismaToEntity(reservationData: any): Reservation {
+  private mapPrismaToEntity(reservationData: Prisma.ReservationGetPayload<Record<string, never>>): Reservation {
+    const fallbackDate = new Date(0);
     const entityData: ReservationEntityData = {
       reservationId: reservationData.id,
       cartId: reservationData.cartId,
       variantId: reservationData.variantId,
       quantity: reservationData.qty,
       expiresAt: reservationData.expiresAt,
-      createdAt: reservationData.createdAt,
-      updatedAt: reservationData.updatedAt,
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     };
     return Reservation.fromPersistence(entityData);
   }

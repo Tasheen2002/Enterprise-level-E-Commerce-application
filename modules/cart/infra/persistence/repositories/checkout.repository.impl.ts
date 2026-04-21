@@ -1,4 +1,4 @@
-import { PrismaClient, CheckoutStatusEnum } from "@prisma/client";
+import { PrismaClient, CheckoutStatusEnum, Prisma } from "@prisma/client";
 import { ICheckoutRepository } from "../../../domain/repositories/checkout.repository";
 import {
   Checkout,
@@ -165,7 +165,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     return result.count;
   }
 
-  private mapPrismaToEntity(prismaData: any): Checkout {
+  private mapPrismaToEntity(prismaData: Prisma.CheckoutGetPayload<Record<string, never>>): Checkout {
     const entityData: CheckoutEntityData = {
       checkoutId: prismaData.id,
       cartId: prismaData.cartId,
