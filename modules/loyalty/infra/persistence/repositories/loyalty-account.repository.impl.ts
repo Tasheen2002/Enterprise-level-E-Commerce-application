@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   ILoyaltyAccountRepository,
   LoyaltyAccountFilters,
@@ -10,21 +12,30 @@ import { Points } from "../../../domain/value-objects/points.vo";
 import { Tier } from "../../../domain/value-objects/tier.vo";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class LoyaltyAccountRepositoryImpl
+  extends PrismaRepository<LoyaltyAccount>
+  implements ILoyaltyAccountRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(account: LoyaltyAccount): Promise<void> {
     const data = this.dehydrate(account);
-    await this.prisma.loyaltyAccount.create({ data });
-  }
-
-  async update(account: LoyaltyAccount): Promise<void> {
-    const data = this.dehydrate(account);
-    const { accountId, ...updateData } = data;
-    await this.prisma.loyaltyAccount.update({
-      where: { accountId },
-      data: updateData,
+    await this.prisma.loyaltyAccount.upsert({
+      where: { accountId: data.accountId },
+      create: data,
+      update: {
+        currentBalance: data.currentBalance,
+        totalPointsEarned: data.totalPointsEarned,
+        totalPointsRedeemed: data.totalPointsRedeemed,
+        lifetimePoints: data.lifetimePoints,
+        tier: data.tier,
+        lastActivityAt: data.lastActivityAt,
+        updatedAt: data.updatedAt,
+      },
     });
+    await this.dispatchEvents(account);
   }
 
   async delete(id: LoyaltyAccountId): Promise<void> {
@@ -41,7 +52,7 @@ export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
   }
 
   async findByUserId(userId: string): Promise<LoyaltyAccount | null> {
-    const record = await this.prisma.loyaltyAccount.findFirst({
+    const record = await this.prisma.loyaltyAccount.findUnique({
       where: { userId },
     });
     return record ? this.hydrate(record) : null;
@@ -51,11 +62,11 @@ export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
     filters: LoyaltyAccountFilters,
     options?: LoyaltyAccountQueryOptions,
   ): Promise<PaginatedResult<LoyaltyAccount>> {
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (filters.userId) where.userId = filters.userId;
     if (filters.tier) where.tier = filters.tier;
     if (filters.minPoints !== undefined) {
-      where.currentBalance = { gte: filters.minPoints };
+      where.currentBalance = { gte: BigInt(filters.minPoints) };
     }
 
     const [records, total] = await Promise.all([
@@ -83,11 +94,11 @@ export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
   }
 
   async count(filters?: LoyaltyAccountFilters): Promise<number> {
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (filters?.userId) where.userId = filters.userId;
     if (filters?.tier) where.tier = filters.tier;
     if (filters?.minPoints !== undefined) {
-      where.currentBalance = { gte: filters.minPoints };
+      where.currentBalance = { gte: BigInt(filters.minPoints) };
     }
     return this.prisma.loyaltyAccount.count({ where });
   }
@@ -99,7 +110,19 @@ export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
     return count > 0;
   }
 
-  private hydrate(record: any): LoyaltyAccount {
+  private hydrate(record: {
+    accountId: string;
+    userId: string;
+    currentBalance: bigint;
+    totalPointsEarned: bigint;
+    totalPointsRedeemed: bigint;
+    lifetimePoints: bigint;
+    tier: string;
+    joinedAt: Date;
+    lastActivityAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }): LoyaltyAccount {
     return LoyaltyAccount.fromPersistence({
       id: LoyaltyAccountId.fromString(record.accountId),
       userId: record.userId,
@@ -109,23 +132,23 @@ export class LoyaltyAccountRepositoryImpl implements ILoyaltyAccountRepository {
       lifetimePoints: Points.create(Number(record.lifetimePoints)),
       tier: Tier.fromString(record.tier),
       joinedAt: record.joinedAt,
-      lastActivityAt: record.lastActivityAt ?? null,
+      lastActivityAt: record.lastActivityAt,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  private dehydrate(account: LoyaltyAccount): any {
+  private dehydrate(account: LoyaltyAccount) {
     return {
       accountId: account.id.getValue(),
       userId: account.userId,
-      currentBalance: account.currentBalance.getValue(),
-      totalPointsEarned: account.totalPointsEarned.getValue(),
-      totalPointsRedeemed: account.totalPointsRedeemed.getValue(),
-      lifetimePoints: account.lifetimePoints.getValue(),
+      currentBalance: BigInt(account.currentBalance.getValue()),
+      totalPointsEarned: BigInt(account.totalPointsEarned.getValue()),
+      totalPointsRedeemed: BigInt(account.totalPointsRedeemed.getValue()),
+      lifetimePoints: BigInt(account.lifetimePoints.getValue()),
       tier: account.tier.getValue(),
       joinedAt: account.joinedAt,
-      lastActivityAt: account.lastActivityAt ?? null,
+      lastActivityAt: account.lastActivityAt,
       createdAt: account.createdAt,
       updatedAt: account.updatedAt,
     };
