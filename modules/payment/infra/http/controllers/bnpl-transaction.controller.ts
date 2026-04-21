@@ -6,24 +6,11 @@ import {
   GetBnplTransactionsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import { BnplPlan } from "../../../domain/entities/bnpl-transaction.entity";
-
-export interface CreateBnplTransactionRequest {
-  intentId: string;
-  provider: string;
-  plan: BnplPlan;
-}
-
-export interface ProcessBnplParams {
-  bnplId: string;
-  action: "approve" | "reject" | "activate" | "complete" | "cancel";
-}
-
-export interface ListBnplTransactionsQuerystring {
-  bnplId?: string;
-  intentId?: string;
-  orderId?: string;
-}
+import {
+  CreateBnplTransactionBody,
+  BnplParams,
+  ListBnplQuery,
+} from "../validation/bnpl.schema";
 
 export class BnplTransactionController {
   constructor(
@@ -33,7 +20,7 @@ export class BnplTransactionController {
   ) {}
 
   async create(
-    request: AuthenticatedRequest<{ Body: CreateBnplTransactionRequest }>,
+    request: AuthenticatedRequest<{ Body: CreateBnplTransactionBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -49,7 +36,7 @@ export class BnplTransactionController {
   }
 
   async process(
-    request: AuthenticatedRequest<{ Params: ProcessBnplParams }>,
+    request: AuthenticatedRequest<{ Params: BnplParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -66,7 +53,7 @@ export class BnplTransactionController {
   }
 
   async list(
-    request: AuthenticatedRequest<{ Querystring: ListBnplTransactionsQuerystring }>,
+    request: AuthenticatedRequest<{ Querystring: ListBnplQuery }>,
     reply: FastifyReply,
   ) {
     try {

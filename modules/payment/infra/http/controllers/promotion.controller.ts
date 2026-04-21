@@ -1,4 +1,5 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
   CreatePromotionHandler,
   ApplyPromotionHandler,
@@ -7,30 +8,12 @@ import {
   GetPromotionUsageHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import { PromotionRule } from "../../../domain/entities/promotion.entity";
-
-export interface CreatePromotionRequest {
-  code?: string;
-  rule: PromotionRule;
-  startsAt?: string;
-  endsAt?: string;
-  usageLimit?: number;
-}
-
-export interface ApplyPromotionRequest {
-  promoCode: string;
-  orderId?: string;
-  orderAmount: number;
-  currency?: string;
-  products?: string[];
-  categories?: string[];
-}
-
-export interface RecordPromotionUsageRequest {
-  orderId: string;
-  discountAmount: number;
-  currency?: string;
-}
+import {
+  CreatePromotionBody,
+  ApplyPromotionBody,
+  RecordPromotionUsageBody,
+  PromoIdParams,
+} from "../validation/promotion.schema";
 
 export class PromotionController {
   constructor(
@@ -42,7 +25,7 @@ export class PromotionController {
   ) {}
 
   async create(
-    request: FastifyRequest<{ Body: CreatePromotionRequest }>,
+    request: AuthenticatedRequest<{ Body: CreatePromotionBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -62,7 +45,7 @@ export class PromotionController {
   }
 
   async apply(
-    request: FastifyRequest<{ Body: ApplyPromotionRequest }>,
+    request: AuthenticatedRequest<{ Body: ApplyPromotionBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -76,7 +59,7 @@ export class PromotionController {
     }
   }
 
-  async listActive(_request: FastifyRequest, reply: FastifyReply) {
+  async listActive(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const result = await this.listActiveHandler.handle();
       return ResponseHelper.ok(reply, "Active promotions retrieved", result);
@@ -86,10 +69,7 @@ export class PromotionController {
   }
 
   async recordUsage(
-    request: FastifyRequest<{
-      Params: { promoId: string };
-      Body: RecordPromotionUsageRequest;
-    }>,
+    request: AuthenticatedRequest<{ Params: PromoIdParams; Body: RecordPromotionUsageBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -107,7 +87,7 @@ export class PromotionController {
   }
 
   async listUsage(
-    request: FastifyRequest<{ Params: { promoId: string } }>,
+    request: AuthenticatedRequest<{ Params: PromoIdParams }>,
     reply: FastifyReply,
   ) {
     try {

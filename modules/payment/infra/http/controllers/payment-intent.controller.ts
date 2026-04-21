@@ -9,32 +9,14 @@ import {
   GetPaymentTransactionsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreatePaymentIntentRequest {
-  orderId: string;
-  provider: string;
-  amount: number;
-  currency?: string;
-  idempotencyKey?: string;
-  clientSecret?: string;
-}
-export interface ProcessPaymentRequest {
-  intentId: string;
-  pspReference?: string;
-}
-export interface RefundPaymentRequest {
-  intentId: string;
-  amount?: number;
-  reason?: string;
-}
-export interface VoidPaymentRequest {
-  intentId: string;
-  pspReference?: string;
-}
-export interface GetPaymentIntentQuerystring {
-  intentId?: string;
-  orderId?: string;
-}
+import {
+  CreatePaymentIntentBody,
+  ProcessPaymentBody,
+  RefundPaymentBody,
+  VoidPaymentBody,
+  GetPaymentIntentQuery,
+  IntentIdParams,
+} from "../validation/payment-intent.schema";
 
 export class PaymentIntentController {
   constructor(
@@ -47,7 +29,7 @@ export class PaymentIntentController {
   ) {}
 
   async create(
-    request: AuthenticatedRequest<{ Body: CreatePaymentIntentRequest }>,
+    request: AuthenticatedRequest<{ Body: CreatePaymentIntentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -63,7 +45,7 @@ export class PaymentIntentController {
   }
 
   async process(
-    request: AuthenticatedRequest<{ Body: ProcessPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: ProcessPaymentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -79,7 +61,7 @@ export class PaymentIntentController {
   }
 
   async refund(
-    request: AuthenticatedRequest<{ Body: RefundPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: RefundPaymentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -95,7 +77,7 @@ export class PaymentIntentController {
   }
 
   async void(
-    request: AuthenticatedRequest<{ Body: VoidPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: VoidPaymentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -111,7 +93,7 @@ export class PaymentIntentController {
   }
 
   async get(
-    request: AuthenticatedRequest<{ Querystring: GetPaymentIntentQuerystring }>,
+    request: AuthenticatedRequest<{ Querystring: GetPaymentIntentQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -121,9 +103,6 @@ export class PaymentIntentController {
         userId: request.user.userId,
         timestamp: new Date(),
       });
-      if (result === null) {
-        return ResponseHelper.notFound(reply, "Payment intent not found");
-      }
       return ResponseHelper.ok(reply, "Payment intent retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -131,7 +110,7 @@ export class PaymentIntentController {
   }
 
   async listTransactions(
-    request: AuthenticatedRequest<{ Params: { intentId: string } }>,
+    request: AuthenticatedRequest<{ Params: IntentIdParams }>,
     reply: FastifyReply,
   ) {
     try {

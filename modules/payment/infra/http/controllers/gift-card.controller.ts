@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
   CreateGiftCardHandler,
@@ -7,21 +7,12 @@ import {
   GetGiftCardTransactionsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateGiftCardRequest {
-  code: string;
-  initialBalance: number;
-  currency?: string;
-  expiresAt?: string;
-  recipientEmail?: string;
-  recipientName?: string;
-  message?: string;
-}
-
-export interface RedeemGiftCardRequest {
-  amount: number;
-  orderId: string;
-}
+import {
+  CreateGiftCardBody,
+  RedeemGiftCardBody,
+  GiftCardIdParams,
+  GiftCardBalanceQuery,
+} from "../validation/gift-card.schema";
 
 export class GiftCardController {
   constructor(
@@ -32,7 +23,7 @@ export class GiftCardController {
   ) {}
 
   async create(
-    request: AuthenticatedRequest<{ Body: CreateGiftCardRequest }>,
+    request: AuthenticatedRequest<{ Body: CreateGiftCardBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -54,10 +45,7 @@ export class GiftCardController {
   }
 
   async redeem(
-    request: AuthenticatedRequest<{
-      Params: { giftCardId: string };
-      Body: RedeemGiftCardRequest;
-    }>,
+    request: AuthenticatedRequest<{ Params: GiftCardIdParams; Body: RedeemGiftCardBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -75,7 +63,7 @@ export class GiftCardController {
   }
 
   async getBalance(
-    request: FastifyRequest<{ Querystring: { codeOrId: string } }>,
+    request: AuthenticatedRequest<{ Querystring: GiftCardBalanceQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -83,9 +71,6 @@ export class GiftCardController {
         codeOrId: request.query.codeOrId,
         timestamp: new Date(),
       });
-      if (result === null) {
-        return ResponseHelper.notFound(reply, "Gift card not found");
-      }
       return ResponseHelper.ok(reply, "Gift card balance retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -93,7 +78,7 @@ export class GiftCardController {
   }
 
   async listTransactions(
-    request: FastifyRequest<{ Params: { giftCardId: string } }>,
+    request: AuthenticatedRequest<{ Params: GiftCardIdParams }>,
     reply: FastifyReply,
   ) {
     try {

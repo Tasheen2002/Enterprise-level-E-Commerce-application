@@ -4,13 +4,7 @@ import { StripeProvider } from "../../payment-providers/stripe.provider";
 import { getStripeConfig } from "../../config/stripe.config";
 import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateStripeIntentBody {
-  orderId: string;
-  amount: number;
-  currency?: string;
-  idempotencyKey?: string;
-}
+import { CreateStripeIntentBody } from "../validation/payment-intent.schema";
 
 type RawBodyRequest = FastifyRequest & { rawBody: Buffer };
 
@@ -24,21 +18,12 @@ export class StripeWebhookController {
     this.webhookSecret = config.webhookSecret || "";
   }
 
-  /**
-   * Create a Stripe PaymentIntent and return client_secret to frontend.
-   *
-   * POST /api/payments/stripe/create-intent
-   */
   async createIntent(
     req: AuthenticatedRequest<{ Body: CreateStripeIntentBody }>,
     reply: FastifyReply,
   ) {
     try {
       const { orderId, amount, currency, idempotencyKey } = req.body;
-
-      if (!orderId || !amount) {
-        return ResponseHelper.badRequest(reply, "orderId and amount are required");
-      }
 
       const paymentIntent = await this.paymentService.createPaymentIntent({
         orderId,
@@ -81,12 +66,6 @@ export class StripeWebhookController {
     }
   }
 
-  /**
-   * Handle Stripe webhook events.
-   *
-   * POST /api/payments/stripe/webhook
-   * Requires raw body (configured in Fastify as Buffer).
-   */
   async handleWebhook(req: RawBodyRequest, reply: FastifyReply) {
     try {
       const signature = req.headers["stripe-signature"] as string;
