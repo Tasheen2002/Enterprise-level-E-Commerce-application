@@ -39,7 +39,7 @@ export class BnplTransactionService {
       throw new PaymentIntentNotFoundError(intentId.getValue());
     }
 
-    const orderId = intent.orderIdOrNull;
+    const orderId = intent.orderId;
     if (!orderId) return;
 
     const order = await this.orderQueryPort.findOrderOwner(orderId);
@@ -110,6 +110,16 @@ export class BnplTransactionService {
 
     await this.assertIntentOwnership(transaction.intentId, userId);
     transaction.cancel();
+    await this.bnplTxnRepo.update(transaction);
+    return BnplTransaction.toDTO(transaction);
+  }
+
+  async failBnplTransaction(bnplId: string, userId?: string): Promise<BnplTransactionDTO> {
+    const transaction = await this.bnplTxnRepo.findById(BnplTransactionId.fromString(bnplId));
+    if (!transaction) throw new BnplTransactionNotFoundError(bnplId);
+
+    await this.assertIntentOwnership(transaction.intentId, userId);
+    transaction.fail();
     await this.bnplTxnRepo.update(transaction);
     return BnplTransaction.toDTO(transaction);
   }
