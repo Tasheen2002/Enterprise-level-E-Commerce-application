@@ -13,7 +13,7 @@ export interface ExternalVariantData {
   getSize(): string | null;
   getColor(): string | null;
   getWeightG(): number | null;
-  getDims(): Record<string, any> | null;
+  getDims(): Record<string, unknown> | null;
 }
 
 export interface IExternalVariantService {
