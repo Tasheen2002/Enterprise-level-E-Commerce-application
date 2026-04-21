@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   IPaymentTransactionRepository,
   PaymentTransactionFilters,
@@ -11,42 +13,42 @@ import { PaymentTransactionType } from "../../../domain/value-objects/payment-tr
 import { PaymentTransactionStatus } from "../../../domain/value-objects/payment-transaction-status.vo";
 import { Money } from "../../../domain/value-objects/money.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
-import {
-  PaginatedResult,
-} from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class PaymentTransactionRepositoryImpl implements IPaymentTransactionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PaymentTransactionRepositoryImpl
+  extends PrismaRepository<PaymentTransaction>
+  implements IPaymentTransactionRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(transaction: PaymentTransaction): Promise<void> {
     const data = this.dehydrate(transaction);
-    await (this.prisma as any).paymentTransaction.create({ data });
-  }
-
-  async update(transaction: PaymentTransaction): Promise<void> {
-    const data = this.dehydrate(transaction);
     const { txnId, ...updateData } = data;
-    await (this.prisma as any).paymentTransaction.update({
+    await this.prisma.paymentTransaction.upsert({
       where: { txnId },
-      data: updateData,
+      create: data,
+      update: updateData,
     });
+    await this.dispatchEvents(transaction);
   }
 
   async delete(id: PaymentTransactionId): Promise<void> {
-    await (this.prisma as any).paymentTransaction.delete({
+    await this.prisma.paymentTransaction.delete({
       where: { txnId: id.getValue() },
     });
   }
 
   async findById(id: PaymentTransactionId): Promise<PaymentTransaction | null> {
-    const record = await (this.prisma as any).paymentTransaction.findUnique({
+    const record = await this.prisma.paymentTransaction.findUnique({
       where: { txnId: id.getValue() },
     });
     return record ? this.hydrate(record) : null;
   }
 
   async findByIntentId(intentId: PaymentIntentId): Promise<PaymentTransaction[]> {
-    const records = await (this.prisma as any).paymentTransaction.findMany({
+    const records = await this.prisma.paymentTransaction.findMany({
       where: { intentId: intentId.getValue() },
       orderBy: { createdAt: "desc" },
     });
@@ -63,7 +65,7 @@ export class PaymentTransactionRepositoryImpl implements IPaymentTransactionRepo
     if (filters.status) where.status = filters.status.getValue();
 
     const [records, total] = await Promise.all([
-      (this.prisma as any).paymentTransaction.findMany({
+      this.prisma.paymentTransaction.findMany({
         where,
         take: options?.limit,
         skip: options?.offset,
@@ -71,7 +73,7 @@ export class PaymentTransactionRepositoryImpl implements IPaymentTransactionRepo
           ? { [options.sortBy]: options.sortOrder ?? "desc" }
           : { createdAt: "desc" },
       }),
-      (this.prisma as any).paymentTransaction.count({ where }),
+      this.prisma.paymentTransaction.count({ where }),
     ]);
 
     const items = records.map((r: any) => this.hydrate(r));
@@ -91,11 +93,11 @@ export class PaymentTransactionRepositoryImpl implements IPaymentTransactionRepo
     if (filters?.intentId) where.intentId = filters.intentId.getValue();
     if (filters?.type) where.type = filters.type.getValue();
     if (filters?.status) where.status = filters.status.getValue();
-    return (this.prisma as any).paymentTransaction.count({ where });
+    return this.prisma.paymentTransaction.count({ where });
   }
 
   async exists(id: PaymentTransactionId): Promise<boolean> {
-    const count = await (this.prisma as any).paymentTransaction.count({
+    const count = await this.prisma.paymentTransaction.count({
       where: { txnId: id.getValue() },
     });
     return count > 0;
