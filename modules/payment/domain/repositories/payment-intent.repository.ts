@@ -16,7 +16,6 @@ export interface PaymentIntentFilters {
 
 export interface IPaymentIntentRepository {
   save(intent: PaymentIntent): Promise<void>;
-  update(intent: PaymentIntent): Promise<void>;
   delete(id: PaymentIntentId): Promise<void>;
   findById(id: PaymentIntentId): Promise<PaymentIntent | null>;
   findByOrderId(orderId: string): Promise<PaymentIntent[]>;

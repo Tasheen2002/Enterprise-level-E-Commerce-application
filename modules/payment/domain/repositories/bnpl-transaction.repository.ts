@@ -17,7 +17,6 @@ export interface BnplTransactionFilters {
 
 export interface IBnplTransactionRepository {
   save(transaction: BnplTransaction): Promise<void>;
-  update(transaction: BnplTransaction): Promise<void>;
   delete(id: BnplTransactionId): Promise<void>;
   findById(id: BnplTransactionId): Promise<BnplTransaction | null>;
   findByIntentId(intentId: PaymentIntentId): Promise<BnplTransaction | null>;

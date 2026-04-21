@@ -16,7 +16,6 @@ export interface PaymentTransactionFilters {
 
 export interface IPaymentTransactionRepository {
   save(transaction: PaymentTransaction): Promise<void>;
-  update(transaction: PaymentTransaction): Promise<void>;
   delete(id: PaymentTransactionId): Promise<void>;
   findById(id: PaymentTransactionId): Promise<PaymentTransaction | null>;
   findByIntentId(intentId: PaymentIntentId): Promise<PaymentTransaction[]>;

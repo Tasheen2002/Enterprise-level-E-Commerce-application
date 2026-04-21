@@ -14,7 +14,6 @@ export interface PromotionFilters {
 
 export interface IPromotionRepository {
   save(promotion: Promotion): Promise<void>;
-  update(promotion: Promotion): Promise<void>;
   delete(id: PromotionId): Promise<void>;
   findById(id: PromotionId): Promise<Promotion | null>;
   findByCode(code: string): Promise<Promotion | null>;
