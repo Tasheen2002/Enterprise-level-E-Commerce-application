@@ -1,10 +1,10 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { LoyaltyProgramId } from '../value-objects/loyalty-program-id.vo';
-import { LoyaltyProgramNameRequiredError } from '../errors/loyalty.errors';
+import { LoyaltyProgramNameRequiredError } from '../errors';
 
 // ============================================================================
-// Domain Events
+// 1. Domain Events
 // ============================================================================
 
 export class LoyaltyProgramCreatedEvent extends DomainEvent {
@@ -22,8 +22,20 @@ export class LoyaltyProgramCreatedEvent extends DomainEvent {
   }
 }
 
+export class LoyaltyProgramUpdatedEvent extends DomainEvent {
+  constructor(public readonly programId: string) {
+    super(programId, 'LoyaltyProgram');
+  }
+
+  get eventType(): string { return 'loyalty-program.updated'; }
+
+  getPayload(): Record<string, unknown> {
+    return { programId: this.programId };
+  }
+}
+
 // ============================================================================
-// Supporting interfaces
+// 2. Supporting Types
 // ============================================================================
 
 export interface EarnRule {
@@ -48,7 +60,7 @@ export interface LoyaltyTierConfig {
 }
 
 // ============================================================================
-// Props & DTO
+// 3. Props Interface
 // ============================================================================
 
 export interface LoyaltyProgramProps {
@@ -61,6 +73,10 @@ export interface LoyaltyProgramProps {
   updatedAt: Date;
 }
 
+// ============================================================================
+// 4. DTO Interface
+// ============================================================================
+
 export interface LoyaltyProgramDTO {
   id: string;
   name: string;
@@ -72,7 +88,7 @@ export interface LoyaltyProgramDTO {
 }
 
 // ============================================================================
-// Entity
+// 5. Entity Class
 // ============================================================================
 
 export class LoyaltyProgram extends AggregateRoot {
@@ -115,6 +131,19 @@ export class LoyaltyProgram extends AggregateRoot {
   get tiers(): LoyaltyTierConfig[] { return this.props.tiers; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
+
+  update(params: Partial<Pick<LoyaltyProgramProps, 'name' | 'earnRules' | 'burnRules' | 'tiers'>>): void {
+    if (params.name !== undefined) {
+      LoyaltyProgram.validateName(params.name);
+      this.props.name = params.name;
+    }
+    if (params.earnRules !== undefined) this.props.earnRules = params.earnRules;
+    if (params.burnRules !== undefined) this.props.burnRules = params.burnRules;
+    if (params.tiers !== undefined) this.props.tiers = params.tiers;
+    this.props.updatedAt = new Date();
+
+    this.addDomainEvent(new LoyaltyProgramUpdatedEvent(this.props.id.getValue()));
+  }
 
   calculatePointsForPurchase(amount: number): number {
     let totalPoints = 0;
