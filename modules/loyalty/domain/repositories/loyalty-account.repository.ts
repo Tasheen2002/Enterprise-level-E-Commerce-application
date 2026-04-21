@@ -1,6 +1,6 @@
 import { LoyaltyAccount } from '../entities/loyalty-account.entity';
 import { LoyaltyAccountId } from '../value-objects/loyalty-account-id.vo';
-import { LoyaltyTier } from '../enums/loyalty.enums';
+import { LoyaltyTier } from '../enums';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -14,7 +14,6 @@ export interface LoyaltyAccountFilters {
 
 export interface ILoyaltyAccountRepository {
   save(account: LoyaltyAccount): Promise<void>;
-  update(account: LoyaltyAccount): Promise<void>;
   delete(id: LoyaltyAccountId): Promise<void>;
   findById(id: LoyaltyAccountId): Promise<LoyaltyAccount | null>;
   findByUserId(userId: string): Promise<LoyaltyAccount | null>;
@@ -24,5 +23,6 @@ export interface ILoyaltyAccountRepository {
 }
 
 export interface LoyaltyAccountQueryOptions extends PaginationOptions {
-  sortBy?: 'createdAt' | 'updatedAt' | 'lifetimePoints';
+  sortBy?: 'updatedAt' | 'currentBalance';
+  sortOrder?: 'asc' | 'desc';
 }
