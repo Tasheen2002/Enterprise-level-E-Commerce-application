@@ -4,8 +4,7 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { PaymentWebhookService } from '../services/payment-webhook.service';
-import { PaymentWebhookEventDTO } from '../../domain/entities/payment-webhook-event.entity';
-import { WebhookEventData } from '../../domain/entities/payment-webhook-event.entity';
+import { PaymentWebhookEventDTO, WebhookEventData } from '../../domain/entities/payment-webhook-event.entity';
 
 export interface ProcessWebhookEventCommand extends ICommand {
   readonly provider: string;

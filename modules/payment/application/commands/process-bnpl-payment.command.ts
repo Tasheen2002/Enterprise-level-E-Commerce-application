@@ -6,7 +6,7 @@ import {
 import { BnplTransactionService } from '../services/bnpl-transaction.service';
 import { BnplTransactionDTO } from '../../domain/entities/bnpl-transaction.entity';
 
-type BnplAction = 'approve' | 'reject' | 'activate' | 'complete' | 'cancel';
+type BnplAction = 'approve' | 'reject' | 'activate' | 'complete' | 'cancel' | 'fail';
 
 export interface ProcessBnplPaymentCommand extends ICommand {
   readonly bnplId: string;
@@ -38,6 +38,9 @@ export class ProcessBnplPaymentHandler implements ICommandHandler<
         break;
       case 'cancel':
         result = await this.bnplService.cancelBnplTransaction(command.bnplId, command.userId);
+        break;
+      case 'fail':
+        result = await this.bnplService.failBnplTransaction(command.bnplId, command.userId);
         break;
       default:
         return CommandResult.failure('Unsupported action', ['action']);
