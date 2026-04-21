@@ -4,9 +4,9 @@ import {
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
 import { LoyaltyService } from '../services/loyalty.service';
-import { LoyaltyTransaction, LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
+import { LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
 
-export interface AdjustPointsCommand extends ICommand {
+export interface AdjustLoyaltyPointsCommand extends ICommand {
   readonly userId: string;
   readonly points: number;
   readonly isAddition: boolean;
@@ -14,13 +14,13 @@ export interface AdjustPointsCommand extends ICommand {
   readonly createdBy: string;
 }
 
-export class AdjustPointsHandler implements ICommandHandler<
-  AdjustPointsCommand,
+export class AdjustLoyaltyPointsHandler implements ICommandHandler<
+  AdjustLoyaltyPointsCommand,
   CommandResult<LoyaltyTransactionDTO>
 > {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
-  async handle(command: AdjustPointsCommand): Promise<CommandResult<LoyaltyTransactionDTO>> {
+  async handle(command: AdjustLoyaltyPointsCommand): Promise<CommandResult<LoyaltyTransactionDTO>> {
     const transaction = await this.loyaltyService.adjustPoints({
       userId: command.userId,
       points: command.points,
@@ -28,6 +28,6 @@ export class AdjustPointsHandler implements ICommandHandler<
       reason: command.reason,
       createdBy: command.createdBy,
     });
-    return CommandResult.success(LoyaltyTransaction.toDTO(transaction));
+    return CommandResult.success(transaction);
   }
 }

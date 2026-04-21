@@ -3,8 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { LoyaltyProgram, LoyaltyProgramDTO, EarnRule, BurnRule, LoyaltyTierConfig } from '../../domain/entities/loyalty-program.entity';
-import { ILoyaltyProgramRepository } from '../../domain/repositories/loyalty-program.repository';
+import { LoyaltyProgramService } from '../services/loyalty-program.service';
+import { LoyaltyProgramDTO, EarnRule, BurnRule, LoyaltyTierConfig } from '../../domain/entities/loyalty-program.entity';
 
 export interface CreateLoyaltyProgramCommand extends ICommand {
   readonly name: string;
@@ -17,16 +17,15 @@ export class CreateLoyaltyProgramHandler implements ICommandHandler<
   CreateLoyaltyProgramCommand,
   CommandResult<LoyaltyProgramDTO>
 > {
-  constructor(private readonly loyaltyProgramRepository: ILoyaltyProgramRepository) {}
+  constructor(private readonly loyaltyProgramService: LoyaltyProgramService) {}
 
   async handle(command: CreateLoyaltyProgramCommand): Promise<CommandResult<LoyaltyProgramDTO>> {
-    const program = LoyaltyProgram.create({
+    const program = await this.loyaltyProgramService.createLoyaltyProgram({
       name: command.name,
       earnRules: command.earnRules,
       burnRules: command.burnRules,
       tiers: command.tiers,
     });
-    await this.loyaltyProgramRepository.save(program);
-    return CommandResult.success(LoyaltyProgram.toDTO(program));
+    return CommandResult.success(program);
   }
 }
