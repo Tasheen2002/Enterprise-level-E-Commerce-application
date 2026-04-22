@@ -4,7 +4,7 @@ import { IPasswordHasherService } from "./password-hasher.service";
 import { IJwtService } from "./ijwt.service";
 import { Email } from "../../domain/value-objects/email.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
-import { User } from "../../domain/entities/user.entity";
+import { User, UserDTO } from "../../domain/entities/user.entity";
 import {
   UserNotFoundError,
   UserAlreadyExistsError,
@@ -156,7 +156,7 @@ export class AuthenticationService {
     };
   }
 
-  async validateToken(token: string): Promise<User> {
+  async validateToken(token: string): Promise<UserDTO> {
     let payload;
     try {
       payload = this.jwtService.verifyAccess(token);
@@ -174,7 +174,7 @@ export class AuthenticationService {
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
 
-    return user;
+    return User.toDTO(user);
   }
 
   async logout(userId: string, accessToken?: string): Promise<void> {
@@ -259,7 +259,7 @@ export class AuthenticationService {
     await this.userRepository.save(user);
   }
 
-  async verifyUserPassword(userId: string, password: string): Promise<User> {
+  private async verifyUserPassword(userId: string, password: string): Promise<User> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
     if (!user.passwordHash)
