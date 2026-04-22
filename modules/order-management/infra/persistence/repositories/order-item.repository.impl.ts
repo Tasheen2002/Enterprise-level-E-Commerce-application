@@ -1,37 +1,28 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   IOrderItemRepository,
   OrderItemQueryOptions,
 } from "../../../domain/repositories/order-item.repository";
 import { OrderItem } from "../../../domain/entities/order-item.entity";
-import { ProductSnapshot } from "../../../domain/value-objects";
+import { ProductSnapshot, ProductSnapshotData } from "../../../domain/value-objects";
 
-interface OrderItemDatabaseRow {
-  id: string;
-  orderId: string;
-  variantId: string;
-  qty: number;
-  productSnapshot: any;
-  isGift: boolean;
-  giftMessage: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+type OrderItemRow = Prisma.OrderItemGetPayload<Record<string, never>>;
 
 export class OrderItemRepositoryImpl implements IOrderItemRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private toEntity(row: OrderItemDatabaseRow): OrderItem {
+  private toEntity(row: OrderItemRow): OrderItem {
+    const fallbackDate = new Date(0);
     return OrderItem.fromPersistence({
       orderItemId: row.id,
       orderId: row.orderId,
       variantId: row.variantId,
       quantity: row.qty,
-      productSnapshot: ProductSnapshot.create(row.productSnapshot),
+      productSnapshot: ProductSnapshot.create(row.productSnapshot as unknown as ProductSnapshotData),
       isGift: row.isGift,
       giftMessage: row.giftMessage ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     });
   }
 
@@ -40,7 +31,7 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
       orderId: orderItem.orderId,
       variantId: orderItem.variantId,
       qty: orderItem.quantity,
-      productSnapshot: orderItem.productSnapshot.getValue() as any,
+      productSnapshot: orderItem.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
       isGift: orderItem.isGift,
       giftMessage: orderItem.giftMessage || null,
     };
@@ -90,7 +81,7 @@ export class OrderItemRepositoryImpl implements IOrderItemRepository {
       return null;
     }
 
-    return this.toEntity(item as any);
+    return this.toEntity(item);
   }
 
   async findByOrderId(

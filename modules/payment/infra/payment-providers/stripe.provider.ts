@@ -68,10 +68,10 @@ export class StripeProvider {
         stripeIntentId: intent.id,
         status: intent.status,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || "Failed to create Stripe payment intent",
+        error: (error instanceof Error ? error.message : String(error)) ||"Failed to create Stripe payment intent",
       };
     }
   }
@@ -87,10 +87,10 @@ export class StripeProvider {
         stripeIntentId: intent.id,
         status: intent.status,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || "Failed to retrieve Stripe payment intent",
+        error: (error instanceof Error ? error.message : String(error)) ||"Failed to retrieve Stripe payment intent",
       };
     }
   }
@@ -119,10 +119,10 @@ export class StripeProvider {
         refundId: refund.id,
         status: refund.status ?? undefined,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || "Stripe refund failed",
+        error: (error instanceof Error ? error.message : String(error)) ||"Stripe refund failed",
       };
     }
   }
@@ -140,10 +140,10 @@ export class StripeProvider {
         stripeIntentId: intent.id,
         status: intent.status,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || "Failed to cancel Stripe payment intent",
+        error: (error instanceof Error ? error.message : String(error)) ||"Failed to cancel Stripe payment intent",
       };
     }
   }

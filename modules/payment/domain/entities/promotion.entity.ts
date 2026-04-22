@@ -50,7 +50,7 @@ export interface PromotionRule {
   maxDiscount?: number;
   applicableProducts?: string[];
   applicableCategories?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ============================================================================

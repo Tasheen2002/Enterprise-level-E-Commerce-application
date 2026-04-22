@@ -14,9 +14,7 @@ import {
   GiftCardNotFoundError,
   GiftCardRedemptionError,
   InvalidOperationError,
-} from "../../domain/errors/payment-loyalty.errors";
-
-export type { GiftCardDTO } from "../../domain/entities/gift-card.entity";
+} from "../../domain/errors";
 
 interface CreateGiftCardParams {
   code: string;

@@ -1,28 +1,27 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
   IBackorderRepository,
   BackorderQueryOptions,
 } from "../../../domain/repositories/backorder.repository";
 import { Backorder } from "../../../domain/entities/backorder.entity";
 
-interface BackorderDatabaseRow {
-  orderItemId: string;
-  promisedEta: Date | null;
-  notifiedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export class BackorderRepositoryImpl
+  extends PrismaRepository<Backorder>
+  implements IBackorderRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
-export class BackorderRepositoryImpl implements IBackorderRepository {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  private toEntity(row: BackorderDatabaseRow): Backorder {
+  private toEntity(row: Prisma.BackorderGetPayload<Record<string, never>>): Backorder {
     return Backorder.fromPersistence({
       orderItemId: row.orderItemId,
       promisedEta: row.promisedEta ?? undefined,
       notifiedAt: row.notifiedAt ?? undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
     });
   }
 
@@ -36,6 +35,8 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       create: { orderItemId: backorder.orderItemId, ...data },
       update: data,
     });
+
+    await this.dispatchEvents(backorder);
   }
 
   async delete(orderItemId: string): Promise<void> {
@@ -53,7 +54,7 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       return null;
     }
 
-    return this.toEntity(backorder as any);
+    return this.toEntity(backorder);
   }
 
   async findAll(options?: BackorderQueryOptions): Promise<Backorder[]> {
@@ -70,7 +71,7 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return backorders.map((backorder) => this.toEntity(backorder as any));
+    return backorders.map((backorder) => this.toEntity(backorder));
   }
 
   async findNotified(options?: BackorderQueryOptions): Promise<Backorder[]> {
@@ -90,7 +91,7 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return backorders.map((backorder) => this.toEntity(backorder as any));
+    return backorders.map((backorder) => this.toEntity(backorder));
   }
 
   async findUnnotified(options?: BackorderQueryOptions): Promise<Backorder[]> {
@@ -110,7 +111,7 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return backorders.map((backorder) => this.toEntity(backorder as any));
+    return backorders.map((backorder) => this.toEntity(backorder));
   }
 
   async findByPromisedEtaBefore(
@@ -136,7 +137,7 @@ export class BackorderRepositoryImpl implements IBackorderRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return backorders.map((backorder) => this.toEntity(backorder as any));
+    return backorders.map((backorder) => this.toEntity(backorder));
   }
 
   async count(): Promise<number> {

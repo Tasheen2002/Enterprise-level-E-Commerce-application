@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, OrderStatusEnum } from "@prisma/client";
 import {
   IOrderStatusHistoryRepository,
   StatusHistoryQueryOptions,
@@ -6,26 +6,19 @@ import {
 import { OrderStatusHistory } from "../../../domain/entities/order-status-history.entity";
 import { OrderStatus } from "../../../domain/value-objects/order-status.vo";
 
-interface OrderStatusHistoryDatabaseRow {
-  id: bigint;
-  orderId: string;
-  fromStatus: string | null;
-  toStatus: string;
-  changedAt: Date;
-  changedBy: string | null;
-}
+type OrderStatusHistoryRow = Prisma.OrderStatusHistoryGetPayload<Record<string, never>>;
 
 export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private toEntity(row: OrderStatusHistoryDatabaseRow): OrderStatusHistory {
+  private toEntity(row: OrderStatusHistoryRow): OrderStatusHistory {
     return OrderStatusHistory.fromPersistence({
       historyId: Number(row.id),
       orderId: row.orderId,
       fromStatus: row.fromStatus
-        ? OrderStatus.fromString(row.fromStatus)
+        ? OrderStatus.fromString(row.fromStatus as string)
         : undefined,
-      toStatus: OrderStatus.fromString(row.toStatus),
+      toStatus: OrderStatus.fromString(row.toStatus as string),
       changedBy: row.changedBy ?? undefined,
       createdAt: row.changedAt,
       updatedAt: row.changedAt,
@@ -36,8 +29,8 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
     await this.prisma.orderStatusHistory.create({
       data: {
         orderId: statusHistory.orderId,
-        fromStatus: (statusHistory.fromStatus?.getValue() ?? null) as any,
-        toStatus: statusHistory.toStatus.getValue() as any,
+        fromStatus: (statusHistory.fromStatus?.getValue() ?? null) as OrderStatusEnum | null,
+        toStatus: statusHistory.toStatus.getValue() as OrderStatusEnum,
         changedBy: statusHistory.changedBy ?? null,
       },
     });
@@ -66,7 +59,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       return null;
     }
 
-    return this.toEntity(history as any);
+    return this.toEntity(history);
   }
 
   async findByOrderId(
@@ -82,7 +75,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       orderBy: { changedAt: sortOrder },
     });
 
-    return histories.map((history) => this.toEntity(history as any));
+    return histories.map((history) => this.toEntity(history));
   }
 
   async findByStatus(
@@ -92,13 +85,13 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
     const { limit, offset, sortOrder = "desc" } = options || {};
 
     const histories = await this.prisma.orderStatusHistory.findMany({
-      where: { toStatus: status.getValue() as any },
+      where: { toStatus: status.getValue() as OrderStatusEnum },
       take: limit,
       skip: offset,
       orderBy: { changedAt: sortOrder },
     });
 
-    return histories.map((history) => this.toEntity(history as any));
+    return histories.map((history) => this.toEntity(history));
   }
 
   async findByChangedBy(
@@ -114,7 +107,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       orderBy: { changedAt: sortOrder },
     });
 
-    return histories.map((history) => this.toEntity(history as any));
+    return histories.map((history) => this.toEntity(history));
   }
 
   async countByOrderId(orderId: string): Promise<number> {
@@ -135,7 +128,7 @@ export class OrderStatusHistoryRepositoryImpl implements IOrderStatusHistoryRepo
       return null;
     }
 
-    return this.toEntity(history as any);
+    return this.toEntity(history);
   }
 
   async exists(historyId: number | null): Promise<boolean> {

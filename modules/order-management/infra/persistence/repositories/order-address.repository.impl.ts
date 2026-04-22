@@ -1,39 +1,48 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { AddressSnapshotData } from "../../../domain/value-objects/address-snapshot.vo";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IOrderAddressRepository } from "../../../domain/repositories/order-address.repository";
 import { OrderAddress } from "../../../domain/entities/order-address.entity";
 import { AddressSnapshot } from "../../../domain/value-objects/address-snapshot.vo";
 
 interface OrderAddressDatabaseRow {
   orderId: string;
-  billingSnapshot: any;
-  shippingSnapshot: any;
-  createdAt: Date;
-  updatedAt: Date;
+  billingSnapshot: Prisma.JsonValue;
+  shippingSnapshot: Prisma.JsonValue;
 }
 
-export class OrderAddressRepositoryImpl implements IOrderAddressRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class OrderAddressRepositoryImpl
+  extends PrismaRepository<OrderAddress>
+  implements IOrderAddressRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private toEntity(row: OrderAddressDatabaseRow): OrderAddress {
+    const fallbackDate = new Date(0);
     return OrderAddress.fromPersistence({
       orderId: row.orderId,
-      billingAddress: AddressSnapshot.create(row.billingSnapshot),
-      shippingAddress: AddressSnapshot.create(row.shippingSnapshot),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      billingAddress: AddressSnapshot.create(row.billingSnapshot as unknown as AddressSnapshotData),
+      shippingAddress: AddressSnapshot.create(row.shippingSnapshot as unknown as AddressSnapshotData),
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     });
   }
 
   async save(orderAddress: OrderAddress): Promise<void> {
     const data = {
-      billingSnapshot: orderAddress.billingAddress.getValue() as any,
-      shippingSnapshot: orderAddress.shippingAddress.getValue() as any,
+      billingSnapshot: orderAddress.billingAddress.getValue() as unknown as Prisma.InputJsonValue,
+      shippingSnapshot: orderAddress.shippingAddress.getValue() as unknown as Prisma.InputJsonValue,
     };
     await this.prisma.orderAddress.upsert({
       where: { orderId: orderAddress.orderId },
       create: { orderId: orderAddress.orderId, ...data },
       update: data,
     });
+
+    await this.dispatchEvents(orderAddress);
   }
 
   async delete(orderId: string): Promise<void> {
@@ -55,7 +64,7 @@ export class OrderAddressRepositoryImpl implements IOrderAddressRepository {
       return null;
     }
 
-    return this.toEntity(record as any);
+    return this.toEntity(record);
   }
 
   async exists(orderId: string): Promise<boolean> {

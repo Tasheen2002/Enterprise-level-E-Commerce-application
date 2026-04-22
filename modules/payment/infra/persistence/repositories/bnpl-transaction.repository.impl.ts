@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -57,18 +57,19 @@ export class BnplTransactionRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findWithFilters(
     filters: BnplTransactionFilters,
     options?: BnplTransactionQueryOptions,
   ): Promise<PaginatedResult<BnplTransaction>> {
-    const where: any = {};
-    if (filters.intentId) where.intentId = filters.intentId.getValue();
-    if (filters.orderId) where.orderId = filters.orderId;
-    if (filters.provider) where.provider = filters.provider.getValue();
-    if (filters.status) where.status = filters.status.getValue();
+    const where: Prisma.BnplTransactionWhereInput = {
+      ...(filters.intentId ? { intentId: filters.intentId.getValue() } : {}),
+      ...(filters.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters.provider ? { provider: filters.provider.getValue() } : {}),
+      ...(filters.status ? { status: filters.status.getValue() } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.bnplTransaction.findMany({
@@ -82,7 +83,7 @@ export class BnplTransactionRepositoryImpl
       this.prisma.bnplTransaction.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -95,11 +96,12 @@ export class BnplTransactionRepositoryImpl
   }
 
   async count(filters?: BnplTransactionFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.intentId) where.intentId = filters.intentId.getValue();
-    if (filters?.orderId) where.orderId = filters.orderId;
-    if (filters?.provider) where.provider = filters.provider.getValue();
-    if (filters?.status) where.status = filters.status.getValue();
+    const where: Prisma.BnplTransactionWhereInput = {
+      ...(filters?.intentId ? { intentId: filters.intentId.getValue() } : {}),
+      ...(filters?.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters?.provider ? { provider: filters.provider.getValue() } : {}),
+      ...(filters?.status ? { status: filters.status.getValue() } : {}),
+    };
     return this.prisma.bnplTransaction.count({ where });
   }
 
@@ -110,24 +112,24 @@ export class BnplTransactionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: any): BnplTransaction {
+  private hydrate(record: Prisma.BnplTransactionGetPayload<Record<string, never>>): BnplTransaction {
     return BnplTransaction.fromPersistence({
       id: BnplTransactionId.fromString(record.bnplId),
-      intentId: PaymentIntentId.fromString(record.intentId),
+      intentId: PaymentIntentId.fromString(record.intentId ?? ""),
       provider: BnplProvider.fromString(record.provider),
-      plan: record.plan as BnplPlan,
+      plan: record.plan as unknown as BnplPlan,
       status: BnplStatus.fromString(record.status ?? "pending"),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  private dehydrate(transaction: BnplTransaction): any {
+  private dehydrate(transaction: BnplTransaction): Prisma.BnplTransactionUncheckedCreateInput {
     return {
       bnplId: transaction.id.getValue(),
       intentId: transaction.intentId.getValue(),
       provider: transaction.provider.getValue(),
-      plan: transaction.plan,
+      plan: transaction.plan as unknown as Prisma.InputJsonValue,
       status: transaction.status.getValue(),
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,

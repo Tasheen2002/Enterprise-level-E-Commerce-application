@@ -1,3 +1,9 @@
+/**
+ * WARNING: In-memory implementation — NOT suitable for production multi-instance deployments.
+ * Token state is lost on restart and is not shared across instances.
+ * Replace with a Redis-backed implementation (e.g. ioredis) before horizontal scaling.
+ */
+import { ITokenBlacklistService } from "../../../application/services/itoken-blacklist.service";
 import { USER_MANAGEMENT_CONSTANTS } from "../../../domain/constants/user-management.constants";
 
 interface TokenEntry {
@@ -47,7 +53,7 @@ setInterval(() => {
   }
 }, 60 * 1000).unref();
 
-export const TokenBlacklistService = {
+export const TokenBlacklistService: ITokenBlacklistService = {
   blacklistToken(token: string, ttlMs = 7 * 24 * 60 * 60 * 1000): void {
     blacklistedTokens.set(token, { expiresAt: Date.now() + ttlMs });
   },

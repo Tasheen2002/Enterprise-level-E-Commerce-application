@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, PaymentTxnTypeEnum } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -52,17 +52,18 @@ export class PaymentTransactionRepositoryImpl
       where: { intentId: intentId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findWithFilters(
     filters: PaymentTransactionFilters,
     options?: PaymentTransactionQueryOptions,
   ): Promise<PaginatedResult<PaymentTransaction>> {
-    const where: any = {};
-    if (filters.intentId) where.intentId = filters.intentId.getValue();
-    if (filters.type) where.type = filters.type.getValue();
-    if (filters.status) where.status = filters.status.getValue();
+    const where: Prisma.PaymentTransactionWhereInput = {
+      ...(filters.intentId ? { intentId: filters.intentId.getValue() } : {}),
+      ...(filters.type ? { type: filters.type.getValue() as PaymentTxnTypeEnum } : {}),
+      ...(filters.status ? { status: filters.status.getValue() } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.paymentTransaction.findMany({
@@ -76,7 +77,7 @@ export class PaymentTransactionRepositoryImpl
       this.prisma.paymentTransaction.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -89,10 +90,11 @@ export class PaymentTransactionRepositoryImpl
   }
 
   async count(filters?: PaymentTransactionFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.intentId) where.intentId = filters.intentId.getValue();
-    if (filters?.type) where.type = filters.type.getValue();
-    if (filters?.status) where.status = filters.status.getValue();
+    const where: Prisma.PaymentTransactionWhereInput = {
+      ...(filters?.intentId ? { intentId: filters.intentId.getValue() } : {}),
+      ...(filters?.type ? { type: filters.type.getValue() as PaymentTxnTypeEnum } : {}),
+      ...(filters?.status ? { status: filters.status.getValue() } : {}),
+    };
     return this.prisma.paymentTransaction.count({ where });
   }
 
@@ -103,7 +105,7 @@ export class PaymentTransactionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: any): PaymentTransaction {
+  private hydrate(record: Prisma.PaymentTransactionGetPayload<Record<string, never>>): PaymentTransaction {
     return PaymentTransaction.fromPersistence({
       id: PaymentTransactionId.fromString(record.txnId),
       intentId: PaymentIntentId.fromString(record.intentId),
@@ -120,11 +122,11 @@ export class PaymentTransactionRepositoryImpl
     });
   }
 
-  private dehydrate(transaction: PaymentTransaction): any {
+  private dehydrate(transaction: PaymentTransaction): Prisma.PaymentTransactionUncheckedCreateInput {
     return {
       txnId: transaction.id.getValue(),
       intentId: transaction.intentId.getValue(),
-      type: transaction.type.getValue(),
+      type: transaction.type.getValue() as PaymentTxnTypeEnum,
       amount: transaction.amount.getAmount(),
       currency: transaction.amount.getCurrency().getValue(),
       status: transaction.status.getValue(),

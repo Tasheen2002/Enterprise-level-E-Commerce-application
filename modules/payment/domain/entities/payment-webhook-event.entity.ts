@@ -26,7 +26,7 @@ export class PaymentWebhookEventReceivedEvent extends DomainEvent {
 // 2. Supporting Interfaces
 // ============================================================================
 export interface WebhookEventData {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ============================================================================

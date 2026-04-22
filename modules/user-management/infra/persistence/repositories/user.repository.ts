@@ -1,6 +1,7 @@
 import {
   PrismaClient,
   Prisma,
+  type User as PrismaUser,
   UserStatus as PrismaUserStatus,
   UserRole as PrismaUserRole,
 } from '@prisma/client';
@@ -92,7 +93,7 @@ export class UserRepository
   ): Promise<PaginatedResult<UserListItem>> {
     const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = options;
 
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -108,31 +109,35 @@ export class UserRepository
 
     const offset = (page - 1) * limit;
 
+    const select = {
+      id: true,
+      email: true,
+      phone: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      status: true,
+      emailVerified: true,
+      phoneVerified: true,
+      isGuest: true,
+      createdAt: true,
+      updatedAt: true,
+    } as const;
+
+    type UserListRow = Prisma.UserGetPayload<{ select: typeof select }>;
+
     const [rows, total] = await Promise.all([
-      (this.prisma.user as any).findMany({
+      this.prisma.user.findMany({
         where,
         orderBy: { [sortBy]: sortOrder },
         skip: offset,
         take: limit,
-        select: {
-          id: true,
-          email: true,
-          phone: true,
-          firstName: true,
-          lastName: true,
-          role: true,
-          status: true,
-          emailVerified: true,
-          phoneVerified: true,
-          isGuest: true,
-          createdAt: true,
-          updatedAt: true,
-        },
+        select,
       }),
       this.prisma.user.count({ where }),
     ]);
 
-    const items: UserListItem[] = rows.map((r: any) => ({
+    const items: UserListItem[] = rows.map((r: UserListRow) => ({
       userId: r.id,
       email: r.email,
       phone: r.phone ?? null,
@@ -160,7 +165,7 @@ export class UserRepository
   // Persistence mapping
   // ==========================================
 
-  private toDomain(row: any): User {
+  private toDomain(row: PrismaUser): User {
     return User.fromPersistence({
       id: UserId.fromString(row.id),
       email: Email.create(row.email),

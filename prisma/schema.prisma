@@ -38,7 +38,7 @@ model User {
   reminders         Reminder[]
   wishlists         Wishlist[]
   orders            Order[]
-  loyalty_accounts  LoyaltyAccount[]
+  loyaltyAccount    LoyaltyAccount?
   paymentMethods    PaymentMethod[]
   socialLogins      SocialLogin[]
   addresses         UserAddress[]
@@ -929,10 +929,11 @@ model PromotionUsage {
 model LoyaltyProgram {
   programId String           @id @default(dbgenerated("gen_random_uuid()")) @map("program_id") @db.Uuid
   name      String
-  earnRules Json             @default("{}") @map("earn_rules")
-  burnRules Json             @default("{}") @map("burn_rules")
+  earnRules Json             @default("[]") @map("earn_rules")
+  burnRules Json             @default("[]") @map("burn_rules")
   tiers     Json             @default("[]")
-  accounts  LoyaltyAccount[]
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([name])
   @@map("loyalty_programs")
@@ -940,37 +941,48 @@ model LoyaltyProgram {
 }
 
 model LoyaltyAccount {
-  accountId     String               @id @default(dbgenerated("gen_random_uuid()")) @map("account_id") @db.Uuid
-  userId        String               @map("user_id") @db.Uuid
-  programId     String               @map("program_id") @db.Uuid
-  pointsBalance BigInt               @default(0) @map("points_balance")
-  tier          String?
-  updatedAt     DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  program       LoyaltyProgram       @relation(fields: [programId], references: [programId], onDelete: Cascade, onUpdate: NoAction)
-  users         User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  transactions  LoyaltyTransaction[]
+  accountId           String               @id @default(dbgenerated("gen_random_uuid()")) @map("account_id") @db.Uuid
+  userId              String               @unique @map("user_id") @db.Uuid
+  currentBalance      BigInt               @default(0) @map("current_balance")
+  totalPointsEarned   BigInt               @default(0) @map("total_points_earned")
+  totalPointsRedeemed BigInt               @default(0) @map("total_points_redeemed")
+  lifetimePoints      BigInt               @default(0) @map("lifetime_points")
+  tier                String               @default("STYLE_LOVER")
+  joinedAt            DateTime             @map("joined_at") @db.Timestamptz(6)
+  lastActivityAt      DateTime?            @map("last_activity_at") @db.Timestamptz(6)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  users               User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transactions        LoyaltyTransaction[]
 
   @@index([userId])
-  @@index([programId])
   @@index([tier])
-  @@index([pointsBalance])
+  @@index([currentBalance])
   @@map("loyalty_accounts")
   @@schema("payment_loyalty")
 }
 
 model LoyaltyTransaction {
-  ltxnId      String            @id @default(dbgenerated("gen_random_uuid()")) @map("ltxn_id") @db.Uuid
-  accountId   String            @map("account_id") @db.Uuid
-  pointsDelta Int               @map("points_delta")
-  reason      LoyaltyReasonEnum
-  orderId     String?           @map("order_id") @db.Uuid
-  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  account     LoyaltyAccount    @relation(fields: [accountId], references: [accountId], onDelete: Cascade, onUpdate: NoAction)
-  orders      Order?            @relation(fields: [orderId], references: [id], onUpdate: NoAction)
+  transactionId String   @id @default(dbgenerated("gen_random_uuid()")) @map("transaction_id") @db.Uuid
+  accountId     String   @map("account_id") @db.Uuid
+  type          String
+  points        BigInt
+  reason        String
+  description   String?
+  referenceId   String?  @map("reference_id") @db.Uuid
+  orderId       String?  @map("order_id") @db.Uuid
+  createdBy     String?  @map("created_by") @db.Uuid
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz(6)
+  balanceAfter  BigInt   @map("balance_after")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  account       LoyaltyAccount @relation(fields: [accountId], references: [accountId], onDelete: Cascade, onUpdate: NoAction)
+  orders        Order?   @relation(fields: [orderId], references: [id], onUpdate: NoAction)
 
   @@index([accountId])
   @@index([orderId])
+  @@index([type])
   @@index([reason])
+  @@index([expiresAt])
   @@index([createdAt])
   @@map("loyalty_transactions")
   @@schema("payment_loyalty")
@@ -1465,15 +1477,6 @@ enum GiftCardTxnTypeEnum {
   @@schema("payment_loyalty")
 }
 
-enum LoyaltyReasonEnum {
-  purchase
-  review
-  goodwill
-  refund
-
-  @@map("loyalty_reason_enum")
-  @@schema("payment_loyalty")
-}
 
 enum TicketSourceEnum {
   email

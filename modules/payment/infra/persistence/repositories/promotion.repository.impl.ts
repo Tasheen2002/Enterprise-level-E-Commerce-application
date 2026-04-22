@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -60,22 +60,25 @@ export class PromotionRepositoryImpl
       },
       orderBy: { startsAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findWithFilters(
     filters: PromotionFilters,
     options?: PromotionQueryOptions,
   ): Promise<PaginatedResult<Promotion>> {
-    const where: any = {};
-    if (filters.status) where.status = filters.status.getValue();
-    if (filters.code) where.code = filters.code;
-    if (filters.activeAt) {
-      where.AND = [
-        { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
-        { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
-      ];
-    }
+    const activeAtFilter: Prisma.PromotionWhereInput["AND"] = filters.activeAt
+      ? [
+          { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
+        ]
+      : undefined;
+
+    const where: Prisma.PromotionWhereInput = {
+      ...(filters.status ? { status: filters.status.getValue() } : {}),
+      ...(filters.code ? { code: filters.code } : {}),
+      ...(activeAtFilter ? { AND: activeAtFilter } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.promotion.findMany({
@@ -89,7 +92,7 @@ export class PromotionRepositoryImpl
       this.prisma.promotion.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -102,15 +105,18 @@ export class PromotionRepositoryImpl
   }
 
   async count(filters?: PromotionFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.status) where.status = filters.status.getValue();
-    if (filters?.code) where.code = filters.code;
-    if (filters?.activeAt) {
-      where.AND = [
-        { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
-        { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
-      ];
-    }
+    const activeAtFilter: Prisma.PromotionWhereInput["AND"] = filters?.activeAt
+      ? [
+          { OR: [{ startsAt: null }, { startsAt: { lte: filters.activeAt } }] },
+          { OR: [{ endsAt: null }, { endsAt: { gte: filters.activeAt } }] },
+        ]
+      : undefined;
+
+    const where: Prisma.PromotionWhereInput = {
+      ...(filters?.status ? { status: filters.status.getValue() } : {}),
+      ...(filters?.code ? { code: filters.code } : {}),
+      ...(activeAtFilter ? { AND: activeAtFilter } : {}),
+    };
     return this.prisma.promotion.count({ where });
   }
 
@@ -121,25 +127,25 @@ export class PromotionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: any): Promotion {
+  private hydrate(record: Prisma.PromotionGetPayload<Record<string, never>>): Promotion {
     return Promotion.fromPersistence({
       id: PromotionId.fromString(record.promoId),
       code: record.code ?? null,
-      rule: record.rule as PromotionRule,
+      rule: record.rule as unknown as PromotionRule,
       startsAt: record.startsAt ?? null,
       endsAt: record.endsAt ?? null,
       usageLimit: record.usageLimit ?? null,
-      status: PromotionStatus.fromString(record.status),
+      status: PromotionStatus.fromString(record.status ?? "inactive"),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  private dehydrate(promotion: Promotion): any {
+  private dehydrate(promotion: Promotion): Prisma.PromotionUncheckedCreateInput {
     return {
       promoId: promotion.id.getValue(),
       code: promotion.code,
-      rule: promotion.rule,
+      rule: promotion.rule as unknown as Prisma.InputJsonValue,
       startsAt: promotion.startsAt,
       endsAt: promotion.endsAt,
       usageLimit: promotion.usageLimit,

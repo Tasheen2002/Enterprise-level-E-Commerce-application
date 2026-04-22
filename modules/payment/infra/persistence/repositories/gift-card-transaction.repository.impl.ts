@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, GiftCardTxnTypeEnum } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -40,7 +40,7 @@ export class GiftCardTransactionRepositoryImpl
       where: { giftCardId: giftCardId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findByOrderId(orderId: string): Promise<GiftCardTransaction[]> {
@@ -48,17 +48,18 @@ export class GiftCardTransactionRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findWithFilters(
     filters: GiftCardTransactionFilters,
     options?: GiftCardTransactionQueryOptions,
   ): Promise<PaginatedResult<GiftCardTransaction>> {
-    const where: any = {};
-    if (filters.giftCardId) where.giftCardId = filters.giftCardId.getValue();
-    if (filters.orderId) where.orderId = filters.orderId;
-    if (filters.type) where.type = filters.type.getValue();
+    const where: Prisma.GiftCardTransactionWhereInput = {
+      ...(filters.giftCardId ? { giftCardId: filters.giftCardId.getValue() } : {}),
+      ...(filters.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters.type ? { type: filters.type.getValue() as GiftCardTxnTypeEnum } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.giftCardTransaction.findMany({
@@ -70,7 +71,7 @@ export class GiftCardTransactionRepositoryImpl
       this.prisma.giftCardTransaction.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -83,35 +84,35 @@ export class GiftCardTransactionRepositoryImpl
   }
 
   async count(filters?: GiftCardTransactionFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.giftCardId) where.giftCardId = filters.giftCardId.getValue();
-    if (filters?.orderId) where.orderId = filters.orderId;
-    if (filters?.type) where.type = filters.type.getValue();
+    const where: Prisma.GiftCardTransactionWhereInput = {
+      ...(filters?.giftCardId ? { giftCardId: filters.giftCardId.getValue() } : {}),
+      ...(filters?.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters?.type ? { type: filters.type.getValue() as GiftCardTxnTypeEnum } : {}),
+    };
     return this.prisma.giftCardTransaction.count({ where });
   }
 
-  private hydrate(record: any): GiftCardTransaction {
+  private hydrate(record: Prisma.GiftCardTransactionGetPayload<Record<string, never>>): GiftCardTransaction {
     return GiftCardTransaction.fromPersistence({
       id: GiftCardTransactionId.fromString(record.gcTxnId),
       giftCardId: GiftCardId.fromString(record.giftCardId),
       orderId: record.orderId ?? null,
       amount: Money.fromAmount(
         Number(record.amount),
-        Currency.create(record.currency ?? "USD"),
+        Currency.create("USD"),
       ),
       type: GiftCardTransactionType.fromString(record.type),
       createdAt: record.createdAt,
     });
   }
 
-  private dehydrate(transaction: GiftCardTransaction): any {
+  private dehydrate(transaction: GiftCardTransaction): Prisma.GiftCardTransactionUncheckedCreateInput {
     return {
       gcTxnId: transaction.id.getValue(),
       giftCardId: transaction.giftCardId.getValue(),
       orderId: transaction.orderId,
       amount: transaction.amount.getAmount(),
-      currency: transaction.amount.getCurrency().getValue(),
-      type: transaction.type.getValue(),
+      type: transaction.type.getValue() as GiftCardTxnTypeEnum,
       createdAt: transaction.createdAt,
     };
   }

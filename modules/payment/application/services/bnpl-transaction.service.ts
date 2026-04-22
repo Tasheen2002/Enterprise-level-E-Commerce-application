@@ -13,9 +13,7 @@ import {
   PaymentIntentNotFoundError,
   BnplTransactionNotFoundError,
   InvalidOperationError,
-} from "../../domain/errors/payment-loyalty.errors";
-
-export type { BnplTransactionDTO } from "../../domain/entities/bnpl-transaction.entity";
+} from "../../domain/errors";
 
 interface CreateBnplTransactionParams {
   intentId: string;
