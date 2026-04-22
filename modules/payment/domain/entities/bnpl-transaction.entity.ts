@@ -48,7 +48,7 @@ export interface BnplPlan {
   frequency: string;
   downPayment?: number;
   interestRate?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // ============================================================================

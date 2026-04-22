@@ -10,7 +10,7 @@ import { PaymentTransactionType } from "../../domain/value-objects/payment-trans
 import {
   PaymentIntentNotFoundError,
   InvalidOperationError,
-} from "../../domain/errors/payment-loyalty.errors";
+} from "../../domain/errors";
 
 interface CreatePaymentIntentParams {
   orderId?: string;

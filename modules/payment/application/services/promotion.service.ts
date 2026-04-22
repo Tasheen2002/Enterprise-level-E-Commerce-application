@@ -12,9 +12,7 @@ import {
 import { PromotionId } from "../../domain/value-objects/promotion-id.vo";
 import { Money } from "../../domain/value-objects/money.vo";
 import { Currency } from "../../domain/value-objects/currency.vo";
-import { PromotionNotFoundError } from "../../domain/errors/payment-loyalty.errors";
-
-export type { PromotionDTO } from "../../domain/entities/promotion.entity";
+import { PromotionNotFoundError } from "../../domain/errors";
 
 interface CreatePromotionParams {
   code?: string;

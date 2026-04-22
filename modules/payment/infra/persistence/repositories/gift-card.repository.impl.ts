@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -56,13 +56,18 @@ export class GiftCardRepositoryImpl
     filters: GiftCardFilters,
     options?: GiftCardQueryOptions,
   ): Promise<PaginatedResult<GiftCard>> {
-    const where: any = {};
-    if (filters.status) where.status = filters.status.getValue();
-    if (filters.expiresAfter) where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
-    if (filters.expiresBefore) where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
-    if (filters.hasBalance !== undefined) {
-      where.currentBalance = filters.hasBalance ? { gt: 0 } : 0;
-    }
+    const where: Prisma.GiftCardWhereInput = {
+      ...(filters.status ? { status: filters.status.getValue() } : {}),
+      ...((filters.expiresAfter || filters.expiresBefore) ? {
+        expiresAt: {
+          ...(filters.expiresAfter ? { gte: filters.expiresAfter } : {}),
+          ...(filters.expiresBefore ? { lte: filters.expiresBefore } : {}),
+        },
+      } : {}),
+      ...(filters.hasBalance !== undefined ? {
+        currentBalance: filters.hasBalance ? { gt: 0 } : { equals: 0 },
+      } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.giftCard.findMany({
@@ -76,7 +81,7 @@ export class GiftCardRepositoryImpl
       this.prisma.giftCard.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -89,13 +94,18 @@ export class GiftCardRepositoryImpl
   }
 
   async count(filters?: GiftCardFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.status) where.status = filters.status.getValue();
-    if (filters?.expiresAfter) where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
-    if (filters?.expiresBefore) where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
-    if (filters?.hasBalance !== undefined) {
-      where.currentBalance = filters.hasBalance ? { gt: 0 } : 0;
-    }
+    const where: Prisma.GiftCardWhereInput = {
+      ...(filters?.status ? { status: filters.status.getValue() } : {}),
+      ...((filters?.expiresAfter || filters?.expiresBefore) ? {
+        expiresAt: {
+          ...(filters?.expiresAfter ? { gte: filters.expiresAfter } : {}),
+          ...(filters?.expiresBefore ? { lte: filters.expiresBefore } : {}),
+        },
+      } : {}),
+      ...(filters?.hasBalance !== undefined ? {
+        currentBalance: filters.hasBalance ? { gt: 0 } : { equals: 0 },
+      } : {}),
+    };
     return this.prisma.giftCard.count({ where });
   }
 
@@ -106,7 +116,7 @@ export class GiftCardRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: any): GiftCard {
+  private hydrate(record: Prisma.GiftCardGetPayload<Record<string, never>>): GiftCard {
     const currency = Currency.create(record.currency ?? "USD");
     return GiftCard.fromPersistence({
       id: GiftCardId.fromString(record.giftCardId),
@@ -123,7 +133,7 @@ export class GiftCardRepositoryImpl
     });
   }
 
-  private dehydrate(giftCard: GiftCard): any {
+  private dehydrate(giftCard: GiftCard): Prisma.GiftCardUncheckedCreateInput {
     return {
       giftCardId: giftCard.id.getValue(),
       code: giftCard.code,

@@ -6,6 +6,7 @@ import { registerInventoryManagementRoutes } from "../../../modules/inventory-ma
 import { registerCartModuleRoutes } from "../../../modules/cart/infra/http/routes";
 import { registerOrderManagementRoutes } from "../../../modules/order-management/infra/http/routes";
 import { registerPaymentRoutes } from "../../../modules/payment/infra/http/routes";
+import { registerEngagementRoutes } from "../../../modules/engagement/infra/http/routes";
 
 export default fp(
   async (fastify) => {
@@ -59,6 +60,13 @@ export default fp(
     const paymentLoyaltyServices = container.getPaymentLoyaltyServices();
     await registerPaymentRoutes(fastify, paymentLoyaltyServices);
     fastify.log.info("✓ Payment & Loyalty module registered");
+
+    // ============================================
+    // Engagement Module
+    // ============================================
+    const engagementServices = container.getEngagementServices();
+    await registerEngagementRoutes(fastify, engagementServices);
+    fastify.log.info("✓ Engagement module registered");
 
     fastify.log.info("All modules registered successfully");
   },

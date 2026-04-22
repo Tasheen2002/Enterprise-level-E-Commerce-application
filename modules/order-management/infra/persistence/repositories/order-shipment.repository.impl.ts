@@ -1,28 +1,16 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   IOrderShipmentRepository,
   ShipmentQueryOptions,
 } from "../../../domain/repositories/order-shipment.repository";
 import { OrderShipment } from "../../../domain/entities/order-shipment.entity";
 
-interface OrderShipmentDatabaseRow {
-  id: string;
-  orderId: string;
-  carrier: string | null;
-  service: string | null;
-  trackingNo: string | null;
-  giftReceipt: boolean;
-  pickupLocationId: string | null;
-  shippedAt: Date | null;
-  deliveredAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+type OrderShipmentRow = Prisma.OrderShipmentGetPayload<Record<string, never>>;
 
 export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private toEntity(row: OrderShipmentDatabaseRow): OrderShipment {
+  private toEntity(row: OrderShipmentRow): OrderShipment {
     return OrderShipment.fromPersistence({
       shipmentId: row.id,
       orderId: row.orderId,
@@ -77,7 +65,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
       return null;
     }
 
-    return this.toEntity(shipment as any);
+    return this.toEntity(shipment);
   }
 
   async findByOrderId(
@@ -103,7 +91,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
             : { createdAt: sortOrder },
     });
 
-    return shipments.map((shipment) => this.toEntity(shipment as any));
+    return shipments.map((shipment) => this.toEntity(shipment));
   }
 
   async findByTrackingNumber(
@@ -117,7 +105,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
       return null;
     }
 
-    return this.toEntity(shipment as any);
+    return this.toEntity(shipment);
   }
 
   async findByCarrier(
@@ -143,7 +131,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
             : { createdAt: sortOrder },
     });
 
-    return shipments.map((shipment) => this.toEntity(shipment as any));
+    return shipments.map((shipment) => this.toEntity(shipment));
   }
 
   async findShipped(options?: ShipmentQueryOptions): Promise<OrderShipment[]> {
@@ -168,7 +156,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
             : undefined,
     });
 
-    return shipments.map((shipment) => this.toEntity(shipment as any));
+    return shipments.map((shipment) => this.toEntity(shipment));
   }
 
   async findDelivered(
@@ -195,7 +183,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
             : undefined,
     });
 
-    return shipments.map((shipment) => this.toEntity(shipment as any));
+    return shipments.map((shipment) => this.toEntity(shipment));
   }
 
   async findPending(options?: ShipmentQueryOptions): Promise<OrderShipment[]> {
@@ -209,7 +197,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
       skip: offset,
     });
 
-    return shipments.map((shipment) => this.toEntity(shipment as any));
+    return shipments.map((shipment) => this.toEntity(shipment));
   }
 
   async countByOrderId(orderId: string): Promise<number> {

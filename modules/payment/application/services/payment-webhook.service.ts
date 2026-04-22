@@ -13,9 +13,7 @@ import * as crypto from "crypto";
 import {
   DomainValidationError,
   InvalidOperationError,
-} from "../../domain/errors/payment-loyalty.errors";
-
-export type { PaymentWebhookEventDTO } from "../../domain/entities/payment-webhook-event.entity";
+} from "../../domain/errors";
 
 interface CreateWebhookEventParams {
   provider: string;

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, PaymentIntentStatusEnum } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -50,7 +50,7 @@ export class PaymentIntentRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r: any) => this.hydrate(r));
+    return records.map((r) => this.hydrate(r));
   }
 
   async findByCheckoutId(checkoutId: string): Promise<PaymentIntent | null> {
@@ -78,15 +78,17 @@ export class PaymentIntentRepositoryImpl
     filters: PaymentIntentFilters,
     options?: PaymentIntentQueryOptions,
   ): Promise<PaginatedResult<PaymentIntent>> {
-    const where: any = {};
-
-    if (filters.status) where.status = filters.status.getValue();
-    if (filters.orderId) where.orderId = filters.orderId;
-    if (filters.provider) where.provider = filters.provider;
-    if (filters.createdAfter) where.createdAt = { gte: filters.createdAfter };
-    if (filters.createdBefore) {
-      where.createdAt = { ...where.createdAt, lte: filters.createdBefore };
-    }
+    const where: Prisma.PaymentIntentWhereInput = {
+      ...(filters.status ? { status: filters.status.getValue() as PaymentIntentStatusEnum } : {}),
+      ...(filters.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters.provider ? { provider: filters.provider } : {}),
+      ...((filters.createdAfter || filters.createdBefore) ? {
+        createdAt: {
+          ...(filters.createdAfter ? { gte: filters.createdAfter } : {}),
+          ...(filters.createdBefore ? { lte: filters.createdBefore } : {}),
+        },
+      } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.paymentIntent.findMany({
@@ -100,7 +102,7 @@ export class PaymentIntentRepositoryImpl
       this.prisma.paymentIntent.count({ where }),
     ]);
 
-    const items = records.map((r: any) => this.hydrate(r));
+    const items = records.map((r) => this.hydrate(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -113,14 +115,17 @@ export class PaymentIntentRepositoryImpl
   }
 
   async count(filters?: PaymentIntentFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.status) where.status = filters.status.getValue();
-    if (filters?.orderId) where.orderId = filters.orderId;
-    if (filters?.provider) where.provider = filters.provider;
-    if (filters?.createdAfter) where.createdAt = { gte: filters.createdAfter };
-    if (filters?.createdBefore) {
-      where.createdAt = { ...where.createdAt, lte: filters.createdBefore };
-    }
+    const where: Prisma.PaymentIntentWhereInput = {
+      ...(filters?.status ? { status: filters.status.getValue() as PaymentIntentStatusEnum } : {}),
+      ...(filters?.orderId ? { orderId: filters.orderId } : {}),
+      ...(filters?.provider ? { provider: filters.provider } : {}),
+      ...((filters?.createdAfter || filters?.createdBefore) ? {
+        createdAt: {
+          ...(filters.createdAfter ? { gte: filters.createdAfter } : {}),
+          ...(filters.createdBefore ? { lte: filters.createdBefore } : {}),
+        },
+      } : {}),
+    };
     return this.prisma.paymentIntent.count({ where });
   }
 
@@ -131,7 +136,7 @@ export class PaymentIntentRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: any): PaymentIntent {
+  private hydrate(record: Prisma.PaymentIntentGetPayload<Record<string, never>>): PaymentIntent {
     return PaymentIntent.fromPersistence({
       id: PaymentIntentId.fromString(record.intentId),
       orderId: record.orderId ?? null,
@@ -141,24 +146,24 @@ export class PaymentIntentRepositoryImpl
       status: PaymentIntentStatus.fromString(record.status),
       amount: Money.fromAmount(Number(record.amount), Currency.create(record.currency)),
       clientSecret: record.clientSecret ?? undefined,
-      metadata: record.metadata ?? {},
+      metadata: (record.metadata ?? {}) as unknown as Record<string, unknown>,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  private dehydrate(intent: PaymentIntent): any {
+  private dehydrate(intent: PaymentIntent): Prisma.PaymentIntentUncheckedCreateInput {
     return {
       intentId: intent.id.getValue(),
       orderId: intent.orderId,
       checkoutId: intent.checkoutId,
       idempotencyKey: intent.idempotencyKey ?? null,
       provider: intent.provider,
-      status: intent.status.getValue(),
+      status: intent.status.getValue() as PaymentIntentStatusEnum,
       amount: intent.amount.getAmount(),
       currency: intent.amount.getCurrency().getValue(),
       clientSecret: intent.clientSecret ?? null,
-      metadata: intent.metadata,
+      metadata: intent.metadata as unknown as Prisma.InputJsonValue,
       createdAt: intent.createdAt,
       updatedAt: intent.updatedAt,
     };
