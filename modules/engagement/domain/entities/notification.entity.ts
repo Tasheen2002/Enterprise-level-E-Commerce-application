@@ -9,7 +9,7 @@ import {
   ChannelType,
   NotificationStatus,
 } from "../value-objects";
-import { DomainValidationError } from "../errors/engagement.errors";
+import { DomainValidationError, NotificationRetryError } from "../errors/engagement.errors";
 
 // ============================================================================
 // 2. Domain Events
@@ -66,7 +66,7 @@ export class NotificationStatusChangedEvent extends DomainEvent {
 export interface NotificationProps {
   id: NotificationId;
   type: NotificationType;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   status: NotificationStatus;
   channel?: ChannelType;
   templateId?: string;
@@ -83,7 +83,7 @@ export interface NotificationProps {
 export interface NotificationDTO {
   id: string;
   type: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   status: string;
   channel?: string;
   templateId?: string;
@@ -105,11 +105,15 @@ export class Notification extends AggregateRoot {
   static create(
     params: Omit<NotificationProps, "id" | "createdAt" | "updatedAt" | "status">
   ): Notification {
+    if (params.scheduledAt !== undefined && params.scheduledAt <= new Date()) {
+      throw new DomainValidationError("Scheduled time must be in the future");
+    }
+
     const entity = new Notification({
       ...params,
       id: NotificationId.create(),
       payload: params.payload || {},
-      status: NotificationStatus.pending(),
+      status: params.scheduledAt ? NotificationStatus.scheduled() : NotificationStatus.pending(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -142,7 +146,7 @@ export class Notification extends AggregateRoot {
   get templateId(): string | undefined {
     return this.props.templateId;
   }
-  get payload(): Record<string, any> {
+  get payload(): Record<string, unknown> {
     return this.props.payload;
   }
   get status(): NotificationStatus {
@@ -185,7 +189,7 @@ export class Notification extends AggregateRoot {
     );
   }
 
-  updatePayload(payload: Record<string, any>): void {
+  updatePayload(payload: Record<string, unknown>): void {
     this.props.payload = { ...this.props.payload, ...payload };
     this.props.updatedAt = new Date();
   }
@@ -213,7 +217,7 @@ export class Notification extends AggregateRoot {
 
   retry(): void {
     if (!this.props.status.isFailed()) {
-      throw new DomainValidationError("Can only retry failed notifications");
+      throw new NotificationRetryError();
     }
     this.updateStatus(NotificationStatus.pending());
   }
@@ -274,6 +278,6 @@ export interface CreateNotificationData {
   type: NotificationType;
   channel?: ChannelType;
   templateId?: string;
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
   scheduledAt?: Date;
 }

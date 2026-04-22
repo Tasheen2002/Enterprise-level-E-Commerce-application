@@ -3,16 +3,22 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import {
   CreateStockAlertHandler,
   ResolveStockAlertHandler,
+  DeleteStockAlertHandler,
   GetStockAlertHandler,
   GetActiveAlertsHandler,
   ListStockAlertsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CreateStockAlertBody,
+  ListStockAlertsQuery,
+} from "../validation/stock-alert.schema";
 
 export class StockAlertController {
   constructor(
     private readonly createAlertHandler: CreateStockAlertHandler,
     private readonly resolveAlertHandler: ResolveStockAlertHandler,
+    private readonly deleteAlertHandler: DeleteStockAlertHandler,
     private readonly getAlertHandler: GetStockAlertHandler,
     private readonly getActiveAlertsHandler: GetActiveAlertsHandler,
     private readonly listAlertsHandler: ListStockAlertsHandler,
@@ -41,13 +47,12 @@ export class StockAlertController {
   }
 
   async listAlerts(
-    request: AuthenticatedRequest<{
-      Querystring: { limit?: number; offset?: number; includeResolved?: boolean };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListStockAlertsQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listAlertsHandler.handle(request.query);
+      const { limit, offset, includeResolved } = request.query;
+      const result = await this.listAlertsHandler.handle({ limit, offset, includeResolved });
       return ResponseHelper.ok(reply, "Alerts retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -55,13 +60,12 @@ export class StockAlertController {
   }
 
   async createAlert(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; type: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateStockAlertBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createAlertHandler.handle(request.body);
+      const { variantId, type } = request.body;
+      const result = await this.createAlertHandler.handle({ variantId, type });
       return ResponseHelper.fromCommand(reply, result, "Alert created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -76,6 +80,19 @@ export class StockAlertController {
       const { alertId } = request.params;
       const result = await this.resolveAlertHandler.handle({ alertId });
       return ResponseHelper.fromCommand(reply, result, "Alert resolved successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async deleteAlert(
+    request: AuthenticatedRequest<{ Params: { alertId: string } }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { alertId } = request.params;
+      const result = await this.deleteAlertHandler.handle({ alertId });
+      return ResponseHelper.fromCommand(reply, result, "Alert deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

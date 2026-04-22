@@ -1,6 +1,4 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
-import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IUserProfileRepository } from "../../../domain/repositories/iuser-profile.repository";
 import {
   UserProfile,
@@ -13,13 +11,8 @@ import { UserId } from "../../../domain/value-objects/user-id.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
 import { Locale } from "../../../domain/value-objects/locale.vo";
 
-export class UserProfileRepository
-  extends PrismaRepository<UserProfile>
-  implements IUserProfileRepository
-{
-  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
-    super(prisma, eventBus);
-  }
+export class UserProfileRepository implements IUserProfileRepository {
+  constructor(private readonly prisma: PrismaClient) {}
 
   private toDomain(data: any): UserProfile {
     const props: UserProfileProps = {
@@ -44,11 +37,11 @@ export class UserProfileRepository
       userId: userProfile.userId.getValue(),
       defaultAddressId: userProfile.defaultAddressId,
       defaultPaymentMethodId: userProfile.defaultPaymentMethodId,
-      prefs: userProfile.preferences,
+      prefs: userProfile.preferences as Prisma.InputJsonValue,
       locale: userProfile.locale?.getValue() || null,
       currency: userProfile.currency?.getValue() || null,
-      stylePreferences: userProfile.stylePreferences,
-      preferredSizes: userProfile.preferredSizes,
+      stylePreferences: userProfile.stylePreferences as Prisma.InputJsonValue,
+      preferredSizes: userProfile.preferredSizes as Prisma.InputJsonValue,
     };
 
     const { userId, ...update } = create;
@@ -65,7 +58,6 @@ export class UserProfileRepository
       update: data.update,
     });
 
-    await this.dispatchEvents(userProfile);
   }
 
   async findByUserId(userId: UserId): Promise<UserProfile | null> {

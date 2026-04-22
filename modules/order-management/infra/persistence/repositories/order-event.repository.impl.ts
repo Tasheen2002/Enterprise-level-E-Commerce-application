@@ -22,7 +22,7 @@ export class OrderEventRepositoryImpl implements IOrderEventRepository {
       eventId: Number(row.id),
       orderId: row.orderId,
       eventType: row.eventType,
-      payload: row.payload || {},
+      payload: row.payload ?? {},
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });

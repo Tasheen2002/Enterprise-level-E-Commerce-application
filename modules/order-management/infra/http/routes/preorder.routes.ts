@@ -141,7 +141,7 @@ export async function registerPreorderRoutes(
     "/preorders/:orderItemId/release-date",
     {
       preValidation: [validateParams(preorderParamsSchema), validateBody(updatePreorderReleaseDateSchema)],
-      preHandler: [...authenticateAdmin],
+      preHandler: authenticateAdmin,
       schema: {
         description: "Update the expected release date for a preorder (Admin only)",
         tags: ["Preorders"],

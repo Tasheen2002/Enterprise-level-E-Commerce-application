@@ -3,18 +3,25 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateReminderHandler,
-  UpdateReminderStatusHandler,
+  MarkReminderAsSentHandler,
   UnsubscribeReminderHandler,
   DeleteReminderHandler,
   GetReminderHandler,
   GetUserRemindersHandler,
   GetVariantRemindersHandler,
 } from "../../../application";
+import {
+  CreateReminderBody,
+  ReminderIdParams,
+  UserIdParams,
+  VariantIdParams,
+  PaginationQuery,
+} from "../validation/reminder.schema";
 
 export class ReminderController {
   constructor(
     private readonly createReminderHandler: CreateReminderHandler,
-    private readonly updateReminderStatusHandler: UpdateReminderStatusHandler,
+    private readonly markReminderAsSentHandler: MarkReminderAsSentHandler,
     private readonly unsubscribeReminderHandler: UnsubscribeReminderHandler,
     private readonly deleteReminderHandler: DeleteReminderHandler,
     private readonly getReminderHandler: GetReminderHandler,
@@ -23,16 +30,7 @@ export class ReminderController {
   ) {}
 
   async createReminder(
-    request: AuthenticatedRequest<{
-      Body: {
-        type: string;
-        variantId: string;
-        userId?: string;
-        contact: string;
-        channel: string;
-        optInAt?: Date;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateReminderBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -52,7 +50,7 @@ export class ReminderController {
   }
 
   async getReminder(
-    request: AuthenticatedRequest<{ Params: { reminderId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -64,10 +62,7 @@ export class ReminderController {
   }
 
   async getUserReminders(
-    request: AuthenticatedRequest<{
-      Params: { userId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -81,10 +76,7 @@ export class ReminderController {
   }
 
   async getVariantReminders(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -97,25 +89,20 @@ export class ReminderController {
     }
   }
 
-  async updateReminderStatus(
-    request: AuthenticatedRequest<{
-      Params: { reminderId: string };
-      Body: { status: "sent" };
-    }>,
+  async markReminderAsSent(
+    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const { reminderId } = request.params;
-      const { status } = request.body;
-      const result = await this.updateReminderStatusHandler.handle({ reminderId, status });
-      return ResponseHelper.fromCommand(reply, result, "Reminder status updated successfully");
+      const result = await this.markReminderAsSentHandler.handle({ reminderId: request.params.reminderId });
+      return ResponseHelper.fromCommand(reply, result, "Reminder marked as sent successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async unsubscribeReminder(
-    request: AuthenticatedRequest<{ Params: { reminderId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -127,12 +114,12 @@ export class ReminderController {
   }
 
   async deleteReminder(
-    request: AuthenticatedRequest<{ Params: { reminderId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
       const result = await this.deleteReminderHandler.handle({ reminderId: request.params.reminderId });
-      return ResponseHelper.fromCommand(reply, result, "Reminder deleted successfully");
+      return ResponseHelper.fromCommand(reply, result, "Reminder deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

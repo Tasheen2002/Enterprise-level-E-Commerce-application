@@ -2,6 +2,7 @@ import {
   AuthenticationService,
   AuthResult,
 } from '../services/authentication.service';
+import { ITokenBlacklistService } from '../services/itoken-blacklist.service';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface LoginUserCommand extends ICommand {
@@ -13,14 +14,18 @@ export interface LoginUserCommand extends ICommand {
 export class LoginUserHandler
   implements ICommandHandler<LoginUserCommand, CommandResult<AuthResult>>
 {
-  constructor(private readonly authService: AuthenticationService) {}
+  constructor(
+    private readonly authService: AuthenticationService,
+    private readonly tokenBlacklistService: ITokenBlacklistService,
+  ) {}
 
   async handle(
     command: LoginUserCommand
   ): Promise<CommandResult<AuthResult>> {
-    if (this.authService.isAccountLocked(command.email)) {
+    if (this.tokenBlacklistService.isAccountLocked(command.email)) {
       return CommandResult.failure(
         'Account temporarily locked due to multiple failed login attempts',
+        undefined,
         429,
       );
     }
@@ -30,10 +35,10 @@ export class LoginUserHandler
         email: command.email,
         password: command.password,
       });
-      this.authService.clearFailedAttempts(command.email);
+      this.tokenBlacklistService.clearFailedAttempts(command.email);
       return CommandResult.success(authResult);
     } catch (error) {
-      this.authService.recordFailedAttempt(command.email);
+      this.tokenBlacklistService.recordFailedAttempt(command.email);
       throw error;
     }
   }

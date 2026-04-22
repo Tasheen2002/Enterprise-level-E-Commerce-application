@@ -1,4 +1,5 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { LocationResult } from "./get-location.query";
 import { LocationManagementService } from "../services/location-management.service";
 
@@ -8,23 +9,26 @@ export interface ListLocationsQuery extends IQuery {
   readonly type?: string;
 }
 
-export interface ListLocationsResult {
-  readonly locations: LocationResult[];
-  readonly total: number;
-}
-
 export class ListLocationsHandler implements IQueryHandler<
   ListLocationsQuery,
-  ListLocationsResult
+  PaginatedResult<LocationResult>
 > {
   constructor(private readonly locationService: LocationManagementService) {}
 
-  async handle(query: ListLocationsQuery): Promise<ListLocationsResult> {
+  async handle(query: ListLocationsQuery): Promise<PaginatedResult<LocationResult>> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
     const result = await this.locationService.listLocations({
-      limit: query.limit,
-      offset: query.offset,
+      limit,
+      offset,
       type: query.type,
     });
-    return { locations: result.locations, total: result.total };
+    return {
+      items: result.locations,
+      total: result.total,
+      limit,
+      offset,
+      hasMore: offset + result.locations.length < result.total,
+    };
   }
 }

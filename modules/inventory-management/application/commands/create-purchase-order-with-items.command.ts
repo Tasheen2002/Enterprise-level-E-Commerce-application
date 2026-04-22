@@ -28,16 +28,16 @@ export class CreatePurchaseOrderWithItemsHandler implements ICommandHandler<
       command.eta,
     );
 
-    const addedItems: PurchaseOrderItemDTO[] = [];
-    for (const item of command.items) {
-      const poItem = await this.poService.addPurchaseOrderItem(
-        purchaseOrder.poId,
-        item.variantId,
-        item.orderedQty,
-      );
-      addedItems.push(poItem);
-    }
+    const items = await Promise.all(
+      command.items.map((item) =>
+        this.poService.addPurchaseOrderItem(
+          purchaseOrder.poId,
+          item.variantId,
+          item.orderedQty,
+        ),
+      ),
+    );
 
-    return CommandResult.success({ purchaseOrder, items: addedItems });
+    return CommandResult.success({ purchaseOrder, items });
   }
 }

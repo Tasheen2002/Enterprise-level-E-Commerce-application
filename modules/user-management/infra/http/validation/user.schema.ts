@@ -38,6 +38,12 @@ export const toggleEmailVerifiedSchema = z.object({
   reason: z.string().optional(),
 });
 
+export type UserIdParams = z.infer<typeof userIdParamsSchema>;
+export type ListUsersQuery = z.infer<typeof listUsersQuerySchema>;
+export type UpdateUserStatusBody = z.infer<typeof updateUserStatusSchema>;
+export type UpdateUserRoleBody = z.infer<typeof updateUserRoleSchema>;
+export type ToggleEmailVerifiedBody = z.infer<typeof toggleEmailVerifiedSchema>;
+
 // JSON Schema response objects (for Swagger docs)
 export const userDetailResponseSchema = {
   type: 'object',

@@ -2,88 +2,41 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  CreateShipmentCommand,
-  CreateShipmentCommandHandler,
-  UpdateShipmentTrackingCommand,
-  UpdateShipmentTrackingCommandHandler,
-  MarkShipmentShippedCommand,
-  MarkShipmentShippedCommandHandler,
-  MarkShipmentDeliveredCommand,
-  MarkShipmentDeliveredCommandHandler,
-  ListOrderShipmentsQuery,
+  CreateShipmentHandler,
+  UpdateShipmentTrackingHandler,
+  MarkShipmentShippedHandler,
+  MarkShipmentDeliveredHandler,
   ListOrderShipmentsHandler,
-  GetShipmentQuery,
   GetShipmentHandler,
 } from "../../../application";
-
-export interface CreateShipmentRequest {
-  Params: { orderId: string };
-  Body: {
-    carrier?: string;
-    service?: string;
-    trackingNumber?: string;
-    giftReceipt?: boolean;
-    pickupLocationId?: string;
-  };
-}
-
-export interface MarkShippedRequest {
-  Params: { orderId: string; shipmentId: string };
-  Body: {
-    carrier: string;
-    service: string;
-    trackingNumber: string;
-  };
-}
-
-export interface UpdateTrackingRequest {
-  Params: { orderId: string; shipmentId: string };
-  Body: {
-    trackingNumber: string;
-    carrier?: string;
-    service?: string;
-  };
-}
-
-export interface MarkDeliveredRequest {
-  Params: { orderId: string; shipmentId: string };
-  Body: {
-    deliveredAt?: Date;
-  };
-}
-
-export interface GetShipmentsRequest {
-  Params: { orderId: string };
-}
-
-export interface GetShipmentRequest {
-  Params: { orderId: string; shipmentId: string };
-}
+import {
+  OrderShipmentsParams,
+  OrderShipmentParams,
+  CreateShipmentBody,
+  MarkShippedBody,
+  UpdateShipmentTrackingBody,
+  MarkDeliveredBody,
+} from "../validation/order-shipment.schema";
 
 export class OrderShipmentController {
   constructor(
-    private readonly createShipmentHandler: CreateShipmentCommandHandler,
-    private readonly updateTrackingHandler: UpdateShipmentTrackingCommandHandler,
-    private readonly markShippedHandler: MarkShipmentShippedCommandHandler,
-    private readonly markDeliveredHandler: MarkShipmentDeliveredCommandHandler,
+    private readonly createShipmentHandler: CreateShipmentHandler,
+    private readonly updateTrackingHandler: UpdateShipmentTrackingHandler,
+    private readonly markShippedHandler: MarkShipmentShippedHandler,
+    private readonly markDeliveredHandler: MarkShipmentDeliveredHandler,
     private readonly listOrderShipmentsHandler: ListOrderShipmentsHandler,
     private readonly getShipmentHandler: GetShipmentHandler,
   ) {}
 
   async createShipment(
-    request: AuthenticatedRequest<CreateShipmentRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentsParams; Body: CreateShipmentBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: CreateShipmentCommand = {
+      const result = await this.createShipmentHandler.handle({
         orderId: request.params.orderId,
-        carrier: request.body.carrier,
-        service: request.body.service,
-        trackingNumber: request.body.trackingNumber,
-        giftReceipt: request.body.giftReceipt,
-        pickupLocationId: request.body.pickupLocationId,
-      };
-      const result = await this.createShipmentHandler.handle(command);
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(reply, result, "Shipment created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -91,12 +44,11 @@ export class OrderShipmentController {
   }
 
   async getShipments(
-    request: AuthenticatedRequest<GetShipmentsRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentsParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: ListOrderShipmentsQuery = { orderId: request.params.orderId };
-      const result = await this.listOrderShipmentsHandler.handle(query);
+      const result = await this.listOrderShipmentsHandler.handle({ orderId: request.params.orderId });
       return ResponseHelper.ok(reply, "Shipments retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -104,15 +56,14 @@ export class OrderShipmentController {
   }
 
   async getShipment(
-    request: AuthenticatedRequest<GetShipmentRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: GetShipmentQuery = {
+      const result = await this.getShipmentHandler.handle({
         orderId: request.params.orderId,
         shipmentId: request.params.shipmentId,
-      };
-      const result = await this.getShipmentHandler.handle(query);
+      });
       return ResponseHelper.ok(reply, "Shipment retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -120,18 +71,15 @@ export class OrderShipmentController {
   }
 
   async markShipped(
-    request: AuthenticatedRequest<MarkShippedRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentParams; Body: MarkShippedBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: MarkShipmentShippedCommand = {
+      const result = await this.markShippedHandler.handle({
         orderId: request.params.orderId,
         shipmentId: request.params.shipmentId,
-        carrier: request.body.carrier,
-        service: request.body.service,
-        trackingNumber: request.body.trackingNumber,
-      };
-      const result = await this.markShippedHandler.handle(command);
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(reply, result, "Shipment marked as shipped successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -139,18 +87,15 @@ export class OrderShipmentController {
   }
 
   async updateTracking(
-    request: AuthenticatedRequest<UpdateTrackingRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentParams; Body: UpdateShipmentTrackingBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: UpdateShipmentTrackingCommand = {
+      const result = await this.updateTrackingHandler.handle({
         orderId: request.params.orderId,
         shipmentId: request.params.shipmentId,
-        trackingNumber: request.body.trackingNumber,
-        carrier: request.body.carrier,
-        service: request.body.service,
-      };
-      const result = await this.updateTrackingHandler.handle(command);
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(reply, result, "Shipment tracking updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -158,16 +103,15 @@ export class OrderShipmentController {
   }
 
   async markDelivered(
-    request: AuthenticatedRequest<MarkDeliveredRequest>,
+    request: AuthenticatedRequest<{ Params: OrderShipmentParams; Body: MarkDeliveredBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: MarkShipmentDeliveredCommand = {
+      const result = await this.markDeliveredHandler.handle({
         orderId: request.params.orderId,
         shipmentId: request.params.shipmentId,
         deliveredAt: request.body.deliveredAt,
-      };
-      const result = await this.markDeliveredHandler.handle(command);
+      });
       return ResponseHelper.fromCommand(reply, result, "Shipment marked as delivered successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -15,7 +15,7 @@ export class ValidateProductTagHandler implements IQueryHandler<ValidateProductT
   constructor(private readonly productTagManagementService: ProductTagManagementService) {}
 
   async handle(query: ValidateProductTagQuery): Promise<ProductTagValidationResult> {
-    const isValid = await this.productTagManagementService.validateTag(decodeURIComponent(query.name));
+    const isValid = await this.productTagManagementService.validateTag(query.name);
     return { tagName: query.name, isValid, available: isValid };
   }
 }

@@ -17,7 +17,7 @@ export const transactionsByVariantSchema = z.object({
 });
 
 export const listTransactionsSchema = z.object({
-  variantId: z.uuid(),
+  variantId: z.uuid().optional(),
   locationId: z.uuid().optional(),
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   offset: z.string().regex(/^\d+$/).optional().default("0").transform(Number),

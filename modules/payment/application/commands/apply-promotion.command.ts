@@ -31,7 +31,7 @@ export class ApplyPromotionHandler implements ICommandHandler<
     });
 
     if (!result.valid) {
-      return CommandResult.failure(result.error || 'Promotion is not valid', ['promoCode']);
+      return CommandResult.failure(result.error || 'Promotion is not valid');
     }
 
     return CommandResult.success(result);

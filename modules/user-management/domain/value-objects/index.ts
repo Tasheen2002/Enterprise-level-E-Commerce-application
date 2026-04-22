@@ -1,6 +1,7 @@
 export { UserId } from "./user-id.vo";
 export { AddressId } from "./address-id";
 export { PaymentMethodId } from "./payment-method-id";
+export { SocialLoginId } from "./social-login-id";
 export { Email } from "./email.vo";
 export { Phone } from "./phone.vo";
 export { Password } from "./password.vo";

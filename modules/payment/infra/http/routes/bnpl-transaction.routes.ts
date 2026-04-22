@@ -1,33 +1,41 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { BnplTransactionController } from "../controllers/bnpl-transaction.controller";
 import {
-  BnplTransactionController,
-  CreateBnplTransactionRequest,
-  ProcessBnplParams,
-  ListBnplTransactionsQuerystring,
-} from "../controllers/bnpl-transaction.controller";
-import { authenticateUser, requireRole } from "@/api/src/shared/middleware";
+  RolePermissions,
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  createBnplTransactionSchema,
+  bnplParamsSchema,
+  listBnplQuerySchema,
+  bnplTransactionResponseSchema,
+} from "../validation/bnpl.schema";
 
-const errorResponses = {
-  400: {
-    description: "Bad request",
-    type: "object",
-    properties: { success: { type: "boolean" }, error: { type: "string" } },
-  },
-  401: {
-    description: "Unauthorized",
-    type: "object",
-    properties: { success: { type: "boolean" }, error: { type: "string" } },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function registerBnplTransactionRoutes(
   fastify: FastifyInstance,
   controller: BnplTransactionController,
 ): Promise<void> {
-  fastify.post<{ Body: CreateBnplTransactionRequest }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /bnpl
+  fastify.post(
     "/bnpl",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateBody(createBnplTransactionSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create a Buy Now Pay Later (BNPL) transaction.",
         tags: ["BNPL"],
@@ -39,34 +47,44 @@ export async function registerBnplTransactionRoutes(
           properties: {
             intentId: { type: "string", format: "uuid" },
             provider: { type: "string" },
-            plan: { type: "object" },
+            plan: {
+              type: "object",
+              required: ["installments", "frequency"],
+              properties: {
+                installments: { type: "integer", minimum: 1 },
+                frequency: { type: "string" },
+                downPayment: { type: "number" },
+                interestRate: { type: "number" },
+              },
+            },
           },
         },
         response: {
           201: {
-            description: "BNPL transaction created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: bnplTransactionResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.create.bind(controller),
+    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
   );
 
-  fastify.post<{ Params: ProcessBnplParams }>(
+  // POST /bnpl/:bnplId/:action — Staff/Admin only
+  fastify.post(
     "/bnpl/:bnplId/:action",
     {
-      preHandler: requireRole(["STAFF"]),
+      preValidation: [validateParams(bnplParamsSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Process a BNPL transaction (approve, reject, activate, complete, cancel) — Staff/Admin only.",
+        description: "Process a BNPL transaction (approve, reject, activate, complete, cancel, fail) — Staff/Admin only.",
         tags: ["BNPL"],
-        summary: "Process BNPL",
+        summary: "Process BNPL Transaction",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -75,30 +93,32 @@ export async function registerBnplTransactionRoutes(
             bnplId: { type: "string", format: "uuid" },
             action: {
               type: "string",
-              enum: ["approve", "reject", "activate", "complete", "cancel"],
+              enum: ["approve", "reject", "activate", "complete", "cancel", "fail"],
             },
           },
         },
         response: {
           200: {
-            description: "BNPL transaction processed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: bnplTransactionResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.process.bind(controller),
+    (request, reply) => controller.process(request as AuthenticatedRequest, reply),
   );
 
-  fastify.get<{ Querystring: ListBnplTransactionsQuerystring }>(
+  // GET /bnpl
+  fastify.get(
     "/bnpl",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateQuery(listBnplQuerySchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "List BNPL transactions with optional filters.",
         tags: ["BNPL"],
@@ -114,20 +134,20 @@ export async function registerBnplTransactionRoutes(
         },
         response: {
           200: {
-            description: "BNPL transactions retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: { type: "object", additionalProperties: true },
+                items: bnplTransactionResponseSchema,
               },
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.list.bind(controller),
+    (request, reply) => controller.list(request as AuthenticatedRequest, reply),
   );
 }

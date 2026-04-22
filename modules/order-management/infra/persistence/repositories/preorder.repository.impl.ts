@@ -19,8 +19,8 @@ export class PreorderRepositoryImpl implements IPreorderRepository {
   private toEntity(row: PreorderDatabaseRow): Preorder {
     return Preorder.fromPersistence({
       orderItemId: row.orderItemId,
-      releaseDate: row.releaseDate || undefined,
-      notifiedAt: row.notifiedAt || undefined,
+      releaseDate: row.releaseDate ?? undefined,
+      notifiedAt: row.notifiedAt ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -28,8 +28,8 @@ export class PreorderRepositoryImpl implements IPreorderRepository {
 
   async save(preorder: Preorder): Promise<void> {
     const data = {
-      releaseDate: preorder.releaseDate || null,
-      notifiedAt: preorder.notifiedAt || null,
+      releaseDate: preorder.releaseDate ?? null,
+      notifiedAt: preorder.notifiedAt ?? null,
     };
     await this.prisma.preorder.upsert({
       where: { orderItemId: preorder.orderItemId },

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ReminderTypeEnum, ContactEnum, ChannelEnum, ReminderStatusEnum, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
@@ -63,20 +63,19 @@ export class ReminderRepositoryImpl
       where: { id: reminder.id.getValue() },
       create: {
         id: reminder.id.getValue(),
-        type: reminder.type.getValue() as any,
+        type: reminder.type.getValue() as ReminderTypeEnum,
         variantId: reminder.variantId,
         userId: reminder.userId,
-        contact: reminder.contact.getValue() as any,
-        channel: reminder.channel.getValue() as any,
+        contact: reminder.contact.getValue() as ContactEnum,
+        channel: reminder.channel.getValue() as ChannelEnum,
         optInAt: reminder.optInAt,
-        status: reminder.status.getValue() as any,
+        status: reminder.status.getValue() as ReminderStatusEnum,
         createdAt: reminder.createdAt,
         updatedAt: reminder.updatedAt,
       },
       update: {
-        status: reminder.status.getValue() as any,
+        status: reminder.status.getValue() as ReminderStatusEnum,
         optInAt: reminder.optInAt,
-        updatedAt: reminder.updatedAt,
       },
     });
     await this.dispatchEvents(reminder);
@@ -114,7 +113,7 @@ export class ReminderRepositoryImpl
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -146,7 +145,7 @@ export class ReminderRepositoryImpl
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -161,7 +160,7 @@ export class ReminderRepositoryImpl
   }
 
   async findByStatus(
-    status: ReminderStatus,
+    status: string,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedResult<Reminder>> {
     const {
@@ -171,14 +170,14 @@ export class ReminderRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where = { status: status.getValue() as any };
+    const where = { status: status as ReminderStatusEnum };
 
     const [records, total] = await Promise.all([
       this.prisma.reminder.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -193,7 +192,7 @@ export class ReminderRepositoryImpl
   }
 
   async findByType(
-    type: ReminderType,
+    type: string,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedResult<Reminder>> {
     const {
@@ -203,14 +202,14 @@ export class ReminderRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where = { type: type.getValue() as any };
+    const where = { type: type as ReminderTypeEnum };
 
     const [records, total] = await Promise.all([
       this.prisma.reminder.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -236,7 +235,7 @@ export class ReminderRepositoryImpl
       this.prisma.reminder.findMany({
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count(),
     ]);
@@ -261,18 +260,19 @@ export class ReminderRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where: any = {};
-    if (filters.userId) where.userId = filters.userId;
-    if (filters.variantId) where.variantId = filters.variantId;
-    if (filters.type) where.type = filters.type.getValue() as any;
-    if (filters.status) where.status = filters.status.getValue() as any;
+    const where: Prisma.ReminderWhereInput = {
+      ...(filters.userId ? { userId: filters.userId } : {}),
+      ...(filters.variantId ? { variantId: filters.variantId } : {}),
+      ...(filters.type ? { type: filters.type as ReminderTypeEnum } : {}),
+      ...(filters.status ? { status: filters.status as ReminderStatusEnum } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.reminder.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -296,14 +296,14 @@ export class ReminderRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where = { status: "pending" as any };
+    const where = { status: "pending" as ReminderStatusEnum };
 
     const [records, total] = await Promise.all([
       this.prisma.reminder.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { [sortBy]: sortOrder as any },
+        orderBy: { [sortBy]: sortOrder as Prisma.SortOrder },
       }),
       this.prisma.reminder.count({ where }),
     ]);
@@ -328,9 +328,9 @@ export class ReminderRepositoryImpl
     return record ? this.toEntity(record as ReminderDatabaseRow) : null;
   }
 
-  async countByStatus(status: ReminderStatus): Promise<number> {
+  async countByStatus(status: string): Promise<number> {
     return await this.prisma.reminder.count({
-      where: { status: status.getValue() as any },
+      where: { status: status as ReminderStatusEnum },
     });
   }
 
@@ -346,18 +346,19 @@ export class ReminderRepositoryImpl
     });
   }
 
-  async countByType(type: ReminderType): Promise<number> {
+  async countByType(type: string): Promise<number> {
     return await this.prisma.reminder.count({
-      where: { type: type.getValue() as any },
+      where: { type: type as ReminderTypeEnum },
     });
   }
 
   async count(filters?: ReminderFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.userId) where.userId = filters.userId;
-    if (filters?.variantId) where.variantId = filters.variantId;
-    if (filters?.type) where.type = filters.type.getValue() as any;
-    if (filters?.status) where.status = filters.status.getValue() as any;
+    const where: Prisma.ReminderWhereInput = {
+      ...(filters?.userId ? { userId: filters.userId } : {}),
+      ...(filters?.variantId ? { variantId: filters.variantId } : {}),
+      ...(filters?.type ? { type: filters.type as ReminderTypeEnum } : {}),
+      ...(filters?.status ? { status: filters.status as ReminderStatusEnum } : {}),
+    };
 
     return await this.prisma.reminder.count({ where });
   }

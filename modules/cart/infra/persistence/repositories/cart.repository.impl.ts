@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { ICartRepository, CartWithCheckoutInfo } from "../../../domain/repositories/cart.repository";
 import {
   ShoppingCart,
@@ -8,6 +8,7 @@ import {
   CartItem,
   CartItemEntityData,
 } from "../../../domain/entities/cart-item.entity";
+import { PromoData } from "../../../domain/value-objects/applied-promos.vo";
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
@@ -41,23 +42,40 @@ export class CartRepositoryImpl implements ICartRepository {
         },
       });
 
-      // Replace all items
+      const incomingIds = (data.items ?? []).map((i) => i.id);
+
+      // Delete items that were removed from the cart
       await tx.cartItem.deleteMany({
-        where: { cartId: data.cartId },
+        where: {
+          cartId: data.cartId,
+          ...(incomingIds.length > 0 ? { id: { notIn: incomingIds } } : {}),
+        },
       });
 
-      if (data.items && data.items.length > 0) {
-        await tx.cartItem.createMany({
-          data: data.items.map((item) => ({
+      // Upsert each item — preserves createdAt, only updates changed fields
+      for (const item of data.items ?? []) {
+        await tx.cartItem.upsert({
+          where: { id: item.id },
+          create: {
             id: item.id,
             cartId: data.cartId,
             variantId: item.variantId,
             qty: item.quantity,
             unitPriceSnapshot: item.unitPriceSnapshot,
-            appliedPromos: item.appliedPromos as any,
+            appliedPromos: item.appliedPromos as unknown as Prisma.InputJsonValue,
             isGift: item.isGift,
-            giftMessage: item.giftMessage,
-          })),
+            giftMessage: item.giftMessage ?? null,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+          },
+          update: {
+            qty: item.quantity,
+            unitPriceSnapshot: item.unitPriceSnapshot,
+            appliedPromos: item.appliedPromos as unknown as Prisma.InputJsonValue,
+            isGift: item.isGift,
+            giftMessage: item.giftMessage ?? null,
+            updatedAt: item.updatedAt,
+          },
         });
       }
     });
@@ -247,7 +265,7 @@ export class CartRepositoryImpl implements ICartRepository {
 
   // Query operations
   async findEmptyCarts(olderThanDays?: number): Promise<ShoppingCart[]> {
-    const whereClause: any = {
+    const whereClause: Prisma.ShoppingCartWhereInput = {
       items: { none: {} },
     };
 
@@ -641,7 +659,7 @@ export class CartRepositoryImpl implements ICartRepository {
     limit?: number;
     offset?: number;
   }): Promise<ShoppingCart[]> {
-    const whereConditions: any = {};
+    const whereConditions: Prisma.ShoppingCartWhereInput = {};
 
     if (criteria.userId) whereConditions.userId = criteria.userId;
     if (criteria.guestToken) whereConditions.guestToken = criteria.guestToken;
@@ -769,7 +787,7 @@ export class CartRepositoryImpl implements ICartRepository {
   // Transaction support
   async saveWithTransaction(
     cart: ShoppingCart,
-    transactionContext?: any,
+    transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
       // Use provided transaction context
@@ -781,7 +799,7 @@ export class CartRepositoryImpl implements ICartRepository {
 
   async deleteWithTransaction(
     cartId: CartId,
-    transactionContext?: any,
+    transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
       await transactionContext.shoppingCart.delete({
@@ -795,7 +813,7 @@ export class CartRepositoryImpl implements ICartRepository {
   // Private helper methods
   private async saveWithPrismaClient(
     cart: ShoppingCart,
-    prismaClient: any,
+    prismaClient: Prisma.TransactionClient,
   ): Promise<void> {
     const data = cart.toSnapshot();
 
@@ -815,9 +833,11 @@ export class CartRepositoryImpl implements ICartRepository {
               variantId: item.variantId,
               qty: item.quantity,
               unitPriceSnapshot: item.unitPriceSnapshot,
-              appliedPromos: item.appliedPromos as any,
+              appliedPromos: item.appliedPromos as unknown as Prisma.InputJsonValue,
               isGift: item.isGift,
               giftMessage: item.giftMessage,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
             })) || [],
         },
       },
@@ -882,33 +902,40 @@ export class CartRepositoryImpl implements ICartRepository {
     });
   }
 
-  async getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null> {
+  async getCartWithCheckoutInfo(cartId: CartId): Promise<CartWithCheckoutInfo | null> {
     return await this.prisma.shoppingCart.findUnique({
-      where: { id: cartId },
+      where: { id: cartId.getValue() },
       include: { items: true },
     });
   }
 
-  private mapPrismaToEntity(cartData: any): ShoppingCart {
+  private mapPrismaToEntity(
+    cartData: Prisma.ShoppingCartGetPayload<{ include: { items: true } }>,
+  ): ShoppingCart {
     const entityData: ShoppingCartEntityData = {
       cartId: cartData.id,
       userId: cartData.userId ?? undefined,
       // If both userId and guestToken exist (invalid state), prioritize userId
       guestToken: cartData.userId ? undefined : (cartData.guestToken ?? undefined),
-      currency: cartData.currency,
+      currency: cartData.currency ?? "",
       reservationExpiresAt: cartData.reservationExpiresAt ?? undefined,
       createdAt: cartData.createdAt,
       updatedAt: cartData.updatedAt,
-      items: (cartData.items ?? []).map((item: any): CartItemEntityData => ({
-        id: item.id,
-        cartId: item.cartId,
-        variantId: item.variantId,
-        quantity: item.qty,
-        unitPriceSnapshot: item.unitPriceSnapshot,
-        appliedPromos: item.appliedPromos ?? [],
-        isGift: item.isGift,
-        giftMessage: item.giftMessage ?? undefined,
-      })),
+      items: (cartData.items ?? []).map((item: Prisma.CartItemGetPayload<Record<string, never>>): CartItemEntityData => {
+        const fallbackDate = new Date(0);
+        return {
+          id: item.id,
+          cartId: item.cartId,
+          variantId: item.variantId,
+          quantity: item.qty,
+          unitPriceSnapshot: Number(item.unitPriceSnapshot),
+          appliedPromos: (item.appliedPromos ?? []) as unknown as PromoData[],
+          isGift: item.isGift,
+          giftMessage: item.giftMessage ?? undefined,
+          createdAt: fallbackDate,
+          updatedAt: fallbackDate,
+        };
+      }),
     };
     return ShoppingCart.fromPersistence(entityData);
   }

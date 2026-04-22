@@ -1,12 +1,13 @@
 import { Reservation } from "../entities/reservation.entity";
+import { ReservationId } from "../value-objects/reservation-id.vo";
 import { CartId } from "../value-objects/cart-id.vo";
 import { VariantId } from "../value-objects/variant-id.vo";
 import { Quantity } from "../value-objects/quantity.vo";
 
 export interface IReservationRepository {
   save(reservation: Reservation): Promise<void>;
-  findById(reservationId: string): Promise<Reservation | null>;
-  delete(reservationId: string): Promise<void>;
+  findById(reservationId: ReservationId): Promise<Reservation | null>;
+  delete(reservationId: ReservationId): Promise<void>;
   findByCartId(cartId: CartId): Promise<Reservation[]>;
   findActiveByCartId(cartId: CartId): Promise<Reservation[]>;
   deleteByCartId(cartId: CartId): Promise<number>;
@@ -34,7 +35,7 @@ export interface IReservationRepository {
     endTime: Date,
   ): Promise<Reservation[]>;
   saveBulk(reservations: Reservation[]): Promise<void>;
-  findByIds(reservationIds: string[]): Promise<Reservation[]>;
+  findByIds(reservationIds: ReservationId[]): Promise<Reservation[]>;
   deleteExpiredBefore(date: Date): Promise<number>;
   createReservation(
     cartId: CartId,
@@ -44,14 +45,14 @@ export interface IReservationRepository {
   ): Promise<Reservation>;
 
   extendReservation(
-    reservationId: string,
+    reservationId: ReservationId,
     additionalMinutes: number,
   ): Promise<boolean>;
   renewReservation(
-    reservationId: string,
+    reservationId: ReservationId,
     durationMinutes?: number,
   ): Promise<boolean>;
-  releaseReservation(reservationId: string): Promise<boolean>;
+  releaseReservation(reservationId: ReservationId): Promise<boolean>;
   checkAvailability(
     variantId: VariantId,
     requestedQuantity: number,
@@ -128,7 +129,7 @@ export interface IReservationRepository {
     variantId: VariantId,
     requestedQuantity: number,
   ): Promise<boolean>;
-  isReservationExtendable(reservationId: string): Promise<boolean>;
+  isReservationExtendable(reservationId: ReservationId): Promise<boolean>;
   canCreateReservation(
     cartId: CartId,
     variantId: VariantId,
@@ -149,7 +150,7 @@ export interface IReservationRepository {
       details: string;
     }>;
   }>;
-  getReservationSummary(reservationId: string): Promise<{
+  getReservationSummary(reservationId: ReservationId): Promise<{
     reservationId: string;
     cartId: string;
     variantId: string;

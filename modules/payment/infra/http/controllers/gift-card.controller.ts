@@ -1,104 +1,94 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  CreateGiftCardCommand,
   CreateGiftCardHandler,
-  RedeemGiftCardCommand,
   RedeemGiftCardHandler,
-  GetGiftCardBalanceQuery,
   GetGiftCardBalanceHandler,
+  GetGiftCardTransactionsHandler,
 } from "../../../application";
-import { GiftCardService } from "../../../application/services/gift-card.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreateGiftCardRequest {
-  code: string;
-  initialBalance: number;
-  currency?: string;
-  expiresAt?: string;
-  recipientEmail?: string;
-  recipientName?: string;
-  message?: string;
-}
-
-export interface RedeemGiftCardRequest {
-  amount: number;
-  orderId: string;
-}
+import {
+  CreateGiftCardBody,
+  RedeemGiftCardBody,
+  GiftCardIdParams,
+  GiftCardBalanceQuery,
+} from "../validation/gift-card.schema";
 
 export class GiftCardController {
-  private createHandler: CreateGiftCardHandler;
-  private redeemHandler: RedeemGiftCardHandler;
-  private balanceHandler: GetGiftCardBalanceHandler;
-
-  constructor(private readonly giftCardService: GiftCardService) {
-    this.createHandler = new CreateGiftCardHandler(giftCardService);
-    this.redeemHandler = new RedeemGiftCardHandler(giftCardService);
-    this.balanceHandler = new GetGiftCardBalanceHandler(giftCardService);
-  }
+  constructor(
+    private readonly createHandler: CreateGiftCardHandler,
+    private readonly redeemHandler: RedeemGiftCardHandler,
+    private readonly balanceHandler: GetGiftCardBalanceHandler,
+    private readonly listTransactionsHandler: GetGiftCardTransactionsHandler,
+  ) {}
 
   async create(
-    request: FastifyRequest<{ Body: CreateGiftCardRequest }>,
+    request: AuthenticatedRequest<{ Body: CreateGiftCardBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const body = request.body;
+      const result = await this.createHandler.handle({
+        code: body.code,
+        initialBalance: body.initialBalance,
+        currency: body.currency,
+        expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
+        recipientEmail: body.recipientEmail,
+        recipientName: body.recipientName,
+        message: body.message,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Gift card created", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const body = request.body;
-    const cmd: CreateGiftCardCommand = {
-      code: body.code,
-      initialBalance: body.initialBalance,
-      currency: body.currency,
-      expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
-      recipientEmail: body.recipientEmail,
-      recipientName: body.recipientName,
-      message: body.message,
-      timestamp: new Date(),
-    };
-    const result = await this.createHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Gift card created", 201);
   }
 
   async redeem(
-    request: FastifyRequest<{
-      Params: { giftCardId: string };
-      Body: RedeemGiftCardRequest;
-    }>,
+    request: AuthenticatedRequest<{ Params: GiftCardIdParams; Body: RedeemGiftCardBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.redeemHandler.handle({
+        giftCardId: request.params.giftCardId,
+        amount: request.body.amount,
+        orderId: request.body.orderId,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Gift card redeemed");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const { giftCardId } = request.params;
-    const body = request.body;
-    const cmd: RedeemGiftCardCommand = {
-      giftCardId,
-      amount: body.amount,
-      orderId: body.orderId,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.redeemHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Gift card redeemed");
   }
 
   async getBalance(
-    request: FastifyRequest<{ Querystring: { codeOrId: string } }>,
+    request: AuthenticatedRequest<{ Querystring: GiftCardBalanceQuery }>,
     reply: FastifyReply,
   ) {
-    const query: GetGiftCardBalanceQuery = {
-      codeOrId: request.query.codeOrId,
-      timestamp: new Date(),
-    };
-    const result = await this.balanceHandler.handle(query);
-    return ResponseHelper.fromQuery(
-      reply,
-      result,
-      "Gift card balance retrieved",
-      "Gift card not found",
-    );
+    try {
+      const result = await this.balanceHandler.handle({
+        codeOrId: request.query.codeOrId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Gift card balance retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listTransactions(
+    request: AuthenticatedRequest<{ Params: GiftCardIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        giftCardId: request.params.giftCardId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Gift card transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

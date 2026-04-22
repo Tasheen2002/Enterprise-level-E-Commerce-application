@@ -22,8 +22,8 @@ export type { GetVariantRemindersQuery } from "./get-variant-reminders.query";
 export { GetNotificationHandler } from "./get-notification.query";
 export type { GetNotificationQuery } from "./get-notification.query";
 
-export { GetUserNotificationsHandler } from "./get-user-notifications.query";
-export type { GetUserNotificationsQuery } from "./get-user-notifications.query";
+export { GetNotificationsByTypeHandler } from "./get-notifications-by-type.query";
+export type { GetNotificationsByTypeQuery } from "./get-notifications-by-type.query";
 
 export { GetAppointmentHandler } from "./get-appointment.query";
 export type { GetAppointmentQuery } from "./get-appointment.query";

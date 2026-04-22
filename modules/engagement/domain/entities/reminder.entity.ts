@@ -1,6 +1,3 @@
-// ============================================================================
-// 1. Imports
-// ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import {
@@ -10,7 +7,10 @@ import {
   ChannelType,
   ReminderStatus,
 } from "../value-objects";
-import { DomainValidationError } from "../errors/engagement.errors";
+import {
+  DomainValidationError,
+  InvalidOperationError,
+} from "../errors/engagement.errors";
 
 // ============================================================================
 // 2. Domain Events
@@ -20,7 +20,7 @@ export class ReminderCreatedEvent extends DomainEvent {
     public readonly reminderId: string,
     public readonly type: string,
     public readonly variantId: string,
-    public readonly userId?: string
+    public readonly userId?: string,
   ) {
     super(reminderId, "Reminder");
   }
@@ -43,7 +43,7 @@ export class ReminderStatusChangedEvent extends DomainEvent {
   constructor(
     public readonly reminderId: string,
     public readonly oldStatus: string,
-    public readonly newStatus: string
+    public readonly newStatus: string,
   ) {
     super(reminderId, "Reminder");
   }
@@ -102,7 +102,7 @@ export class Reminder extends AggregateRoot {
   }
 
   static create(
-    params: Omit<ReminderProps, "id" | "createdAt" | "updatedAt" | "status">
+    params: Omit<ReminderProps, "id" | "createdAt" | "updatedAt" | "status">,
   ): Reminder {
     Reminder.validateVariantId(params.variantId);
 
@@ -119,8 +119,8 @@ export class Reminder extends AggregateRoot {
         entity.props.id.getValue(),
         entity.props.type.getValue(),
         entity.props.variantId,
-        entity.props.userId
-      )
+        entity.props.userId,
+      ),
     );
 
     return entity;
@@ -131,7 +131,7 @@ export class Reminder extends AggregateRoot {
   }
 
   private static validateVariantId(variantId: string): void {
-    if (!variantId || variantId.trim().length === 0) {
+    if (variantId.trim().length === 0) {
       throw new DomainValidationError("Variant ID is required");
     }
   }
@@ -182,21 +182,30 @@ export class Reminder extends AggregateRoot {
       new ReminderStatusChangedEvent(
         this.props.id.getValue(),
         oldStatusLabel,
-        newStatusLabel
-      )
+        newStatusLabel,
+      ),
     );
   }
 
   optIn(): void {
+    if (!this.props.status.isPending()) {
+      throw new InvalidOperationError("Can only opt in to a pending reminder");
+    }
     this.props.optInAt = new Date();
     this.props.updatedAt = new Date();
   }
 
   markAsSent(): void {
+    if (!this.props.status.isPending()) {
+      throw new InvalidOperationError("Can only mark a pending reminder as sent");
+    }
     this.updateStatus(ReminderStatus.sent());
   }
 
   unsubscribe(): void {
+    if (this.props.status.isUnsubscribed()) {
+      throw new InvalidOperationError("Reminder is already unsubscribed");
+    }
     this.updateStatus(ReminderStatus.unsubscribed());
   }
 

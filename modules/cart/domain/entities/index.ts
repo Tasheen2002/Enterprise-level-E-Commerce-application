@@ -4,7 +4,6 @@ export {
   type CreateCartItemData,
   type CartItemEntityData,
   type CartItemDTO,
-  CartItemQuantityUpdatedEvent,
 } from "./cart-item.entity";
 export {
   ShoppingCart,
@@ -15,6 +14,7 @@ export {
   CartCreatedEvent,
   CartItemAddedEvent,
   CartItemRemovedEvent,
+  CartItemQuantityChangedEvent,
   CartClearedEvent,
   CartTransferredToUserEvent,
 } from "./shopping-cart.entity";

@@ -141,7 +141,7 @@ export async function registerBackorderRoutes(
     "/backorders/:orderItemId/eta",
     {
       preValidation: [validateParams(backorderParamsSchema), validateBody(updateBackorderEtaSchema)],
-      preHandler: [...authenticateAdmin],
+      preHandler: authenticateAdmin,
       schema: {
         description: "Update the promised ETA for a backorder (Admin only)",
         tags: ["Backorders"],

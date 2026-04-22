@@ -8,6 +8,11 @@ import {
   GetSearchStatsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  SearchQuery,
+  SearchSuggestionsQuery,
+  SearchFiltersQuery,
+} from "../validation/search.schema";
 
 export class SearchController {
   constructor(
@@ -19,21 +24,7 @@ export class SearchController {
   ) {}
 
   async searchProducts(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        q: string;
-        page?: number;
-        limit?: number;
-        category?: string;
-        brand?: string;
-        minPrice?: number;
-        maxPrice?: number;
-        status?: "draft" | "published" | "scheduled";
-        tags?: string[];
-        sortBy?: "relevance" | "price" | "title" | "createdAt";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: SearchQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -58,13 +49,7 @@ export class SearchController {
   }
 
   async getSearchSuggestions(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        q: string;
-        limit?: number;
-        type?: "products" | "categories" | "brands" | "all";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: SearchSuggestionsQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -86,14 +71,12 @@ export class SearchController {
   }
 
   async getSearchFilters(
-    request: AuthenticatedRequest<{
-      Querystring: { q?: string; category?: string };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: SearchFiltersQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const { q, category } = request.query;
-      const result = await this.getSearchFiltersHandler.handle({ query: q, category });
+      const { q } = request.query;
+      const result = await this.getSearchFiltersHandler.handle({ query: q });
       return ResponseHelper.ok(reply, "Search filters retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

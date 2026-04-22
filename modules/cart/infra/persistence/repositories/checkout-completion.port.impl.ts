@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   ICheckoutCompletionPort,
   PaymentIntentInfo,
@@ -40,7 +40,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
 
     if (!order) return null;
 
-    const totals = order.totals as any;
+    const totals = order.totals as Record<string, unknown>;
     return {
       orderId: order.id,
       orderNo: order.orderNo,
@@ -77,7 +77,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
 
     if (!order) return null;
 
-    const totals = order.totals as any;
+    const totals = order.totals as Record<string, unknown>;
     return {
       orderId: order.id,
       orderNo: order.orderNo,
@@ -87,13 +87,16 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       currency: order.currency,
       status: order.status,
       createdAt: order.createdAt,
-      items: order.items.map((item: any) => ({
-        id: item.id,
-        productId: item.productSnapshot?.productId || item.productId,
-        variantId: item.variantId,
-        quantity: item.qty,
-        price: Number(item.productSnapshot?.price || item.price) || 0,
-      })),
+      items: order.items.map((item) => {
+        const snapshot = item.productSnapshot as Record<string, unknown> | null;
+        return {
+          id: item.id,
+          productId: (snapshot?.productId as string | undefined) ?? "",
+          variantId: item.variantId,
+          quantity: item.qty,
+          price: Number(snapshot?.price) || 0,
+        };
+      }),
     };
   }
 
@@ -109,7 +112,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           guestToken: data.guestToken,
           checkoutId: data.checkoutId,
           paymentIntentId: data.paymentIntentId,
-          totals: data.totals as any,
+          totals: data.totals as unknown as Prisma.InputJsonValue,
           status: "created",
           source: "web",
           currency: data.currency,
@@ -124,7 +127,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
             orderId: order.id,
             variantId: item.variantId,
             qty: item.qty,
-            productSnapshot: item.productSnapshot as any,
+            productSnapshot: item.productSnapshot as unknown as Prisma.InputJsonValue,
             isGift: item.isGift,
             giftMessage: item.giftMessage,
           },
@@ -136,8 +139,8 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       await tx.orderAddress.create({
         data: {
           orderId: order.id,
-          shippingSnapshot: data.shippingAddress as any,
-          billingSnapshot: data.billingAddress as any,
+          shippingSnapshot: data.shippingAddress as unknown as Prisma.InputJsonValue,
+          billingSnapshot: data.billingAddress as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -219,7 +222,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
             checkoutId: data.checkoutId,
             paymentIntentId: data.paymentIntentId,
             source: "checkout",
-          } as any,
+          } as unknown as Prisma.InputJsonValue,
         },
       });
 
@@ -253,7 +256,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           shippingMethod: null,
           shippingOption: null,
           email: null,
-        } as any,
+        },
       });
 
       return {

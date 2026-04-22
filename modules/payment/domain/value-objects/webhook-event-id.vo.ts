@@ -13,8 +13,4 @@ export class WebhookEventId extends UuidId {
   static fromString(value: string): WebhookEventId {
     return new WebhookEventId(value);
   }
-
-  equals(other: WebhookEventId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

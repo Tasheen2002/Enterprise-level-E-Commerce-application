@@ -132,34 +132,31 @@ export class PreorderManagementService {
       throw new DomainValidationError("At least one order item ID is required");
     }
 
-    const notifiedPreorders: Preorder[] = [];
+    const preorders = await Promise.all(
+      orderItemIds.map((id) => this.preorderRepository.findByOrderItemId(id)),
+    );
 
-    for (const orderItemId of orderItemIds) {
-      const preorder = await this.preorderRepository.findByOrderItemId(orderItemId);
+    const toNotify = preorders.filter(
+      (p): p is Preorder => p !== null && !p.isCustomerNotified(),
+    );
 
-      if (preorder && !preorder.isCustomerNotified()) {
-        preorder.markAsNotified();
-        await this.preorderRepository.save(preorder);
-        notifiedPreorders.push(preorder);
-      }
-    }
+    toNotify.forEach((p) => p.markAsNotified());
 
-    return notifiedPreorders.map((p) => Preorder.toDTO(p));
+    await Promise.all(toNotify.map((p) => this.preorderRepository.save(p)));
+
+    return toNotify.map((p) => Preorder.toDTO(p));
   }
 
   async notifyReleasedPreorders(): Promise<PreorderDTO[]> {
     const releasedPreorders = await this.preorderRepository.findReleased();
-    const notifiedPreorders: Preorder[] = [];
 
-    for (const preorder of releasedPreorders) {
-      if (!preorder.isCustomerNotified()) {
-        preorder.markAsNotified();
-        await this.preorderRepository.save(preorder);
-        notifiedPreorders.push(preorder);
-      }
-    }
+    const toNotify = releasedPreorders.filter((p) => !p.isCustomerNotified());
 
-    return notifiedPreorders.map((p) => Preorder.toDTO(p));
+    toNotify.forEach((p) => p.markAsNotified());
+
+    await Promise.all(toNotify.map((p) => this.preorderRepository.save(p)));
+
+    return toNotify.map((p) => Preorder.toDTO(p));
   }
 
   async deletePreorder(orderItemId: string): Promise<void> {

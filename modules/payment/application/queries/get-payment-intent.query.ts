@@ -4,6 +4,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { PaymentService } from '../services/payment.service';
 import { PaymentIntentDTO } from '../../domain/entities/payment-intent.entity';
+import { DomainValidationError } from '../../domain/errors/payment-loyalty.errors';
 
 export interface GetPaymentIntentQuery extends IQuery {
   readonly intentId?: string;
@@ -19,7 +20,7 @@ export class GetPaymentIntentHandler implements IQueryHandler<
 
   async handle(query: GetPaymentIntentQuery): Promise<PaymentIntentDTO> {
     if (!query.intentId && !query.orderId) {
-      throw new Error('Either intentId or orderId is required');
+      throw new DomainValidationError('Either intentId or orderId is required');
     }
 
     return query.intentId

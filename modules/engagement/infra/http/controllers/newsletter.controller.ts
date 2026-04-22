@@ -6,6 +6,12 @@ import {
   UnsubscribeNewsletterHandler,
   GetNewsletterSubscriptionHandler,
 } from "../../../application";
+import {
+  SubscribeNewsletterBody,
+  UnsubscribeNewsletterBody,
+  UnsubscribeViaLinkQuery,
+  GetSubscriptionQuery,
+} from "../validation/newsletter.schema";
 
 export class NewsletterController {
   constructor(
@@ -15,9 +21,7 @@ export class NewsletterController {
   ) {}
 
   async subscribe(
-    request: AuthenticatedRequest<{
-      Body: { email: string; source?: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: SubscribeNewsletterBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -30,9 +34,7 @@ export class NewsletterController {
   }
 
   async unsubscribe(
-    request: AuthenticatedRequest<{
-      Body: { subscriptionId?: string; email?: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: UnsubscribeNewsletterBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -45,7 +47,7 @@ export class NewsletterController {
   }
 
   async unsubscribeViaLink(
-    request: AuthenticatedRequest<{ Querystring: { email: string } }>,
+    request: AuthenticatedRequest<{ Querystring: UnsubscribeViaLinkQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -77,9 +79,7 @@ export class NewsletterController {
   }
 
   async getSubscription(
-    request: AuthenticatedRequest<{
-      Querystring: { subscriptionId?: string; email?: string };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: GetSubscriptionQuery }>,
     reply: FastifyReply,
   ) {
     try {

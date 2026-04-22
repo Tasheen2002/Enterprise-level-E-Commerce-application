@@ -173,24 +173,17 @@ export class AddressManagementService {
     const errors: string[] = [];
     const suggestions: string[] = [];
 
-    try {
-      const tempAddress = Address.create({
-        userId: 'temp-user-id',
-        addressData,
-        type: AddressType.SHIPPING,
-      });
-
-      if (!tempAddress.isValidForShipping()) {
-        errors.push('Address is not complete for shipping');
-      }
-      if (!tempAddress.isValidForBilling()) {
-        errors.push('Address is not complete for billing');
-      }
-    } catch (error) {
-      errors.push(error instanceof Error ? error.message : 'Invalid address format');
+    if (!addressData.addressLine1?.trim()) {
+      errors.push('Address line 1 is required');
+    }
+    if (!addressData.city?.trim()) {
+      errors.push('City is required');
+    }
+    if (!addressData.country?.trim()) {
+      errors.push('Country is required');
     }
 
-    if (!addressData.postalCode && ['US', 'CA', 'UK'].includes(addressData.country)) {
+    if (!addressData.postalCode && ['US', 'CA', 'GB'].includes(addressData.country)) {
       suggestions.push('Postal code is recommended for this country');
     }
     if (!addressData.state && addressData.country === 'US') {

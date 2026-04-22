@@ -2,6 +2,7 @@ import { PaymentTransaction } from '../entities/payment-transaction.entity';
 import { PaymentTransactionId } from '../value-objects/payment-transaction-id.vo';
 import { PaymentIntentId } from '../value-objects/payment-intent-id.vo';
 import { PaymentTransactionType } from '../value-objects/payment-transaction-type.vo';
+import { PaymentTransactionStatus } from '../value-objects/payment-transaction-status.vo';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -10,12 +11,11 @@ import {
 export interface PaymentTransactionFilters {
   intentId?: PaymentIntentId;
   type?: PaymentTransactionType;
-  status?: string;
+  status?: PaymentTransactionStatus;
 }
 
 export interface IPaymentTransactionRepository {
   save(transaction: PaymentTransaction): Promise<void>;
-  update(transaction: PaymentTransaction): Promise<void>;
   delete(id: PaymentTransactionId): Promise<void>;
   findById(id: PaymentTransactionId): Promise<PaymentTransaction | null>;
   findByIntentId(intentId: PaymentIntentId): Promise<PaymentTransaction[]>;

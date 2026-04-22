@@ -55,6 +55,21 @@ export class GiftCardCancelledEvent extends DomainEvent {
   }
 }
 
+export class GiftCardRefundedEvent extends DomainEvent {
+  constructor(
+    public readonly giftCardId: string,
+    public readonly amount: number,
+  ) {
+    super(giftCardId, 'GiftCard');
+  }
+
+  get eventType(): string { return 'gift_card.refunded'; }
+
+  getPayload(): Record<string, unknown> {
+    return { giftCardId: this.giftCardId, amount: this.amount };
+  }
+}
+
 // ============================================================================
 // 2. Props Interface
 // ============================================================================
@@ -175,6 +190,7 @@ export class GiftCard extends AggregateRoot {
     }
 
     this.props.updatedAt = new Date();
+    this.addDomainEvent(new GiftCardRefundedEvent(this.props.id.getValue(), amount.getAmount()));
   }
 
   cancel(): void {

@@ -70,8 +70,11 @@ export async function stockRoutes(
               data: {
                 type: "object",
                 properties: {
-                  stocks: { type: "array", items: stockResponseSchema },
+                  items: { type: "array", items: stockResponseSchema },
                   total: { type: "integer" },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },
@@ -160,24 +163,21 @@ export async function stockRoutes(
     (request, reply) => controller.getOutOfStockItems(request as AuthenticatedRequest, reply),
   );
 
-  // Get stock by variant and location
+  // Get total available stock — MUST be registered before /stocks/:variantId
   fastify.get(
-    "/stocks/:variantId/:locationId",
+    "/stocks/:variantId/total",
     {
-      preValidation: [validateParams(stockParamsSchema)],
+      preValidation: [validateParams(variantParamsSchema)],
       preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description: "Get stock for a specific variant at a location (Staff/Admin only)",
+        description: "Get total available stock for a variant (Staff/Admin only)",
         tags: ["Stock Management"],
-        summary: "Get Stock",
+        summary: "Get Total Available Stock",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-          },
-          required: ["variantId", "locationId"],
+          properties: { variantId: { type: "string", format: "uuid" } },
+          required: ["variantId"],
         },
         response: {
           200: {
@@ -186,13 +186,16 @@ export async function stockRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: stockResponseSchema,
+              data: {
+                type: "object",
+                properties: { total: { type: "integer" } },
+              },
             },
           },
         },
       },
     },
-    (request, reply) => controller.getStock(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getTotalAvailableStock(request as AuthenticatedRequest, reply),
   );
 
   // Get stock by variant (all locations)
@@ -227,21 +230,24 @@ export async function stockRoutes(
     (request, reply) => controller.getStockByVariant(request as AuthenticatedRequest, reply),
   );
 
-  // Get total available stock
+  // Get stock by variant and location
   fastify.get(
-    "/stocks/:variantId/total",
+    "/stocks/:variantId/:locationId",
     {
-      preValidation: [validateParams(variantParamsSchema)],
+      preValidation: [validateParams(stockParamsSchema)],
       preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description: "Get total available stock for a variant (Staff/Admin only)",
+        description: "Get stock for a specific variant at a location (Staff/Admin only)",
         tags: ["Stock Management"],
-        summary: "Get Total Available Stock",
+        summary: "Get Stock",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
-          properties: { variantId: { type: "string", format: "uuid" } },
-          required: ["variantId"],
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+            locationId: { type: "string", format: "uuid" },
+          },
+          required: ["variantId", "locationId"],
         },
         response: {
           200: {
@@ -250,13 +256,13 @@ export async function stockRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object", properties: { total: { type: "integer" } } },
+              data: stockResponseSchema,
             },
           },
         },
       },
     },
-    (request, reply) => controller.getTotalAvailableStock(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getStock(request as AuthenticatedRequest, reply),
   );
 
   // Add stock
@@ -361,7 +367,13 @@ export async function stockRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object" },
+              data: {
+                type: "object",
+                properties: {
+                  fromStock: stockResponseSchema,
+                  toStock: stockResponseSchema,
+                },
+              },
             },
           },
         },
@@ -397,7 +409,7 @@ export async function stockRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object" },
+              data: stockResponseSchema,
             },
           },
         },
@@ -433,7 +445,7 @@ export async function stockRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object" },
+              data: stockResponseSchema,
             },
           },
         },

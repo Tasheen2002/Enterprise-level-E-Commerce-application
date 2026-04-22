@@ -8,7 +8,7 @@ export interface LogOrderEventCommand extends ICommand {
   readonly payload?: Record<string, unknown>;
 }
 
-export class LogOrderEventCommandHandler implements ICommandHandler<
+export class LogOrderEventHandler implements ICommandHandler<
   LogOrderEventCommand,
   CommandResult<OrderEventDTO>
 > {

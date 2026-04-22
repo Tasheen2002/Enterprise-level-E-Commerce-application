@@ -110,33 +110,24 @@ export class ProductManagementService {
     const offset = (page - 1) * limit;
     const effectiveIncludeDrafts = status ? true : includeDrafts;
 
-    let products = await this.productRepository.findAll({
+    const queryOptions: ProductQueryOptions = {
+      limit,
+      offset,
       sortBy,
       sortOrder,
       includeDrafts: effectiveIncludeDrafts,
-    });
+      brand,
+      categoryId,
+      status,
+    };
 
-    if (brand) {
-      products = products.filter((p) => p.brand === brand);
-    }
-
-    if (categoryId) {
-      const categoryProducts = await this.productRepository.findByCategory(
-        categoryId,
-        { sortBy, sortOrder, includeDrafts: effectiveIncludeDrafts },
-      );
-      products = brand ? categoryProducts.filter((p) => p.brand === brand) : categoryProducts;
-    }
-
-    if (status) {
-      products = products.filter((p) => p.status.toString() === status);
-    }
-
-    const total = products.length;
-    const paginatedProducts = products.slice(offset, offset + limit);
+    const [products, total] = await Promise.all([
+      this.productRepository.findAll(queryOptions),
+      this.productRepository.count({ brand, categoryId, status }),
+    ]);
 
     return {
-      items: paginatedProducts.map((p) => Product.toDTO(p)),
+      items: products.map((p) => Product.toDTO(p)),
       total,
       limit,
       offset,
@@ -261,9 +252,9 @@ export class ProductManagementService {
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await this.getProduct(id);
-    const productId = ProductId.fromString(id);
-    await this.productRepository.delete(productId);
+    const product = await this.getProduct(id);
+    product.archive();
+    await this.productRepository.save(product);
   }
 
   async getProductEnrichment(

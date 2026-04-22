@@ -2,6 +2,7 @@ import { IReservationRepository } from "../../domain/repositories/reservation.re
 import { ICartRepository } from "../../domain/repositories/cart.repository";
 import { Reservation } from "../../domain/entities/reservation.entity";
 import { CartId } from "../../domain/value-objects/cart-id.vo";
+import { ReservationId } from "../../domain/value-objects/reservation-id.vo";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { Quantity } from "../../domain/value-objects/quantity.vo";
 import { RESERVATION_CLEANUP_BATCH_SIZE } from "../../domain/constants";
@@ -145,7 +146,7 @@ export class ReservationService {
 
   async getReservation(reservationId: string): Promise<ReservationDto | null> {
     const reservation =
-      await this.reservationRepository.findById(reservationId);
+      await this.reservationRepository.findById(ReservationId.fromString(reservationId));
     return reservation ? this.mapReservationToDto(reservation) : null;
   }
 
@@ -172,9 +173,8 @@ export class ReservationService {
 
   // Reservation management
   async extendReservation(dto: ExtendReservationDto): Promise<ReservationDto> {
-    const reservation = await this.reservationRepository.findById(
-      dto.reservationId,
-    );
+    const reservationId = ReservationId.fromString(dto.reservationId);
+    const reservation = await this.reservationRepository.findById(reservationId);
     if (!reservation) {
       throw new ReservationNotFoundError(dto.reservationId);
     }
@@ -186,7 +186,7 @@ export class ReservationService {
     }
 
     const success = await this.reservationRepository.extendReservation(
-      dto.reservationId,
+      reservationId,
       dto.additionalMinutes,
     );
 
@@ -194,22 +194,19 @@ export class ReservationService {
       throw new InvalidOperationError("Failed to extend reservation");
     }
 
-    const updatedReservation = await this.reservationRepository.findById(
-      dto.reservationId,
-    );
+    const updatedReservation = await this.reservationRepository.findById(reservationId);
     return this.mapReservationToDto(updatedReservation!);
   }
 
   async renewReservation(dto: RenewReservationDto): Promise<ReservationDto> {
-    const reservation = await this.reservationRepository.findById(
-      dto.reservationId,
-    );
+    const reservationId = ReservationId.fromString(dto.reservationId);
+    const reservation = await this.reservationRepository.findById(reservationId);
     if (!reservation) {
       throw new ReservationNotFoundError(dto.reservationId);
     }
 
     const success = await this.reservationRepository.renewReservation(
-      dto.reservationId,
+      reservationId,
       dto.durationMinutes,
     );
 
@@ -217,20 +214,18 @@ export class ReservationService {
       throw new InvalidOperationError("Failed to renew reservation");
     }
 
-    const updatedReservation = await this.reservationRepository.findById(
-      dto.reservationId,
-    );
+    const updatedReservation = await this.reservationRepository.findById(reservationId);
     return this.mapReservationToDto(updatedReservation!);
   }
 
   async releaseReservation(reservationId: string): Promise<void> {
-    const reservation =
-      await this.reservationRepository.findById(reservationId);
+    const id = ReservationId.fromString(reservationId);
+    const reservation = await this.reservationRepository.findById(id);
     if (!reservation) {
       throw new ReservationNotFoundError(reservationId);
     }
 
-    await this.reservationRepository.releaseReservation(reservationId);
+    await this.reservationRepository.releaseReservation(id);
   }
 
   async adjustReservation(
@@ -382,7 +377,7 @@ export class ReservationService {
 
   async isReservationExtendable(reservationId: string): Promise<boolean> {
     return await this.reservationRepository.isReservationExtendable(
-      reservationId,
+      ReservationId.fromString(reservationId),
     );
   }
 

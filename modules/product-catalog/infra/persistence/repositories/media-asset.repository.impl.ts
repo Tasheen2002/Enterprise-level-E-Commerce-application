@@ -1,36 +1,45 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   IMediaAssetRepository,
+  MediaAssetFilters,
   MediaAssetQueryOptions,
   MediaAssetCountOptions,
 } from "../../../domain/repositories/media-asset.repository";
-import {
-  MediaAsset,
-  MediaAssetId,
-} from "../../../domain/entities/media-asset.entity";
+import { MediaAsset } from "../../../domain/entities/media-asset.entity";
+import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
-export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+type MediaAssetRow = Prisma.MediaAssetGetPayload<object>;
+
+export class MediaAssetRepositoryImpl
+  extends PrismaRepository<MediaAsset>
+  implements IMediaAssetRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private convertBigIntToNumber(value: bigint | null): number | null {
     if (value === null) return null;
     return Number(value);
   }
 
-  private mapRow(row: any): MediaAsset {
+  private mapRow(row: MediaAssetRow): MediaAsset {
     return MediaAsset.fromPersistence({
       id: MediaAssetId.fromString(row.id),
       storageKey: row.storageKey,
       mime: row.mime,
       width: row.width,
       height: row.height,
-      bytes: this.convertBigIntToNumber(row.bytes),
+      bytes: this.convertBigIntToNumber(row.bytes as bigint | null),
       altText: row.altText,
       focalX: row.focalX,
       focalY: row.focalY,
-      renditions: row.renditions as any,
+      renditions: (row.renditions ?? {}) as Record<string, unknown>,
       version: row.version,
       createdAt: row.createdAt,
+      updatedAt: (row as any).updatedAt ?? row.createdAt,
     });
   }
 
@@ -44,38 +53,30 @@ export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
       altText: asset.altText,
       focalX: asset.focalX,
       focalY: asset.focalY,
-      renditions: asset.renditions as any,
+      renditions: asset.renditions as Prisma.InputJsonValue,
       version: asset.version,
+      updatedAt: asset.updatedAt,
     };
     await this.prisma.mediaAsset.upsert({
       where: { id: asset.id.getValue() },
       create: { id: asset.id.getValue(), createdAt: asset.createdAt, ...updateData },
       update: updateData,
     });
+    await this.dispatchEvents(asset);
   }
 
   async findById(id: MediaAssetId): Promise<MediaAsset | null> {
-    const assetData = await this.prisma.mediaAsset.findUnique({
+    const row = await this.prisma.mediaAsset.findUnique({
       where: { id: id.getValue() },
     });
-
-    if (!assetData) {
-      return null;
-    }
-
-    return this.mapRow(assetData);
+    return row ? this.mapRow(row) : null;
   }
 
   async findByStorageKey(storageKey: string): Promise<MediaAsset | null> {
-    const assetData = await this.prisma.mediaAsset.findFirst({
+    const row = await this.prisma.mediaAsset.findFirst({
       where: { storageKey },
     });
-
-    if (!assetData) {
-      return null;
-    }
-
-    return this.mapRow(assetData);
+    return row ? this.mapRow(row) : null;
   }
 
   async findAll(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -87,95 +88,64 @@ export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
       hasRenditions,
     } = options || {};
 
-    const whereClause: any = {};
+    const where: Prisma.MediaAssetWhereInput = {};
 
     if (hasRenditions !== undefined) {
-      if (hasRenditions) {
-        // Check if renditions has any keys (not empty object)
-        whereClause.renditions = {
-          not: { equals: {} },
-        };
-      } else {
-        // Check if renditions is empty object
-        whereClause.renditions = {
-          equals: {},
-        };
-      }
+      where.renditions = hasRenditions
+        ? { not: Prisma.JsonNull as unknown as Prisma.InputJsonValue }
+        : { equals: Prisma.JsonNull };
     }
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: whereClause,
+    const rows = await this.prisma.mediaAsset.findMany({
+      where,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findByMimeType(
     mimeType: string,
     options?: MediaAssetQueryOptions,
   ): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "createdAt", sortOrder = "desc" } = options || {};
 
-    const assets = await this.prisma.mediaAsset.findMany({
+    const rows = await this.prisma.mediaAsset.findMany({
       where: { mime: mimeType },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findImages(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "createdAt", sortOrder = "desc" } = options || {};
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: {
-        mime: {
-          startsWith: "image/",
-        },
-      },
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { mime: { startsWith: "image/" } },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findVideos(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "createdAt", sortOrder = "desc" } = options || {};
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: {
-        mime: {
-          startsWith: "video/",
-        },
-      },
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { mime: { startsWith: "video/" } },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findByDimensions(
@@ -183,24 +153,16 @@ export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
     height: number,
     options?: MediaAssetQueryOptions,
   ): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "createdAt", sortOrder = "desc" } = options || {};
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: {
-        width,
-        height,
-      },
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { width, height },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findBySizeRange(
@@ -208,56 +170,32 @@ export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
     maxBytes: number,
     options?: MediaAssetQueryOptions,
   ): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "bytes",
-      sortOrder = "asc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "bytes", sortOrder = "asc" } = options || {};
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: {
-        bytes: {
-          gte: minBytes,
-          lte: maxBytes,
-        },
-      },
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { bytes: { gte: minBytes, lte: maxBytes } },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 
   async findOrphaned(): Promise<MediaAsset[]> {
-    // Find assets that are not referenced in product_media or variant_media
-    const assets = await this.prisma.mediaAsset.findMany({
+    const rows = await this.prisma.mediaAsset.findMany({
       where: {
         AND: [
-          {
-            productMedia: {
-              none: {},
-            },
-          },
-          {
-            variantMedia: {
-              none: {},
-            },
-          },
-          {
-            editorialLooks: {
-              none: {},
-            },
-          },
+          { productMedia: { none: {} } },
+          { variantMedia: { none: {} } },
+          { editorialLooks: { none: {} } },
         ],
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
-
 
   async delete(id: MediaAssetId): Promise<void> {
     await this.prisma.mediaAsset.delete({
@@ -280,124 +218,70 @@ export class MediaAssetRepositoryImpl implements IMediaAssetRepository {
   }
 
   async count(options?: MediaAssetCountOptions): Promise<number> {
-    const whereClause: any = {};
+    const where: Prisma.MediaAssetWhereInput = {};
 
+    // mimeType / isImage / isVideo are mutually exclusive — first one wins
     if (options?.mimeType) {
-      whereClause.mime = options.mimeType;
-    }
-
-    if (options?.isImage) {
-      whereClause.mime = {
-        startsWith: "image/",
-      };
-    }
-
-    if (options?.isVideo) {
-      whereClause.mime = {
-        startsWith: "video/",
-      };
+      where.mime = options.mimeType;
+    } else if (options?.isImage) {
+      where.mime = { startsWith: "image/" };
+    } else if (options?.isVideo) {
+      where.mime = { startsWith: "video/" };
     }
 
     if (options?.hasRenditions !== undefined) {
-      if (options.hasRenditions) {
-        // Check if renditions has any keys (not empty object)
-        whereClause.renditions = {
-          not: { equals: {} },
-        };
-      } else {
-        // Check if renditions is empty object
-        whereClause.renditions = {
-          equals: {},
-        };
-      }
+      where.renditions = options.hasRenditions
+        ? { not: Prisma.JsonNull as unknown as Prisma.InputJsonValue }
+        : { equals: Prisma.JsonNull };
     }
 
-    return await this.prisma.mediaAsset.count({
-      where: whereClause,
-    });
+    return this.prisma.mediaAsset.count({ where });
   }
 
   async getTotalSize(): Promise<number> {
     const result = await this.prisma.mediaAsset.aggregate({
-      _sum: {
-        bytes: true,
-      },
+      _sum: { bytes: true },
     });
 
-    return this.convertBigIntToNumber(result._sum.bytes) || 0;
+    return this.convertBigIntToNumber(result._sum.bytes as bigint | null) ?? 0;
   }
 
   async findWithFilters(
-    filters: any,
+    filters: MediaAssetFilters,
     options?: MediaAssetQueryOptions,
   ): Promise<MediaAsset[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "createdAt", sortOrder = "desc" } = options || {};
 
-    // Build where clause combining all filters
-    const whereClause: any = {};
+    const where: Prisma.MediaAssetWhereInput = {};
 
+    // mimeType / isImage / isVideo are mutually exclusive — first one wins
     if (filters.mimeType) {
-      whereClause.mime = filters.mimeType;
-    }
-
-    if (filters.isImage) {
-      whereClause.mime = { startsWith: "image/" };
-    }
-
-    if (filters.isVideo) {
-      whereClause.mime = { startsWith: "video/" };
-    }
-
-    if (filters.minWidth !== undefined || filters.maxWidth !== undefined) {
-      whereClause.width = {};
-      if (filters.minWidth !== undefined) {
-        whereClause.width.gte = filters.minWidth;
-      }
-      if (filters.maxWidth !== undefined) {
-        whereClause.width.lte = filters.maxWidth;
-      }
-    }
-
-    if (filters.minHeight !== undefined || filters.maxHeight !== undefined) {
-      whereClause.height = {};
-      if (filters.minHeight !== undefined) {
-        whereClause.height.gte = filters.minHeight;
-      }
-      if (filters.maxHeight !== undefined) {
-        whereClause.height.lte = filters.maxHeight;
-      }
+      where.mime = filters.mimeType;
+    } else if (filters.isImage) {
+      where.mime = { startsWith: "image/" };
+    } else if (filters.isVideo) {
+      where.mime = { startsWith: "video/" };
     }
 
     if (filters.minBytes !== undefined || filters.maxBytes !== undefined) {
-      whereClause.bytes = {};
-      if (filters.minBytes !== undefined) {
-        whereClause.bytes.gte = filters.minBytes;
-      }
-      if (filters.maxBytes !== undefined) {
-        whereClause.bytes.lte = filters.maxBytes;
-      }
+      where.bytes = {};
+      if (filters.minBytes !== undefined) (where.bytes as Prisma.IntNullableFilter).gte = filters.minBytes;
+      if (filters.maxBytes !== undefined) (where.bytes as Prisma.IntNullableFilter).lte = filters.maxBytes;
     }
 
     if (filters.hasRenditions !== undefined) {
-      if (filters.hasRenditions) {
-        whereClause.renditions = { not: {} };
-      } else {
-        whereClause.OR = [{ renditions: { equals: {} } }, { renditions: null }];
-      }
+      where.renditions = filters.hasRenditions
+        ? { not: Prisma.JsonNull as unknown as Prisma.InputJsonValue }
+        : { equals: Prisma.JsonNull };
     }
 
-    const assets = await this.prisma.mediaAsset.findMany({
-      where: whereClause,
+    const rows = await this.prisma.mediaAsset.findMany({
+      where,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return assets.map((row) => this.mapRow(row));
+    return rows.map((row) => this.mapRow(row));
   }
 }

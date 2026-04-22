@@ -47,15 +47,15 @@ export async function purchaseOrderRoutes(
         querystring: {
           type: "object",
           properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
             status: {
               type: "string",
               enum: ["draft", "sent", "part_received", "received", "cancelled"],
             },
             supplierId: { type: "string", format: "uuid" },
-            sortBy: { type: "string", enum: ["createdAt", "updatedAt", "eta"] },
-            sortOrder: { type: "string", enum: ["asc", "desc"] },
+            sortBy: { type: "string", enum: ["createdAt", "updatedAt", "eta"], default: "createdAt" },
+            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
           },
         },
         response: {
@@ -68,8 +68,11 @@ export async function purchaseOrderRoutes(
               data: {
                 type: "object",
                 properties: {
-                  purchaseOrders: { type: "array", items: purchaseOrderResponseSchema },
+                  items: { type: "array", items: purchaseOrderResponseSchema },
                   total: { type: "integer" },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },
@@ -80,7 +83,7 @@ export async function purchaseOrderRoutes(
     (request, reply) => controller.listPurchaseOrders(request as AuthenticatedRequest, reply),
   );
 
-  // Get overdue purchase orders
+  // Get overdue purchase orders — registered before /:poId to avoid param collision
   fastify.get(
     "/purchase-orders/overdue",
     {
@@ -106,7 +109,7 @@ export async function purchaseOrderRoutes(
     (request, reply) => controller.getOverduePurchaseOrders(request as AuthenticatedRequest, reply),
   );
 
-  // Get pending receival purchase orders
+  // Get pending receival purchase orders — registered before /:poId to avoid param collision
   fastify.get(
     "/purchase-orders/pending-receival",
     {
@@ -132,7 +135,7 @@ export async function purchaseOrderRoutes(
     (request, reply) => controller.getPendingReceival(request as AuthenticatedRequest, reply),
   );
 
-  // Get purchase order
+  // Get purchase order by ID
   fastify.get(
     "/purchase-orders/:poId",
     {
@@ -164,6 +167,40 @@ export async function purchaseOrderRoutes(
       },
     },
     (request, reply) => controller.getPurchaseOrder(request as AuthenticatedRequest, reply),
+  );
+
+  // Create purchase order (empty, no items)
+  fastify.post(
+    "/purchase-orders",
+    {
+      preHandler: [RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Create an empty purchase order (Staff/Admin only)",
+        tags: ["Purchase Orders"],
+        summary: "Create Purchase Order",
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["supplierId"],
+          properties: {
+            supplierId: { type: "string", format: "uuid" },
+            eta: { type: "string", format: "date-time" },
+          },
+        },
+        response: {
+          201: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: purchaseOrderResponseSchema,
+            },
+          },
+        },
+      },
+    },
+    (request, reply) => controller.createPurchaseOrder(request as AuthenticatedRequest, reply),
   );
 
   // Create purchase order with items
@@ -249,13 +286,7 @@ export async function purchaseOrderRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  poId: { type: "string", format: "uuid" },
-                  status: { type: "string" },
-                },
-              },
+              data: purchaseOrderResponseSchema,
             },
           },
         },
@@ -296,14 +327,7 @@ export async function purchaseOrderRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  poId: { type: "string", format: "uuid" },
-                  eta: { type: "string", format: "date-time", nullable: true },
-                  status: { type: "string" },
-                },
-              },
+              data: purchaseOrderResponseSchema,
             },
           },
         },
@@ -356,7 +380,7 @@ export async function purchaseOrderRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "object" },
+              data: purchaseOrderResponseSchema,
             },
           },
         },

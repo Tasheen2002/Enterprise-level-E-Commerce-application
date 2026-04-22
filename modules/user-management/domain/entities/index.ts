@@ -1,7 +1,5 @@
 export {
   User,
-  UserRole,
-  UserStatus,
   UserRegisteredEvent,
   UserEmailChangedEvent,
   UserPasswordChangedEvent,
@@ -25,17 +23,16 @@ export {
 
 export {
   Address,
-  AddressId,
-  ShippingZone,
+  AddressCreatedEvent,
+  AddressSetAsDefaultEvent,
   type AddressProps,
-  type AddressLabel,
   type AddressDTO,
 } from "./address.entity";
 
 export {
   PaymentMethod,
-  PaymentMethodType,
-  PaymentMethodId,
+  PaymentMethodAddedEvent,
+  PaymentMethodSetAsDefaultEvent,
   type PaymentMethodProps,
   type PaymentMethodDTO,
 } from "./payment-method.entity";
@@ -43,21 +40,24 @@ export {
 export {
   VerificationToken,
   type VerificationTokenProps,
+  type VerificationTokenDTO,
 } from "./verification-token.entity";
 
 export {
   VerificationAuditLog,
   type VerificationAuditLogProps,
+  type VerificationAuditLogDTO,
 } from "./verification-audit-log.entity";
 
 export {
   VerificationRateLimit,
   type VerificationRateLimitProps,
+  type VerificationRateLimitDTO,
 } from "./verification-rate-limit.entity";
 
 export {
   SocialLogin,
-  SocialProvider,
+  SocialLoginConnectedEvent,
   type SocialLoginProps,
   type SocialLoginDTO,
 } from "./social-login.entity";

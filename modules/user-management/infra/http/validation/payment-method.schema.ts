@@ -4,29 +4,30 @@ const currentYear = new Date().getFullYear();
 
 export const addPaymentMethodSchema = z.object({
   type: z.enum(["card", "wallet", "bank", "cod", "gift_card"]),
-  provider: z.string().max(50).optional(),
-  last4: z.string().regex(/^\d{4}$/).optional(),
   brand: z.string().max(50).optional(),
-  expiryMonth: z.number().int().min(1).max(12).optional(),
-  expiryYear: z.number().int().min(currentYear).optional(),
-  billingName: z.string().max(200).optional(),
+  last4: z.string().regex(/^\d{4}$/).optional(),
+  expMonth: z.number().int().min(1).max(12).optional(),
+  expYear: z.number().int().min(currentYear).optional(),
+  billingAddressId: z.uuid().optional(),
+  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 
 export const updatePaymentMethodSchema = z.object({
-  type: z.enum(["card", "wallet", "bank", "cod", "gift_card"]).optional(),
-  provider: z.string().max(50).optional(),
-  last4: z.string().regex(/^\d{4}$/).optional(),
-  brand: z.string().max(50).optional(),
-  expiryMonth: z.number().int().min(1).max(12).optional(),
-  expiryYear: z.number().int().min(currentYear).optional(),
-  billingName: z.string().max(200).optional(),
+  billingAddressId: z.uuid().optional(),
+  expMonth: z.number().int().min(1).max(12).optional(),
+  expYear: z.number().int().min(currentYear).optional(),
+  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 
 export const paymentMethodIdParamsSchema = z.object({
   paymentMethodId: z.uuid(),
 });
+
+export type AddPaymentMethodBody = z.infer<typeof addPaymentMethodSchema>;
+export type UpdatePaymentMethodBody = z.infer<typeof updatePaymentMethodSchema>;
+export type PaymentMethodIdParams = z.infer<typeof paymentMethodIdParamsSchema>;
 
 // JSON Schema response objects (for Swagger docs)
 export const paymentMethodResponseSchema = {

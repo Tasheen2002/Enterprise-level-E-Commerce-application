@@ -102,6 +102,6 @@ export class LocationManagementService {
       limit: options?.limit,
       offset: options?.offset,
     });
-    return { locations: result.locations.map(Location.toDTO), total: result.total };
+    return { locations: result.items.map(Location.toDTO), total: result.total };
   }
 }

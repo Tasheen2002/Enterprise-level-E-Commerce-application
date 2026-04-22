@@ -1,10 +1,7 @@
-// ============================================================================
-// 1. Imports
-// ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { ReviewId, Rating, ReviewStatus } from "../value-objects";
-import { DomainValidationError } from "../errors/engagement.errors";
+import { DomainValidationError, ReviewNotEditableError } from "../errors/engagement.errors";
 
 // ============================================================================
 // 2. Domain Events
@@ -14,7 +11,7 @@ export class ReviewSubmittedEvent extends DomainEvent {
     public readonly reviewId: string,
     public readonly productId: string,
     public readonly userId: string,
-    public readonly rating: number
+    public readonly rating: number,
   ) {
     super(reviewId, "Review");
   }
@@ -37,7 +34,7 @@ export class ReviewStatusChangedEvent extends DomainEvent {
   constructor(
     public readonly reviewId: string,
     public readonly oldStatus: string,
-    public readonly newStatus: string
+    public readonly newStatus: string,
   ) {
     super(reviewId, "Review");
   }
@@ -94,7 +91,7 @@ export class ProductReview extends AggregateRoot {
   }
 
   static create(
-    params: Omit<ReviewProps, "id" | "createdAt" | "updatedAt" | "status">
+    params: Omit<ReviewProps, "id" | "createdAt" | "updatedAt" | "status">,
   ): ProductReview {
     ProductReview.validateProductId(params.productId);
     ProductReview.validateUserId(params.userId);
@@ -116,8 +113,8 @@ export class ProductReview extends AggregateRoot {
         entity.props.id.getValue(),
         entity.props.productId,
         entity.props.userId,
-        entity.props.rating.getValue()
-      )
+        entity.props.rating.getValue(),
+      ),
     );
 
     return entity;
@@ -182,22 +179,31 @@ export class ProductReview extends AggregateRoot {
       new ReviewStatusChangedEvent(
         this.props.id.getValue(),
         oldStatusLabel,
-        newStatusLabel
-      )
+        newStatusLabel,
+      ),
     );
   }
 
+  private assertEditable(): void {
+    if (!this.props.status.isPending()) {
+      throw new ReviewNotEditableError(this.props.status.getValue());
+    }
+  }
+
   updateRating(rating: number): void {
+    this.assertEditable();
     this.props.rating = Rating.fromNumber(rating);
     this.props.updatedAt = new Date();
   }
 
   updateTitle(title?: string): void {
+    this.assertEditable();
     this.props.title = title?.trim();
     this.props.updatedAt = new Date();
   }
 
   updateBody(body?: string): void {
+    this.assertEditable();
     this.props.body = body?.trim();
     this.props.updatedAt = new Date();
   }

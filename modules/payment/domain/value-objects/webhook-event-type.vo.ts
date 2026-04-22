@@ -1,4 +1,5 @@
 import { EmptyFieldError } from "../../../../packages/core/src/domain/domain-error";
+import { WebhookEventTypeEnum } from "../enums";
 
 export class WebhookEventType {
   private constructor(private readonly value: string) {}
@@ -11,7 +12,7 @@ export class WebhookEventType {
   }
 
   static fromString(value: string): WebhookEventType {
-    return new WebhookEventType(value);
+    return WebhookEventType.create(value);
   }
 
   getValue(): string {
@@ -28,18 +29,18 @@ export class WebhookEventType {
 
   // Common webhook event types
   static paymentIntentSucceeded(): WebhookEventType {
-    return new WebhookEventType("payment_intent.succeeded");
+    return new WebhookEventType(WebhookEventTypeEnum.PAYMENT_INTENT_SUCCEEDED);
   }
 
   static paymentIntentFailed(): WebhookEventType {
-    return new WebhookEventType("payment_intent.failed");
+    return new WebhookEventType(WebhookEventTypeEnum.PAYMENT_INTENT_FAILED);
   }
 
   static paymentIntentCanceled(): WebhookEventType {
-    return new WebhookEventType("payment_intent.canceled");
+    return new WebhookEventType(WebhookEventTypeEnum.PAYMENT_INTENT_CANCELED);
   }
 
   static chargeRefunded(): WebhookEventType {
-    return new WebhookEventType("charge.refunded");
+    return new WebhookEventType(WebhookEventTypeEnum.CHARGE_REFUNDED);
   }
 }

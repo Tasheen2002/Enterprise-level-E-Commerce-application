@@ -76,15 +76,11 @@ export class StripeProvider {
     }
   }
 
-  /**
-   * Retrieve a Stripe PaymentIntent by its Stripe ID.
-   */
   async retrievePaymentIntent(
     stripeIntentId: string,
   ): Promise<StripePaymentIntentResult> {
     try {
-      const intent =
-        await this.stripe.paymentIntents.retrieve(stripeIntentId);
+      const intent = await this.stripe.paymentIntents.retrieve(stripeIntentId);
       return {
         success: true,
         clientSecret: intent.client_secret ?? undefined,
@@ -138,8 +134,7 @@ export class StripeProvider {
     stripeIntentId: string,
   ): Promise<StripePaymentIntentResult> {
     try {
-      const intent =
-        await this.stripe.paymentIntents.cancel(stripeIntentId);
+      const intent = await this.stripe.paymentIntents.cancel(stripeIntentId);
       return {
         success: true,
         stripeIntentId: intent.id,

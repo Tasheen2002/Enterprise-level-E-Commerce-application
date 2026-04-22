@@ -39,9 +39,6 @@ export class ListProductTagsHandler implements IQueryHandler<ListProductTagsQuer
       ? await this.productTagManagementService.getTagsByKind(query.kind, serviceOptions)
       : await this.productTagManagementService.getAllTags(serviceOptions);
 
-    const tags = (result as { tags?: ProductTagDTO[] }).tags ?? (result as ProductTagDTO[]);
-    const total = (result as { total?: number }).total ?? 0;
-
-    return { tags, pagination: { page, limit, total, total_pages: Math.ceil(total / limit) } };
+    return { tags: result.tags, pagination: { page, limit, total: result.total, total_pages: Math.ceil(result.total / limit) } };
   }
 }

@@ -147,7 +147,7 @@ export class WishlistManagementService {
   async deleteWishlist(wishlistId: string): Promise<void> {
     const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
     if (!wishlist) throw new WishlistNotFoundError(wishlistId);
-    await this.wishlistItemRepository.deleteByWishlistId(wishlist.id);
+    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
     await this.wishlistRepository.delete(wishlist.id);
   }
 
@@ -225,7 +225,7 @@ export class WishlistManagementService {
     }
 
     const alreadyExists = await this.wishlistItemRepository.isVariantInWishlist(
-      wishlistIdVO,
+      wishlistId,
       variantId,
     );
     if (alreadyExists) throw new WishlistItemAlreadyExistsError(variantId);
@@ -236,20 +236,16 @@ export class WishlistManagementService {
   }
 
   async removeFromWishlist(wishlistId: string, variantId: string): Promise<void> {
-    const wishlistIdVO = WishlistId.fromString(wishlistId);
-    const exists = await this.wishlistItemRepository.isVariantInWishlist(wishlistIdVO, variantId);
+    const exists = await this.wishlistItemRepository.isVariantInWishlist(wishlistId, variantId);
     if (!exists) throw new WishlistItemNotFoundError(`${wishlistId}/${variantId}`);
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistIdVO);
+    await this.wishlistItemRepository.deleteByWishlistIdAndVariantId(wishlistId, variantId);
   }
 
   async getWishlistItems(
     wishlistId: string,
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedWishlistItemResult> {
-    const result = await this.wishlistItemRepository.findByWishlistId(
-      WishlistId.fromString(wishlistId),
-      options,
-    );
+    const result = await this.wishlistItemRepository.findByWishlistId(wishlistId, options);
     return {
       items: result.items.map(WishlistItem.toDTO),
       total: result.total,
@@ -260,21 +256,17 @@ export class WishlistManagementService {
   }
 
   async countWishlistItems(wishlistId: string): Promise<number> {
-    return this.wishlistItemRepository.countByWishlistId(WishlistId.fromString(wishlistId));
+    return this.wishlistItemRepository.countByWishlistId(wishlistId);
   }
 
   async isInWishlist(wishlistId: string, variantId: string): Promise<boolean> {
-    return this.wishlistItemRepository.isVariantInWishlist(
-      WishlistId.fromString(wishlistId),
-      variantId,
-    );
+    return this.wishlistItemRepository.isVariantInWishlist(wishlistId, variantId);
   }
 
   async clearWishlist(wishlistId: string): Promise<void> {
-    const wishlistIdVO = WishlistId.fromString(wishlistId);
-    const exists = await this.wishlistRepository.exists(wishlistIdVO);
+    const exists = await this.wishlistRepository.exists(WishlistId.fromString(wishlistId));
     if (!exists) throw new WishlistNotFoundError(wishlistId);
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistIdVO);
+    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
   }
 
   async addManyToWishlist(wishlistId: string, variantIds: string[]): Promise<void> {
@@ -287,6 +279,7 @@ export class WishlistManagementService {
     );
     await this.wishlistItemRepository.saveMany(items);
   }
+
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 

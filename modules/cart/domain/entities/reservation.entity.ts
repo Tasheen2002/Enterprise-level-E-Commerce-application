@@ -188,6 +188,7 @@ export class Reservation extends AggregateRoot {
   // Business methods
   updateQuantity(newQuantity: number): void {
     this.props.quantity = Quantity.fromNumber(newQuantity);
+    this.props.updatedAt = new Date();
   }
 
   incrementQuantity(amount: number = 1): void {

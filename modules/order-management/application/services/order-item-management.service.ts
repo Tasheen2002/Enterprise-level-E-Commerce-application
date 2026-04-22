@@ -29,7 +29,7 @@ export class OrderItemManagementService {
       variantId: params.variantId,
       quantity: params.quantity,
       productSnapshot,
-      isGift: params.isGift || false,
+      isGift: params.isGift ?? false,
       giftMessage: params.giftMessage,
     });
 

@@ -1,8 +1,3 @@
-// ── Public API for the order-management module ───────────────────────────────
-//
-// Other modules must import from this path only.
-// Internal paths (domain/, application/, infra/) are not part of the public API.
-
 // ── Domain errors ─────────────────────────────────────────────────────────────
 export {
   DomainValidationError,
@@ -24,6 +19,7 @@ export {
   ShipmentAlreadyShippedError,
   ShipmentAlreadyDeliveredError,
   OrderAddressRequiredError,
+  ContactMismatchError,
 } from "./domain/errors/order-management.errors";
 
 // ── Domain enums ──────────────────────────────────────────────────────────────

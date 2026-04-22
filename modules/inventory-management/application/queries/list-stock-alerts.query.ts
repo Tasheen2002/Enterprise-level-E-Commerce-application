@@ -1,4 +1,5 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { StockAlertResult } from "./get-stock-alert.query";
 import { StockAlertService } from "../services/stock-alert.service";
 
@@ -8,23 +9,26 @@ export interface ListStockAlertsQuery extends IQuery {
   readonly includeResolved?: boolean;
 }
 
-export interface ListStockAlertsResult {
-  readonly alerts: StockAlertResult[];
-  readonly total: number;
-}
-
 export class ListStockAlertsHandler implements IQueryHandler<
   ListStockAlertsQuery,
-  ListStockAlertsResult
+  PaginatedResult<StockAlertResult>
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
-  async handle(query: ListStockAlertsQuery): Promise<ListStockAlertsResult> {
+  async handle(query: ListStockAlertsQuery): Promise<PaginatedResult<StockAlertResult>> {
+    const limit = query.limit ?? 20;
+    const offset = query.offset ?? 0;
     const result = await this.stockAlertService.listStockAlerts({
-      limit: query.limit,
-      offset: query.offset,
+      limit,
+      offset,
       includeResolved: query.includeResolved,
     });
-    return { alerts: result.alerts, total: result.total };
+    return {
+      items: result.alerts,
+      total: result.total,
+      limit,
+      offset,
+      hasMore: offset + result.alerts.length < result.total,
+    };
   }
 }

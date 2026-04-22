@@ -40,7 +40,8 @@ export async function searchRoutes(
     {
       preValidation: [validateQuery(searchQuerySchema)],
       schema: {
-        description: "Full-text search across products with filtering and sorting",
+        description:
+          "Full-text search across products with filtering and sorting",
         tags: ["Search"],
         summary: "Search Products",
         querystring: {
@@ -54,9 +55,20 @@ export async function searchRoutes(
             brand: { type: "string" },
             minPrice: { type: "number", minimum: 0 },
             maxPrice: { type: "number", minimum: 0 },
-            status: { type: "string", enum: ["draft", "published", "scheduled"] },
-            sortBy: { type: "string", enum: ["relevance", "price", "title", "createdAt"], default: "relevance" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
+            status: {
+              type: "string",
+              enum: ["draft", "published", "scheduled"],
+            },
+            sortBy: {
+              type: "string",
+              enum: ["relevance", "price", "title", "createdAt"],
+              default: "relevance",
+            },
+            sortOrder: {
+              type: "string",
+              enum: ["asc", "desc"],
+              default: "desc",
+            },
           },
         },
         response: {
@@ -72,7 +84,8 @@ export async function searchRoutes(
         },
       },
     },
-    (request, reply) => controller.searchProducts(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.searchProducts(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/suggestions — Get search suggestions (public)
@@ -90,7 +103,11 @@ export async function searchRoutes(
           properties: {
             q: { type: "string", minLength: 1 },
             limit: { type: "integer", minimum: 1, maximum: 20, default: 5 },
-            type: { type: "string", enum: ["products", "categories", "brands", "all"], default: "all" },
+            type: {
+              type: "string",
+              enum: ["products", "categories", "brands", "all"],
+              default: "all",
+            },
           },
         },
         response: {
@@ -106,7 +123,8 @@ export async function searchRoutes(
         },
       },
     },
-    (request, reply) => controller.getSearchSuggestions(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSearchSuggestions(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/popular — Get popular searches (public)
@@ -130,7 +148,8 @@ export async function searchRoutes(
         },
       },
     },
-    (request, reply) => controller.getPopularSearches(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getPopularSearches(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/filters — Get available search filters (public)
@@ -161,7 +180,8 @@ export async function searchRoutes(
         },
       },
     },
-    (request, reply) => controller.getSearchFilters(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSearchFilters(request as AuthenticatedRequest, reply),
   );
 
   // GET /search/stats — Get search statistics (Staff+)
@@ -187,6 +207,7 @@ export async function searchRoutes(
         },
       },
     },
-    (request, reply) => controller.getSearchStats(request as AuthenticatedRequest, reply),
+    (request, reply) =>
+      controller.getSearchStats(request as AuthenticatedRequest, reply),
   );
 }

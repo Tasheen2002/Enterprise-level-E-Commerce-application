@@ -21,6 +21,16 @@ import {
 } from "../../../application";
 import { Region } from "../../../domain/enums/product-catalog.enums";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  SizeGuideParams,
+  RegionParams,
+  ListSizeGuidesQuery,
+  CreateSizeGuideBody,
+  UpdateSizeGuideBody,
+  BulkCreateSizeGuidesBody,
+  BulkDeleteSizeGuidesBody,
+  RegionalSizeGuideBody,
+} from "../validation/size-guide.schema";
 
 export class SizeGuideController {
   constructor(
@@ -44,21 +54,15 @@ export class SizeGuideController {
   ) {}
 
   async getSizeGuides(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        page?: number;
-        limit?: number;
-        region?: Region;
-        category?: string;
-        hasContent?: boolean;
-        sortBy?: "title" | "region" | "category";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListSizeGuidesQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listSizeGuidesHandler.handle(request.query);
+      const { region, ...rest } = request.query;
+      const result = await this.listSizeGuidesHandler.handle({
+        ...rest,
+        region: region as Region | undefined,
+      });
       return ResponseHelper.ok(reply, "Size guides retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -66,7 +70,7 @@ export class SizeGuideController {
   }
 
   async getSizeGuide(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: SizeGuideParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -78,13 +82,15 @@ export class SizeGuideController {
   }
 
   async createSizeGuide(
-    request: AuthenticatedRequest<{
-      Body: { title: string; bodyHtml?: string; region: Region; category?: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateSizeGuideBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createSizeGuideHandler.handle(request.body);
+      const { region, ...rest } = request.body;
+      const result = await this.createSizeGuideHandler.handle({
+        ...rest,
+        region: region as Region,
+      });
       return ResponseHelper.fromCommand(reply, result, "Size guide created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -92,14 +98,16 @@ export class SizeGuideController {
   }
 
   async updateSizeGuide(
-    request: AuthenticatedRequest<{
-      Params: { id: string };
-      Body: { title?: string; bodyHtml?: string; region?: Region; category?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: SizeGuideParams; Body: UpdateSizeGuideBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.updateSizeGuideHandler.handle({ id: request.params.id, ...request.body });
+      const { region, ...rest } = request.body;
+      const result = await this.updateSizeGuideHandler.handle({
+        id: request.params.id,
+        ...rest,
+        region: region as Region | undefined,
+      });
       return ResponseHelper.fromCommand(reply, result, "Size guide updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -107,7 +115,7 @@ export class SizeGuideController {
   }
 
   async deleteSizeGuide(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: SizeGuideParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -119,23 +127,14 @@ export class SizeGuideController {
   }
 
   async getRegionalSizeGuides(
-    request: AuthenticatedRequest<{
-      Params: { region: string };
-      Querystring: {
-        page?: number;
-        limit?: number;
-        category?: string;
-        hasContent?: boolean;
-        sortBy?: "title" | "region" | "category";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: RegionParams; Querystring: ListSizeGuidesQuery }>,
     reply: FastifyReply,
   ) {
     try {
+      const { region: _queryRegion, ...queryRest } = request.query;
       const result = await this.getRegionalSizeGuidesHandler.handle({
         region: request.params.region as Region,
-        ...request.query,
+        ...queryRest,
       });
       return ResponseHelper.ok(reply, "Regional size guides retrieved successfully", result);
     } catch (error: unknown) {
@@ -144,10 +143,7 @@ export class SizeGuideController {
   }
 
   async createRegionalSizeGuide(
-    request: AuthenticatedRequest<{
-      Params: { region: string };
-      Body: { title: string; bodyHtml?: string; category?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: RegionParams; Body: RegionalSizeGuideBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -162,7 +158,7 @@ export class SizeGuideController {
   }
 
   async getGeneralSizeGuides(
-    request: AuthenticatedRequest<{ Params: { region: string } }>,
+    request: AuthenticatedRequest<{ Params: RegionParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -175,8 +171,8 @@ export class SizeGuideController {
 
   async createCategorySizeGuide(
     request: AuthenticatedRequest<{
-      Params: { category: string; region: string };
-      Body: { title: string; bodyHtml?: string };
+      Params: { category: string } & RegionParams;
+      Body: RegionalSizeGuideBody;
     }>,
     reply: FastifyReply,
   ) {
@@ -193,10 +189,7 @@ export class SizeGuideController {
   }
 
   async updateSizeGuideContent(
-    request: AuthenticatedRequest<{
-      Params: { id: string };
-      Body: { htmlContent: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: SizeGuideParams; Body: { htmlContent: string } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -211,7 +204,7 @@ export class SizeGuideController {
   }
 
   async clearSizeGuideContent(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: SizeGuideParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -241,7 +234,7 @@ export class SizeGuideController {
   }
 
   async getAvailableCategories(
-    request: AuthenticatedRequest<{ Querystring: { region?: string } }>,
+    request: AuthenticatedRequest<{ Querystring: { region?: "UK" | "US" | "EU" } }>,
     reply: FastifyReply,
   ) {
     try {
@@ -255,13 +248,13 @@ export class SizeGuideController {
   }
 
   async createBulkSizeGuides(
-    request: AuthenticatedRequest<{
-      Body: { guides: Array<{ title: string; bodyHtml?: string; region: Region; category?: string }> };
-    }>,
+    request: AuthenticatedRequest<{ Body: BulkCreateSizeGuidesBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createBulkSizeGuidesHandler.handle({ guides: request.body.guides });
+      const result = await this.createBulkSizeGuidesHandler.handle({
+        guides: request.body.guides.map((g) => ({ ...g, region: g.region as Region })),
+      });
       return ResponseHelper.fromCommand(reply, result, "Size guides created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -269,7 +262,7 @@ export class SizeGuideController {
   }
 
   async deleteBulkSizeGuides(
-    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
+    request: AuthenticatedRequest<{ Body: BulkDeleteSizeGuidesBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -281,9 +274,7 @@ export class SizeGuideController {
   }
 
   async validateUniqueness(
-    request: AuthenticatedRequest<{
-      Querystring: { region: string; category?: string };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: { region: "UK" | "US" | "EU"; category?: string } }>,
     reply: FastifyReply,
   ) {
     try {

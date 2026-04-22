@@ -43,11 +43,18 @@ export class WishlistItemRepositoryImpl
   }
 
   async save(item: WishlistItem): Promise<void> {
-    await this.prisma.wishlistItem.create({
-      data: {
+    await this.prisma.wishlistItem.upsert({
+      where: {
+        wishlistId_variantId: {
+          wishlistId: item.wishlistId.getValue(),
+          variantId: item.variantId,
+        },
+      },
+      create: {
         wishlistId: item.wishlistId.getValue(),
         variantId: item.variantId,
       },
+      update: {},
     });
     await this.dispatchEvents(item);
   }
@@ -67,23 +74,18 @@ export class WishlistItemRepositoryImpl
   }
 
   async findByWishlistId(
-    wishlistId: WishlistId,
+    wishlistId: string,
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedResult<WishlistItem>> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0 } = options || {};
 
-    const where = { wishlistId: wishlistId.getValue() };
+    const where = { wishlistId };
 
     const [records, total] = await Promise.all([
       this.prisma.wishlistItem.findMany({
         where,
         take: limit,
         skip: offset,
-        orderBy: { wishlistId: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count({ where }),
     ]);
@@ -101,11 +103,7 @@ export class WishlistItemRepositoryImpl
     variantId: string,
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedResult<WishlistItem>> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0 } = options || {};
 
     const where = { variantId };
 
@@ -114,7 +112,6 @@ export class WishlistItemRepositoryImpl
         where,
         take: limit,
         skip: offset,
-        orderBy: { variantId: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count({ where }),
     ]);
@@ -131,17 +128,12 @@ export class WishlistItemRepositoryImpl
   async findAll(
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedResult<WishlistItem>> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortOrder = "desc",
-    } = options || {};
+    const { limit = 50, offset = 0 } = options || {};
 
     const [records, total] = await Promise.all([
       this.prisma.wishlistItem.findMany({
         take: limit,
         skip: offset,
-        orderBy: { wishlistId: sortOrder } as any,
       }),
       this.prisma.wishlistItem.count(),
     ]);
@@ -165,9 +157,15 @@ export class WishlistItemRepositoryImpl
     });
   }
 
-  async deleteByWishlistId(wishlistId: WishlistId): Promise<void> {
+  async deleteByWishlistId(wishlistId: string): Promise<void> {
     await this.prisma.wishlistItem.deleteMany({
-      where: { wishlistId: wishlistId.getValue() },
+      where: { wishlistId },
+    });
+  }
+
+  async deleteByWishlistIdAndVariantId(wishlistId: string, variantId: string): Promise<void> {
+    await this.prisma.wishlistItem.deleteMany({
+      where: { wishlistId, variantId },
     });
   }
 
@@ -179,9 +177,9 @@ export class WishlistItemRepositoryImpl
     );
   }
 
-  async countByWishlistId(wishlistId: WishlistId): Promise<number> {
+  async countByWishlistId(wishlistId: string): Promise<number> {
     return await this.prisma.wishlistItem.count({
-      where: { wishlistId: wishlistId.getValue() },
+      where: { wishlistId },
     });
   }
 
@@ -197,12 +195,12 @@ export class WishlistItemRepositoryImpl
   }
 
   async isVariantInWishlist(
-    wishlistId: WishlistId,
+    wishlistId: string,
     variantId: string,
   ): Promise<boolean> {
     const count = await this.prisma.wishlistItem.count({
       where: {
-        wishlistId: wishlistId.getValue(),
+        wishlistId,
         variantId,
       },
     });

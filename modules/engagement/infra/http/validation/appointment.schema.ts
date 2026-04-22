@@ -40,23 +40,25 @@ export const updateAppointmentSchema = z.object({
   endAt: z.coerce.date().optional(),
   notes: z.string().max(2000).optional(),
   locationId: z.uuid().optional(),
-});
+}).refine(
+  (data) => (data.startAt === undefined) === (data.endAt === undefined),
+  { message: "startAt and endAt must be provided together", path: ["endAt"] },
+);
 
 // ── JSON Schema for Swagger docs ─────────────────────────────────────────────
 
 export const appointmentResponseSchema = {
   type: "object",
   properties: {
-    appointmentId: { type: "string", format: "uuid" },
+    id: { type: "string", format: "uuid" },
     userId: { type: "string", format: "uuid" },
     type: { type: "string" },
     locationId: { type: "string", format: "uuid" },
-    status: { type: "string" },
     startAt: { type: "string", format: "date-time" },
     endAt: { type: "string", format: "date-time" },
     notes: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
-    cancelledAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 

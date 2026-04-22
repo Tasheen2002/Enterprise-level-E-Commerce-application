@@ -161,6 +161,8 @@ export class EditorialLook extends AggregateRoot {
 
   addProduct(productId: string): void {
     const productIdVo = ProductId.fromString(productId);
+    const alreadyExists = Array.from(this.props.productIds).some((id) => id.equals(productIdVo));
+    if (alreadyExists) return;
     this.props.productIds.add(productIdVo);
     this.props.updatedAt = new Date();
     this.addDomainEvent(new EditorialLookUpdatedEvent(this.props.id.getValue()));

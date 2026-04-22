@@ -26,13 +26,13 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
     return OrderShipment.fromPersistence({
       shipmentId: row.id,
       orderId: row.orderId,
-      carrier: row.carrier || undefined,
-      service: row.service || undefined,
-      trackingNumber: row.trackingNo || undefined,
+      carrier: row.carrier ?? undefined,
+      service: row.service ?? undefined,
+      trackingNumber: row.trackingNo ?? undefined,
       giftReceipt: row.giftReceipt,
-      pickupLocationId: row.pickupLocationId || undefined,
-      shippedAt: row.shippedAt || undefined,
-      deliveredAt: row.deliveredAt || undefined,
+      pickupLocationId: row.pickupLocationId ?? undefined,
+      shippedAt: row.shippedAt ?? undefined,
+      deliveredAt: row.deliveredAt ?? undefined,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -41,13 +41,13 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
   async save(shipment: OrderShipment): Promise<void> {
     const data = {
       orderId: shipment.orderId,
-      carrier: shipment.carrier || null,
-      service: shipment.service || null,
-      trackingNo: shipment.trackingNumber || null,
+      carrier: shipment.carrier ?? null,
+      service: shipment.service ?? null,
+      trackingNo: shipment.trackingNumber ?? null,
       giftReceipt: shipment.giftReceipt,
-      pickupLocationId: shipment.pickupLocationId || null,
-      shippedAt: shipment.shippedAt || null,
-      deliveredAt: shipment.deliveredAt || null,
+      pickupLocationId: shipment.pickupLocationId ?? null,
+      shippedAt: shipment.shippedAt ?? null,
+      deliveredAt: shipment.deliveredAt ?? null,
     };
     await this.prisma.orderShipment.upsert({
       where: { id: shipment.shipmentId },
@@ -100,7 +100,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
           ? { shippedAt: sortOrder }
           : sortBy === "deliveredAt"
             ? { deliveredAt: sortOrder }
-            : undefined,
+            : { createdAt: sortOrder },
     });
 
     return shipments.map((shipment) => this.toEntity(shipment as any));
@@ -140,7 +140,7 @@ export class OrderShipmentRepositoryImpl implements IOrderShipmentRepository {
           ? { shippedAt: sortOrder }
           : sortBy === "deliveredAt"
             ? { deliveredAt: sortOrder }
-            : undefined,
+            : { createdAt: sortOrder },
     });
 
     return shipments.map((shipment) => this.toEntity(shipment as any));

@@ -99,6 +99,11 @@ export class OrderItem {
     return this.props.isGift;
   }
 
+  setOrderId(orderId: string): void {
+    this.props.orderId = orderId;
+    this.props.updatedAt = new Date();
+  }
+
   updateQuantity(newQuantity: number): void {
     if (newQuantity <= 0) {
       throw new DomainValidationError("Quantity must be greater than 0");

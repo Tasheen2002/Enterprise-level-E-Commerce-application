@@ -26,6 +26,7 @@ export interface IBackorderRepository {
   count(): Promise<number>;
   countNotified(): Promise<number>;
   countUnnotified(): Promise<number>;
+  countByPromisedEtaBefore(date: Date): Promise<number>;
 
   // Existence checks
   exists(orderItemId: string): Promise<boolean>;

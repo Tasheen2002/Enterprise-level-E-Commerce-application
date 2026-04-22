@@ -63,8 +63,11 @@ export async function supplierRoutes(
               data: {
                 type: "object",
                 properties: {
-                  suppliers: { type: "array", items: supplierResponseSchema },
+                  items: { type: "array", items: supplierResponseSchema },
                   total: { type: "integer" },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },
@@ -181,7 +184,17 @@ export async function supplierRoutes(
           properties: {
             name: { type: "string", minLength: 2, maxLength: 128 },
             leadTimeDays: { type: "integer", minimum: 0 },
-            contacts: { type: "array" },
+            contacts: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  email: { type: "string", format: "email" },
+                  phone: { type: "string" },
+                },
+              },
+            },
           },
         },
         response: {

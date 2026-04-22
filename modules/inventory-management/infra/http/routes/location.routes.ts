@@ -60,8 +60,11 @@ export async function locationRoutes(
               data: {
                 type: "object",
                 properties: {
-                  locations: { type: "array", items: locationResponseSchema },
+                  items: { type: "array", items: locationResponseSchema },
                   total: { type: "integer" },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },

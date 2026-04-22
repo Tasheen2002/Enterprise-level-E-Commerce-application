@@ -115,8 +115,8 @@ export class OrderRepositoryImpl
     return Order.fromPersistence({
       id: OrderId.fromString(row.id),
       orderNumber: OrderNumber.fromString(row.orderNo),
-      userId: row.userId || undefined,
-      guestToken: row.guestToken || undefined,
+      userId: row.userId ?? undefined,
+      guestToken: row.guestToken ?? undefined,
       items,
       address,
       shipments,
@@ -137,8 +137,8 @@ export class OrderRepositoryImpl
 
     const orderData = {
       orderNo: order.orderNumber.getValue(),
-      userId: order.userId || null,
-      guestToken: order.guestToken || null,
+      userId: order.userId ?? null,
+      guestToken: order.guestToken ?? null,
       totals: order.totals.getValue() as any,
       status: order.status.getValue() as PrismaOrderStatusEnum,
       source: order.source.getValue(),

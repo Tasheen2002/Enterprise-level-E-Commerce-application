@@ -13,8 +13,4 @@ export class GiftCardId extends UuidId {
   static fromString(value: string): GiftCardId {
     return new GiftCardId(value);
   }
-
-  equals(other: GiftCardId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

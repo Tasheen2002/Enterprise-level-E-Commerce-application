@@ -5,27 +5,24 @@ import {
   ScheduleNotificationHandler,
   SendNotificationHandler,
   GetNotificationHandler,
-  GetUserNotificationsHandler,
+  GetNotificationsByTypeHandler,
 } from "../../../application";
+import {
+  ScheduleNotificationBody,
+  NotificationIdParams,
+  NotificationsByTypeQuery,
+} from "../validation/notification.schema";
 
 export class NotificationController {
   constructor(
     private readonly scheduleNotificationHandler: ScheduleNotificationHandler,
     private readonly sendNotificationHandler: SendNotificationHandler,
     private readonly getNotificationHandler: GetNotificationHandler,
-    private readonly getUserNotificationsHandler: GetUserNotificationsHandler,
+    private readonly getNotificationsByTypeHandler: GetNotificationsByTypeHandler,
   ) {}
 
   async scheduleNotification(
-    request: AuthenticatedRequest<{
-      Body: {
-        type: string;
-        channel?: string;
-        templateId?: string;
-        payload?: Record<string, unknown>;
-        scheduledAt: Date;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: ScheduleNotificationBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -44,7 +41,7 @@ export class NotificationController {
   }
 
   async sendNotification(
-    request: AuthenticatedRequest<{ Params: { notificationId: string } }>,
+    request: AuthenticatedRequest<{ Params: NotificationIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -58,7 +55,7 @@ export class NotificationController {
   }
 
   async getNotification(
-    request: AuthenticatedRequest<{ Params: { notificationId: string } }>,
+    request: AuthenticatedRequest<{ Params: NotificationIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -71,15 +68,13 @@ export class NotificationController {
     }
   }
 
-  async getUserNotifications(
-    request: AuthenticatedRequest<{
-      Querystring: { type: string; limit?: number; offset?: number };
-    }>,
+  async getNotificationsByType(
+    request: AuthenticatedRequest<{ Querystring: NotificationsByTypeQuery }>,
     reply: FastifyReply,
   ) {
     try {
       const { type, limit, offset } = request.query;
-      const result = await this.getUserNotificationsHandler.handle({ type, limit, offset });
+      const result = await this.getNotificationsByTypeHandler.handle({ type, limit, offset });
       return ResponseHelper.ok(reply, "Notifications retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

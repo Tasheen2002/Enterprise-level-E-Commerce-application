@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
@@ -69,7 +69,6 @@ export class WishlistRepositoryImpl
         isDefault: wishlist.isDefault,
         isPublic: wishlist.isPublic,
         description: wishlist.description,
-        updatedAt: wishlist.updatedAt,
       },
     });
     await this.dispatchEvents(wishlist);
@@ -231,11 +230,12 @@ export class WishlistRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where: any = {};
-    if (filters.userId) where.userId = filters.userId;
-    if (filters.guestToken) where.guestToken = filters.guestToken;
-    if (filters.isPublic !== undefined) where.isPublic = filters.isPublic;
-    if (filters.isDefault !== undefined) where.isDefault = filters.isDefault;
+    const where: Prisma.WishlistWhereInput = {
+      ...(filters.userId ? { userId: filters.userId } : {}),
+      ...(filters.guestToken ? { guestToken: filters.guestToken } : {}),
+      ...(filters.isPublic !== undefined ? { isPublic: filters.isPublic } : {}),
+      ...(filters.isDefault !== undefined ? { isDefault: filters.isDefault } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.wishlist.findMany({
@@ -289,11 +289,12 @@ export class WishlistRepositoryImpl
   }
 
   async count(filters?: WishlistFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.userId) where.userId = filters.userId;
-    if (filters?.guestToken) where.guestToken = filters.guestToken;
-    if (filters?.isPublic !== undefined) where.isPublic = filters.isPublic;
-    if (filters?.isDefault !== undefined) where.isDefault = filters.isDefault;
+    const where: Prisma.WishlistWhereInput = {
+      ...(filters?.userId ? { userId: filters.userId } : {}),
+      ...(filters?.guestToken ? { guestToken: filters.guestToken } : {}),
+      ...(filters?.isPublic !== undefined ? { isPublic: filters.isPublic } : {}),
+      ...(filters?.isDefault !== undefined ? { isDefault: filters.isDefault } : {}),
+    };
 
     return await this.prisma.wishlist.count({ where });
   }

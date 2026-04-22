@@ -125,7 +125,7 @@ export class NewsletterService {
     options?: NewsletterSubscriptionQueryOptions,
   ): Promise<PaginatedSubscriptionResult> {
     const result = await this.subscriptionRepository.findByStatus(
-      SubscriptionStatus.fromString(status),
+      status,
       options,
     );
     return this.mapPaginated(result);
@@ -180,7 +180,7 @@ export class NewsletterService {
   }
 
   async countSubscriptionsByStatus(status: string): Promise<number> {
-    return this.subscriptionRepository.countByStatus(SubscriptionStatus.fromString(status));
+    return this.subscriptionRepository.countByStatus(status);
   }
 
   async countSubscriptionsBySource(source: string): Promise<number> {

@@ -2,76 +2,39 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  CreatePreorderCommand,
-  CreatePreorderCommandHandler,
-  UpdatePreorderReleaseDateCommand,
-  UpdatePreorderReleaseDateCommandHandler,
-  MarkPreorderNotifiedCommand,
-  MarkPreorderNotifiedCommandHandler,
-  DeletePreorderCommand,
-  DeletePreorderCommandHandler,
-  GetPreorderQuery,
+  CreatePreorderHandler,
+  UpdatePreorderReleaseDateHandler,
+  MarkPreorderNotifiedHandler,
+  DeletePreorderHandler,
   GetPreorderHandler,
-  ListPreordersQuery,
   ListPreordersHandler,
 } from "../../../application";
-
-export interface CreatePreorderRequest {
-  Body: {
-    orderItemId: string;
-    releaseDate?: Date;
-  };
-}
-
-export interface UpdatePreorderReleaseDateRequest {
-  Params: { orderItemId: string };
-  Body: {
-    releaseDate: Date;
-  };
-}
-
-export interface MarkPreorderNotifiedRequest {
-  Params: { orderItemId: string };
-}
-
-export interface DeletePreorderRequest {
-  Params: { orderItemId: string };
-}
-
-export interface GetPreorderRequest {
-  Params: { orderItemId: string };
-}
-
-export interface ListPreordersRequest {
-  Querystring: {
-    limit?: number;
-    offset?: number;
-    sortBy?: "releaseDate" | "notifiedAt";
-    sortOrder?: "asc" | "desc";
-    filterType?: "all" | "notified" | "unnotified" | "released";
-  };
-}
+import {
+  PreorderParams,
+  ListPreordersQuery,
+  CreatePreorderBody,
+  UpdatePreorderReleaseDateBody,
+} from "../validation/preorder.schema";
 
 export class PreorderController {
   constructor(
-    private readonly createHandler: CreatePreorderCommandHandler,
-    private readonly updateReleaseDateHandler: UpdatePreorderReleaseDateCommandHandler,
-    private readonly markNotifiedHandler: MarkPreorderNotifiedCommandHandler,
-    private readonly deleteHandler: DeletePreorderCommandHandler,
+    private readonly createHandler: CreatePreorderHandler,
+    private readonly updateReleaseDateHandler: UpdatePreorderReleaseDateHandler,
+    private readonly markNotifiedHandler: MarkPreorderNotifiedHandler,
+    private readonly deleteHandler: DeletePreorderHandler,
     private readonly getPreorderHandler: GetPreorderHandler,
     private readonly listPreordersHandler: ListPreordersHandler,
   ) {}
 
   async createPreorder(
-    request: AuthenticatedRequest<CreatePreorderRequest>,
+    request: AuthenticatedRequest<{ Body: CreatePreorderBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: CreatePreorderCommand = {
+      const result = await this.createHandler.handle({
         orderItemId: request.body.orderItemId,
         releaseDate: request.body.releaseDate,
-      };
-      const result = await this.createHandler.handle(command);
+      });
       return ResponseHelper.fromCommand(reply, result, "Preorder created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -79,12 +42,11 @@ export class PreorderController {
   }
 
   async getPreorder(
-    request: AuthenticatedRequest<GetPreorderRequest>,
+    request: AuthenticatedRequest<{ Params: PreorderParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: GetPreorderQuery = { orderItemId: request.params.orderItemId };
-      const result = await this.getPreorderHandler.handle(query);
+      const result = await this.getPreorderHandler.handle({ orderItemId: request.params.orderItemId });
       return ResponseHelper.ok(reply, "Preorder retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -92,18 +54,11 @@ export class PreorderController {
   }
 
   async listPreorders(
-    request: AuthenticatedRequest<ListPreordersRequest>,
+    request: AuthenticatedRequest<{ Querystring: ListPreordersQuery }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: ListPreordersQuery = {
-        limit: request.query.limit,
-        offset: request.query.offset,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
-        filterType: request.query.filterType,
-      };
-      const result = await this.listPreordersHandler.handle(query);
+      const result = await this.listPreordersHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Preorders retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -111,15 +66,14 @@ export class PreorderController {
   }
 
   async updateReleaseDate(
-    request: AuthenticatedRequest<UpdatePreorderReleaseDateRequest>,
+    request: AuthenticatedRequest<{ Params: PreorderParams; Body: UpdatePreorderReleaseDateBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: UpdatePreorderReleaseDateCommand = {
+      const result = await this.updateReleaseDateHandler.handle({
         orderItemId: request.params.orderItemId,
         releaseDate: request.body.releaseDate,
-      };
-      const result = await this.updateReleaseDateHandler.handle(command);
+      });
       return ResponseHelper.fromCommand(reply, result, "Preorder release date updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -127,14 +81,11 @@ export class PreorderController {
   }
 
   async markNotified(
-    request: AuthenticatedRequest<MarkPreorderNotifiedRequest>,
+    request: AuthenticatedRequest<{ Params: PreorderParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: MarkPreorderNotifiedCommand = {
-        orderItemId: request.params.orderItemId,
-      };
-      const result = await this.markNotifiedHandler.handle(command);
+      const result = await this.markNotifiedHandler.handle({ orderItemId: request.params.orderItemId });
       return ResponseHelper.fromCommand(reply, result, "Preorder marked as notified successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -142,14 +93,11 @@ export class PreorderController {
   }
 
   async deletePreorder(
-    request: AuthenticatedRequest<DeletePreorderRequest>,
+    request: AuthenticatedRequest<{ Params: PreorderParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: DeletePreorderCommand = {
-        orderItemId: request.params.orderItemId,
-      };
-      const result = await this.deleteHandler.handle(command);
+      const result = await this.deleteHandler.handle({ orderItemId: request.params.orderItemId });
       return ResponseHelper.fromCommand(reply, result, "Preorder deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

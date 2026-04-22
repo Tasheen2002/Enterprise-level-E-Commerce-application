@@ -37,12 +37,12 @@ export const getSubscriptionQuerySchema = z.object({
 export const newsletterSubscriptionResponseSchema = {
   type: "object",
   properties: {
-    subscriptionId: { type: "string", format: "uuid" },
+    id: { type: "string", format: "uuid" },
     email: { type: "string", format: "email" },
     status: { type: "string" },
     source: { type: "string" },
-    subscribedAt: { type: "string", format: "date-time" },
-    unsubscribedAt: { type: "string", format: "date-time" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 

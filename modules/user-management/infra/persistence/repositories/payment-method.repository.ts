@@ -5,8 +5,8 @@ import { IPaymentMethodRepository } from "../../../domain/repositories/ipayment-
 import {
   PaymentMethod,
   PaymentMethodProps,
-  PaymentMethodType,
 } from "../../../domain/entities/payment-method.entity";
+import { PaymentMethodType } from "../../../domain/enums/payment-method-type.enum";
 import { PaymentMethodId } from "../../../domain/value-objects/payment-method-id";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
 
@@ -19,7 +19,7 @@ export class PaymentMethodRepository
   }
 
   // Maps a Prisma record to a PaymentMethod domain entity
-  private toDomain(data: any): PaymentMethod {
+  private toDomain(data: Prisma.PaymentMethodGetPayload<object>): PaymentMethod {
     const props: PaymentMethodProps = {
       id: PaymentMethodId.fromString(data.id),
       userId: UserId.fromString(data.userId),
@@ -55,7 +55,6 @@ export class PaymentMethodRepository
       providerRef: paymentMethod.providerRef,
       isDefault: paymentMethod.isDefault,
       createdAt: paymentMethod.createdAt,
-      updatedAt: paymentMethod.updatedAt,
     };
 
     const { id, userId, createdAt, ...update } = create;

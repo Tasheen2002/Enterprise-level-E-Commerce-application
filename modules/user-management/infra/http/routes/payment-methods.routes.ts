@@ -75,12 +75,12 @@ export async function paymentMethodRoutes(
           required: ["type"],
           properties: {
             type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
-            provider: { type: "string", maxLength: 50 },
-            last4: { type: "string", pattern: "^\\d{4}$" },
             brand: { type: "string", maxLength: 50 },
-            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
-            expiryYear: { type: "integer" },
-            billingName: { type: "string", maxLength: 200 },
+            last4: { type: "string", pattern: "^\\d{4}$" },
+            expMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expYear: { type: "integer" },
+            billingAddressId: { type: "string", format: "uuid" },
+            providerRef: { type: "string", maxLength: 100 },
             isDefault: { type: "boolean" },
           },
         },
@@ -123,13 +123,10 @@ export async function paymentMethodRoutes(
         body: {
           type: "object",
           properties: {
-            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
-            provider: { type: "string", maxLength: 50 },
-            last4: { type: "string", pattern: "^\\d{4}$" },
-            brand: { type: "string", maxLength: 50 },
-            expiryMonth: { type: "integer", minimum: 1, maximum: 12 },
-            expiryYear: { type: "integer" },
-            billingName: { type: "string", maxLength: 200 },
+            billingAddressId: { type: "string", format: "uuid" },
+            expMonth: { type: "integer", minimum: 1, maximum: 12 },
+            expYear: { type: "integer" },
+            providerRef: { type: "string", maxLength: 100 },
             isDefault: { type: "boolean" },
           },
         },
@@ -214,6 +211,6 @@ export async function paymentMethodRoutes(
       },
     },
     (request, reply) =>
-      controller.setDefaultPaymentMethod(request as AuthenticatedRequest, reply),
+      controller.setDefaultCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 }

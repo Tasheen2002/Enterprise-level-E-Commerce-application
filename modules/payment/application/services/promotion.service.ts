@@ -164,7 +164,7 @@ export class PromotionService {
     if (!promotion) throw new PromotionNotFoundError(promoId);
 
     promotion.deactivate();
-    await this.promotionRepo.update(promotion);
+    await this.promotionRepo.save(promotion);
     return Promotion.toDTO(promotion);
   }
 
@@ -173,7 +173,7 @@ export class PromotionService {
     if (!promotion) throw new PromotionNotFoundError(promoId);
 
     promotion.activate();
-    await this.promotionRepo.update(promotion);
+    await this.promotionRepo.save(promotion);
     return Promotion.toDTO(promotion);
   }
 

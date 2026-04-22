@@ -40,7 +40,7 @@ export const updateReviewStatusSchema = z.object({
 export const productReviewResponseSchema = {
   type: "object",
   properties: {
-    reviewId: { type: "string", format: "uuid" },
+    id: { type: "string", format: "uuid" },
     productId: { type: "string", format: "uuid" },
     userId: { type: "string", format: "uuid" },
     rating: { type: "number" },

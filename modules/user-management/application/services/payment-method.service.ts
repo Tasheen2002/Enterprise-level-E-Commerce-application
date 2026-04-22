@@ -3,9 +3,9 @@ import { IUserRepository } from "../../domain/repositories/iuser.repository";
 import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
 import {
   PaymentMethod,
-  PaymentMethodType,
   PaymentMethodDTO,
 } from "../../domain/entities/payment-method.entity";
+import { PaymentMethodType } from "../../domain/enums/payment-method-type.enum";
 import { PaymentMethodId } from "../../domain/value-objects/payment-method-id";
 import { AddressId } from "../../domain/value-objects/address-id";
 import { UserId } from "../../domain/value-objects/user-id.vo";
@@ -14,7 +14,6 @@ import {
   AddressNotFoundError,
   PaymentMethodNotFoundError,
   InvalidOperationError,
-  DomainValidationError,
 } from "../../domain/errors/user-management.errors";
 
 interface AddPaymentMethodDto {
@@ -42,11 +41,6 @@ interface UpdatePaymentMethodDto {
   isDefault?: boolean;
 }
 
-interface PaymentMethodValidationResult {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-}
 
 export class PaymentMethodService {
   constructor(
@@ -69,14 +63,6 @@ export class PaymentMethodService {
     // Validate billing address if provided
     if (dto.billingAddressId) {
       await this.validateBillingAddress(dto.billingAddressId, userId);
-    }
-
-    // Validate payment method data
-    const validation = this.validatePaymentMethodData(dto);
-    if (!validation.isValid) {
-      throw new DomainValidationError(
-        `Invalid payment method: ${validation.errors.join(", ")}`,
-      );
     }
 
     // Check if user already has payment methods
@@ -289,7 +275,7 @@ export class PaymentMethodService {
 
   async validatePaymentMethod(
     paymentMethodId: string,
-  ): Promise<PaymentMethodValidationResult> {
+  ): Promise<{ isValid: boolean; errors: string[]; warnings: string[] }> {
     const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
     const paymentMethod =
       await this.paymentMethodRepository.findById(paymentMethodIdVo);
@@ -345,48 +331,6 @@ export class PaymentMethodService {
     return await this.paymentMethodRepository.deleteByUserId(userIdVo);
   }
 
-  async getPaymentMethodStats(userId: string): Promise<{
-    total: number;
-    byType: Record<string, number>;
-    expired: number;
-    expiringSoon: number;
-    hasDefault: boolean;
-  }> {
-    const userIdVo = UserId.fromString(userId);
-    const paymentMethods =
-      await this.paymentMethodRepository.findByUserId(userIdVo);
-
-    const stats = {
-      total: paymentMethods.length,
-      byType: {} as Record<string, number>,
-      expired: 0,
-      expiringSoon: 0,
-      hasDefault: false,
-    };
-
-    for (const method of paymentMethods) {
-      // Count by type
-      const type = method.type;
-      stats.byType[type] = (stats.byType[type] || 0) + 1;
-
-      // Check if default
-      if (method.isDefault) {
-        stats.hasDefault = true;
-      }
-
-      // Count expired and expiring cards
-      if (method.type === PaymentMethodType.CARD) {
-        if (method.isExpired()) {
-          stats.expired++;
-        } else if (method.isExpiringSoon()) {
-          stats.expiringSoon++;
-        }
-      }
-    }
-
-    return stats;
-  }
-
   private async validateBillingAddress(
     addressId: string,
     userId: UserId,
@@ -406,70 +350,6 @@ export class PaymentMethodService {
     if (!address.isValidForBilling()) {
       throw new InvalidOperationError("Address is not valid for billing");
     }
-  }
-
-  private validatePaymentMethodData(
-    dto: AddPaymentMethodDto,
-  ): PaymentMethodValidationResult {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Validate card-specific fields
-    if (dto.type === PaymentMethodType.CARD) {
-      if (!dto.last4) {
-        errors.push("Last 4 digits are required for card payments");
-      } else if (!/^\d{4}$/.test(dto.last4)) {
-        errors.push("Last 4 digits must be exactly 4 numeric characters");
-      }
-
-      if (!dto.expMonth || !dto.expYear) {
-        errors.push("Expiration month and year are required for card payments");
-      } else {
-        if (dto.expMonth < 1 || dto.expMonth > 12) {
-          errors.push("Expiration month must be between 1 and 12");
-        }
-
-        const currentYear = new Date().getFullYear();
-        if (dto.expYear < currentYear) {
-          errors.push("Expiration year cannot be in the past");
-        }
-
-        // Check if card expires soon
-        const currentDate = new Date();
-        const expDate = new Date(dto.expYear, dto.expMonth - 1);
-        const monthsUntilExpiry =
-          (expDate.getTime() - currentDate.getTime()) /
-          (1000 * 60 * 60 * 24 * 30);
-
-        if (monthsUntilExpiry < 3) {
-          warnings.push("Card expires within 3 months");
-        }
-      }
-
-      if (!dto.brand) {
-        warnings.push("Brand is recommended for card payments");
-      }
-    }
-
-    // Validate wallet-specific fields
-    if (dto.type === PaymentMethodType.WALLET) {
-      if (!dto.providerRef) {
-        errors.push("Provider reference is required for wallet payments");
-      }
-    }
-
-    // Validate bank-specific fields
-    if (dto.type === PaymentMethodType.BANK) {
-      if (!dto.providerRef) {
-        errors.push("Provider reference is required for bank payments");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-    };
   }
 
 }

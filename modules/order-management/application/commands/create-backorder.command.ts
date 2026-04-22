@@ -7,7 +7,7 @@ export interface CreateBackorderCommand extends ICommand {
   readonly promisedEta?: Date;
 }
 
-export class CreateBackorderCommandHandler implements ICommandHandler<
+export class CreateBackorderHandler implements ICommandHandler<
   CreateBackorderCommand,
   CommandResult<BackorderDTO>
 > {

@@ -15,6 +15,9 @@ export class UpdateAppointmentHandler
   constructor(private readonly appointmentService: AppointmentService) {}
 
   async handle(command: UpdateAppointmentCommand): Promise<CommandResult<void>> {
+    if ((command.startAt === undefined) !== (command.endAt === undefined)) {
+      return CommandResult.failure("Both startAt and endAt must be provided together");
+    }
     if (command.startAt !== undefined && command.endAt !== undefined) {
       await this.appointmentService.rescheduleAppointment(
         command.appointmentId,

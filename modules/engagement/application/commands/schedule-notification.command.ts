@@ -6,7 +6,7 @@ export interface ScheduleNotificationCommand extends ICommand {
   readonly type: string;
   readonly channel?: string;
   readonly templateId?: string;
-  readonly payload?: Record<string, any>;
+  readonly payload?: Record<string, unknown>;
   readonly scheduledAt: Date;
 }
 

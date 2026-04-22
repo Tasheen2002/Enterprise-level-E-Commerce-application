@@ -3,30 +3,32 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { LoyaltyService, LoyaltyAccountData } from '../services/loyalty.service';
+import { LoyaltyService } from '../services/loyalty.service';
+import { LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
 import { LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
 
 export interface RedeemLoyaltyPointsCommand extends ICommand {
   readonly userId: string;
   readonly points: number;
-  readonly orderId: string;
+  readonly orderId?: string;
   readonly reason?: LoyaltyTransactionReason;
+  readonly description?: string;
 }
 
 export class RedeemLoyaltyPointsHandler implements ICommandHandler<
   RedeemLoyaltyPointsCommand,
-  CommandResult<LoyaltyAccountData>
+  CommandResult<LoyaltyTransactionDTO>
 > {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
-  async handle(command: RedeemLoyaltyPointsCommand): Promise<CommandResult<LoyaltyAccountData>> {
-    await this.loyaltyService.redeemPoints({
+  async handle(command: RedeemLoyaltyPointsCommand): Promise<CommandResult<LoyaltyTransactionDTO>> {
+    const transaction = await this.loyaltyService.redeemPoints({
       userId: command.userId,
       points: command.points,
       reason: command.reason ?? LoyaltyTransactionReason.DISCOUNT_REDEMPTION,
-      referenceId: command.orderId,
+      orderId: command.orderId,
+      description: command.description,
     });
-    const account = await this.loyaltyService.getAccountDetails(command.userId);
-    return CommandResult.success(account);
+    return CommandResult.success(transaction);
   }
 }

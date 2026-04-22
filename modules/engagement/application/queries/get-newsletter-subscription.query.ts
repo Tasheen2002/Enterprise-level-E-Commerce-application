@@ -1,7 +1,10 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { NewsletterService } from "../services/newsletter.service";
 import { SubscriptionDTO } from "../../domain/entities/newsletter-subscription.entity";
-import { NewsletterSubscriptionNotFoundError } from "../../domain/errors/engagement.errors";
+import {
+  NewsletterSubscriptionNotFoundError,
+  DomainValidationError,
+} from "../../domain/errors/engagement.errors";
 
 export interface GetNewsletterSubscriptionQuery extends IQuery {
   readonly subscriptionId?: string;
@@ -26,6 +29,6 @@ export class GetNewsletterSubscriptionHandler
       return dto;
     }
 
-    throw new NewsletterSubscriptionNotFoundError();
+    throw new DomainValidationError("Either subscriptionId or email must be provided");
   }
 }

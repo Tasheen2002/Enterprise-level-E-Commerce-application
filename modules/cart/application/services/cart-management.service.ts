@@ -1,4 +1,4 @@
-import { ICartRepository } from "../../domain/repositories/cart.repository";
+import { ICartRepository, CartWithCheckoutInfo } from "../../domain/repositories/cart.repository";
 import { IReservationRepository } from "../../domain/repositories/reservation.repository";
 import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
 import {
@@ -262,6 +262,47 @@ export class CartManagementService {
   }
 
   // Cart retrieval
+  async getCartSummary(
+    cartId: string,
+    userId?: string,
+    guestToken?: string,
+  ): Promise<CartSummaryDto | null> {
+    const cart = await this.cartRepository.findById(CartId.fromString(cartId));
+
+    if (!cart) {
+      return null;
+    }
+
+    this.validateCartOwnership(cart, userId, guestToken);
+
+    const cartWithCheckoutInfo =
+      await this.cartRepository.getCartWithCheckoutInfo(cart.cartId);
+
+    const resolvedShippingCost = await this.calculateShippingCost(
+      cartWithCheckoutInfo?.shippingMethod ?? undefined,
+      cartWithCheckoutInfo?.shippingOption ?? undefined,
+    );
+
+    return {
+      cartId: cart.cartId.getValue(),
+      isUserCart: cart.isUserCart,
+      isGuestCart: cart.isGuestCart,
+      currency: cart.currency.getValue(),
+      itemCount: cart.itemCount,
+      uniqueItemCount: cart.uniqueItemCount,
+      subtotal: cart.subtotal,
+      totalDiscount: cart.totalDiscount,
+      total: cart.total + resolvedShippingCost,
+      shippingAmount: resolvedShippingCost,
+      hasGiftItems: cart.hasGiftItems,
+      hasFreeShipping: cart.hasFreeShipping,
+      isEmpty: cart.isEmpty,
+      isReservationExpired: cart.isReservationExpired,
+      reservationExpiresAt: cart.reservationExpiresAt ?? undefined,
+      updatedAt: cart.updatedAt,
+    };
+  }
+
   async getCart(
     cartId: string,
     userId?: string,
@@ -276,9 +317,6 @@ export class CartManagementService {
     // Validate ownership
     this.validateCartOwnership(cart, userId, guestToken);
 
-    // Refresh reservations (Lazy Renewal)
-    await this.refreshCartReservations(cart);
-
     return await this.mapCartToDto(cart);
   }
 
@@ -286,24 +324,29 @@ export class CartManagementService {
     const cart = await this.cartRepository.findActiveCartByCartOwnerId(
       CartOwnerId.fromString(userId),
     );
-
-    if (cart) {
-      await this.refreshCartReservations(cart);
-      return await this.mapCartToDto(cart);
-    }
-    return null;
+    return cart ? await this.mapCartToDto(cart) : null;
   }
 
   async getActiveCartByGuestToken(guestToken: string): Promise<CartDto | null> {
     const cart = await this.cartRepository.findActiveCartByGuestToken(
       GuestToken.fromString(guestToken),
     );
+    return cart ? await this.mapCartToDto(cart) : null;
+  }
 
-    if (cart) {
-      await this.refreshCartReservations(cart);
-      return await this.mapCartToDto(cart);
-    }
-    return null;
+  /**
+   * Explicitly renew expired reservations for all items in a cart.
+   * Must be called as a command (write operation), not during reads.
+   */
+  async refreshReservations(
+    cartId: string,
+    userId?: string,
+    guestToken?: string,
+  ): Promise<void> {
+    const cart = await this.cartRepository.findById(CartId.fromString(cartId));
+    if (!cart) throw new CartNotFoundError(cartId);
+    this.validateCartOwnership(cart, userId, guestToken);
+    await this.refreshCartReservations(cart);
   }
 
   // Item management
@@ -475,7 +518,7 @@ export class CartManagementService {
         reservation.updateQuantity(dto.quantity);
         await this.reservationRepository.save(reservation);
       } else {
-        await this.reservationRepository.delete(reservation.reservationId.getValue());
+        await this.reservationRepository.delete(reservation.reservationId);
       }
     }
 
@@ -486,7 +529,7 @@ export class CartManagementService {
     return await this.mapCartToDto(cart);
   }
 
-  async removeFromCart(dto: RemoveFromCartDto): Promise<CartDto> {
+  async removeFromCart(dto: RemoveFromCartDto): Promise<void> {
     const cart = await this.cartRepository.findById(
       CartId.fromString(dto.cartId),
     );
@@ -507,15 +550,13 @@ export class CartManagementService {
     // Remove from cart
     cart.removeItem(dto.variantId);
     await this.cartRepository.save(cart);
-
-    return await this.mapCartToDto(cart);
   }
 
   async clearCart(
     cartId: string,
     userId?: string,
     guestToken?: string,
-  ): Promise<CartDto> {
+  ): Promise<void> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
 
     if (!cart) {
@@ -531,8 +572,6 @@ export class CartManagementService {
     // Clear cart items
     cart.clearItems();
     await this.cartRepository.save(cart);
-
-    return await this.mapCartToDto(cart);
   }
 
   // Cart transfer and merging
@@ -656,16 +695,11 @@ export class CartManagementService {
   }
 
   private async mapCartToDto(cart: ShoppingCart): Promise<CartDto> {
-    // Map all cart items with product details
-    const items = await Promise.all(
-      cart.items.map((item) => this.mapCartItemToDto(item)),
-    );
-
-    // Fetch checkout fields from database (they're not in the domain entity)
-    const cartWithCheckoutInfo =
-      await this.cartRepository.getCartWithCheckoutInfo(
-        cart.cartId.getValue(),
-      );
+    // Fetch checkout fields and all variant/product data in parallel
+    const [cartWithCheckoutInfo, items] = await Promise.all([
+      this.cartRepository.getCartWithCheckoutInfo(cart.cartId),
+      this.mapCartItemsBatched(cart.items),
+    ]);
 
     // Calculate shipping
     const shippingCost = await this.calculateShippingCost(
@@ -749,74 +783,120 @@ export class CartManagementService {
     return 0.0;
   }
 
-  private async mapCartItemToDto(item: CartItem): Promise<CartItemDto> {
-    const variantId = item.variantId.getValue();
+  private async mapCartItemsBatched(items: CartItem[]): Promise<CartItemDto[]> {
+    if (items.length === 0) return [];
 
-    // Fetch variant details
-    const variant = await this.productVariantRepository.findById({
-      getValue: () => variantId,
-    });
+    // 1. Fetch all variants in parallel
+    const variantResults = await Promise.all(
+      items.map((item) =>
+        this.productVariantRepository.findById({
+          getValue: () => item.variantId.getValue(),
+        }),
+      ),
+    );
 
-    let productDetails = undefined;
-    let variantDetails = undefined;
+    // 2. Collect unique product IDs, then fetch all products in parallel
+    const productIdSet = new Set<string>();
+    for (const variant of variantResults) {
+      if (variant) productIdSet.add(variant.getProductId().getValue());
+    }
+    const uniqueProductIds = [...productIdSet];
 
-    if (variant) {
-      // Get variant details
-      variantDetails = {
-        size: variant.getSize(),
-        color: variant.getColor(),
-        sku: variant.getSku().getValue(),
-      };
+    const productResults = await Promise.all(
+      uniqueProductIds.map((pid) =>
+        this.productRepository.findById({ getValue: () => pid }),
+      ),
+    );
+    const productMap = new Map(
+      productResults
+        .filter((p): p is NonNullable<typeof p> => p !== null)
+        .map((p) => [p.getId().getValue(), p]),
+    );
 
-      // Fetch product details
-      const productId = variant.getProductId();
-      const product = await this.productRepository.findById(productId);
+    // 3. Fetch media lists for all products in parallel
+    const mediaListResults = await Promise.all(
+      uniqueProductIds.map((pid) =>
+        this.productMediaRepository.findByProductId(
+          { getValue: () => pid },
+          { sortBy: "position", sortOrder: "asc" },
+        ),
+      ),
+    );
+    const mediaListMap = new Map(
+      uniqueProductIds.map((pid, i) => [pid, mediaListResults[i]]),
+    );
 
-      if (product) {
-        // Fetch product images
-        const productMediaList =
-          await this.productMediaRepository.findByProductId(productId, {
-            sortBy: "position",
-            sortOrder: "asc",
-          });
-
-        const images = await Promise.all(
-          productMediaList.map(async (media) => {
-            const asset = await this.mediaAssetRepository.findById(
-              media.getAssetId(),
-            );
-            return {
-              url: asset?.getStorageKey() || "",
-              alt: asset?.getAltText() || undefined,
-            };
-          }),
-        );
-
-        productDetails = {
-          productId: product.getId().getValue(),
-          title: product.getTitle(),
-          slug: product.getSlug().getValue(),
-          images,
-        };
+    // 4. Collect unique asset IDs, then fetch all assets in parallel
+    const assetIdSet = new Set<string>();
+    for (const mediaList of mediaListResults) {
+      for (const media of mediaList) {
+        assetIdSet.add(media.getAssetId().getValue());
       }
     }
+    const assetResults = await Promise.all(
+      [...assetIdSet].map((aid) =>
+        this.mediaAssetRepository.findById({ getValue: () => aid }),
+      ),
+    );
+    const assetMap = new Map(
+      [...assetIdSet].map((aid, i) => [aid, assetResults[i]]),
+    );
 
-    return {
-      id: item.id,
-      variantId,
-      quantity: item.quantity.getValue(),
-      unitPrice: item.unitPrice,
-      subtotal: item.subtotal,
-      discountAmount: item.discountAmount,
-      totalPrice: item.totalPrice,
-      appliedPromos: item.appliedPromos.getValue(),
-      isGift: item.isGift,
-      giftMessage: item.giftMessage,
-      hasPromosApplied: item.hasPromosApplied,
-      hasFreeShipping: item.hasFreeShipping,
-      product: productDetails,
-      variant: variantDetails,
-    };
+    // 5. Assemble DTOs from pre-fetched data
+    return items.map((item, i) => {
+      const variantId = item.variantId.getValue();
+      const variant = variantResults[i];
+
+      let productDetails = undefined;
+      let variantDetails = undefined;
+
+      if (variant) {
+        variantDetails = {
+          size: variant.getSize(),
+          color: variant.getColor(),
+          sku: variant.getSku().getValue(),
+        };
+
+        const productId = variant.getProductId().getValue();
+        const product = productMap.get(productId);
+
+        if (product) {
+          const mediaList = mediaListMap.get(productId) ?? [];
+          const images = mediaList.map((media) => {
+            const assetId = media.getAssetId().getValue();
+            const asset = assetMap.get(assetId);
+            return {
+              url: asset?.getStorageKey() ?? "",
+              alt: asset?.getAltText() ?? undefined,
+            };
+          });
+
+          productDetails = {
+            productId,
+            title: product.getTitle(),
+            slug: product.getSlug().getValue(),
+            images,
+          };
+        }
+      }
+
+      return {
+        id: item.id,
+        variantId,
+        quantity: item.quantity.getValue(),
+        unitPrice: item.unitPrice,
+        subtotal: item.subtotal,
+        discountAmount: item.discountAmount,
+        totalPrice: item.totalPrice,
+        appliedPromos: item.appliedPromos.getValue(),
+        isGift: item.isGift,
+        giftMessage: item.giftMessage,
+        hasPromosApplied: item.hasPromosApplied,
+        hasFreeShipping: item.hasFreeShipping,
+        product: productDetails,
+        variant: variantDetails,
+      };
+    });
   }
 
   // Cart cleanup and maintenance
@@ -915,13 +995,7 @@ export class CartManagementService {
     cartId: string,
     userId?: string,
     guestToken?: string,
-  ): Promise<
-    ReturnType<ICartRepository["getCartWithCheckoutInfo"]> extends Promise<
-      infer T
-    >
-      ? T
-      : never
-  > {
+  ): Promise<CartWithCheckoutInfo | null> {
     const cart = await this.cartRepository.findById(CartId.fromString(cartId));
     if (!cart) {
       throw new CartNotFoundError(cartId);
@@ -930,7 +1004,7 @@ export class CartManagementService {
     this.validateCartOwnership(cart, userId, guestToken);
 
     return await this.cartRepository.getCartWithCheckoutInfo(
-      cart.cartId.getValue(),
+      cart.cartId,
     );
   }
 }

@@ -74,9 +74,8 @@ export class PurchaseOrderManagementService {
     variantId: string,
     orderedQty: number,
   ): Promise<PurchaseOrderItemDTO> {
-    const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.fromString(poId),
-    );
+    const poIdVO = PurchaseOrderId.fromString(poId);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
@@ -87,7 +86,7 @@ export class PurchaseOrderManagementService {
     }
 
     const existingItem = await this.purchaseOrderItemRepository.findByPoAndVariant(
-      PurchaseOrderId.fromString(poId),
+      poIdVO,
       variantId,
     );
 
@@ -95,11 +94,7 @@ export class PurchaseOrderManagementService {
       throw new PurchaseOrderItemAlreadyExistsError(variantId);
     }
 
-    const item = PurchaseOrderItem.create({
-      poId: PurchaseOrderId.fromString(poId),
-      variantId,
-      orderedQty,
-    });
+    const item = PurchaseOrderItem.create({ poId: poIdVO, variantId, orderedQty });
 
     await this.purchaseOrderItemRepository.save(item);
     return PurchaseOrderItem.toDTO(item);
@@ -110,9 +105,8 @@ export class PurchaseOrderManagementService {
     variantId: string,
     orderedQty: number,
   ): Promise<PurchaseOrderItemDTO> {
-    const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.fromString(poId),
-    );
+    const poIdVO = PurchaseOrderId.fromString(poId);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
@@ -122,10 +116,7 @@ export class PurchaseOrderManagementService {
       throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
     }
 
-    const item = await this.purchaseOrderItemRepository.findByPoAndVariant(
-      PurchaseOrderId.fromString(poId),
-      variantId,
-    );
+    const item = await this.purchaseOrderItemRepository.findByPoAndVariant(poIdVO, variantId);
 
     if (!item) {
       throw new PurchaseOrderItemNotFoundError(variantId);
@@ -140,9 +131,8 @@ export class PurchaseOrderManagementService {
     poId: string,
     variantId: string,
   ): Promise<void> {
-    const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.fromString(poId),
-    );
+    const poIdVO = PurchaseOrderId.fromString(poId);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
@@ -152,10 +142,7 @@ export class PurchaseOrderManagementService {
       throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
     }
 
-    await this.purchaseOrderItemRepository.delete(
-      PurchaseOrderId.fromString(poId),
-      variantId,
-    );
+    await this.purchaseOrderItemRepository.delete(poIdVO, variantId);
   }
 
   async receivePurchaseOrderItems(
@@ -163,21 +150,23 @@ export class PurchaseOrderManagementService {
     locationId: string,
     items: { variantId: string; receivedQty: number }[],
   ): Promise<{ purchaseOrder: PurchaseOrderDTO; items: PurchaseOrderItemDTO[] }> {
-    const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.fromString(poId),
-    );
+    const poIdVO = PurchaseOrderId.fromString(poId);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
+    if (!purchaseOrder.isSent() && !purchaseOrder.isPartiallyReceived()) {
+      throw new InvalidOperationError(
+        `Cannot receive items for a purchase order in '${purchaseOrder.status.getValue()}' status`,
+      );
+    }
+
     const updatedItems: PurchaseOrderItem[] = [];
 
     for (const { variantId, receivedQty } of items) {
-      const item = await this.purchaseOrderItemRepository.findByPoAndVariant(
-        PurchaseOrderId.fromString(poId),
-        variantId,
-      );
+      const item = await this.purchaseOrderItemRepository.findByPoAndVariant(poIdVO, variantId);
 
       if (!item) {
         throw new PurchaseOrderItemNotFoundError(variantId);
@@ -204,9 +193,7 @@ export class PurchaseOrderManagementService {
       await this.transactionRepository.save(transaction);
     }
 
-    const allItems = await this.purchaseOrderItemRepository.findByPurchaseOrder(
-      PurchaseOrderId.fromString(poId),
-    );
+    const allItems = await this.purchaseOrderItemRepository.findByPurchaseOrder(poIdVO);
 
     const allFullyReceived = allItems.every((item) => item.isFullyReceived());
     const anyPartiallyReceived = allItems.some((item) => item.isPartiallyReceived());
@@ -228,9 +215,8 @@ export class PurchaseOrderManagementService {
   }
 
   async deletePurchaseOrder(poId: string): Promise<void> {
-    const purchaseOrder = await this.purchaseOrderRepository.findById(
-      PurchaseOrderId.fromString(poId),
-    );
+    const poIdVO = PurchaseOrderId.fromString(poId);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
@@ -240,7 +226,7 @@ export class PurchaseOrderManagementService {
       throw new InvalidOperationError("Only draft purchase orders can be deleted");
     }
 
-    await this.purchaseOrderRepository.delete(PurchaseOrderId.fromString(poId));
+    await this.purchaseOrderRepository.delete(poIdVO);
   }
 
   async getPurchaseOrder(poId: string): Promise<PurchaseOrderDTO> {
@@ -275,7 +261,7 @@ export class PurchaseOrderManagementService {
         : undefined,
     });
     return {
-      purchaseOrders: result.purchaseOrders.map(PurchaseOrder.toDTO),
+      purchaseOrders: result.items.map(PurchaseOrder.toDTO),
       total: result.total,
     };
   }

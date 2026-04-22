@@ -60,21 +60,21 @@ export class CheckoutService {
     }
 
     // Validate cart belongs to user or guest
-    if (dto.userId && cart.cartOwnerId?.toString() !== dto.userId) {
+    if (dto.userId && cart.cartOwnerId?.getValue() !== dto.userId) {
       throw new CartOwnershipError("Cart does not belong to user");
     }
 
-    if (dto.guestToken && cart.guestToken?.toString() !== dto.guestToken) {
+    if (dto.guestToken && cart.guestToken?.getValue() !== dto.guestToken) {
       throw new CartOwnershipError("Cart does not belong to guest");
     }
 
     // Calculate total amount with shipping
     let totalAmount = cart.total;
-    const currency = cart.currency.toString();
+    const currency = cart.currency.getValue();
 
     // Get checkout info to calculate shipping
     const cartWithCheckoutInfo =
-      await this.cartRepository.getCartWithCheckoutInfo(cartId.getValue());
+      await this.cartRepository.getCartWithCheckoutInfo(cartId);
 
     if (cartWithCheckoutInfo?.shippingMethod === "home") {
       const shippingRates = await this.settingsService.getShippingRates();
@@ -120,11 +120,11 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (userId && checkout.cartOwnerId?.toString() !== userId) {
+    if (userId && checkout.cartOwnerId?.getValue() !== userId) {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (guestToken && checkout.guestToken?.toString() !== guestToken) {
+    if (guestToken && checkout.guestToken?.getValue() !== guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -140,11 +140,11 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (dto.userId && checkout.cartOwnerId?.toString() !== dto.userId) {
+    if (dto.userId && checkout.cartOwnerId?.getValue() !== dto.userId) {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (dto.guestToken && checkout.guestToken?.toString() !== dto.guestToken) {
+    if (dto.guestToken && checkout.guestToken?.getValue() !== dto.guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -178,11 +178,11 @@ export class CheckoutService {
     }
 
     // Validate ownership
-    if (userId && checkout.cartOwnerId?.toString() !== userId) {
+    if (userId && checkout.cartOwnerId?.getValue() !== userId) {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (guestToken && checkout.guestToken?.toString() !== guestToken) {
+    if (guestToken && checkout.guestToken?.getValue() !== guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -200,8 +200,8 @@ export class CheckoutService {
     return {
       checkoutId: checkout.checkoutId.getValue(),
       cartId: checkout.cartId.getValue(),
-      userId: checkout.cartOwnerId?.toString(),
-      guestToken: checkout.guestToken?.toString(),
+      userId: checkout.cartOwnerId?.getValue(),
+      guestToken: checkout.guestToken?.getValue(),
       status: checkout.status.getValue(),
       totalAmount: checkout.totalAmount,
       currency: checkout.currency.getValue(),

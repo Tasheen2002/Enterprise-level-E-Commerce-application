@@ -8,6 +8,11 @@ import {
   ListSuppliersHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CreateSupplierBody,
+  UpdateSupplierBody,
+  ListSuppliersQuery,
+} from "../validation/supplier.schema";
 
 export class SupplierController {
   constructor(
@@ -32,13 +37,12 @@ export class SupplierController {
   }
 
   async listSuppliers(
-    request: AuthenticatedRequest<{
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListSuppliersQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listSuppliersHandler.handle(request.query);
+      const { limit, offset } = request.query;
+      const result = await this.listSuppliersHandler.handle({ limit, offset });
       return ResponseHelper.ok(reply, "Suppliers retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -46,17 +50,12 @@ export class SupplierController {
   }
 
   async createSupplier(
-    request: AuthenticatedRequest<{
-      Body: {
-        name: string;
-        leadTimeDays?: number;
-        contacts?: Array<{ name?: string; email?: string; phone?: string }>;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateSupplierBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createSupplierHandler.handle(request.body);
+      const { name, leadTimeDays, contacts } = request.body;
+      const result = await this.createSupplierHandler.handle({ name, leadTimeDays, contacts });
       return ResponseHelper.fromCommand(reply, result, "Supplier created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -66,17 +65,14 @@ export class SupplierController {
   async updateSupplier(
     request: AuthenticatedRequest<{
       Params: { supplierId: string };
-      Body: {
-        name?: string;
-        leadTimeDays?: number;
-        contacts?: Array<{ name?: string; email?: string; phone?: string }>;
-      };
+      Body: UpdateSupplierBody;
     }>,
     reply: FastifyReply,
   ) {
     try {
       const { supplierId } = request.params;
-      const result = await this.updateSupplierHandler.handle({ supplierId, ...request.body });
+      const { name, leadTimeDays, contacts } = request.body;
+      const result = await this.updateSupplierHandler.handle({ supplierId, name, leadTimeDays, contacts });
       return ResponseHelper.fromCommand(reply, result, "Supplier updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

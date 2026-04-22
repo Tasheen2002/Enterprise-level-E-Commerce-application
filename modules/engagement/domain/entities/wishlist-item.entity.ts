@@ -62,7 +62,7 @@ export class WishlistItem extends AggregateRoot {
   static create(
     params: Omit<WishlistItemProps, "id" | "createdAt" | "updatedAt">
   ): WishlistItem {
-    WishlistItem.validateIds(params.wishlistId, params.variantId);
+    WishlistItem.validateVariantId(params.variantId);
 
     const entity = new WishlistItem({
       ...params,
@@ -85,11 +85,8 @@ export class WishlistItem extends AggregateRoot {
     return new WishlistItem(props);
   }
 
-  private static validateIds(wishlistId: WishlistId, variantId: string): void {
-    if (!wishlistId) {
-      throw new DomainValidationError("Wishlist ID is required");
-    }
-    if (!variantId || variantId.trim().length === 0) {
+  private static validateVariantId(variantId: string): void {
+    if (variantId.trim().length === 0) {
       throw new DomainValidationError("Variant ID is required");
     }
   }

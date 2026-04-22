@@ -16,7 +16,7 @@ export class CreateCategorySizeGuideHandler implements ICommandHandler<CreateCat
   async handle(command: CreateCategorySizeGuideCommand): Promise<CommandResult<SizeGuideDTO>> {
     const { category, region, ...data } = command;
     const dto = await this.sizeGuideManagementService.createCategorySizeGuide(
-      decodeURIComponent(category),
+      category,
       region,
       data,
     );

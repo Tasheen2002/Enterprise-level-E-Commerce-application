@@ -53,7 +53,14 @@ export const orderItemResponseSchema = {
         price: { type: "number" },
         imageUrl: { type: "string" },
         weight: { type: "number" },
-        dimensions: { type: "object", additionalProperties: true },
+        dimensions: {
+          type: "object",
+          properties: {
+            length: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+          },
+        },
         attributes: { type: "object", additionalProperties: true },
       },
     },

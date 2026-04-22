@@ -1,50 +1,55 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { Supplier } from "../../../domain/entities/supplier.entity";
 import { SupplierId } from "../../../domain/value-objects/supplier-id.vo";
 import { SupplierName } from "../../../domain/value-objects/supplier-name.vo";
 import { SupplierContact } from "../../../domain/value-objects/supplier-contact.vo";
 import { ISupplierRepository } from "../../../domain/repositories/supplier.repository";
 
-interface SupplierDatabaseRow {
-  supplierId: string;
-  name: string;
-  leadTimeDays: number | null;
-  contacts: any;
-}
-
-export class SupplierRepositoryImpl extends PrismaRepository<Supplier> implements ISupplierRepository {
+export class SupplierRepositoryImpl
+  extends PrismaRepository<Supplier>
+  implements ISupplierRepository
+{
   constructor(prisma: PrismaClient, eventBus?: IEventBus) {
     super(prisma, eventBus);
   }
 
-  private toEntity(row: SupplierDatabaseRow): Supplier {
+  private toEntity(row: {
+    supplierId: string;
+    name: string;
+    leadTimeDays: number | null;
+    contacts: unknown;
+  }): Supplier {
     const contacts: SupplierContact[] = Array.isArray(row.contacts)
-      ? row.contacts.map((c: any) => SupplierContact.create(c))
+      ? (row.contacts as Record<string, unknown>[]).map((c) => SupplierContact.create(c))
       : [];
 
+    const fallbackDate = new Date(0);
     return Supplier.fromPersistence({
       supplierId: SupplierId.fromString(row.supplierId),
       name: SupplierName.create(row.name),
       leadTimeDays: row.leadTimeDays ?? undefined,
       contacts,
+      createdAt: fallbackDate,
+      updatedAt: fallbackDate,
     });
   }
 
   async save(supplier: Supplier): Promise<void> {
-    await (this.prisma as any).supplier.upsert({
+    await this.prisma.supplier.upsert({
       where: { supplierId: supplier.supplierId.getValue() },
       create: {
         supplierId: supplier.supplierId.getValue(),
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.getValue()) as any,
+        contacts: supplier.contacts.map((c) => c.getValue()) as Prisma.InputJsonValue,
       },
       update: {
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.getValue()) as any,
+        contacts: supplier.contacts.map((c) => c.getValue()) as Prisma.InputJsonValue,
       },
     });
 
@@ -52,60 +57,48 @@ export class SupplierRepositoryImpl extends PrismaRepository<Supplier> implement
   }
 
   async findById(supplierId: SupplierId): Promise<Supplier | null> {
-    const supplier = await (this.prisma as any).supplier.findUnique({
+    const row = await this.prisma.supplier.findUnique({
       where: { supplierId: supplierId.getValue() },
     });
 
-    if (!supplier) {
-      return null;
-    }
-
-    return this.toEntity(supplier as SupplierDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async delete(supplierId: SupplierId): Promise<void> {
-    await (this.prisma as any).supplier.delete({
+    await this.prisma.supplier.delete({
       where: { supplierId: supplierId.getValue() },
     });
   }
 
   async findByName(name: string): Promise<Supplier | null> {
-    const supplier = await (this.prisma as any).supplier.findFirst({
+    const row = await this.prisma.supplier.findFirst({
       where: { name },
     });
 
-    if (!supplier) {
-      return null;
-    }
-
-    return this.toEntity(supplier as SupplierDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async findAll(options?: {
     limit?: number;
     offset?: number;
-  }): Promise<{ suppliers: Supplier[]; total: number }> {
+  }): Promise<PaginatedResult<Supplier>> {
     const { limit = 50, offset = 0 } = options || {};
 
-    const [suppliers, total] = await Promise.all([
-      (this.prisma as any).supplier.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.supplier.findMany({
         take: limit,
         skip: offset,
         orderBy: { name: "asc" },
       }),
-      (this.prisma as any).supplier.count(),
+      this.prisma.supplier.count(),
     ]);
 
-    return {
-      suppliers: suppliers.map((supplier: SupplierDatabaseRow) =>
-        this.toEntity(supplier),
-      ),
-      total,
-    };
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
   async exists(supplierId: SupplierId): Promise<boolean> {
-    const count = await (this.prisma as any).supplier.count({
+    const count = await this.prisma.supplier.count({
       where: { supplierId: supplierId.getValue() },
     });
 
@@ -113,7 +106,7 @@ export class SupplierRepositoryImpl extends PrismaRepository<Supplier> implement
   }
 
   async existsByName(name: string): Promise<boolean> {
-    const count = await (this.prisma as any).supplier.count({
+    const count = await this.prisma.supplier.count({
       where: { name },
     });
 

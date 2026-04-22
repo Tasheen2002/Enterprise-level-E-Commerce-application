@@ -7,7 +7,7 @@ import {
   ProductReview,
   ReviewDTO,
 } from "../../domain/entities/product-review.entity";
-import { ReviewId, ReviewStatus, Rating } from "../../domain/value-objects";
+import { ReviewId, Rating } from "../../domain/value-objects";
 import {
   ProductReviewNotFoundError,
   ProductReviewAlreadyExistsError,
@@ -127,10 +127,7 @@ export class ProductReviewService {
     status: string,
     options?: ProductReviewQueryOptions,
   ): Promise<PaginatedReviewResult> {
-    const result = await this.reviewRepository.findByStatus(
-      ReviewStatus.fromString(status),
-      options,
-    );
+    const result = await this.reviewRepository.findByStatus(status, options);
     return this.mapPaginated(result);
   }
 
@@ -191,7 +188,7 @@ export class ProductReviewService {
   }
 
   async countReviewsByStatus(status: string): Promise<number> {
-    return this.reviewRepository.countByStatus(ReviewStatus.fromString(status));
+    return this.reviewRepository.countByStatus(status);
   }
 
   async getAverageRating(productId: string): Promise<number> {

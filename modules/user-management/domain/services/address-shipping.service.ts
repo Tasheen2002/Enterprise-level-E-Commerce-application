@@ -24,7 +24,7 @@ export class AddressShippingService {
       case 'CA':
       case 'MX':
         return ShippingZone.NORTH_AMERICA;
-      case 'UK':
+      case 'GB':
       case 'FR':
       case 'DE':
       case 'IT':

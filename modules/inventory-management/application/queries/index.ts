@@ -35,4 +35,3 @@ export { ListPickupReservationsHandler } from "./list-pickup-reservations.query"
 export { GetTransactionHandler } from "./get-transaction.query";
 export { ListTransactionsHandler } from "./list-transactions.query";
 export { GetTransactionsByVariantHandler } from "./get-transactions-by-variant.query";
-export { GetTransactionHistoryHandler } from "./get-transaction-history.query";

@@ -18,6 +18,16 @@ import {
   GetTagProductsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  TagParams,
+  TagByTagIdParams,
+  ListTagsQuery,
+  CreateTagBody,
+  UpdateTagBody,
+  BulkCreateTagsBody,
+  BulkDeleteTagsBody,
+  AssociateTagsBody,
+} from "../validation/product-tag.schema";
 
 export class ProductTagController {
   constructor(
@@ -39,15 +49,7 @@ export class ProductTagController {
   ) {}
 
   async getTags(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        page?: number;
-        limit?: number;
-        kind?: string;
-        sortBy?: "tag" | "kind";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListTagsQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -59,7 +61,7 @@ export class ProductTagController {
   }
 
   async getTag(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: TagParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -83,7 +85,7 @@ export class ProductTagController {
   }
 
   async createTag(
-    request: AuthenticatedRequest<{ Body: { tag: string; kind?: string } }>,
+    request: AuthenticatedRequest<{ Body: CreateTagBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -95,7 +97,7 @@ export class ProductTagController {
   }
 
   async updateTag(
-    request: AuthenticatedRequest<{ Params: { id: string }; Body: { tag?: string; kind?: string } }>,
+    request: AuthenticatedRequest<{ Params: TagParams; Body: UpdateTagBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -107,7 +109,7 @@ export class ProductTagController {
   }
 
   async deleteTag(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: TagParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -152,7 +154,7 @@ export class ProductTagController {
   }
 
   async createBulkTags(
-    request: AuthenticatedRequest<{ Body: { tags: Array<{ tag: string; kind?: string }> } }>,
+    request: AuthenticatedRequest<{ Body: BulkCreateTagsBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -164,7 +166,7 @@ export class ProductTagController {
   }
 
   async deleteBulkTags(
-    request: AuthenticatedRequest<{ Body: { ids: string[] } }>,
+    request: AuthenticatedRequest<{ Body: BulkDeleteTagsBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -200,10 +202,7 @@ export class ProductTagController {
   }
 
   async associateProductTags(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Body: { tagIds: string[] };
-    }>,
+    request: AuthenticatedRequest<{ Params: { productId: string }; Body: AssociateTagsBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -230,10 +229,7 @@ export class ProductTagController {
   }
 
   async getTagProducts(
-    request: AuthenticatedRequest<{
-      Params: { tagId: string };
-      Querystring: { page?: number; limit?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: TagByTagIdParams; Querystring: { page?: number; limit?: number } }>,
     reply: FastifyReply,
   ) {
     try {

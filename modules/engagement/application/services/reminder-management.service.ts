@@ -12,7 +12,6 @@ import {
   ReminderType,
   ContactType,
   ChannelType,
-  ReminderStatus,
 } from "../../domain/value-objects";
 import { ReminderNotFoundError } from "../../domain/errors/engagement.errors";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
@@ -101,10 +100,7 @@ export class ReminderManagementService {
     type: string,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedReminderResult> {
-    const result = await this.reminderRepository.findByType(
-      ReminderType.fromString(type),
-      options,
-    );
+    const result = await this.reminderRepository.findByType(type, options);
     return this.mapPaginated(result);
   }
 
@@ -112,10 +108,7 @@ export class ReminderManagementService {
     status: string,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedReminderResult> {
-    const result = await this.reminderRepository.findByStatus(
-      ReminderStatus.fromString(status),
-      options,
-    );
+    const result = await this.reminderRepository.findByStatus(status, options);
     return this.mapPaginated(result);
   }
 
@@ -142,11 +135,11 @@ export class ReminderManagementService {
   }
 
   async countRemindersByType(type: string): Promise<number> {
-    return this.reminderRepository.countByType(ReminderType.fromString(type));
+    return this.reminderRepository.countByType(type);
   }
 
   async countRemindersByStatus(status: string): Promise<number> {
-    return this.reminderRepository.countByStatus(ReminderStatus.fromString(status));
+    return this.reminderRepository.countByStatus(status);
   }
 
   async reminderExists(reminderId: string): Promise<boolean> {

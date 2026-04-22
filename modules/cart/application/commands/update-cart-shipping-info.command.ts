@@ -41,6 +41,6 @@ export class UpdateCartShippingInfoHandler implements ICommandHandler<
       command.userId,
       command.guestToken,
     );
-    return CommandResult.success<CartDto>(cart ?? undefined);
+    return CommandResult.success<CartDto>(cart!);
   }
 }

@@ -16,18 +16,18 @@ export interface AdjustReservationCommand extends ICommand {
 
 export class AdjustReservationHandler implements ICommandHandler<
   AdjustReservationCommand,
-  CommandResult<ReservationDto | null>
+  CommandResult<ReservationDto | undefined>
 > {
   constructor(private readonly reservationService: ReservationService) {}
 
   async handle(
     command: AdjustReservationCommand,
-  ): Promise<CommandResult<ReservationDto | null>> {
+  ): Promise<CommandResult<ReservationDto | undefined>> {
     const reservation = await this.reservationService.adjustReservation({
       cartId: command.cartId,
       variantId: command.variantId,
       newQuantity: command.newQuantity,
     });
-    return CommandResult.success<ReservationDto>(reservation ?? undefined);
+    return CommandResult.success<ReservationDto | undefined>(reservation ?? undefined);
   }
 }

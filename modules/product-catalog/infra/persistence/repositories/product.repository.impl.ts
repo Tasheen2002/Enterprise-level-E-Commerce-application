@@ -11,11 +11,21 @@ import { Product } from "../../../domain/entities/product.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
 import { Price } from "../../../domain/value-objects/price.vo";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
-export class ProductRepositoryImpl implements IProductRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ProductRepositoryImpl
+  extends PrismaRepository<Product>
+  implements IProductRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private mapRow(row: any): Product {
+    if (!row.createdAt || !row.updatedAt) {
+      throw new Error(`Product row is missing timestamps for id=${row.id}`);
+    }
     const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
     return Product.fromPersistence({
       id: ProductId.fromString(row.id),
@@ -30,9 +40,15 @@ export class ProductRepositoryImpl implements IProductRepository {
       seoTitle: row.seoTitle,
       seoDescription: row.seoDescription,
       price: Price.create(parseFloat(row.price?.toString() ?? "0")),
-      priceSgd: row.priceSgd ? Price.create(parseFloat(row.priceSgd.toString())) : null,
-      priceUsd: row.priceUsd ? Price.create(parseFloat(row.priceUsd.toString())) : null,
-      compareAtPrice: row.compareAtPrice ? Price.create(parseFloat(row.compareAtPrice.toString())) : null,
+      priceSgd: row.priceSgd
+        ? Price.create(parseFloat(row.priceSgd.toString()))
+        : null,
+      priceUsd: row.priceUsd
+        ? Price.create(parseFloat(row.priceUsd.toString()))
+        : null,
+      compareAtPrice: row.compareAtPrice
+        ? Price.create(parseFloat(row.compareAtPrice.toString()))
+        : null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
@@ -50,21 +66,22 @@ export class ProductRepositoryImpl implements IProductRepository {
       countryOfOrigin: product.countryOfOrigin,
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
+      price: product.price.getValue(),
+      priceSgd: product.priceSgd?.getValue() ?? null,
+      priceUsd: product.priceUsd?.getValue() ?? null,
+      compareAtPrice: product.compareAtPrice?.getValue() ?? null,
       updatedAt: product.updatedAt,
     };
     await this.prisma.product.upsert({
       where: { id: product.id.getValue() },
       create: {
         id: product.id.getValue(),
-        price: product.price.getValue(),
-        priceSgd: product.priceSgd?.getValue() ?? null,
-        priceUsd: product.priceUsd?.getValue() ?? null,
-        compareAtPrice: product.compareAtPrice?.getValue() ?? null,
         createdAt: product.createdAt,
         ...updateData,
       },
       update: updateData,
     });
+    await this.dispatchEvents(product);
   }
 
   async saveWithCategories(
@@ -146,7 +163,7 @@ export class ProductRepositoryImpl implements IProductRepository {
       status,
     } = options || {};
 
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
     if (brand) {
       whereClause.brand = brand;
     }
@@ -168,19 +185,6 @@ export class ProductRepositoryImpl implements IProductRepository {
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
-      include: {
-        variants: true,
-        media: {
-          include: {
-            asset: true,
-          },
-        },
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-      },
     });
 
     return products.map((p) => this.mapRow(p));
@@ -219,7 +223,7 @@ export class ProductRepositoryImpl implements IProductRepository {
       includeDrafts = false,
     } = options || {};
 
-    const whereClause: any = { brand };
+    const whereClause: Record<string, unknown> = { brand };
     if (!includeDrafts) {
       whereClause.status = { in: ["published", "scheduled"] };
     }
@@ -246,7 +250,7 @@ export class ProductRepositoryImpl implements IProductRepository {
       includeDrafts = false,
     } = options || {};
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       categories: { some: { categoryId: categoryId } },
     };
 
@@ -280,7 +284,7 @@ export class ProductRepositoryImpl implements IProductRepository {
       priceRange,
     } = options || {};
 
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       OR: [
         {
           title: {
@@ -346,7 +350,6 @@ export class ProductRepositoryImpl implements IProductRepository {
     return products.map((p) => this.mapRow(p));
   }
 
-
   async delete(id: ProductId): Promise<void> {
     await this.prisma.product.update({
       where: { id: id.getValue() },
@@ -369,7 +372,7 @@ export class ProductRepositoryImpl implements IProductRepository {
   }
 
   async count(options?: ProductCountOptions): Promise<number> {
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     if (options?.status) {
       whereClause.status = options.status;

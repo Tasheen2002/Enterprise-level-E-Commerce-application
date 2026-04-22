@@ -10,7 +10,7 @@ export interface UpdateOrderItemCommand extends ICommand {
   readonly giftMessage?: string;
 }
 
-export class UpdateOrderItemCommandHandler implements ICommandHandler<
+export class UpdateOrderItemHandler implements ICommandHandler<
   UpdateOrderItemCommand,
   CommandResult<OrderDTO>
 > {

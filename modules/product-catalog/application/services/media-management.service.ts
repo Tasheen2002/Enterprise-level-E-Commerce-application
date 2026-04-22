@@ -2,11 +2,8 @@ import {
   IMediaAssetRepository,
   MediaAssetQueryOptions,
 } from "../../domain/repositories/media-asset.repository";
-import {
-  MediaAsset,
-  MediaAssetDTO,
-  MediaAssetId,
-} from "../../domain/entities/media-asset.entity";
+import { MediaAsset, MediaAssetDTO } from "../../domain/entities/media-asset.entity";
+import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import {
   MediaAssetNotFoundError,
   DomainValidationError,

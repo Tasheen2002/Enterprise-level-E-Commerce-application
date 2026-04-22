@@ -14,6 +14,9 @@ export class UpdateWishlistHandler
   constructor(private readonly wishlistService: WishlistManagementService) {}
 
   async handle(command: UpdateWishlistCommand): Promise<CommandResult<void>> {
+    if (command.name === undefined && command.description === undefined && command.isPublic === undefined) {
+      return CommandResult.failure("At least one field must be provided to update");
+    }
     if (command.name !== undefined) {
       await this.wishlistService.updateWishlistName(command.wishlistId, command.name);
     }

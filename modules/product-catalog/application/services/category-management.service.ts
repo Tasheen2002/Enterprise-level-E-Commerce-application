@@ -14,7 +14,7 @@ import {
 
 type CreateCategoryData = {
   name: string;
-  parentId?: string;
+  parentId?: string | null;
   position?: number;
 };
 
@@ -66,7 +66,11 @@ export class CategoryManagementService {
       position = maxPosition + 1;
     }
 
-    const category = Category.create({ ...data, position });
+    const category = Category.create({
+      ...data,
+      position,
+      parentId: data.parentId ?? undefined,
+    });
     await this.categoryRepository.save(category);
     return Category.toDTO(category);
   }
@@ -125,7 +129,10 @@ export class CategoryManagementService {
       }
     }
 
-    return { categories: categories.map((c) => Category.toDTO(c)), total: categories.length };
+    return {
+      categories: categories.map((c) => Category.toDTO(c)),
+      total: categories.length,
+    };
   }
 
   async getAllCategories(

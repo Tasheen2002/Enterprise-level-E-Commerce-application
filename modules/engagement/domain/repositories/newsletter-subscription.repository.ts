@@ -1,5 +1,5 @@
 import { NewsletterSubscription } from "../entities/newsletter-subscription.entity";
-import { SubscriptionId, SubscriptionStatus } from "../value-objects";
+import { SubscriptionId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -9,7 +9,7 @@ import {
 // 2. Filters interface
 // ============================================================================
 export interface NewsletterSubscriptionFilters {
-  status?: SubscriptionStatus;
+  status?: string;
   source?: string;
   startDate?: Date;
   endDate?: Date;
@@ -29,7 +29,7 @@ export interface INewsletterSubscriptionRepository {
   ): Promise<NewsletterSubscription | null>;
   findByEmail(email: string): Promise<NewsletterSubscription | null>;
   findByStatus(
-    status: SubscriptionStatus,
+    status: string,
     options?: NewsletterSubscriptionQueryOptions,
   ): Promise<PaginatedResult<NewsletterSubscription>>;
   findBySource(
@@ -56,7 +56,7 @@ export interface INewsletterSubscriptionRepository {
   ): Promise<PaginatedResult<NewsletterSubscription>>;
 
   // Counts and statistics
-  countByStatus(status: SubscriptionStatus): Promise<number>;
+  countByStatus(status: string): Promise<number>;
   countBySource(source: string): Promise<number>;
   countActive(): Promise<number>;
   count(filters?: NewsletterSubscriptionFilters): Promise<number>;

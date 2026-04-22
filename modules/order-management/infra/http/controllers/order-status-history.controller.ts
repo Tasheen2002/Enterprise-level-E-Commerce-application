@@ -2,47 +2,30 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  LogOrderStatusChangeCommand,
-  LogOrderStatusChangeCommandHandler,
-  GetOrderStatusHistoryQuery,
+  LogOrderStatusChangeHandler,
   GetOrderStatusHistoryHandler,
 } from "../../../application";
-
-export interface LogStatusChangeRequest {
-  Params: { orderId: string };
-  Body: {
-    fromStatus?: string;
-    toStatus: string;
-    changedBy?: string;
-  };
-}
-
-export interface GetStatusHistoryRequest {
-  Params: { orderId: string };
-  Querystring: {
-    limit?: number;
-    offset?: number;
-  };
-}
+import {
+  OrderStatusHistoryParams,
+  GetStatusHistoryQuery,
+  LogStatusChangeBody,
+} from "../validation/order-status-history.schema";
 
 export class OrderStatusHistoryController {
   constructor(
-    private readonly logStatusChangeHandler: LogOrderStatusChangeCommandHandler,
+    private readonly logStatusChangeHandler: LogOrderStatusChangeHandler,
     private readonly getStatusHistoryHandler: GetOrderStatusHistoryHandler,
   ) {}
 
   async logStatusChange(
-    request: AuthenticatedRequest<LogStatusChangeRequest>,
+    request: AuthenticatedRequest<{ Params: OrderStatusHistoryParams; Body: LogStatusChangeBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: LogOrderStatusChangeCommand = {
+      const result = await this.logStatusChangeHandler.handle({
         orderId: request.params.orderId,
-        fromStatus: request.body.fromStatus,
-        toStatus: request.body.toStatus,
-        changedBy: request.body.changedBy,
-      };
-      const result = await this.logStatusChangeHandler.handle(command);
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(reply, result, "Status change logged successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -50,16 +33,14 @@ export class OrderStatusHistoryController {
   }
 
   async getStatusHistory(
-    request: AuthenticatedRequest<GetStatusHistoryRequest>,
+    request: AuthenticatedRequest<{ Params: OrderStatusHistoryParams; Querystring: GetStatusHistoryQuery }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: GetOrderStatusHistoryQuery = {
+      const result = await this.getStatusHistoryHandler.handle({
         orderId: request.params.orderId,
-        limit: request.query.limit,
-        offset: request.query.offset,
-      };
-      const result = await this.getStatusHistoryHandler.handle(query);
+        ...request.query,
+      });
       return ResponseHelper.ok(reply, "Status history retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

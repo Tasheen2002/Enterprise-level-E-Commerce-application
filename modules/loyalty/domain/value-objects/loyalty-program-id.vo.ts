@@ -3,7 +3,7 @@ import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-
 
 export class LoyaltyProgramId extends UuidId {
   private constructor(value: string) {
-    super(value, "LoyaltyProgramId");
+    super(value, "Loyalty Program ID");
   }
 
   static create(): LoyaltyProgramId {

@@ -15,7 +15,7 @@ export interface GetCartStatisticsQuery extends IQuery {}
 export class GetCartStatisticsHandler implements IQueryHandler<GetCartStatisticsQuery, CartStatisticsDto> {
   constructor(private readonly cartManagementService: CartManagementService) {}
 
-  async handle(): Promise<CartStatisticsDto> {
+  async handle(_query: GetCartStatisticsQuery): Promise<CartStatisticsDto> {
     return this.cartManagementService.getCartStatistics();
   }
 }

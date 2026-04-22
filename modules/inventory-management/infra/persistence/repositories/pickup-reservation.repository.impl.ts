@@ -9,16 +9,6 @@ import {
 } from "../../../domain/value-objects/reservation-status.vo";
 import { IPickupReservationRepository } from "../../../domain/repositories/pickup-reservation.repository";
 
-interface PickupReservationDatabaseRow {
-  reservationId: string;
-  orderId: string;
-  variantId: string;
-  locationId: string;
-  qty: number;
-  expiresAt: Date;
-  status: string;
-}
-
 export class PickupReservationRepositoryImpl
   extends PrismaRepository<PickupReservation>
   implements IPickupReservationRepository
@@ -27,7 +17,15 @@ export class PickupReservationRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: PickupReservationDatabaseRow): PickupReservation {
+  private toEntity(row: {
+    reservationId: string;
+    orderId: string;
+    variantId: string;
+    locationId: string;
+    qty: number;
+    expiresAt: Date;
+    status?: string;
+  }): PickupReservation {
     return PickupReservation.fromPersistence({
       reservationId: ReservationId.fromString(row.reservationId),
       orderId: row.orderId,
@@ -40,12 +38,10 @@ export class PickupReservationRepositoryImpl
   }
 
   async save(reservation: PickupReservation): Promise<void> {
-    const reservationId = reservation.reservationId.getValue();
-
-    await (this.prisma as any).pickupReservation.upsert({
-      where: { reservationId },
+    await this.prisma.pickupReservation.upsert({
+      where: { reservationId: reservation.reservationId.getValue() },
       create: {
-        reservationId,
+        reservationId: reservation.reservationId.getValue(),
         orderId: reservation.orderId,
         variantId: reservation.variantId,
         locationId: reservation.locationId,
@@ -63,90 +59,75 @@ export class PickupReservationRepositoryImpl
     await this.dispatchEvents(reservation);
   }
 
-  async findById(
-    reservationId: ReservationId,
-  ): Promise<PickupReservation | null> {
-    const reservation = await (this.prisma as any).pickupReservation.findUnique(
-      {
-        where: { reservationId: reservationId.getValue() },
-      },
-    );
+  async findById(reservationId: ReservationId): Promise<PickupReservation | null> {
+    const row = await this.prisma.pickupReservation.findUnique({
+      where: { reservationId: reservationId.getValue() },
+    });
 
-    if (!reservation) {
-      return null;
-    }
-
-    return this.toEntity(reservation as PickupReservationDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async delete(reservationId: ReservationId): Promise<void> {
-    await (this.prisma as any).pickupReservation.delete({
+    await this.prisma.pickupReservation.delete({
       where: { reservationId: reservationId.getValue() },
     });
   }
 
   async findByOrder(orderId: string): Promise<PickupReservation[]> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: { orderId },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findByVariant(variantId: string): Promise<PickupReservation[]> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: { variantId },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findByLocation(locationId: string): Promise<PickupReservation[]> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: { locationId },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findByVariantAndLocation(
     variantId: string,
     locationId: string,
   ): Promise<PickupReservation[]> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: { variantId, locationId },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findExpiredReservations(): Promise<PickupReservation[]> {
     const now = new Date();
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
-      where: { expiresAt: { lt: now } },
+    const rows = await this.prisma.pickupReservation.findMany({
+      where: {
+        status: ReservationStatus.ACTIVE,
+        expiresAt: { lt: now },
+      },
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findActiveReservations(): Promise<PickupReservation[]> {
     const now = new Date();
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: {
         status: ReservationStatus.ACTIVE,
         expiresAt: { gte: now },
@@ -154,19 +135,15 @@ export class PickupReservationRepositoryImpl
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findAllReservations(): Promise<PickupReservation[]> {
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findActiveByVariantAndLocation(
@@ -174,7 +151,7 @@ export class PickupReservationRepositoryImpl
     locationId: string,
   ): Promise<PickupReservation[]> {
     const now = new Date();
-    const reservations = await (this.prisma as any).pickupReservation.findMany({
+    const rows = await this.prisma.pickupReservation.findMany({
       where: {
         variantId,
         locationId,
@@ -184,9 +161,7 @@ export class PickupReservationRepositoryImpl
       orderBy: { expiresAt: "asc" },
     });
 
-    return reservations.map((r: PickupReservationDatabaseRow) =>
-      this.toEntity(r),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
   async getTotalReservedQty(
@@ -194,7 +169,7 @@ export class PickupReservationRepositoryImpl
     locationId: string,
   ): Promise<number> {
     const now = new Date();
-    const result = await (this.prisma as any).pickupReservation.aggregate({
+    const result = await this.prisma.pickupReservation.aggregate({
       where: {
         variantId,
         locationId,
@@ -208,7 +183,7 @@ export class PickupReservationRepositoryImpl
   }
 
   async exists(reservationId: ReservationId): Promise<boolean> {
-    const count = await (this.prisma as any).pickupReservation.count({
+    const count = await this.prisma.pickupReservation.count({
       where: { reservationId: reservationId.getValue() },
     });
 

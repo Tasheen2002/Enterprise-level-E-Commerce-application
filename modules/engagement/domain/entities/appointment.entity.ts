@@ -1,6 +1,3 @@
-// ============================================================================
-// 1. Imports
-// ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AppointmentId, AppointmentType } from "../value-objects";
@@ -15,7 +12,7 @@ export class AppointmentCreatedEvent extends DomainEvent {
     public readonly userId: string,
     public readonly type: string,
     public readonly startAt: string,
-    public readonly endAt: string
+    public readonly endAt: string,
   ) {
     super(appointmentId, "Appointment");
   }
@@ -41,7 +38,7 @@ export class AppointmentRescheduledEvent extends DomainEvent {
     public readonly oldStartAt: string,
     public readonly oldEndAt: string,
     public readonly newStartAt: string,
-    public readonly newEndAt: string
+    public readonly newEndAt: string,
   ) {
     super(appointmentId, "Appointment");
   }
@@ -100,7 +97,7 @@ export class Appointment extends AggregateRoot {
   }
 
   static create(
-    params: Omit<AppointmentProps, "id" | "createdAt" | "updatedAt">
+    params: Omit<AppointmentProps, "id" | "createdAt" | "updatedAt">,
   ): Appointment {
     Appointment.validateTimes(params.startAt, params.endAt);
     Appointment.validateUserId(params.userId);
@@ -118,8 +115,8 @@ export class Appointment extends AggregateRoot {
         entity.props.userId,
         entity.props.type.getValue(),
         entity.props.startAt.toISOString(),
-        entity.props.endAt.toISOString()
-      )
+        entity.props.endAt.toISOString(),
+      ),
     );
 
     return entity;
@@ -129,17 +126,15 @@ export class Appointment extends AggregateRoot {
     return new Appointment(props);
   }
 
-  private static validateTimes(startAt: Date, endAt: Date): void {
-    if (!startAt) {
-      throw new DomainValidationError("Start time is required");
-    }
-    if (!endAt) {
-      throw new DomainValidationError("End time is required");
-    }
+  private static validateTimes(
+    startAt: Date,
+    endAt: Date,
+    allowPast = false,
+  ): void {
     if (startAt >= endAt) {
       throw new DomainValidationError("End time must be after start time");
     }
-    if (startAt < new Date()) {
+    if (!allowPast && startAt < new Date()) {
       throw new DomainValidationError("Start time cannot be in the past");
     }
   }
@@ -181,7 +176,7 @@ export class Appointment extends AggregateRoot {
 
   // Business methods
   reschedule(startAt: Date, endAt: Date): void {
-    Appointment.validateTimes(startAt, endAt);
+    Appointment.validateTimes(startAt, endAt, true);
 
     const oldStartAt = this.props.startAt.toISOString();
     const oldEndAt = this.props.endAt.toISOString();
@@ -196,8 +191,8 @@ export class Appointment extends AggregateRoot {
         oldStartAt,
         oldEndAt,
         startAt.toISOString(),
-        endAt.toISOString()
-      )
+        endAt.toISOString(),
+      ),
     );
   }
 

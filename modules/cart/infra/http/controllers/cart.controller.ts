@@ -21,9 +21,22 @@ import {
   GetCartSummaryHandler,
   GetCartStatisticsHandler,
 } from "../../../application";
-import { PromoData } from "../../../domain/value-objects/applied-promos.vo";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CartIdParams,
+  UserIdParams,
+  GuestTokenParams,
+  CartItemParams,
+  CreateUserCartBody,
+  CreateGuestCartBody,
+  AddToCartBody,
+  UpdateCartItemBody,
+  TransferCartBody,
+  UpdateCartEmailBody,
+  UpdateCartShippingInfoBody,
+  UpdateCartAddressesBody,
+} from "../validation/cart.schema";
 
 export class CartController {
   constructor(
@@ -48,10 +61,7 @@ export class CartController {
   ) {}
 
   async getCart(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Querystring: { userId?: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -72,7 +82,7 @@ export class CartController {
   }
 
   async getActiveCartByUser(
-    request: AuthenticatedRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -86,7 +96,7 @@ export class CartController {
   }
 
   async getActiveCartByGuestToken(
-    request: AuthenticatedRequest<{ Params: { guestToken: string } }>,
+    request: AuthenticatedRequest<{ Params: GuestTokenParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -109,10 +119,7 @@ export class CartController {
   }
 
   async createUserCart(
-    request: AuthenticatedRequest<{
-      Params: { userId: string };
-      Body: { currency?: string; reservationDurationMinutes?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams; Body: CreateUserCartBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -135,10 +142,7 @@ export class CartController {
   }
 
   async createGuestCart(
-    request: AuthenticatedRequest<{
-      Params: { guestToken: string };
-      Body: { currency?: string; reservationDurationMinutes?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: GuestTokenParams; Body: CreateGuestCartBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -168,23 +172,7 @@ export class CartController {
   }
 
   async addToCart(
-    request: AuthenticatedRequest<{
-      Body: {
-        cartId?: string;
-        variantId: string;
-        quantity: number;
-        appliedPromos?: Array<{
-          id: string;
-          code: string;
-          type: "percentage" | "fixed_amount" | "free_shipping" | "buy_x_get_y";
-          value: number;
-          description?: string;
-          appliedAt: Date;
-        }>;
-        isGift?: boolean;
-        giftMessage?: string;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: AddToCartBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -198,7 +186,7 @@ export class CartController {
         guestToken,
         variantId: itemData.variantId,
         quantity: itemData.quantity,
-        appliedPromos: itemData.appliedPromos as PromoData[] | undefined,
+        appliedPromos: itemData.appliedPromos,
         isGift: itemData.isGift,
         giftMessage: itemData.giftMessage,
       });
@@ -213,11 +201,7 @@ export class CartController {
   }
 
   async updateCartItem(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string; variantId: string };
-      Body: { quantity: number };
-      Querystring: { userId?: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartItemParams; Body: UpdateCartItemBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -244,10 +228,7 @@ export class CartController {
   }
 
   async removeFromCart(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string; variantId: string };
-      Querystring: { userId?: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartItemParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -274,10 +255,7 @@ export class CartController {
   }
 
   async clearCart(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Querystring: { userId?: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -303,10 +281,7 @@ export class CartController {
   }
 
   async transferGuestCartToUser(
-    request: AuthenticatedRequest<{
-      Params: { guestToken: string };
-      Body: { userId: string; mergeWithExisting?: boolean };
-    }>,
+    request: AuthenticatedRequest<{ Params: GuestTokenParams; Body: TransferCartBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -336,10 +311,7 @@ export class CartController {
   }
 
   async getCartSummary(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Querystring: { userId?: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -361,7 +333,7 @@ export class CartController {
 
   async getCartStatistics(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getCartStatisticsHandler.handle();
+      const result = await this.getCartStatisticsHandler.handle({});
       return ResponseHelper.ok(reply, "Cart statistics retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -399,7 +371,7 @@ export class CartController {
   }
 
   async clearUserCart(
-    request: AuthenticatedRequest<{ Params: { userId: string } }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -418,7 +390,7 @@ export class CartController {
   }
 
   async clearGuestCart(
-    request: AuthenticatedRequest<{ Params: { guestToken: string } }>,
+    request: AuthenticatedRequest<{ Params: GuestTokenParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -444,10 +416,7 @@ export class CartController {
   }
 
   async updateCartEmail(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Body: { email: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams; Body: UpdateCartEmailBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -473,14 +442,7 @@ export class CartController {
   }
 
   async updateCartShippingInfo(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Body: {
-        shippingMethod?: string;
-        shippingOption?: string;
-        isGift?: boolean;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams; Body: UpdateCartShippingInfoBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -508,30 +470,7 @@ export class CartController {
   }
 
   async updateCartAddresses(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Body: {
-        shippingFirstName?: string;
-        shippingLastName?: string;
-        shippingAddress1?: string;
-        shippingAddress2?: string;
-        shippingCity?: string;
-        shippingProvince?: string;
-        shippingPostalCode?: string;
-        shippingCountryCode?: string;
-        shippingPhone?: string;
-        billingFirstName?: string;
-        billingLastName?: string;
-        billingAddress1?: string;
-        billingAddress2?: string;
-        billingCity?: string;
-        billingProvince?: string;
-        billingPostalCode?: string;
-        billingCountryCode?: string;
-        billingPhone?: string;
-        sameAddressForBilling?: boolean;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams; Body: UpdateCartAddressesBody }>,
     reply: FastifyReply,
   ) {
     try {

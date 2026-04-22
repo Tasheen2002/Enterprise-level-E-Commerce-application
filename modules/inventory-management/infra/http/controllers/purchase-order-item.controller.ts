@@ -7,6 +7,12 @@ import {
   GetPOItemsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  POParams,
+  POItemParams,
+  AddPOItemBody,
+  UpdatePOItemBody,
+} from "../validation/purchase-order.schema";
 
 export class PurchaseOrderItemController {
   constructor(
@@ -17,7 +23,7 @@ export class PurchaseOrderItemController {
   ) {}
 
   async getPOItems(
-    request: AuthenticatedRequest<{ Params: { poId: string } }>,
+    request: AuthenticatedRequest<{ Params: POParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -30,10 +36,7 @@ export class PurchaseOrderItemController {
   }
 
   async addItem(
-    request: AuthenticatedRequest<{
-      Params: { poId: string };
-      Body: { variantId: string; orderedQty: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: POParams; Body: AddPOItemBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -47,10 +50,7 @@ export class PurchaseOrderItemController {
   }
 
   async updateItem(
-    request: AuthenticatedRequest<{
-      Params: { poId: string; variantId: string };
-      Body: { orderedQty: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: POItemParams; Body: UpdatePOItemBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -64,7 +64,7 @@ export class PurchaseOrderItemController {
   }
 
   async removeItem(
-    request: AuthenticatedRequest<{ Params: { poId: string; variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: POItemParams }>,
     reply: FastifyReply,
   ) {
     try {

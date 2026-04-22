@@ -32,7 +32,7 @@ export const scheduleNotificationSchema = z.object({
 export const notificationResponseSchema = {
   type: "object",
   properties: {
-    notificationId: { type: "string", format: "uuid" },
+    id: { type: "string", format: "uuid" },
     type: { type: "string" },
     channel: { type: "string" },
     status: { type: "string" },
@@ -40,7 +40,9 @@ export const notificationResponseSchema = {
     payload: { type: "object", additionalProperties: true },
     scheduledAt: { type: "string", format: "date-time" },
     sentAt: { type: "string", format: "date-time" },
+    error: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 

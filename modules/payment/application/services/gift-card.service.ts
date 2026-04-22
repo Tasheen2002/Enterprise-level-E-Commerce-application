@@ -102,7 +102,7 @@ export class GiftCardService {
       type: GiftCardTransactionType.redeem(),
     });
 
-    await this.giftCardRepo.update(giftCard);
+    await this.giftCardRepo.save(giftCard);
     await this.giftCardTxnRepo.save(transaction);
 
     return GiftCard.toDTO(giftCard);
@@ -122,7 +122,7 @@ export class GiftCardService {
       type: GiftCardTransactionType.refund(),
     });
 
-    await this.giftCardRepo.update(giftCard);
+    await this.giftCardRepo.save(giftCard);
     await this.giftCardTxnRepo.save(transaction);
 
     return GiftCard.toDTO(giftCard);
@@ -166,7 +166,7 @@ export class GiftCardService {
     if (!giftCard) throw new GiftCardNotFoundError(giftCardId);
 
     giftCard.cancel();
-    await this.giftCardRepo.update(giftCard);
+    await this.giftCardRepo.save(giftCard);
 
     return GiftCard.toDTO(giftCard);
   }

@@ -34,7 +34,7 @@ export interface SetOrderAddressesCommand extends ICommand {
   };
 }
 
-export class SetOrderAddressesCommandHandler implements ICommandHandler<
+export class SetOrderAddressesHandler implements ICommandHandler<
   SetOrderAddressesCommand,
   CommandResult<OrderAddressDTO>
 > {

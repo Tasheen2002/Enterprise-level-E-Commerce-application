@@ -89,22 +89,22 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderIdOrNull && params.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
+    if (intent.orderId && params.userId) {
+      await this.assertOrderOwnership(intent.orderId, params.userId);
     }
 
     intent.authorize();
 
     const transaction = PaymentTransaction.create({
-      intentId: PaymentIntentId.fromString(params.intentId),
+      intentId: intent.id,
       type: PaymentTransactionType.auth(),
       amount: intent.amount,
-      status: "SUCCESS",
       pspReference: params.pspReference ?? null,
       failureReason: null,
     });
+    transaction.markAsSucceeded(params.pspReference ?? '');
 
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
   }
@@ -115,22 +115,22 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
-    if (intent.orderIdOrNull && userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, userId);
+    if (intent.orderId && userId) {
+      await this.assertOrderOwnership(intent.orderId, userId);
     }
 
     intent.capture();
 
     const transaction = PaymentTransaction.create({
-      intentId: PaymentIntentId.fromString(intentId),
+      intentId: intent.id,
       type: PaymentTransactionType.capture(),
       amount: intent.amount,
-      status: "SUCCESS",
       pspReference: pspReference ?? null,
       failureReason: null,
     });
+    transaction.markAsSucceeded(pspReference ?? '');
 
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
   }
@@ -141,8 +141,8 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderIdOrNull && params.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
+    if (intent.orderId && params.userId) {
+      await this.assertOrderOwnership(intent.orderId, params.userId);
     }
 
     if (!intent.isCaptured()) {
@@ -156,16 +156,16 @@ export class PaymentService {
       : intent.amount;
 
     const transaction = PaymentTransaction.create({
-      intentId: PaymentIntentId.fromString(params.intentId),
+      intentId: intent.id,
       type: PaymentTransactionType.refund(),
       amount: refundAmount,
-      status: "SUCCESS",
       pspReference: null,
       failureReason: null,
     });
+    transaction.markAsSucceeded('');
 
     intent.cancel();
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
   }
@@ -177,7 +177,7 @@ export class PaymentService {
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
     intent.cancel();
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     return PaymentIntent.toDTO(intent);
   }
 
@@ -187,8 +187,8 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderIdOrNull && params.userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, params.userId);
+    if (intent.orderId && params.userId) {
+      await this.assertOrderOwnership(intent.orderId, params.userId);
     }
 
     if (intent.isCaptured()) {
@@ -198,15 +198,15 @@ export class PaymentService {
     intent.cancel();
 
     const transaction = PaymentTransaction.create({
-      intentId: PaymentIntentId.fromString(params.intentId),
+      intentId: intent.id,
       type: PaymentTransactionType.void(),
       amount: intent.amount,
-      status: "SUCCESS",
       pspReference: params.pspReference ?? null,
       failureReason: null,
     });
+    transaction.markAsSucceeded(params.pspReference ?? '');
 
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
   }
@@ -224,7 +224,7 @@ export class PaymentService {
       intent.updateClientSecret(data.clientSecret);
     }
 
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     return PaymentIntent.toDTO(intent);
   }
 
@@ -237,15 +237,15 @@ export class PaymentService {
     intent.fail();
 
     const transaction = PaymentTransaction.create({
-      intentId: PaymentIntentId.fromString(intentId),
-      type: PaymentTransactionType.capture(),
+      intentId: intent.id,
+      type: PaymentTransactionType.auth(),
       amount: intent.amount,
-      status: "FAILED",
       pspReference: null,
       failureReason,
     });
+    transaction.markAsFailed(failureReason);
 
-    await this.paymentIntentRepository.update(intent);
+    await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
   }
@@ -255,8 +255,8 @@ export class PaymentService {
       PaymentIntentId.fromString(intentId),
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
-    if (intent.orderIdOrNull && userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, userId);
+    if (intent.orderId && userId) {
+      await this.assertOrderOwnership(intent.orderId, userId);
     }
     return PaymentIntent.toDTO(intent);
   }
@@ -287,8 +287,8 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
-    if (intent.orderIdOrNull && userId) {
-      await this.assertOrderOwnership(intent.orderIdOrNull, userId);
+    if (intent.orderId && userId) {
+      await this.assertOrderOwnership(intent.orderId, userId);
     }
 
     const transactions = await this.paymentTransactionRepository.findByIntentId(

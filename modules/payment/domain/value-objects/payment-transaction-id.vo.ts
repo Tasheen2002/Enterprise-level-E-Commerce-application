@@ -13,8 +13,4 @@ export class PaymentTransactionId extends UuidId {
   static fromString(value: string): PaymentTransactionId {
     return new PaymentTransactionId(value);
   }
-
-  equals(other: PaymentTransactionId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

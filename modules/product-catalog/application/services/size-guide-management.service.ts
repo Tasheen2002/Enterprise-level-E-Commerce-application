@@ -3,12 +3,9 @@ import {
   SizeGuideQueryOptions,
   SizeGuideCountOptions,
 } from "../../domain/repositories/size-guide.repository";
-import {
-  SizeGuide,
-  SizeGuideDTO,
-  SizeGuideId,
-  Region,
-} from "../../domain/entities/size-guide.entity";
+import { SizeGuide, SizeGuideDTO } from "../../domain/entities/size-guide.entity";
+import { SizeGuideId } from "../../domain/value-objects/size-guide-id.vo";
+import { Region } from "../../domain/enums/product-catalog.enums";
 import {
   SizeGuideNotFoundError,
   DomainValidationError,

@@ -110,6 +110,14 @@ export class PreorderAlreadyExistsError extends DomainError {
   }
 }
 
+// ─── Authorization Errors (403) ──────────────────────────────────────────────
+
+export class ContactMismatchError extends DomainError {
+  constructor() {
+    super("The email or phone number does not match our records for this order", 403);
+  }
+}
+
 // ─── Business Rule Violations (422) ──────────────────────────────────────────
 
 export class InvalidOperationError extends DomainError {

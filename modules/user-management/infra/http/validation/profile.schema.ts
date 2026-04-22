@@ -3,18 +3,21 @@ import { z } from "zod";
 export const updateProfileSchema = z.object({
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
-  displayName: z.string().max(100).optional(),
-  bio: z.string().max(500).optional(),
-  avatarUrl: z.url().optional(),
+  phone: z.string().optional(),
+  title: z.string().max(50).optional(),
   dateOfBirth: z.string().optional(),
-  gender: z.enum(["male", "female", "non_binary", "prefer_not_to_say"]).optional(),
+  residentOf: z.string().optional(),
+  nationality: z.string().optional(),
   locale: z.string().max(10).optional(),
   currency: z.string().length(3).optional(),
   defaultAddressId: z.uuid().optional(),
   defaultPaymentMethodId: z.uuid().optional(),
+  prefs: z.record(z.string(), z.unknown()).optional(),
   stylePreferences: z.record(z.string(), z.unknown()).optional(),
-  preferredSizes: z.record(z.string(), z.unknown()).optional(),
+  preferredSizes: z.record(z.string(), z.string().optional()).optional(),
 });
+
+export type UpdateProfileBody = z.infer<typeof updateProfileSchema>;
 
 // JSON Schema response objects (for Swagger docs)
 export const profileResponseSchema = {

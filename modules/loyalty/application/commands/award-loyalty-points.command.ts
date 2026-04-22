@@ -3,7 +3,8 @@ import {
   ICommandHandler,
   CommandResult,
 } from '../../../../packages/core/src/application/cqrs';
-import { LoyaltyService, LoyaltyAccountData } from '../services/loyalty.service';
+import { LoyaltyService } from '../services/loyalty.service';
+import { LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
 import { LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
 
 export interface AwardLoyaltyPointsCommand extends ICommand {
@@ -16,19 +17,18 @@ export interface AwardLoyaltyPointsCommand extends ICommand {
 
 export class AwardLoyaltyPointsHandler implements ICommandHandler<
   AwardLoyaltyPointsCommand,
-  CommandResult<LoyaltyAccountData>
+  CommandResult<LoyaltyTransactionDTO>
 > {
   constructor(private readonly loyaltyService: LoyaltyService) {}
 
-  async handle(command: AwardLoyaltyPointsCommand): Promise<CommandResult<LoyaltyAccountData>> {
-    await this.loyaltyService.earnPoints({
+  async handle(command: AwardLoyaltyPointsCommand): Promise<CommandResult<LoyaltyTransactionDTO>> {
+    const transaction = await this.loyaltyService.earnPoints({
       userId: command.userId,
       points: command.points,
       reason: command.reason,
       orderId: command.orderId,
       description: command.description,
     });
-    const account = await this.loyaltyService.getAccountDetails(command.userId);
-    return CommandResult.success(account);
+    return CommandResult.success(transaction);
   }
 }

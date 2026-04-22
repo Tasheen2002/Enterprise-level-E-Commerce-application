@@ -9,6 +9,14 @@ import {
   GetProductReviewsHandler,
   GetUserReviewsHandler,
 } from "../../../application";
+import {
+  CreateProductReviewBody,
+  UpdateReviewStatusBody,
+  ReviewIdParams,
+  ProductIdParams,
+  UserIdParams,
+  PaginationQuery,
+} from "../validation/product-review.schema";
 
 export class ProductReviewController {
   constructor(
@@ -21,15 +29,7 @@ export class ProductReviewController {
   ) {}
 
   async createReview(
-    request: AuthenticatedRequest<{
-      Body: {
-        productId: string;
-        userId: string;
-        rating: number;
-        title?: string;
-        body?: string;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateProductReviewBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -48,7 +48,7 @@ export class ProductReviewController {
   }
 
   async getReview(
-    request: AuthenticatedRequest<{ Params: { reviewId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReviewIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -60,10 +60,7 @@ export class ProductReviewController {
   }
 
   async getProductReviews(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: ProductIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -77,10 +74,7 @@ export class ProductReviewController {
   }
 
   async getUserReviews(
-    request: AuthenticatedRequest<{
-      Params: { userId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -94,10 +88,7 @@ export class ProductReviewController {
   }
 
   async updateReviewStatus(
-    request: AuthenticatedRequest<{
-      Params: { reviewId: string };
-      Body: { status: "approved" | "rejected" | "flagged" };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReviewIdParams; Body: UpdateReviewStatusBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -111,12 +102,12 @@ export class ProductReviewController {
   }
 
   async deleteReview(
-    request: AuthenticatedRequest<{ Params: { reviewId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReviewIdParams }>,
     reply: FastifyReply,
   ) {
     try {
       const result = await this.deleteProductReviewHandler.handle({ reviewId: request.params.reviewId });
-      return ResponseHelper.fromCommand(reply, result, "Product review deleted successfully");
+      return ResponseHelper.fromCommand(reply, result, "Product review deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

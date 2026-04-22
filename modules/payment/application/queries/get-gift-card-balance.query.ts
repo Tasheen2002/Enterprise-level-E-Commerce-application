@@ -1,8 +1,8 @@
 import {
   IQuery,
   IQueryHandler,
-} from '../../../../packages/core/src/application/cqrs';
-import { GiftCardService } from '../services/gift-card.service';
+} from "../../../../packages/core/src/application/cqrs";
+import { GiftCardService } from "../services/gift-card.service";
 
 export interface GetGiftCardBalanceQuery extends IQuery {
   readonly codeOrId: string;
@@ -10,11 +10,11 @@ export interface GetGiftCardBalanceQuery extends IQuery {
 
 export class GetGiftCardBalanceHandler implements IQueryHandler<
   GetGiftCardBalanceQuery,
-  number | null
+  number
 > {
   constructor(private readonly giftCardService: GiftCardService) {}
 
-  async handle(query: GetGiftCardBalanceQuery): Promise<number | null> {
+  async handle(query: GetGiftCardBalanceQuery): Promise<number> {
     return this.giftCardService.getGiftCardBalance(query.codeOrId);
   }
 }

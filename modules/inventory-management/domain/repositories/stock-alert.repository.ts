@@ -1,3 +1,4 @@
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { StockAlert } from "../entities/stock-alert.entity";
 import { AlertId } from "../value-objects/alert-id.vo";
 import { AlertType } from "../value-objects/alert-type.vo";
@@ -10,7 +11,7 @@ export interface IStockAlertRepository {
   findActiveAlerts(): Promise<StockAlert[]>;
   findResolvedAlerts(): Promise<StockAlert[]>;
   findByType(type: AlertType): Promise<StockAlert[]>;
-  findAll(options?: StockAlertQueryOptions): Promise<{ alerts: StockAlert[]; total: number }>;
+  findAll(options?: StockAlertQueryOptions): Promise<PaginatedResult<StockAlert>>;
   findActiveAlertsByVariant(variantId: string): Promise<StockAlert[]>;
   hasActiveAlert(variantId: string, type: AlertType): Promise<boolean>;
 }

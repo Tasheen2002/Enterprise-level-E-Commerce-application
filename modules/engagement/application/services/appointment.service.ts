@@ -80,6 +80,7 @@ export class AppointmentService {
       appointment.userId,
       startAt,
       endAt,
+      appointmentId,
     );
     if (hasConflict) {
       throw new AppointmentSchedulingError(
@@ -137,10 +138,7 @@ export class AppointmentService {
     type: string,
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedAppointmentResult> {
-    const result = await this.appointmentRepository.findByType(
-      AppointmentType.fromString(type),
-      options,
-    );
+    const result = await this.appointmentRepository.findByType(type, options);
     return this.mapPaginated(result);
   }
 
@@ -182,11 +180,13 @@ export class AppointmentService {
     userId: string,
     startAt: Date,
     endAt: Date,
+    excludeId?: string,
   ): Promise<AppointmentDTO[]> {
     const entities = await this.appointmentRepository.findConflictingAppointments(
       userId,
       startAt,
       endAt,
+      excludeId,
     );
     return entities.map(Appointment.toDTO);
   }
@@ -217,15 +217,15 @@ export class AppointmentService {
   }
 
   async countAppointmentsByType(type: string): Promise<number> {
-    return this.appointmentRepository.countByType(AppointmentType.fromString(type));
+    return this.appointmentRepository.countByType(type);
   }
 
   async appointmentExists(appointmentId: string): Promise<boolean> {
     return this.appointmentRepository.exists(AppointmentId.fromString(appointmentId));
   }
 
-  async hasConflict(userId: string, startAt: Date, endAt: Date): Promise<boolean> {
-    return this.appointmentRepository.hasConflict(userId, startAt, endAt);
+  async hasConflict(userId: string, startAt: Date, endAt: Date, excludeId?: string): Promise<boolean> {
+    return this.appointmentRepository.hasConflict(userId, startAt, endAt, excludeId);
   }
 
   async hasAppointmentAtTime(userId: string, startAt: Date, endAt: Date): Promise<boolean> {

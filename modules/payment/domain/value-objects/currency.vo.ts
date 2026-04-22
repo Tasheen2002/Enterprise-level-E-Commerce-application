@@ -22,7 +22,7 @@ export class Currency {
   }
 
   static fromString(value: string): Currency {
-    return new Currency(value);
+    return Currency.create(value);
   }
 
   getValue(): string {

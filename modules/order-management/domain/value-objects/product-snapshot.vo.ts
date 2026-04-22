@@ -69,6 +69,10 @@ export class ProductSnapshot {
     return { ...this.props };
   }
 
+  toJSON(): ProductSnapshotData {
+    return { ...this.props };
+  }
+
   toString(): string {
     return JSON.stringify(this.getValue());
   }

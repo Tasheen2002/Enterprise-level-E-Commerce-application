@@ -15,8 +15,6 @@ interface CreateShipmentParams {
   trackingNumber?: string;
   giftReceipt?: boolean;
   pickupLocationId?: string;
-  shippedAt?: Date;
-  deliveredAt?: Date;
 }
 
 export class ShipmentManagementService {
@@ -34,8 +32,6 @@ export class ShipmentManagementService {
       trackingNumber: params.trackingNumber,
       giftReceipt: params.giftReceipt || false,
       pickupLocationId: params.pickupLocationId,
-      shippedAt: params.shippedAt,
-      deliveredAt: params.deliveredAt,
     });
 
     await this.shipmentRepository.save(shipment);

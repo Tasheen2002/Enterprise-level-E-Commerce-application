@@ -1,90 +1,105 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { PaymentWebhookController } from "../controllers/payment-webhook.controller";
+import { StripeWebhookController } from "../controllers/stripe-webhook.controller";
 import {
-  PaymentWebhookController,
-  WebhookFilterParams,
-} from "../controllers/payment-webhook.controller";
+  RolePermissions,
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware";
+import { validateBody, validateQuery } from "../validation/validator";
+import { createStripeIntentSchema } from "../validation/payment-intent.schema";
 import {
-  StripeWebhookController,
-  CreateStripeIntentBody,
-} from "../controllers/stripe-webhook.controller";
-import { requireAdmin, optionalAuth } from "@/api/src/shared/middleware";
+  listWebhookEventsQuerySchema,
+  stripeIntentResultSchema,
+  webhookEventResponseSchema,
+} from "../validation/webhook.schema";
+
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function registerWebhookRoutes(
   fastify: FastifyInstance,
   webhookController: PaymentWebhookController,
   stripeController: StripeWebhookController,
 ): Promise<void> {
-  // Stripe: create PaymentIntent and return client_secret for frontend
-  fastify.post<{ Body: CreateStripeIntentBody }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /payments/stripe/create-intent — authenticated
+  fastify.post(
     "/payments/stripe/create-intent",
     {
-      preHandler: optionalAuth,
+      preValidation: [validateBody(createStripeIntentSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
-        description:
-          "Create a Stripe PaymentIntent. Returns client_secret for the frontend to complete payment with Stripe.js.",
+        description: "Create a Stripe PaymentIntent. Returns client_secret for the frontend to complete payment with Stripe.js.",
         tags: ["Stripe"],
         summary: "Create Stripe PaymentIntent",
+        security: [{ bearerAuth: [] }],
         body: {
           type: "object",
           required: ["orderId", "amount"],
           properties: {
             orderId: { type: "string", format: "uuid" },
             amount: { type: "number", minimum: 0.01 },
-            currency: { type: "string", default: "usd" },
+            currency: { type: "string" },
             idempotencyKey: { type: "string" },
           },
         },
         response: {
           201: {
-            description: "PaymentIntent created",
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: { type: "object", additionalProperties: true },
-            },
-          },
-          400: {
-            description: "Bad request",
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              error: { type: "string" },
-            },
-          },
-          500: {
-            description: "Internal server error",
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              error: { type: "string" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: stripeIntentResultSchema,
             },
           },
         },
       },
     },
-    stripeController.createIntent.bind(stripeController),
+    (request, reply) => stripeController.createIntent(request as AuthenticatedRequest, reply),
   );
 
-  // Stripe webhook (no auth — validated by Stripe signature)
+  // POST /payments/stripe/webhook — no auth (Stripe signature validation)
   fastify.post(
     "/payments/stripe/webhook",
     {
       config: { rawBody: true },
       schema: {
-        description:
-          "Stripe webhook endpoint. Stripe POSTs signed events here.",
+        description: "Stripe webhook endpoint. Stripe POSTs signed events here.",
         tags: ["Stripe"],
         summary: "Stripe Webhook",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: { type: "object" },
+            },
+          },
+        },
       },
     },
-    stripeController.handleWebhook.bind(stripeController),
+    (request, reply) => stripeController.handleWebhook(request as any, reply),
   );
 
-  // Generic webhook event log (admin)
-  fastify.get<{ Querystring: WebhookFilterParams }>(
+  // GET /webhooks/events — Admin only
+  fastify.get(
     "/webhooks/events",
     {
-      preHandler: requireAdmin,
+      preValidation: [validateQuery(listWebhookEventsQuerySchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all received webhook events — Admin only.",
         tags: ["Webhooks"],
@@ -95,25 +110,26 @@ export async function registerWebhookRoutes(
           properties: {
             provider: { type: "string" },
             eventType: { type: "string" },
-            limit: { type: "number", minimum: 1, maximum: 100, default: 50 },
-            offset: { type: "number", minimum: 0, default: 0 },
+            limit: { type: "number", minimum: 1, maximum: 100 },
+            offset: { type: "number", minimum: 0 },
           },
         },
         response: {
           200: {
-            description: "Webhook events retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: { type: "object", additionalProperties: true },
+                items: webhookEventResponseSchema,
               },
             },
           },
         },
       },
     },
-    webhookController.listWebhookEvents.bind(webhookController),
+    (request, reply) => webhookController.listWebhookEvents(request as AuthenticatedRequest, reply),
   );
 }

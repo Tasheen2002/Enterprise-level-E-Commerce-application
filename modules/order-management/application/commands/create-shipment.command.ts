@@ -11,7 +11,7 @@ export interface CreateShipmentCommand extends ICommand {
   readonly pickupLocationId?: string;
 }
 
-export class CreateShipmentCommandHandler implements ICommandHandler<
+export class CreateShipmentHandler implements ICommandHandler<
   CreateShipmentCommand,
   CommandResult<OrderShipmentDTO>
 > {

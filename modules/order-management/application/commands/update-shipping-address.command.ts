@@ -22,7 +22,7 @@ export interface UpdateShippingAddressCommand extends ICommand {
   };
 }
 
-export class UpdateShippingAddressCommandHandler implements ICommandHandler<
+export class UpdateShippingAddressHandler implements ICommandHandler<
   UpdateShippingAddressCommand,
   CommandResult<OrderAddressDTO>
 > {

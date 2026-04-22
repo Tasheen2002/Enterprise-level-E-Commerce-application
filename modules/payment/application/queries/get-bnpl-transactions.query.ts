@@ -4,6 +4,7 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { BnplTransactionService } from '../services/bnpl-transaction.service';
 import { BnplTransactionDTO } from '../../domain/entities/bnpl-transaction.entity';
+import { DomainValidationError } from '../../domain/errors/payment-loyalty.errors';
 
 export interface GetBnplTransactionsQuery extends IQuery {
   readonly bnplId?: string;
@@ -20,7 +21,7 @@ export class GetBnplTransactionsHandler implements IQueryHandler<
 
   async handle(query: GetBnplTransactionsQuery): Promise<BnplTransactionDTO[]> {
     if (!query.bnplId && !query.intentId && !query.orderId) {
-      throw new Error('At least one of bnplId, intentId, or orderId is required');
+      throw new DomainValidationError('At least one of bnplId, intentId, or orderId is required');
     }
 
     if (query.bnplId) {

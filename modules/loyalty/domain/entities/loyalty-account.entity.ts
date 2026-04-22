@@ -1,12 +1,12 @@
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { LoyaltyAccountId } from "../value-objects/loyalty-account-id.vo";
-import { Points } from "../value-objects/points";
-import { Tier } from "../value-objects/tier";
-import { InsufficientPointsError } from "../errors/loyalty.errors";
+import { Points } from "../value-objects/points.vo";
+import { Tier } from "../value-objects/tier.vo";
+import { InsufficientPointsError } from "../errors";
 
 // ============================================================================
-// Domain Events
+// 1. Domain Events
 // ============================================================================
 
 export class LoyaltyAccountCreatedEvent extends DomainEvent {
@@ -70,8 +70,54 @@ export class PointsRedeemedEvent extends DomainEvent {
   }
 }
 
+export class PointsAdjustedEvent extends DomainEvent {
+  constructor(
+    public readonly accountId: string,
+    public readonly points: number,
+    public readonly isAddition: boolean,
+    public readonly newBalance: number,
+  ) {
+    super(accountId, "LoyaltyAccount");
+  }
+
+  get eventType(): string {
+    return "loyalty-account.points-adjusted";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      accountId: this.accountId,
+      points: this.points,
+      isAddition: this.isAddition,
+      newBalance: this.newBalance,
+    };
+  }
+}
+
+export class PointsExpiredEvent extends DomainEvent {
+  constructor(
+    public readonly accountId: string,
+    public readonly points: number,
+    public readonly newBalance: number,
+  ) {
+    super(accountId, "LoyaltyAccount");
+  }
+
+  get eventType(): string {
+    return "loyalty-account.points-expired";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      accountId: this.accountId,
+      points: this.points,
+      newBalance: this.newBalance,
+    };
+  }
+}
+
 // ============================================================================
-// Props & DTO
+// 2. Props Interface
 // ============================================================================
 
 export interface LoyaltyAccountProps {
@@ -87,6 +133,10 @@ export interface LoyaltyAccountProps {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ============================================================================
+// 3. DTO Interface
+// ============================================================================
 
 export interface LoyaltyAccountDTO {
   id: string;
@@ -104,7 +154,7 @@ export interface LoyaltyAccountDTO {
 }
 
 // ============================================================================
-// Entity
+// 4. Entity Class
 // ============================================================================
 
 export class LoyaltyAccount extends AggregateRoot {
@@ -233,6 +283,15 @@ export class LoyaltyAccount extends AggregateRoot {
     }
     this.props.lastActivityAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PointsAdjustedEvent(
+        this.props.id.getValue(),
+        points.getValue(),
+        isAddition,
+        this.props.currentBalance.getValue(),
+      ),
+    );
   }
 
   expirePoints(points: Points): void {
@@ -243,6 +302,14 @@ export class LoyaltyAccount extends AggregateRoot {
     }
     this.props.lastActivityAt = new Date();
     this.props.updatedAt = new Date();
+
+    this.addDomainEvent(
+      new PointsExpiredEvent(
+        this.props.id.getValue(),
+        points.getValue(),
+        this.props.currentBalance.getValue(),
+      ),
+    );
   }
 
   equals(other: LoyaltyAccount): boolean {
@@ -258,7 +325,7 @@ export class LoyaltyAccount extends AggregateRoot {
       totalPointsRedeemed: entity.props.totalPointsRedeemed.getValue(),
       lifetimePoints: entity.props.lifetimePoints.getValue(),
       tier: entity.props.tier.getValue(),
-      tierMultiplier: entity.props.tier.pointsMultiplier,
+      tierMultiplier: entity.props.tier.getPointsMultiplier(),
       joinedAt: entity.props.joinedAt.toISOString(),
       lastActivityAt: entity.props.lastActivityAt?.toISOString() ?? null,
       createdAt: entity.props.createdAt.toISOString(),

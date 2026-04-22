@@ -22,6 +22,7 @@ import {
   updateWishlistSchema,
   addToWishlistSchema,
   wishlistResponseSchema,
+  wishlistItemResponseSchema,
 } from "../validation/wishlist.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -142,6 +143,44 @@ export async function wishlistRoutes(
   );
 
   // GET /engagement/wishlists/:wishlistId/items — Get wishlist items
+  fastify.get(
+    "/engagement/wishlists/:wishlistId/items",
+    {
+      preValidation: [validateParams(wishlistIdParamsSchema), validateQuery(paginationQuerySchema)],
+      preHandler: [optionalAuth],
+      schema: {
+        description: "Get all items in a wishlist",
+        summary: "Get Wishlist Items",
+        tags: ["Engagement - Wishlists"],
+        params: {
+          type: "object",
+          required: ["wishlistId"],
+          properties: {
+            wishlistId: { type: "string", format: "uuid" },
+          },
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            limit: { type: "integer", minimum: 1 },
+            offset: { type: "integer", minimum: 0 },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              data: { type: "array", items: wishlistItemResponseSchema },
+              total: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+    (request, reply) =>
+      controller.getWishlistItems(request as AuthenticatedRequest, reply),
+  );
 
   // GET /engagement/users/:userId/wishlists — Get user wishlists
   fastify.get(
@@ -216,7 +255,7 @@ export async function wishlistRoutes(
             type: "object",
             properties: {
               success: { type: "boolean" },
-              data: { type: "object", additionalProperties: true },
+              data: wishlistItemResponseSchema,
               message: { type: "string" },
             },
           },

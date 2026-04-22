@@ -1,5 +1,5 @@
 import { WishlistItem } from "../entities/wishlist-item.entity";
-import { WishlistId, WishlistItemId } from "../value-objects";
+import { WishlistItemId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -9,7 +9,7 @@ import {
 // 2. Filters interface
 // ============================================================================
 export interface WishlistItemFilters {
-  wishlistId?: WishlistId;
+  wishlistId?: string;
   variantId?: string;
 }
 
@@ -24,7 +24,7 @@ export interface IWishlistItemRepository {
   // Finders
   findById(itemId: WishlistItemId): Promise<WishlistItem | null>;
   findByWishlistId(
-    wishlistId: WishlistId,
+    wishlistId: string,
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedResult<WishlistItem>>;
   findByVariantId(
@@ -37,17 +37,18 @@ export interface IWishlistItemRepository {
 
   // Batch operations
   saveMany(items: WishlistItem[]): Promise<void>;
-  deleteByWishlistId(wishlistId: WishlistId): Promise<void>;
+  deleteByWishlistId(wishlistId: string): Promise<void>;
+  deleteByWishlistIdAndVariantId(wishlistId: string, variantId: string): Promise<void>;
   deleteMany(itemIds: WishlistItemId[]): Promise<void>;
 
   // Counts and statistics
-  countByWishlistId(wishlistId: WishlistId): Promise<number>;
+  countByWishlistId(wishlistId: string): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
 
   // Existence checks
   exists(itemId: WishlistItemId): Promise<boolean>;
   isVariantInWishlist(
-    wishlistId: WishlistId,
+    wishlistId: string,
     variantId: string,
   ): Promise<boolean>;
 }

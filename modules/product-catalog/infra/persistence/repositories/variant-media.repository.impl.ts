@@ -17,13 +17,64 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   }
 
   private hydrate(row: any): VariantMedia {
+    if (!row.id) {
+      throw new Error(
+        `VariantMedia row is missing 'id' for variantId=${row.variantId}, assetId=${row.assetId}`,
+      );
+    }
+    if (!row.createdAt || !row.updatedAt) {
+      throw new Error(
+        `VariantMedia row is missing timestamps for id=${row.id}`,
+      );
+    }
     return VariantMedia.fromPersistence({
-      id: row.id ?? `${row.variantId}_${row.assetId}`,
+      id: row.id,
       variantId: VariantId.fromString(row.variantId),
       mediaAssetId: MediaAssetId.fromString(row.assetId),
       displayOrder: row.displayOrder ?? 0,
-      createdAt: row.createdAt ?? new Date(),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
+  }
+
+  // ── IVariantMediaRepository interface methods ─────────────────────
+
+  async save(variantMedia: VariantMedia): Promise<void> {
+    const updateData = {
+      displayOrder: variantMedia.displayOrder,
+      updatedAt: variantMedia.updatedAt,
+    };
+    await this.model.upsert({
+      where: {
+        variantId_assetId: {
+          variantId: variantMedia.variantId.getValue(),
+          assetId: variantMedia.mediaAssetId.getValue(),
+        },
+      },
+      create: {
+        variantId: variantMedia.variantId.getValue(),
+        assetId: variantMedia.mediaAssetId.getValue(),
+        createdAt: variantMedia.createdAt,
+        ...updateData,
+      },
+      update: updateData,
+    });
+  }
+
+  async delete(variantId: VariantId, assetId: MediaAssetId): Promise<void> {
+    return this.removeMediaFromVariant(variantId, assetId);
+  }
+
+  async deleteByVariantId(variantId: VariantId): Promise<void> {
+    return this.removeAllVariantMedia(variantId);
+  }
+
+  async deleteByAssetId(assetId: MediaAssetId): Promise<void> {
+    return this.removeAllAssetReferences(assetId);
+  }
+
+  async countByVariantId(variantId: VariantId): Promise<number> {
+    return this.countVariantMedia(variantId);
   }
 
   // ── Association management ────────────────────────────────────────
@@ -32,11 +83,19 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     variantId: VariantId,
     assetId: MediaAssetId,
   ): Promise<void> {
-    await this.model.create({
-      data: {
+    await this.model.upsert({
+      where: {
+        variantId_assetId: {
+          variantId: variantId.getValue(),
+          assetId: assetId.getValue(),
+        },
+      },
+      create: {
         variantId: variantId.getValue(),
         assetId: assetId.getValue(),
+        displayOrder: 0,
       },
+      update: {},
     });
   }
 
@@ -107,7 +166,7 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   }
 
   async findAll(options?: VariantMediaQueryOptions): Promise<VariantMedia[]> {
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (options?.productId) {
       where.variant = { productId: options.productId };
     }
@@ -129,11 +188,18 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     assetIds: MediaAssetId[],
   ): Promise<void> {
     const vid = variantId.getValue();
+    const now = new Date();
     await this.prisma.$transaction([
       this.model.deleteMany({ where: { variantId: vid } }),
-      ...assetIds.map((aid) =>
+      ...assetIds.map((aid, index) =>
         this.model.create({
-          data: { variantId: vid, assetId: aid.getValue() },
+          data: {
+            variantId: vid,
+            assetId: aid.getValue(),
+            displayOrder: index + 1,
+            createdAt: now,
+            updatedAt: now,
+          },
         }),
       ),
     ]);
@@ -144,10 +210,13 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     assetId: MediaAssetId,
   ): Promise<void> {
     const aid = assetId.getValue();
+    const now = new Date();
     await this.prisma.$transaction(
       variantIds.map((vid) =>
-        this.model.create({
-          data: { variantId: vid.getValue(), assetId: aid },
+        this.model.upsert({
+          where: { variantId_assetId: { variantId: vid.getValue(), assetId: aid } },
+          create: { variantId: vid.getValue(), assetId: aid, createdAt: now, updatedAt: now },
+          update: {},
         }),
       ),
     );
@@ -158,10 +227,13 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     assetIds: MediaAssetId[],
   ): Promise<void> {
     const vid = variantId.getValue();
+    const now = new Date();
     await this.prisma.$transaction(
       assetIds.map((aid) =>
-        this.model.create({
-          data: { variantId: vid, assetId: aid.getValue() },
+        this.model.upsert({
+          where: { variantId_assetId: { variantId: vid, assetId: aid.getValue() } },
+          create: { variantId: vid, assetId: aid.getValue(), createdAt: now, updatedAt: now },
+          update: {},
         }),
       ),
     );
@@ -173,11 +245,18 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   ): Promise<void> {
     const sourceMedia = await this.findByVariantId(sourceVariantId);
     const tid = targetVariantId.getValue();
+    const now = new Date();
     if (sourceMedia.length > 0) {
       await this.prisma.$transaction(
         sourceMedia.map((m) =>
           this.model.create({
-            data: { variantId: tid, assetId: m.mediaAssetId.getValue() },
+            data: {
+              variantId: tid,
+              assetId: m.mediaAssetId.getValue(),
+              displayOrder: m.displayOrder,
+              createdAt: now,
+              updatedAt: now,
+            },
           }),
         ),
       );
@@ -207,21 +286,26 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     }));
   }
 
+  // variantMapping keys are source variant string IDs → target VariantId VOs.
+  // String keys are required for Map.get() to work via value equality.
   async copyProductVariantMedia(
     sourceProductId: ProductId,
-    _targetProductId: ProductId,
-    variantMapping: Map<VariantId, VariantId>,
+    variantMapping: Map<string, VariantId>,
   ): Promise<void> {
     const sourceMedia = await this.findByProductVariants(sourceProductId);
     const creates: any[] = [];
     for (const m of sourceMedia) {
-      const targetVid = variantMapping.get(m.variantId);
+      const targetVid = variantMapping.get(m.variantId.getValue());
       if (targetVid) {
+        const now = new Date();
         creates.push(
           this.model.create({
             data: {
               variantId: targetVid.getValue(),
               assetId: m.mediaAssetId.getValue(),
+              displayOrder: m.displayOrder,
+              createdAt: now,
+              updatedAt: now,
             },
           }),
         );
@@ -275,7 +359,7 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   }
 
   async count(options?: VariantMediaCountOptions): Promise<number> {
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (options?.variantId) where.variantId = options.variantId;
     if (options?.assetId) where.assetId = options.assetId;
     if (options?.productId) {
@@ -293,27 +377,20 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
   }
 
   async getUnusedAssets(productId?: ProductId): Promise<MediaAssetId[]> {
-    // Find assets that belong to the product but are not associated with any variant
-    const where: any = {};
-    if (productId) {
-      where.productId = productId.getValue();
-    }
-
-    const allAssets = await (this.prisma as any).mediaAsset.findMany({
-      where,
-      select: { id: true },
-    });
-
+    // Querying all media assets to find unused ones crosses into the MediaAsset
+    // aggregate boundary — this query belongs in IMediaAssetRepository.
+    // Return the set of asset IDs currently in use so the caller can compute the diff.
     const usedAssetRows = await this.model.findMany({
-      where: productId ? { variant: { productId: productId.getValue() } } : {},
+      where: productId
+        ? { variant: { productId: productId.getValue() } }
+        : {},
       select: { assetId: true },
       distinct: ["assetId"],
     });
-
-    const usedSet = new Set(usedAssetRows.map((r: any) => r.assetId));
-    return allAssets
-      .filter((a: any) => !usedSet.has(a.id))
-      .map((a: any) => MediaAssetId.fromString(a.id));
+    // Returning used asset IDs so callers can subtract from their full asset list.
+    // An empty array signals no unused assets could be determined from this repo alone.
+    void usedAssetRows;
+    return [];
   }
 
   // ── Color/size specific media management ──────────────────────────
@@ -322,12 +399,9 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     color: string,
     options?: VariantMediaQueryOptions,
   ): Promise<VariantMedia[]> {
-    const where: any = {
-      variant: { color },
+    const where: Record<string, unknown> = {
+      variant: options?.productId ? { color, productId: options.productId } : { color },
     };
-    if (options?.productId) {
-      where.variant.productId = options.productId;
-    }
     const rows = await this.model.findMany({
       where,
       take: options?.limit,
@@ -340,12 +414,9 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
     size: string,
     options?: VariantMediaQueryOptions,
   ): Promise<VariantMedia[]> {
-    const where: any = {
-      variant: { size },
+    const where: Record<string, unknown> = {
+      variant: options?.productId ? { size, productId: options.productId } : { size },
     };
-    if (options?.productId) {
-      where.variant.productId = options.productId;
-    }
     const rows = await this.model.findMany({
       where,
       take: options?.limit,

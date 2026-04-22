@@ -9,6 +9,12 @@ import {
 } from "../../../application";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CheckoutIdParams,
+  InitializeCheckoutBody,
+  CompleteCheckoutBody,
+  CompleteCheckoutWithOrderBody,
+} from "../validation/checkout.schema";
 
 // Import middleware for type augmentations (request.guestToken)
 import "../middleware/cart-auth.middleware";
@@ -24,9 +30,7 @@ export class CheckoutController {
   ) {}
 
   async initialize(
-    request: AuthenticatedRequest<{
-      Body: { cartId: string; expiresInMinutes?: number };
-    }>,
+    request: AuthenticatedRequest<{ Body: InitializeCheckoutBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -51,7 +55,7 @@ export class CheckoutController {
   }
 
   async get(
-    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -68,10 +72,7 @@ export class CheckoutController {
   }
 
   async complete(
-    request: AuthenticatedRequest<{
-      Params: { checkoutId: string };
-      Body: { paymentIntentId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams; Body: CompleteCheckoutBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -91,7 +92,7 @@ export class CheckoutController {
   }
 
   async cancel(
-    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -111,34 +112,7 @@ export class CheckoutController {
   }
 
   async completeWithOrder(
-    request: AuthenticatedRequest<{
-      Params: { checkoutId: string };
-      Body: {
-        paymentIntentId: string;
-        shippingAddress: {
-          firstName: string;
-          lastName: string;
-          addressLine1: string;
-          addressLine2?: string;
-          city: string;
-          state?: string;
-          postalCode?: string;
-          country: string;
-          phone?: string;
-        };
-        billingAddress?: {
-          firstName: string;
-          lastName: string;
-          addressLine1: string;
-          addressLine2?: string;
-          city: string;
-          state?: string;
-          postalCode?: string;
-          country: string;
-          phone?: string;
-        };
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams; Body: CompleteCheckoutWithOrderBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -166,7 +140,7 @@ export class CheckoutController {
   }
 
   async getOrderByCheckoutId(
-    request: AuthenticatedRequest<{ Params: { checkoutId: string } }>,
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
     reply: FastifyReply,
   ) {
     try {

@@ -1,5 +1,5 @@
 import { ProductReview } from "../entities/product-review.entity";
-import { ReviewId, ReviewStatus } from "../value-objects";
+import { ReviewId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -11,7 +11,7 @@ import {
 export interface ProductReviewFilters {
   productId?: string;
   userId?: string;
-  status?: ReviewStatus;
+  status?: string;
   minRating?: number;
   maxRating?: number;
   startDate?: Date;
@@ -37,7 +37,7 @@ export interface IProductReviewRepository {
     options?: ProductReviewQueryOptions,
   ): Promise<PaginatedResult<ProductReview>>;
   findByStatus(
-    status: ReviewStatus,
+    status: string,
     options?: ProductReviewQueryOptions,
   ): Promise<PaginatedResult<ProductReview>>;
   findAll(
@@ -62,13 +62,13 @@ export interface IProductReviewRepository {
   ): Promise<ProductReview | null>;
   findRecentByProductId(
     productId: string,
-    options?: ProductReviewQueryOptions, // Standardized to options
+    options?: ProductReviewQueryOptions,
   ): Promise<PaginatedResult<ProductReview>>;
 
   // Counts and statistics
   countByProductId(productId: string): Promise<number>;
   countByUserId(userId: string): Promise<number>;
-  countByStatus(status: ReviewStatus): Promise<number>;
+  countByStatus(status: string): Promise<number>;
   count(filters?: ProductReviewFilters): Promise<number>;
 
   // Rating statistics

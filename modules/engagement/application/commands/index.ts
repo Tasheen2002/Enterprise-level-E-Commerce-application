@@ -16,8 +16,8 @@ export type { DeleteWishlistCommand } from "./delete-wishlist.command";
 export { CreateReminderHandler } from "./create-reminder.command";
 export type { CreateReminderCommand } from "./create-reminder.command";
 
-export { UpdateReminderStatusHandler } from "./update-reminder-status.command";
-export type { UpdateReminderStatusCommand } from "./update-reminder-status.command";
+export { MarkReminderAsSentHandler } from "./mark-reminder-as-sent.command";
+export type { MarkReminderAsSentCommand } from "./mark-reminder-as-sent.command";
 
 export { UnsubscribeReminderHandler } from "./unsubscribe-reminder.command";
 export type { UnsubscribeReminderCommand } from "./unsubscribe-reminder.command";

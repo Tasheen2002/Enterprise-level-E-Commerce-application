@@ -1,7 +1,4 @@
-/**
- * In-memory token blacklist for JWT revocation.
- * In production, replace with Redis or database-backed store.
- */
+import { USER_MANAGEMENT_CONSTANTS } from "../../../domain/constants/user-management.constants";
 
 interface TokenEntry {
   expiresAt: number;
@@ -24,10 +21,12 @@ interface FailedAttemptEntry {
   lockedUntil?: number;
 }
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const PASSWORD_RESET_TOKEN_TTL_MS = 1 * 60 * 60 * 1000; // 1 hour
+const MAX_LOGIN_ATTEMPTS = USER_MANAGEMENT_CONSTANTS.MAX_LOGIN_ATTEMPTS;
+const LOCKOUT_DURATION_MS = USER_MANAGEMENT_CONSTANTS.LOGIN_LOCKOUT_DURATION_MS;
+const VERIFICATION_TOKEN_TTL_MS =
+  USER_MANAGEMENT_CONSTANTS.EMAIL_VERIFICATION_EXPIRY_MS;
+const PASSWORD_RESET_TOKEN_TTL_MS =
+  USER_MANAGEMENT_CONSTANTS.PASSWORD_RESET_EXPIRY_MS;
 
 const blacklistedTokens = new Map<string, TokenEntry>();
 const verificationTokens = new Map<string, VerificationTokenEntry>();
@@ -71,7 +70,9 @@ export const TokenBlacklistService = {
     });
   },
 
-  getVerificationToken(token: string): { userId: string; email: string } | null {
+  getVerificationToken(
+    token: string,
+  ): { userId: string; email: string } | null {
     const entry = verificationTokens.get(token);
     if (!entry) return null;
     if (entry.expiresAt < Date.now()) {
@@ -90,7 +91,9 @@ export const TokenBlacklistService = {
     });
   },
 
-  getPasswordResetToken(token: string): { userId: string; email: string } | null {
+  getPasswordResetToken(
+    token: string,
+  ): { userId: string; email: string } | null {
     const entry = passwordResetTokens.get(token);
     if (!entry) return null;
     if (entry.expiresAt < Date.now()) {

@@ -10,7 +10,7 @@ export class Locale {
 
     const normalizedLocale = locale.trim();
 
-    if (!this.isValidLocale(normalizedLocale)) {
+    if (!Locale.isValidLocale(normalizedLocale)) {
       throw new DomainValidationError(
         `Invalid locale format: ${locale}. Use format like "en-US", "fr-FR", "de-DE"`
       );
@@ -19,7 +19,7 @@ export class Locale {
     this.value = normalizedLocale;
   }
 
-  private isValidLocale(locale: string): boolean {
+  private static isValidLocale(locale: string): boolean {
     // BCP 47 language tag format: language-country
     const localeRegex = /^[a-z]{2}-[A-Z]{2}$/;
 

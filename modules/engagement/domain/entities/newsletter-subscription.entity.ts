@@ -1,6 +1,3 @@
-// ============================================================================
-// 1. Imports
-// ============================================================================
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { SubscriptionId, SubscriptionStatus } from "../value-objects";
@@ -13,7 +10,7 @@ export class SubscriptionCreatedEvent extends DomainEvent {
   constructor(
     public readonly subscriptionId: string,
     public readonly email: string,
-    public readonly source?: string
+    public readonly source?: string,
   ) {
     super(subscriptionId, "Subscription");
   }
@@ -35,7 +32,7 @@ export class SubscriptionStatusChangedEvent extends DomainEvent {
   constructor(
     public readonly subscriptionId: string,
     public readonly oldStatus: string,
-    public readonly newStatus: string
+    public readonly newStatus: string,
   ) {
     super(subscriptionId, "Subscription");
   }
@@ -85,7 +82,12 @@ export class NewsletterSubscription extends AggregateRoot {
     super();
   }
 
-  static create(params: Omit<SubscriptionProps, "id" | "createdAt" | "updatedAt">): NewsletterSubscription {
+  static create(
+    params: Omit<
+      SubscriptionProps,
+      "id" | "createdAt" | "updatedAt" | "status"
+    >,
+  ): NewsletterSubscription {
     NewsletterSubscription.validateEmail(params.email);
 
     const entity = new NewsletterSubscription({
@@ -101,8 +103,8 @@ export class NewsletterSubscription extends AggregateRoot {
       new SubscriptionCreatedEvent(
         entity.props.id.getValue(),
         entity.props.email,
-        entity.props.source
-      )
+        entity.props.source,
+      ),
     );
 
     return entity;
@@ -156,8 +158,8 @@ export class NewsletterSubscription extends AggregateRoot {
       new SubscriptionStatusChangedEvent(
         this.props.id.getValue(),
         oldStatusLabel,
-        newStatusLabel
-      )
+        newStatusLabel,
+      ),
     );
   }
 

@@ -10,6 +10,6 @@ export class GetColorVariantMediaHandler implements IQueryHandler<GetColorVarian
   constructor(private readonly variantMediaManagementService: VariantMediaManagementService) {}
 
   async handle(query: GetColorVariantMediaQuery): Promise<ColorVariantMedia> {
-    return this.variantMediaManagementService.getColorVariantMedia(query.productId, decodeURIComponent(query.color));
+    return this.variantMediaManagementService.getColorVariantMedia(query.productId, query.color);
   }
 }

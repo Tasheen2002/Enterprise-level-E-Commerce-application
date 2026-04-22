@@ -7,7 +7,7 @@ export interface CreatePreorderCommand extends ICommand {
   readonly releaseDate?: Date;
 }
 
-export class CreatePreorderCommandHandler implements ICommandHandler<
+export class CreatePreorderHandler implements ICommandHandler<
   CreatePreorderCommand,
   CommandResult<PreorderDTO>
 > {

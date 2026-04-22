@@ -4,7 +4,6 @@ import {
 } from "../../domain/repositories/product-media.repository";
 import { IMediaAssetRepository } from "../../domain/repositories/media-asset.repository";
 import { IProductRepository } from "../../domain/repositories/product.repository";
-import { MediaAssetId as EntityMediaAssetId } from "../../domain/entities/media-asset.entity";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import {
@@ -71,7 +70,7 @@ export class ProductMediaManagementService {
     }
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -179,7 +178,7 @@ export class ProductMediaManagementService {
     // Get asset details for each product media
     const mediaAssets = await Promise.all(
       productMediaList.map(async (productMedia) => {
-        const assetIdEntity = EntityMediaAssetId.fromString(
+        const assetIdEntity = MediaAssetId.fromString(
           productMedia.mediaAssetId.getValue(),
         );
         const asset = await this.mediaAssetRepository.findById(assetIdEntity);
@@ -317,7 +316,7 @@ export class ProductMediaManagementService {
 
     // Validate all assets exist
     for (const item of mediaData) {
-      const assetIdEntity = EntityMediaAssetId.fromString(item.assetId);
+      const assetIdEntity = MediaAssetId.fromString(item.assetId);
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (!asset) {
         throw new MediaAssetNotFoundError(item.assetId);
@@ -374,7 +373,7 @@ export class ProductMediaManagementService {
     const assetIdVo = MediaAssetId.fromString(assetId);
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -389,7 +388,7 @@ export class ProductMediaManagementService {
     const assetIdVo = MediaAssetId.fromString(assetId);
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -448,7 +447,7 @@ export class ProductMediaManagementService {
 
     // Check if all referenced assets exist
     for (const pm of productMedia) {
-      const assetIdEntity = EntityMediaAssetId.fromString(
+      const assetIdEntity = MediaAssetId.fromString(
         pm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
@@ -493,7 +492,7 @@ export class ProductMediaManagementService {
     let totalSize = 0;
 
     for (const pm of productMedia) {
-      const assetIdEntity = EntityMediaAssetId.fromString(
+      const assetIdEntity = MediaAssetId.fromString(
         pm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);

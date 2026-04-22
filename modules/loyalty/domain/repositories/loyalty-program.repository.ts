@@ -11,7 +11,6 @@ export interface LoyaltyProgramFilters {
 
 export interface ILoyaltyProgramRepository {
   save(program: LoyaltyProgram): Promise<void>;
-  update(program: LoyaltyProgram): Promise<void>;
   delete(id: LoyaltyProgramId): Promise<void>;
   findById(id: LoyaltyProgramId): Promise<LoyaltyProgram | null>;
   findByName(name: string): Promise<LoyaltyProgram | null>;
@@ -22,4 +21,5 @@ export interface ILoyaltyProgramRepository {
 
 export interface LoyaltyProgramQueryOptions extends PaginationOptions {
   sortBy?: 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
 }

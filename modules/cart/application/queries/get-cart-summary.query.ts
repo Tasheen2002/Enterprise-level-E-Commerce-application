@@ -11,11 +11,10 @@ export class GetCartSummaryHandler implements IQueryHandler<GetCartSummaryQuery,
   constructor(private readonly cartManagementService: CartManagementService) {}
 
   async handle(query: GetCartSummaryQuery): Promise<CartSummaryDto | null> {
-    const cart = await this.cartManagementService.getCart(
+    return this.cartManagementService.getCartSummary(
       query.cartId,
       query.userId,
       query.guestToken,
     );
-    return cart ? cart.summary : null;
   }
 }

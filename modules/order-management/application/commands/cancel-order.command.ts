@@ -6,7 +6,7 @@ export interface CancelOrderCommand extends ICommand {
   readonly orderId: string;
 }
 
-export class CancelOrderCommandHandler implements ICommandHandler<
+export class CancelOrderHandler implements ICommandHandler<
   CancelOrderCommand,
   CommandResult<OrderDTO>
 > {

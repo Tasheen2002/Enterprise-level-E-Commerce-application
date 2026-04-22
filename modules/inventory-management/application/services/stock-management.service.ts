@@ -237,7 +237,7 @@ export class StockManagementService {
     sortOrder?: "asc" | "desc";
   }): Promise<{ stocks: StockDTO[]; total: number }> {
     const result = await this.stockRepository.findAll(options);
-    return { stocks: result.stocks.map(Stock.toDTO), total: result.total };
+    return { stocks: result.items.map(Stock.toDTO), total: result.total };
   }
 
   async getTransactionHistory(
@@ -249,7 +249,7 @@ export class StockManagementService {
       ? await this.transactionRepository.findByVariantAndLocation(variantId, locationId, options)
       : await this.transactionRepository.findByVariant(variantId, options);
     return {
-      transactions: result.transactions.map(InventoryTransaction.toDTO),
+      transactions: result.items.map(InventoryTransaction.toDTO),
       total: result.total,
     };
   }
@@ -272,7 +272,7 @@ export class StockManagementService {
   }): Promise<{ transactions: InventoryTransactionDTO[]; total: number }> {
     const result = await this.transactionRepository.findAll(options);
     return {
-      transactions: result.transactions.map(InventoryTransaction.toDTO),
+      transactions: result.items.map(InventoryTransaction.toDTO),
       total: result.total,
     };
   }

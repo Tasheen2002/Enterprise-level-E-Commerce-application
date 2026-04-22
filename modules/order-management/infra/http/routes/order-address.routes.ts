@@ -92,7 +92,7 @@ export async function registerOrderAddressRoutes(
     "/orders/:orderId/addresses",
     {
       preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticateUser],
       schema: {
         description: "Get billing and shipping addresses for an order",
         tags: ["Order Addresses"],

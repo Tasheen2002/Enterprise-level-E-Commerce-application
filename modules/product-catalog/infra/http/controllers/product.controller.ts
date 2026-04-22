@@ -8,8 +8,15 @@ import {
   ListProductsHandler,
   SearchProductsHandler,
 } from "../../../application";
-import { ProductStatus } from "../../../domain/enums";
+import { ProductStatus } from "../../../domain/enums/product-catalog.enums";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  ProductParams,
+  ProductSlugParams,
+  ListProductsQuery,
+  CreateProductBody,
+  UpdateProductBody,
+} from "../validation/product.schema";
 
 export class ProductController {
   constructor(
@@ -22,28 +29,19 @@ export class ProductController {
   ) {}
 
   async listProducts(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        page?: number;
-        limit?: number;
-        status?: ProductStatus;
-        brand?: string;
-        categoryId?: string;
-        search?: string;
-        includeDrafts?: boolean;
-        sortBy?: "createdAt" | "title" | "publishAt";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListProductsQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const { search, ...queryRest } = request.query;
+      const { search, ...queryRest } = request.query as ListProductsQuery & { search?: string };
 
       if (search) {
+        const { sortBy, status, ...searchRest } = queryRest;
         const result = await this.searchProductsHandler.handle({
           searchTerm: search,
-          ...queryRest,
+          ...searchRest,
+          status: status as ProductStatus | undefined,
+          sortBy: sortBy === "updatedAt" ? undefined : sortBy as "relevance" | "price" | "title" | "createdAt" | "publishAt" | undefined,
         });
         return ResponseHelper.ok(reply, "Products retrieved successfully", result);
       }
@@ -56,12 +54,11 @@ export class ProductController {
   }
 
   async getProduct(
-    request: AuthenticatedRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: ProductParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const result = await this.getProductHandler.handle({ productId });
+      const result = await this.getProductHandler.handle({ productId: request.params.productId });
       return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -69,12 +66,11 @@ export class ProductController {
   }
 
   async getProductBySlug(
-    request: AuthenticatedRequest<{ Params: { slug: string } }>,
+    request: AuthenticatedRequest<{ Params: ProductSlugParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const { slug } = request.params;
-      const result = await this.getProductHandler.handle({ slug });
+      const result = await this.getProductHandler.handle({ slug: request.params.slug });
       return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -82,29 +78,15 @@ export class ProductController {
   }
 
   async createProduct(
-    request: AuthenticatedRequest<{
-      Body: {
-        title: string;
-        brand?: string;
-        shortDesc?: string;
-        longDescHtml?: string;
-        status?: ProductStatus;
-        publishAt?: Date;
-        countryOfOrigin?: string;
-        seoTitle?: string;
-        seoDescription?: string;
-        price?: number;
-        priceSgd?: number;
-        priceUsd?: number;
-        compareAtPrice?: number;
-        categoryIds?: string[];
-        tags?: string[];
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateProductBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createProductHandler.handle(request.body);
+      const { status, ...rest } = request.body;
+      const result = await this.createProductHandler.handle({
+        ...rest,
+        status: status as ProductStatus | undefined,
+      });
       return ResponseHelper.fromCommand(reply, result, "Product created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -112,33 +94,15 @@ export class ProductController {
   }
 
   async updateProduct(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Body: {
-        title?: string;
-        brand?: string;
-        shortDesc?: string;
-        longDescHtml?: string;
-        status?: ProductStatus;
-        publishAt?: string;
-        countryOfOrigin?: string;
-        seoTitle?: string;
-        seoDescription?: string;
-        price?: number;
-        priceSgd?: number;
-        priceUsd?: number;
-        compareAtPrice?: number;
-        categoryIds?: string[];
-        tags?: string[];
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: ProductParams; Body: UpdateProductBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
+      const { status, ...rest } = request.body;
       const result = await this.updateProductHandler.handle({
-        productId,
-        ...request.body,
+        productId: request.params.productId,
+        ...rest,
+        status: status as ProductStatus | undefined,
       });
       return ResponseHelper.fromCommand(reply, result, "Product updated successfully");
     } catch (error: unknown) {
@@ -147,12 +111,11 @@ export class ProductController {
   }
 
   async deleteProduct(
-    request: AuthenticatedRequest<{ Params: { productId: string } }>,
+    request: AuthenticatedRequest<{ Params: ProductParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const { productId } = request.params;
-      const result = await this.deleteProductHandler.handle({ productId });
+      const result = await this.deleteProductHandler.handle({ productId: request.params.productId });
       return ResponseHelper.fromCommand(reply, result, "Product deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

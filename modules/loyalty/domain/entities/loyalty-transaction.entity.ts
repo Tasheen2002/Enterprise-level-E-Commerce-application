@@ -1,18 +1,18 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { LoyaltyTransactionId } from '../value-objects/loyalty-transaction-id.vo';
-import { Points } from '../value-objects/points';
+import { Points } from '../value-objects/points.vo';
 import { LoyaltyTransactionType, LoyaltyTransactionReason } from '../enums/loyalty.enums';
 
 // ============================================================================
-// Domain Events
+// 1. Domain Events
 // ============================================================================
 
 export class LoyaltyTransactionCreatedEvent extends DomainEvent {
   constructor(
     public readonly transactionId: string,
     public readonly accountId: string,
-    public readonly type: LoyaltyTransactionType,
+    public readonly type: string,
     public readonly points: number,
   ) {
     super(transactionId, 'LoyaltyTransaction');
@@ -31,7 +31,7 @@ export class LoyaltyTransactionCreatedEvent extends DomainEvent {
 }
 
 // ============================================================================
-// Props & DTO
+// 2. Props Interface
 // ============================================================================
 
 export interface LoyaltyTransactionProps {
@@ -49,6 +49,10 @@ export interface LoyaltyTransactionProps {
   createdAt: Date;
 }
 
+// ============================================================================
+// 3. DTO Interface
+// ============================================================================
+
 export interface LoyaltyTransactionDTO {
   id: string;
   accountId: string;
@@ -65,7 +69,7 @@ export interface LoyaltyTransactionDTO {
 }
 
 // ============================================================================
-// Entity
+// 4. Entity Class
 // ============================================================================
 
 export class LoyaltyTransaction extends AggregateRoot {
@@ -108,7 +112,9 @@ export class LoyaltyTransaction extends AggregateRoot {
   get createdAt(): Date { return this.props.createdAt; }
 
   isEarn(): boolean { return this.props.type === LoyaltyTransactionType.EARN; }
-  isBurn(): boolean { return this.props.type === LoyaltyTransactionType.REDEEM; }
+  isRedeem(): boolean { return this.props.type === LoyaltyTransactionType.REDEEM; }
+  isExpire(): boolean { return this.props.type === LoyaltyTransactionType.EXPIRE; }
+  isAdjust(): boolean { return this.props.type === LoyaltyTransactionType.ADJUST; }
 
   isExpired(): boolean {
     if (!this.props.expiresAt) return false;

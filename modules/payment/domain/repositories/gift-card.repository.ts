@@ -15,7 +15,6 @@ export interface GiftCardFilters {
 
 export interface IGiftCardRepository {
   save(giftCard: GiftCard): Promise<void>;
-  update(giftCard: GiftCard): Promise<void>;
   delete(id: GiftCardId): Promise<void>;
   findById(id: GiftCardId): Promise<GiftCard | null>;
   findByCode(code: string): Promise<GiftCard | null>;

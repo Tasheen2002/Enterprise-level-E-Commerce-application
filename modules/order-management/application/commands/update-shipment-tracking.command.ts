@@ -10,7 +10,7 @@ export interface UpdateShipmentTrackingCommand extends ICommand {
   readonly service?: string;
 }
 
-export class UpdateShipmentTrackingCommandHandler implements ICommandHandler<
+export class UpdateShipmentTrackingHandler implements ICommandHandler<
   UpdateShipmentTrackingCommand,
   CommandResult<OrderShipmentDTO>
 > {

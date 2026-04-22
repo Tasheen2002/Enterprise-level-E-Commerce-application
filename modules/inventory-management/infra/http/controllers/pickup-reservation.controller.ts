@@ -7,6 +7,10 @@ import {
   ListPickupReservationsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  CreatePickupReservationBody,
+  ListPickupReservationsQuery,
+} from "../validation/pickup-reservation.schema";
 
 export class PickupReservationController {
   constructor(
@@ -30,13 +34,12 @@ export class PickupReservationController {
   }
 
   async listReservations(
-    request: AuthenticatedRequest<{
-      Querystring: { orderId?: string; locationId?: string; activeOnly?: boolean };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListPickupReservationsQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listReservationsHandler.handle(request.query);
+      const { orderId, locationId, activeOnly } = request.query;
+      const result = await this.listReservationsHandler.handle({ orderId, locationId, activeOnly });
       return ResponseHelper.ok(reply, "Reservations retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -44,19 +47,18 @@ export class PickupReservationController {
   }
 
   async createReservation(
-    request: AuthenticatedRequest<{
-      Body: {
-        orderId: string;
-        variantId: string;
-        locationId: string;
-        qty: number;
-        expirationMinutes?: number;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreatePickupReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createReservationHandler.handle(request.body);
+      const { orderId, variantId, locationId, qty, expirationMinutes } = request.body;
+      const result = await this.createReservationHandler.handle({
+        orderId,
+        variantId,
+        locationId,
+        qty,
+        expirationMinutes,
+      });
       return ResponseHelper.fromCommand(reply, result, "Reservation created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

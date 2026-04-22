@@ -1,16 +1,16 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { NotificationService, PaginatedNotificationResult } from "../services/notification.service";
 
-export interface GetUserNotificationsQuery extends IQuery {
+export interface GetNotificationsByTypeQuery extends IQuery {
   readonly type: string;
   readonly limit?: number;
   readonly offset?: number;
 }
 
-export class GetUserNotificationsHandler implements IQueryHandler<GetUserNotificationsQuery, PaginatedNotificationResult> {
+export class GetNotificationsByTypeHandler implements IQueryHandler<GetNotificationsByTypeQuery, PaginatedNotificationResult> {
   constructor(private readonly notificationService: NotificationService) {}
 
-  async handle(query: GetUserNotificationsQuery): Promise<PaginatedNotificationResult> {
+  async handle(query: GetNotificationsByTypeQuery): Promise<PaginatedNotificationResult> {
     return this.notificationService.getNotificationsByType(
       query.type,
       {

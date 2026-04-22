@@ -1,17 +1,16 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ReminderManagementService } from "../services/reminder-management.service";
 
-export interface UpdateReminderStatusCommand extends ICommand {
+export interface MarkReminderAsSentCommand extends ICommand {
   readonly reminderId: string;
-  readonly status: "sent";
 }
 
-export class UpdateReminderStatusHandler
-  implements ICommandHandler<UpdateReminderStatusCommand, CommandResult<void>>
+export class MarkReminderAsSentHandler
+  implements ICommandHandler<MarkReminderAsSentCommand, CommandResult<void>>
 {
   constructor(private readonly reminderService: ReminderManagementService) {}
 
-  async handle(command: UpdateReminderStatusCommand): Promise<CommandResult<void>> {
+  async handle(command: MarkReminderAsSentCommand): Promise<CommandResult<void>> {
     await this.reminderService.markReminderAsSent(command.reminderId);
     return CommandResult.success();
   }

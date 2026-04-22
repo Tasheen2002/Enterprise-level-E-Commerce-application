@@ -16,56 +16,56 @@ import {
   BackorderManagementService,
   // Order commands
   CreateOrderHandler,
-  UpdateOrderStatusCommandHandler,
-  UpdateOrderTotalsCommandHandler,
-  MarkOrderPaidCommandHandler,
-  MarkOrderFulfilledCommandHandler,
-  CancelOrderCommandHandler,
-  DeleteOrderCommandHandler,
+  UpdateOrderStatusHandler,
+  UpdateOrderTotalsHandler,
+  MarkOrderPaidHandler,
+  MarkOrderFulfilledHandler,
+  CancelOrderHandler,
+  DeleteOrderHandler,
   // Order queries
   GetOrderHandler,
   ListOrdersHandler,
   TrackOrderHandler,
   // Address commands
-  SetOrderAddressesCommandHandler,
-  UpdateBillingAddressCommandHandler,
-  UpdateShippingAddressCommandHandler,
+  SetOrderAddressesHandler,
+  UpdateBillingAddressHandler,
+  UpdateShippingAddressHandler,
   // Address queries
   GetOrderAddressHandler,
   // Order item commands
-  AddOrderItemCommandHandler,
-  UpdateOrderItemCommandHandler,
-  RemoveOrderItemCommandHandler,
+  AddOrderItemHandler,
+  UpdateOrderItemHandler,
+  RemoveOrderItemHandler,
   // Order item queries
   ListOrderItemsHandler,
   GetOrderItemHandler,
   // Shipment commands
-  CreateShipmentCommandHandler,
-  UpdateShipmentTrackingCommandHandler,
-  MarkShipmentShippedCommandHandler,
-  MarkShipmentDeliveredCommandHandler,
+  CreateShipmentHandler,
+  UpdateShipmentTrackingHandler,
+  MarkShipmentShippedHandler,
+  MarkShipmentDeliveredHandler,
   // Shipment queries
   ListOrderShipmentsHandler,
   GetShipmentHandler,
   // Status history
-  LogOrderStatusChangeCommandHandler,
+  LogOrderStatusChangeHandler,
   GetOrderStatusHistoryHandler,
   // Events
-  LogOrderEventCommandHandler,
+  LogOrderEventHandler,
   ListOrderEventsHandler,
   GetOrderEventHandler,
   // Preorders
-  CreatePreorderCommandHandler,
-  UpdatePreorderReleaseDateCommandHandler,
-  MarkPreorderNotifiedCommandHandler,
-  DeletePreorderCommandHandler,
+  CreatePreorderHandler,
+  UpdatePreorderReleaseDateHandler,
+  MarkPreorderNotifiedHandler,
+  DeletePreorderHandler,
   GetPreorderHandler,
   ListPreordersHandler,
   // Backorders
-  CreateBackorderCommandHandler,
-  UpdateBackorderEtaCommandHandler,
-  MarkBackorderNotifiedCommandHandler,
-  DeleteBackorderCommandHandler,
+  CreateBackorderHandler,
+  UpdateBackorderEtaHandler,
+  MarkBackorderNotifiedHandler,
+  DeleteBackorderHandler,
   GetBackorderHandler,
   ListBackordersHandler,
 } from "../../../application";
@@ -97,64 +97,64 @@ export async function registerOrderManagementRoutes(
     new CreateOrderHandler(orderService),
     new GetOrderHandler(orderService),
     new ListOrdersHandler(orderService),
-    new UpdateOrderStatusCommandHandler(orderService),
-    new UpdateOrderTotalsCommandHandler(orderService),
-    new MarkOrderPaidCommandHandler(orderService),
-    new MarkOrderFulfilledCommandHandler(orderService),
-    new CancelOrderCommandHandler(orderService),
-    new DeleteOrderCommandHandler(orderService),
+    new UpdateOrderStatusHandler(orderService),
+    new UpdateOrderTotalsHandler(orderService),
+    new MarkOrderPaidHandler(orderService),
+    new MarkOrderFulfilledHandler(orderService),
+    new CancelOrderHandler(orderService),
+    new DeleteOrderHandler(orderService),
     new TrackOrderHandler(orderService, shipmentService),
   );
 
   const orderAddressController = new OrderAddressController(
-    new SetOrderAddressesCommandHandler(orderService),
-    new UpdateBillingAddressCommandHandler(orderService),
-    new UpdateShippingAddressCommandHandler(orderService),
+    new SetOrderAddressesHandler(orderService),
+    new UpdateBillingAddressHandler(orderService),
+    new UpdateShippingAddressHandler(orderService),
     new GetOrderAddressHandler(orderService),
   );
 
   const orderItemController = new OrderItemController(
-    new AddOrderItemCommandHandler(orderService),
-    new UpdateOrderItemCommandHandler(orderService),
-    new RemoveOrderItemCommandHandler(orderService),
+    new AddOrderItemHandler(orderService),
+    new UpdateOrderItemHandler(orderService),
+    new RemoveOrderItemHandler(orderService),
     new ListOrderItemsHandler(orderItemService),
     new GetOrderItemHandler(orderItemService),
   );
 
   const orderShipmentController = new OrderShipmentController(
-    new CreateShipmentCommandHandler(orderService),
-    new UpdateShipmentTrackingCommandHandler(orderService),
-    new MarkShipmentShippedCommandHandler(orderService),
-    new MarkShipmentDeliveredCommandHandler(orderService),
+    new CreateShipmentHandler(orderService),
+    new UpdateShipmentTrackingHandler(orderService),
+    new MarkShipmentShippedHandler(orderService),
+    new MarkShipmentDeliveredHandler(orderService),
     new ListOrderShipmentsHandler(shipmentService),
     new GetShipmentHandler(shipmentService),
   );
 
   const orderStatusHistoryController = new OrderStatusHistoryController(
-    new LogOrderStatusChangeCommandHandler(orderService),
+    new LogOrderStatusChangeHandler(orderService),
     new GetOrderStatusHistoryHandler(orderService),
   );
 
   const orderEventController = new OrderEventController(
-    new LogOrderEventCommandHandler(orderEventService),
+    new LogOrderEventHandler(orderEventService),
     new ListOrderEventsHandler(orderEventService),
     new GetOrderEventHandler(orderEventService),
   );
 
   const preorderController = new PreorderController(
-    new CreatePreorderCommandHandler(preorderService),
-    new UpdatePreorderReleaseDateCommandHandler(preorderService),
-    new MarkPreorderNotifiedCommandHandler(preorderService),
-    new DeletePreorderCommandHandler(preorderService),
+    new CreatePreorderHandler(preorderService),
+    new UpdatePreorderReleaseDateHandler(preorderService),
+    new MarkPreorderNotifiedHandler(preorderService),
+    new DeletePreorderHandler(preorderService),
     new GetPreorderHandler(preorderService),
     new ListPreordersHandler(preorderService),
   );
 
   const backorderController = new BackorderController(
-    new CreateBackorderCommandHandler(backorderService),
-    new UpdateBackorderEtaCommandHandler(backorderService),
-    new MarkBackorderNotifiedCommandHandler(backorderService),
-    new DeleteBackorderCommandHandler(backorderService),
+    new CreateBackorderHandler(backorderService),
+    new UpdateBackorderEtaHandler(backorderService),
+    new MarkBackorderNotifiedHandler(backorderService),
+    new DeleteBackorderHandler(backorderService),
     new GetBackorderHandler(backorderService),
     new ListBackordersHandler(backorderService),
   );

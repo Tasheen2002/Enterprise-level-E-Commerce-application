@@ -1,6 +1,5 @@
 export {
   Product,
-  ProductStatus,
   type ProductProps,
   type ProductDTO,
   ProductCreatedEvent,
@@ -24,7 +23,6 @@ export {
 } from "./category.entity";
 export {
   MediaAsset,
-  MediaAssetId,
   type MediaAssetProps,
   type MediaAssetDTO,
   MediaAssetCreatedEvent,
@@ -33,20 +31,16 @@ export {
 } from "./media-asset.entity";
 export {
   ProductTag,
-  ProductTagId,
   type ProductTagProps,
   type ProductTagDTO,
 } from "./product-tag.entity";
 export {
   SizeGuide,
-  SizeGuideId,
-  Region,
   type SizeGuideProps,
   type SizeGuideDTO,
 } from "./size-guide.entity";
 export {
   EditorialLook,
-  EditorialLookId,
   type EditorialLookProps,
   type EditorialLookDTO,
 } from "./editorial-look.entity";

@@ -38,7 +38,7 @@ export const addToCartSchema = z.object({
   appliedPromos: z
     .array(
       z.object({
-        id: z.string().uuid(),
+        id: z.uuid(),
         code: z.string(),
         type: z.enum([
           "percentage",
@@ -48,10 +48,7 @@ export const addToCartSchema = z.object({
         ]),
         value: z.number(),
         description: z.string().optional(),
-        appliedAt: z
-          .string()
-          .datetime()
-          .transform((v) => new Date(v)),
+        appliedAt: z.iso.datetime().transform((v) => new Date(v)),
       }),
     )
     .optional(),
@@ -122,4 +119,30 @@ export type UpdateCartAddressesBody = z.infer<typeof updateCartAddressesSchema>;
 export const cartResponseSchema = {
   type: "object",
   additionalProperties: true,
+} as const;
+
+export const guestTokenResponseSchema = {
+  type: "object",
+  properties: {
+    guestToken: { type: "string" },
+  },
+} as const;
+
+export const cleanupCartsResponseSchema = {
+  type: "object",
+  properties: {
+    deletedCount: { type: "integer" },
+  },
+} as const;
+
+export const cartStatisticsResponseSchema = {
+  type: "object",
+  properties: {
+    totalCarts: { type: "integer" },
+    userCarts: { type: "integer" },
+    guestCarts: { type: "integer" },
+    emptyCarts: { type: "integer" },
+    averageItemsPerCart: { type: "number" },
+    averageCartValue: { type: "number" },
+  },
 } as const;

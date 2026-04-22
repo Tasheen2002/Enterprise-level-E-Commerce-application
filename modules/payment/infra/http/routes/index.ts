@@ -1,17 +1,12 @@
 import { FastifyInstance } from "fastify";
 import {
   PaymentIntentController,
-  PaymentTransactionController,
   PaymentWebhookController,
   BnplTransactionController,
   GiftCardController,
-  GiftCardTransactionController,
   PromotionController,
-  PromotionUsageController,
-  LoyaltyProgramController,
-  LoyaltyAccountController,
-  LoyaltyTransactionController,
 } from "../controllers";
+import { LoyaltyController } from "../../../../loyalty/infra/http/controllers/loyalty.controller";
 import { StripeWebhookController } from "../controllers/stripe-webhook.controller";
 import { isStripeConfigured } from "../../config/stripe.config";
 import {
@@ -20,16 +15,51 @@ import {
   GiftCardService,
   PromotionService,
   PaymentWebhookService,
-  LoyaltyService,
-  LoyaltyTransactionService,
 } from "../../../application/services";
+import {
+  CreatePaymentIntentHandler,
+  ProcessPaymentHandler,
+  RefundPaymentHandler,
+  VoidPaymentHandler,
+  CreateBnplTransactionHandler,
+  ProcessBnplPaymentHandler,
+  CreateGiftCardHandler,
+  RedeemGiftCardHandler,
+  CreatePromotionHandler,
+  ApplyPromotionHandler,
+  RecordPromotionUsageHandler,
+  ProcessWebhookEventHandler,
+} from "../../../application/commands";
+import {
+  GetPaymentIntentHandler,
+  GetPaymentTransactionsHandler,
+  GetBnplTransactionsHandler,
+  GetGiftCardBalanceHandler,
+  GetGiftCardTransactionsHandler,
+  GetActivePromotionsHandler,
+  GetPromotionUsageHandler,
+  GetWebhookEventsHandler,
+} from "../../../application/queries";
+import { LoyaltyService } from "../../../../loyalty/application/services/loyalty.service";
+import { LoyaltyTransactionService } from "../../../../loyalty/application/services/loyalty-transaction.service";
+import { ILoyaltyProgramRepository } from "../../../../loyalty/domain/repositories/loyalty-program.repository";
+import {
+  CreateLoyaltyProgramHandler,
+  AwardLoyaltyPointsHandler,
+  RedeemLoyaltyPointsHandler,
+  AdjustPointsHandler,
+} from "../../../../loyalty/application/commands";
+import {
+  GetLoyaltyProgramsHandler,
+  GetLoyaltyAccountHandler,
+  GetLoyaltyTransactionsHandler,
+} from "../../../../loyalty/application/queries";
 import { registerPaymentIntentRoutes } from "./payment-intent.routes";
-import { registerPaymentTransactionRoutes } from "./payment-transaction.routes";
 import { registerBnplTransactionRoutes } from "./bnpl-transaction.routes";
 import { registerGiftCardRoutes } from "./gift-card.routes";
 import { registerPromotionRoutes } from "./promotion.routes";
 import { registerWebhookRoutes } from "./webhook.routes";
-import { registerLoyaltyRoutes } from "./loyalty.routes";
+import { registerLoyaltyRoutes } from "../../../../loyalty/infra/http/routes";
 
 export interface PaymentRouteServices {
   paymentService: PaymentService;
@@ -39,25 +69,51 @@ export interface PaymentRouteServices {
   webhookService: PaymentWebhookService;
   loyaltyService: LoyaltyService;
   loyaltyTxnService: LoyaltyTransactionService;
+  loyaltyProgramRepository: ILoyaltyProgramRepository;
 }
 
 export async function registerPaymentRoutes(
   fastify: FastifyInstance,
   services: PaymentRouteServices,
 ): Promise<void> {
-  const paymentIntentController = new PaymentIntentController(services.paymentService);
-  const paymentTransactionController = new PaymentTransactionController(services.paymentService);
-  const paymentWebhookController = new PaymentWebhookController(services.webhookService);
-  const bnplController = new BnplTransactionController(services.bnplService);
-  const giftCardController = new GiftCardController(services.giftCardService);
-  const giftCardTxnController = new GiftCardTransactionController(services.giftCardService);
-  const promotionController = new PromotionController(services.promotionService);
-  const promotionUsageController = new PromotionUsageController(services.promotionService);
-  const loyaltyProgramController = new LoyaltyProgramController(services.loyaltyService);
-  const loyaltyAccountController = new LoyaltyAccountController(services.loyaltyService);
-  const loyaltyTxnController = new LoyaltyTransactionController(
-    services.loyaltyService,
-    services.loyaltyTxnService,
+  const paymentIntentController = new PaymentIntentController(
+    new CreatePaymentIntentHandler(services.paymentService),
+    new ProcessPaymentHandler(services.paymentService),
+    new RefundPaymentHandler(services.paymentService),
+    new VoidPaymentHandler(services.paymentService),
+    new GetPaymentIntentHandler(services.paymentService),
+    new GetPaymentTransactionsHandler(services.paymentService),
+  );
+  const paymentWebhookController = new PaymentWebhookController(
+    new ProcessWebhookEventHandler(services.webhookService),
+    new GetWebhookEventsHandler(services.webhookService),
+  );
+  const bnplController = new BnplTransactionController(
+    new CreateBnplTransactionHandler(services.bnplService),
+    new ProcessBnplPaymentHandler(services.bnplService),
+    new GetBnplTransactionsHandler(services.bnplService),
+  );
+  const giftCardController = new GiftCardController(
+    new CreateGiftCardHandler(services.giftCardService),
+    new RedeemGiftCardHandler(services.giftCardService),
+    new GetGiftCardBalanceHandler(services.giftCardService),
+    new GetGiftCardTransactionsHandler(services.giftCardService),
+  );
+  const promotionController = new PromotionController(
+    new CreatePromotionHandler(services.promotionService),
+    new ApplyPromotionHandler(services.promotionService),
+    new GetActivePromotionsHandler(services.promotionService),
+    new RecordPromotionUsageHandler(services.promotionService),
+    new GetPromotionUsageHandler(services.promotionService),
+  );
+  const loyaltyController = new LoyaltyController(
+    new CreateLoyaltyProgramHandler(services.loyaltyProgramRepository),
+    new GetLoyaltyProgramsHandler(services.loyaltyProgramRepository),
+    new GetLoyaltyAccountHandler(services.loyaltyService),
+    new AwardLoyaltyPointsHandler(services.loyaltyService),
+    new RedeemLoyaltyPointsHandler(services.loyaltyService),
+    new AdjustPointsHandler(services.loyaltyService),
+    new GetLoyaltyTransactionsHandler(services.loyaltyTxnService),
   );
 
   if (!isStripeConfigured()) {
@@ -73,19 +129,13 @@ export async function registerPaymentRoutes(
   await fastify.register(
     async (instance) => {
       await registerPaymentIntentRoutes(instance, paymentIntentController);
-      await registerPaymentTransactionRoutes(instance, paymentTransactionController);
       await registerBnplTransactionRoutes(instance, bnplController);
-      await registerGiftCardRoutes(instance, giftCardController, giftCardTxnController);
-      await registerPromotionRoutes(instance, promotionController, promotionUsageController);
+      await registerGiftCardRoutes(instance, giftCardController);
+      await registerPromotionRoutes(instance, promotionController);
       if (stripeController) {
         await registerWebhookRoutes(instance, paymentWebhookController, stripeController);
       }
-      await registerLoyaltyRoutes(
-        instance,
-        loyaltyProgramController,
-        loyaltyAccountController,
-        loyaltyTxnController,
-      );
+      await registerLoyaltyRoutes(instance, loyaltyController);
     },
     { prefix: "/api/v1" },
   );

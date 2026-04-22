@@ -1,15 +1,15 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { StripeProvider } from "../../payment-providers/stripe.provider";
 import { getStripeConfig } from "../../config/stripe.config";
 import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { CreateStripeIntentBody } from "../validation/payment-intent.schema";
 
-export interface CreateStripeIntentBody {
-  orderId: string;
-  amount: number;
-  currency?: string;
-  idempotencyKey?: string;
-}
+type RawBodyRequest = FastifyRequest & { rawBody: Buffer };
+
+type StripeEventObject = { id?: string; last_payment_error?: { message?: string } };
+type StripeWebhookEvent = { type: string; data: { object: StripeEventObject } };
 
 export class StripeWebhookController {
   private stripeProvider: StripeProvider;
@@ -21,43 +21,28 @@ export class StripeWebhookController {
     this.webhookSecret = config.webhookSecret || "";
   }
 
-  /**
-   * Create a Stripe PaymentIntent and return client_secret to frontend.
-   *
-   * POST /api/payments/stripe/create-intent
-   */
   async createIntent(
-    req: FastifyRequest<{ Body: CreateStripeIntentBody }>,
+    req: AuthenticatedRequest<{ Body: CreateStripeIntentBody }>,
     reply: FastifyReply,
   ) {
     try {
       const { orderId, amount, currency, idempotencyKey } = req.body;
-      const user = (req as any).user;
 
-      if (!orderId || !amount) {
-        return ResponseHelper.badRequest(
-          reply,
-          "orderId and amount are required",
-        );
-      }
-
-      // Create payment intent in our system
       const paymentIntent = await this.paymentService.createPaymentIntent({
         orderId,
         provider: "stripe",
         amount,
         currency: currency || "usd",
         idempotencyKey,
-        userId: user?.userId,
+        userId: req.user.userId,
       });
 
-      // Create PaymentIntent on Stripe
       const stripeResult = await this.stripeProvider.createPaymentIntent({
         amount,
         currency: currency || "usd",
         orderId,
-        intentId: paymentIntent.intentId,
-        customerEmail: user?.email,
+        intentId: paymentIntent.id,
+        customerEmail: req.user.email,
         idempotencyKey,
       });
 
@@ -68,66 +53,50 @@ export class StripeWebhookController {
         );
       }
 
-      // Persist the Stripe intent ID as clientSecret reference
       if (stripeResult.stripeIntentId) {
-        await this.paymentService.updatePaymentIntent(paymentIntent.intentId, {
+        await this.paymentService.updatePaymentIntent(paymentIntent.id, {
           clientSecret: stripeResult.stripeIntentId,
         });
       }
 
       return ResponseHelper.created(reply, "Stripe payment intent created", {
-        intentId: paymentIntent.intentId,
+        intentId: paymentIntent.id,
         clientSecret: stripeResult.clientSecret,
         stripeIntentId: stripeResult.stripeIntentId,
       });
-    } catch (error: any) {
-      req.log.error(error);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  /**
-   * Handle Stripe webhook events.
-   *
-   * POST /api/payments/stripe/webhook
-   * Requires raw body (configured in Fastify as Buffer).
-   */
-  async handleWebhook(req: FastifyRequest, reply: FastifyReply) {
+  async handleWebhook(req: RawBodyRequest, reply: FastifyReply) {
     try {
       const signature = req.headers["stripe-signature"] as string;
-      const rawBody = (req as any).rawBody as Buffer;
+      const rawBody = req.rawBody;
 
       if (!signature) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Missing Stripe-Signature header",
-        );
+        return ResponseHelper.badRequest(reply, "Missing Stripe-Signature header");
       }
 
-      // Verify webhook signature when webhook secret is configured
-      let event: any;
+      let event: StripeWebhookEvent;
       if (this.webhookSecret) {
         try {
           event = this.stripeProvider.constructWebhookEvent(
             rawBody,
             signature,
             this.webhookSecret,
-          );
-        } catch (err: any) {
+          ) as unknown as StripeWebhookEvent;
+        } catch (err: unknown) {
           req.log.warn(
-            `Stripe webhook signature validation failed: ${err.message}`,
+            `Stripe webhook signature validation failed: ${err instanceof Error ? err.message : String(err)}`,
           );
-          return ResponseHelper.unauthorized(
-            reply,
-            "Invalid webhook signature",
-          );
+          return ResponseHelper.unauthorized(reply, "Invalid webhook signature");
         }
       } else {
-        // Without webhook secret (development), parse body directly
         req.log.warn(
           "Stripe webhook signature validation skipped (STRIPE_WEBHOOK_SECRET not configured)",
         );
-        event = req.body;
+        event = req.body as StripeWebhookEvent;
       }
 
       req.log.info(`Stripe webhook received: ${event.type}`);
@@ -139,11 +108,9 @@ export class StripeWebhookController {
           const stripeIntentId = stripeObject?.id;
           if (!stripeIntentId) break;
 
-          // Find our intent by Stripe intent ID (stored in clientSecret field)
-          const paymentIntent =
-            await this.paymentService.getPaymentIntentByClientSecret(
-              stripeIntentId,
-            );
+          const paymentIntent = await this.paymentService.getPaymentIntentByClientSecret(
+            stripeIntentId,
+          );
 
           if (!paymentIntent) {
             req.log.error(
@@ -152,7 +119,7 @@ export class StripeWebhookController {
             break;
           }
 
-          const intentId = paymentIntent.intentId;
+          const intentId = paymentIntent.id;
           const currentStatus = paymentIntent.status;
 
           if (currentStatus !== "captured") {
@@ -161,8 +128,8 @@ export class StripeWebhookController {
                 intentId,
                 pspReference: stripeIntentId,
               });
-            } catch (err: any) {
-              req.log.warn(`Authorize step skipped: ${err.message}`);
+            } catch (err: unknown) {
+              req.log.warn(`Authorize step skipped: ${err instanceof Error ? err.message : String(err)}`);
             }
 
             await this.paymentService.capturePayment(intentId, stripeIntentId);
@@ -174,25 +141,19 @@ export class StripeWebhookController {
           const stripeIntentId = stripeObject?.id;
           if (!stripeIntentId) break;
 
-          const paymentIntent =
-            await this.paymentService.getPaymentIntentByClientSecret(
-              stripeIntentId,
-            );
+          const paymentIntent = await this.paymentService.getPaymentIntentByClientSecret(
+            stripeIntentId,
+          );
 
           if (paymentIntent) {
-            const reason =
-              stripeObject?.last_payment_error?.message || "Payment failed";
-            await this.paymentService.failPayment(
-              paymentIntent.intentId,
-              reason,
-            );
+            const reason = stripeObject?.last_payment_error?.message || "Payment failed";
+            await this.paymentService.failPayment(paymentIntent.id, reason);
           }
           break;
         }
 
         case "charge.refunded": {
           req.log.info("Stripe charge.refunded event received");
-          // Refund state updates are handled via explicit refund API calls
           break;
         }
 
@@ -201,8 +162,7 @@ export class StripeWebhookController {
       }
 
       return ResponseHelper.ok(reply, "Webhook received", { received: true });
-    } catch (error: any) {
-      req.log.error(error);
+    } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }

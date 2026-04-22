@@ -6,7 +6,7 @@ export interface MarkOrderFulfilledCommand extends ICommand {
   readonly orderId: string;
 }
 
-export class MarkOrderFulfilledCommandHandler implements ICommandHandler<
+export class MarkOrderFulfilledHandler implements ICommandHandler<
   MarkOrderFulfilledCommand,
   CommandResult<OrderDTO>
 > {

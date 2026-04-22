@@ -26,6 +26,12 @@ export enum PaymentTransactionTypeEnum {
   VOID = "void",
 }
 
+export enum PaymentTransactionStatusEnum {
+  PENDING = "pending",
+  SUCCEEDED = "succeeded",
+  FAILED = "failed",
+}
+
 export enum BnplStatusEnum {
   PENDING = "pending",
   APPROVED = "approved",
@@ -46,4 +52,11 @@ export enum PromotionStatusEnum {
   INACTIVE = "inactive",
   EXPIRED = "expired",
   SCHEDULED = "scheduled",
+}
+
+export enum WebhookEventTypeEnum {
+  PAYMENT_INTENT_SUCCEEDED = "payment_intent.succeeded",
+  PAYMENT_INTENT_FAILED = "payment_intent.failed",
+  PAYMENT_INTENT_CANCELED = "payment_intent.canceled",
+  CHARGE_REFUNDED = "charge.refunded",
 }

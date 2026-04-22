@@ -1,15 +1,15 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
   ProcessWebhookEventHandler,
   GetWebhookEventsHandler,
 } from "../../../application";
 import { WebhookEventData } from "../../../domain/entities/payment-webhook-event.entity";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface WebhookFilterParams {
-  provider?: string;
-  eventType?: string;
-}
+import {
+  WebhookProviderParams,
+  ListWebhookEventsQuery,
+} from "../validation/webhook.schema";
 
 export class PaymentWebhookController {
   constructor(
@@ -18,7 +18,7 @@ export class PaymentWebhookController {
   ) {}
 
   async processWebhook(
-    request: FastifyRequest<{ Params: { provider: string }; Body: WebhookEventData }>,
+    request: AuthenticatedRequest<{ Params: WebhookProviderParams; Body: WebhookEventData }>,
     reply: FastifyReply,
   ) {
     try {
@@ -28,7 +28,7 @@ export class PaymentWebhookController {
 
       const result = await this.processHandler.handle({
         provider,
-        eventType: (eventData as any)?.type || (eventData as any)?.event_type || "unknown",
+        eventType: (eventData.type as string | undefined) || (eventData.event_type as string | undefined) || "unknown",
         eventData,
         signature,
         timestamp: new Date(),
@@ -40,7 +40,7 @@ export class PaymentWebhookController {
   }
 
   async listWebhookEvents(
-    request: FastifyRequest<{ Querystring: WebhookFilterParams }>,
+    request: AuthenticatedRequest<{ Querystring: ListWebhookEventsQuery }>,
     reply: FastifyReply,
   ) {
     try {

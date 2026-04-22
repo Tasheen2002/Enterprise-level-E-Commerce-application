@@ -18,7 +18,6 @@ import {
   variantIdParamsSchema,
   paginationQuerySchema,
   createReminderSchema,
-  updateReminderStatusSchema,
   reminderResponseSchema,
 } from "../validation/reminder.schema";
 
@@ -235,15 +234,15 @@ export async function reminderRoutes(
       controller.unsubscribeReminder(request as AuthenticatedRequest, reply),
   );
 
-  // PATCH /engagement/reminders/:reminderId/status — Update reminder status (admin)
+  // PATCH /engagement/reminders/:reminderId/sent — Mark reminder as sent (admin)
   fastify.patch(
-    "/engagement/reminders/:reminderId/status",
+    "/engagement/reminders/:reminderId/sent",
     {
-      preValidation: [validateParams(reminderIdParamsSchema), validateBody(updateReminderStatusSchema)],
+      preValidation: [validateParams(reminderIdParamsSchema)],
       preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
-        description: "Update reminder status",
-        summary: "Update Reminder Status",
+        description: "Mark reminder as sent",
+        summary: "Mark Reminder As Sent",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
         params: {
@@ -251,13 +250,6 @@ export async function reminderRoutes(
           required: ["reminderId"],
           properties: {
             reminderId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["status"],
-          properties: {
-            status: { type: "string", enum: ["sent"] },
           },
         },
         response: {
@@ -272,7 +264,7 @@ export async function reminderRoutes(
       },
     },
     (request, reply) =>
-      controller.updateReminderStatus(request as AuthenticatedRequest, reply),
+      controller.markReminderAsSent(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /engagement/reminders/:reminderId — Delete reminder

@@ -22,7 +22,10 @@ import {
   OrderAddress,
   OrderAddressDTO,
 } from "../../domain/entities/order-address.entity";
-import { OrderItem } from "../../domain/entities/order-item.entity";
+import {
+  OrderItem,
+  OrderItemDTO,
+} from "../../domain/entities/order-item.entity";
 import {
   OrderShipment,
   OrderShipmentDTO,
@@ -31,7 +34,10 @@ import {
   OrderStatusHistory,
   OrderStatusHistoryDTO,
 } from "../../domain/entities/order-status-history.entity";
-import { OrderTotals } from "../../domain/value-objects/order-totals.vo";
+import {
+  OrderTotals,
+  OrderTotalsData,
+} from "../../domain/value-objects/order-totals.vo";
 import { ProductSnapshot } from "../../domain/value-objects/product-snapshot.vo";
 import {
   AddressSnapshot,
@@ -43,6 +49,7 @@ import {
   OrderShipmentNotFoundError,
   DomainValidationError,
   InvalidOperationError,
+  ContactMismatchError,
 } from "../../domain/errors/order-management.errors";
 
 interface AddressParams {
@@ -70,7 +77,7 @@ interface CreateOrderParams {
   shippingAddress: AddressParams;
   billingAddress?: AddressParams;
   source?: string;
-  currency: string;
+  currency?: string;
 }
 
 export interface ListOrdersResult {
@@ -82,11 +89,11 @@ export interface TrackOrderResult {
   orderId: string;
   orderNumber: string;
   status: string;
-  items: unknown[];
-  totals: unknown;
-  shipments: unknown[];
-  billingAddress: unknown;
-  shippingAddress: unknown;
+  items: OrderItemDTO[];
+  totals: OrderTotalsData;
+  shipments: OrderShipmentDTO[];
+  billingAddress: AddressSnapshotData | Record<string, never>;
+  shippingAddress: AddressSnapshotData | Record<string, never>;
   createdAt: string;
   updatedAt: string;
 }
@@ -105,28 +112,54 @@ export class OrderManagementService {
   async createOrder(params: CreateOrderParams): Promise<OrderDTO> {
     const defaultLocationId = this.getDefaultWarehouseId();
 
-    const items: OrderItem[] = [];
-    let subtotal = 0;
+    // Bug 6 fix: parallelize all per-item external calls across all items at once
+    const [stocks, variants] = await Promise.all([
+      Promise.all(
+        params.items.map((item) =>
+          this.stockManagementService.getStock(
+            item.variantId,
+            defaultLocationId,
+          ),
+        ),
+      ),
+      Promise.all(
+        params.items.map((item) =>
+          this.variantManagementService.getVariantById(item.variantId),
+        ),
+      ),
+    ]);
 
-    for (const itemData of params.items) {
-      const stock = await this.stockManagementService.getStock(
-        itemData.variantId,
-        defaultLocationId,
-      );
+    // Validate stock and variants, then fetch products in parallel
+    for (let i = 0; i < params.items.length; i++) {
+      const itemData = params.items[i];
+      const stock = stocks[i];
+      const variant = variants[i];
       if (!stock || stock.getStockLevel().getAvailable() < itemData.quantity) {
         throw new DomainValidationError(
           `Insufficient stock for variant ${itemData.variantId}`,
         );
       }
-
-      const variant = await this.variantManagementService.getVariantById(
-        itemData.variantId,
-      );
       if (!variant) throw new OrderItemNotFoundError(itemData.variantId);
+    }
 
-      const product = await this.productManagementService.getProductById(
-        variant.getProductId().getValue(),
-      );
+    const products = await Promise.all(
+      variants.map((variant) =>
+        this.productManagementService.getProductById(
+          variant!.getProductId().getValue(),
+        ),
+      ),
+    );
+
+    // Build items using a placeholder orderId — the real orderId is assigned
+    // after Order.create() generates it, then items are re-stamped below.
+    const placeholderOrderId = OrderId.create().getValue();
+    const items: OrderItem[] = [];
+    let subtotal = 0;
+
+    for (let i = 0; i < params.items.length; i++) {
+      const itemData = params.items[i];
+      const variant = variants[i]!;
+      const product = products[i];
       if (!product) throw new DomainValidationError("Product not found");
 
       const productSnapshot = ProductSnapshot.create({
@@ -137,9 +170,8 @@ export class OrderManagementService {
         price: product.getPrice().getValue(),
       });
 
-      const orderId = OrderId.create();
       const orderItem = OrderItem.create({
-        orderId: orderId.getValue(),
+        orderId: placeholderOrderId,
         variantId: itemData.variantId,
         quantity: itemData.quantity,
         productSnapshot,
@@ -166,8 +198,14 @@ export class OrderManagementService {
       shipments: [],
       totals,
       source: OrderSource.fromString(params.source ?? "web"),
-      currency: Currency.fromString(params.currency),
+      currency: Currency.fromString(params.currency ?? "USD"),
     });
+
+    // Stamp the real orderId onto all items now that Order.create() has assigned it
+    const realOrderId = order.id.getValue();
+    for (const item of items) {
+      item.setOrderId(realOrderId);
+    }
 
     const billingSnap = AddressSnapshot.create(
       params.billingAddress ?? params.shippingAddress,
@@ -175,29 +213,40 @@ export class OrderManagementService {
     const shippingSnap = AddressSnapshot.create(params.shippingAddress);
 
     const address = OrderAddress.create({
-      orderId: order.id.getValue(),
+      orderId: realOrderId,
       billingAddress: billingSnap,
       shippingAddress: shippingSnap,
     });
 
-    await this.orderRepository.save(order);
-    await this.orderAddressRepository.save(address);
-
-    for (const itemData of params.items) {
-      await this.stockManagementService.reserveStock(
-        itemData.variantId,
-        defaultLocationId,
-        itemData.quantity,
-      );
-    }
-
     const statusHistory = OrderStatusHistory.create({
-      orderId: order.id.getValue(),
+      orderId: realOrderId,
       fromStatus: OrderStatus.created(),
       toStatus: OrderStatus.created(),
       changedBy: "system",
     });
+
+    // Bug 1 fix: save order, address, and status history together before touching stock.
+    // These are all DB writes — keep them atomic so a stock failure doesn't leave ghost orders.
+    await this.orderRepository.save(order);
+    await this.orderAddressRepository.save(address);
     await this.orderStatusHistoryRepository.save(statusHistory);
+
+    try {
+      await Promise.all(
+        params.items.map((itemData) =>
+          this.stockManagementService.reserveStock(
+            itemData.variantId,
+            defaultLocationId,
+            itemData.quantity,
+          ),
+        ),
+      );
+    } catch (err) {
+      // Compensate: cancel the order so it doesn't sit as a ghost CREATED order
+      order.cancel();
+      await this.orderRepository.save(order);
+      throw err;
+    }
 
     return Order.toDTO(order);
   }
@@ -287,9 +336,22 @@ export class OrderManagementService {
       OrderId.fromString(params.orderId),
     );
     if (!order) throw new OrderNotFoundError(params.orderId);
+
     if (params.quantity !== undefined) {
       order.updateItemQuantity(params.itemId, params.quantity);
     }
+
+    // Bug 3 fix: apply isGift/giftMessage changes that were previously silently dropped
+    if (params.isGift === true) {
+      const item = order.items.find((i) => i.orderItemId === params.itemId);
+      if (!item) throw new OrderItemNotFoundError(params.itemId);
+      item.setAsGift(params.giftMessage);
+    } else if (params.isGift === false) {
+      const item = order.items.find((i) => i.orderItemId === params.itemId);
+      if (!item) throw new OrderItemNotFoundError(params.itemId);
+      item.removeGift();
+    }
+
     await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
@@ -329,9 +391,10 @@ export class OrderManagementService {
   }
 
   async deleteOrder(id: string): Promise<void> {
-    const order = await this.orderRepository.findById(OrderId.fromString(id));
+    const orderId = OrderId.fromString(id);
+    const order = await this.orderRepository.findById(orderId);
     if (!order) throw new OrderNotFoundError(id);
-    await this.orderRepository.delete(OrderId.fromString(id));
+    await this.orderRepository.delete(orderId);
   }
 
   // ============================================================================
@@ -376,13 +439,6 @@ export class OrderManagementService {
     if (!order) throw new OrderNotFoundError(orderId);
 
     const existing = await this.orderAddressRepository.findByOrderId(orderId);
-    const address =
-      existing ??
-      OrderAddress.create({
-        orderId,
-        billingAddress: AddressSnapshot.create(billingAddress),
-        shippingAddress: AddressSnapshot.create(shippingAddress),
-      });
 
     if (existing) {
       existing.updateBillingAddress(AddressSnapshot.create(billingAddress));
@@ -391,6 +447,11 @@ export class OrderManagementService {
       return OrderAddress.toDTO(existing);
     }
 
+    const address = OrderAddress.create({
+      orderId,
+      billingAddress: AddressSnapshot.create(billingAddress),
+      shippingAddress: AddressSnapshot.create(shippingAddress),
+    });
     await this.orderAddressRepository.save(address);
     return OrderAddress.toDTO(address);
   }
@@ -454,12 +515,11 @@ export class OrderManagementService {
     order.addItem(orderItem);
     await this.orderRepository.save(order);
 
-    await this.stockManagementService.adjustStock(
+    // Bug 7 fix: use reserveStock (soft hold) to match the createOrder pattern
+    await this.stockManagementService.reserveStock(
       data.variantId,
       defaultLocationId,
-      -data.quantity,
-      "order-add",
-      orderId,
+      data.quantity,
     );
 
     return Order.toDTO(order);
@@ -492,6 +552,7 @@ export class OrderManagementService {
     );
     if (!order) throw new OrderNotFoundError(data.orderId);
 
+    // Bug 2 fix: go through order.createShipment() to enforce the paid/fulfilled guard
     const shipment = OrderShipment.create({
       orderId: data.orderId,
       carrier: data.carrier,
@@ -501,7 +562,8 @@ export class OrderManagementService {
       pickupLocationId: data.pickupLocationId,
     });
 
-    await this.orderShipmentRepository.save(shipment);
+    order.createShipment(shipment);
+    await this.orderRepository.save(order);
     return OrderShipment.toDTO(shipment);
   }
 
@@ -579,8 +641,11 @@ export class OrderManagementService {
     return history.map(OrderStatusHistory.toDTO);
   }
 
-  async getShipmentByTrackingNumber(trackingNumber: string): Promise<OrderShipmentDTO | null> {
-    const shipment = await this.orderShipmentRepository.findByTrackingNumber(trackingNumber);
+  async getShipmentByTrackingNumber(
+    trackingNumber: string,
+  ): Promise<OrderShipmentDTO | null> {
+    const shipment =
+      await this.orderShipmentRepository.findByTrackingNumber(trackingNumber);
     return shipment ? OrderShipment.toDTO(shipment) : null;
   }
 
@@ -599,16 +664,17 @@ export class OrderManagementService {
 
       const contactLower = query.contact.toLowerCase().trim();
       const contactMatches =
-        contactLower === (billing?.email as string | undefined)?.toLowerCase().trim() ||
-        contactLower === (shipping?.email as string | undefined)?.toLowerCase().trim() ||
-        query.contact === (billing?.phone as string | undefined)?.trim() ||
-        query.contact === (shipping?.phone as string | undefined)?.trim();
+        contactLower === billing?.email?.toLowerCase().trim() ||
+        contactLower === shipping?.email?.toLowerCase().trim() ||
+        query.contact === billing?.phone?.trim() ||
+        query.contact === shipping?.phone?.trim();
 
       if (!contactMatches) {
-        throw new Error("CONTACT_MISMATCH");
+        throw new ContactMismatchError();
       }
 
       const shipments = await this.getOrderShipments(order.id);
+      const emptyAddress: Record<string, never> = {};
 
       return {
         orderId: order.id,
@@ -617,32 +683,43 @@ export class OrderManagementService {
         items: order.items,
         totals: order.totals,
         shipments,
-        billingAddress: billing ?? {},
-        shippingAddress: shipping ?? {},
+        billingAddress: billing ?? emptyAddress,
+        shippingAddress: shipping ?? emptyAddress,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
       };
     }
 
     if (query.trackingNumber) {
-      const shipmentDTO = await this.getShipmentByTrackingNumber(query.trackingNumber);
-      if (!shipmentDTO) throw new OrderShipmentNotFoundError(query.trackingNumber);
+      const shipmentDTO = await this.getShipmentByTrackingNumber(
+        query.trackingNumber,
+      );
+      if (!shipmentDTO)
+        throw new OrderShipmentNotFoundError(query.trackingNumber);
+
+      // Bug 4 fix: fetch the actual order instead of returning an empty shell
+      const order = await this.getOrderById(shipmentDTO.orderId);
+      if (!order) throw new OrderNotFoundError(shipmentDTO.orderId);
+
+      const emptyAddress: Record<string, never> = {};
 
       return {
-        orderId: shipmentDTO.orderId,
-        orderNumber: "",
-        status: "",
-        items: [],
-        totals: {},
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        items: order.items,
+        totals: order.totals,
         shipments: [shipmentDTO],
-        billingAddress: {},
-        shippingAddress: {},
-        createdAt: "",
-        updatedAt: "",
+        billingAddress: emptyAddress,
+        shippingAddress: emptyAddress,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
       };
     }
 
-    throw new Error("INVALID_TRACK_REQUEST");
+    throw new DomainValidationError(
+      "Provide either orderNumber + contact, or a trackingNumber",
+    );
   }
 
   private getDefaultWarehouseId(): string {

@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   IPaymentIntentRepository,
-  PaymentIntentFilterOptions,
+  PaymentIntentFilters,
   PaymentIntentQueryOptions,
 } from "../../../domain/repositories/payment-intent.repository";
 import { PaymentIntent } from "../../../domain/entities/payment-intent.entity";
@@ -9,175 +11,156 @@ import { PaymentIntentId } from "../../../domain/value-objects/payment-intent-id
 import { PaymentIntentStatus } from "../../../domain/value-objects/payment-intent-status.vo";
 import { Money } from "../../../domain/value-objects/money.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class PaymentIntentRepository implements IPaymentIntentRepository {
-  constructor(private readonly prisma: PrismaClient) {}
-
-  async save(paymentIntent: PaymentIntent): Promise<void> {
-    const data = this.dehydrate(paymentIntent);
-    await (this.prisma as any).paymentIntent.create({ data });
+export class PaymentIntentRepositoryImpl
+  extends PrismaRepository<PaymentIntent>
+  implements IPaymentIntentRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
   }
 
-  async update(paymentIntent: PaymentIntent): Promise<void> {
-    const data = this.dehydrate(paymentIntent);
+  async save(intent: PaymentIntent): Promise<void> {
+    const data = this.dehydrate(intent);
     const { intentId, ...updateData } = data;
-    await (this.prisma as any).paymentIntent.update({
+    await this.prisma.paymentIntent.upsert({
       where: { intentId },
-      data: updateData,
+      create: data,
+      update: updateData,
+    });
+    await this.dispatchEvents(intent);
+  }
+
+  async delete(id: PaymentIntentId): Promise<void> {
+    await this.prisma.paymentIntent.delete({
+      where: { intentId: id.getValue() },
     });
   }
 
-  async delete(intentId: string): Promise<void> {
-    await (this.prisma as any).paymentIntent.delete({
-      where: { intentId },
+  async findById(id: PaymentIntentId): Promise<PaymentIntent | null> {
+    const record = await this.prisma.paymentIntent.findUnique({
+      where: { intentId: id.getValue() },
     });
-  }
-
-  async findById(intentId: string): Promise<PaymentIntent | null> {
-    const record = await (this.prisma as any).paymentIntent.findUnique({
-      where: { intentId },
-    });
-
     return record ? this.hydrate(record) : null;
   }
 
   async findByOrderId(orderId: string): Promise<PaymentIntent[]> {
-    const records = await (this.prisma as any).paymentIntent.findMany({
+    const records = await this.prisma.paymentIntent.findMany({
       where: { orderId },
+      orderBy: { createdAt: "desc" },
     });
-
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
   async findByCheckoutId(checkoutId: string): Promise<PaymentIntent | null> {
-    const record = await (this.prisma as any).paymentIntent.findUnique({
+    const record = await this.prisma.paymentIntent.findFirst({
       where: { checkoutId },
     });
-
     return record ? this.hydrate(record) : null;
   }
 
-  async findByIdempotencyKey(
-    idempotencyKey: string,
-  ): Promise<PaymentIntent | null> {
-    const record = await (this.prisma as any).paymentIntent.findUnique({
-      where: { idempotencyKey },
+  async findByIdempotencyKey(key: string): Promise<PaymentIntent | null> {
+    const record = await this.prisma.paymentIntent.findUnique({
+      where: { idempotencyKey: key },
     });
-
     return record ? this.hydrate(record) : null;
   }
 
   async findByClientSecret(secret: string): Promise<PaymentIntent | null> {
-    const record = await (this.prisma as any).paymentIntent.findFirst({
+    const record = await this.prisma.paymentIntent.findFirst({
       where: { clientSecret: secret },
     });
-
     return record ? this.hydrate(record) : null;
   }
 
   async findWithFilters(
-    filters: PaymentIntentFilterOptions,
+    filters: PaymentIntentFilters,
     options?: PaymentIntentQueryOptions,
-  ): Promise<PaymentIntent[]> {
+  ): Promise<PaginatedResult<PaymentIntent>> {
     const where: any = {};
 
-    if (filters.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters.orderId) {
-      where.orderId = filters.orderId;
-    }
-    if (filters.provider) {
-      where.provider = filters.provider;
-    }
-    if (filters.createdAfter) {
-      where.createdAt = { gte: filters.createdAfter };
-    }
+    if (filters.status) where.status = filters.status.getValue();
+    if (filters.orderId) where.orderId = filters.orderId;
+    if (filters.provider) where.provider = filters.provider;
+    if (filters.createdAfter) where.createdAt = { gte: filters.createdAfter };
     if (filters.createdBefore) {
-      where.createdAt = {
-        ...where.createdAt,
-        lte: filters.createdBefore,
-      };
+      where.createdAt = { ...where.createdAt, lte: filters.createdBefore };
     }
 
-    const records = await (this.prisma as any).paymentIntent.findMany({
-      where,
-      take: options?.limit,
-      skip: options?.offset,
-      orderBy: options?.sortBy
-        ? { [options.sortBy]: options.sortOrder || "desc" }
-        : { createdAt: "desc" },
-    });
+    const [records, total] = await Promise.all([
+      this.prisma.paymentIntent.findMany({
+        where,
+        take: options?.limit,
+        skip: options?.offset,
+        orderBy: options?.sortBy
+          ? { [options.sortBy]: options.sortOrder ?? "desc" }
+          : { createdAt: "desc" },
+      }),
+      this.prisma.paymentIntent.count({ where }),
+    ]);
 
-    return records.map((record: any) => this.hydrate(record));
+    const items = records.map((r: any) => this.hydrate(r));
+    const limit = options?.limit ?? total;
+    const offset = options?.offset ?? 0;
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    };
   }
 
-  async count(filters?: PaymentIntentFilterOptions): Promise<number> {
+  async count(filters?: PaymentIntentFilters): Promise<number> {
     const where: any = {};
-
-    if (filters?.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters?.orderId) {
-      where.orderId = filters.orderId;
-    }
-    if (filters?.provider) {
-      where.provider = filters.provider;
-    }
-    if (filters?.createdAfter) {
-      where.createdAt = { gte: filters.createdAfter };
-    }
+    if (filters?.status) where.status = filters.status.getValue();
+    if (filters?.orderId) where.orderId = filters.orderId;
+    if (filters?.provider) where.provider = filters.provider;
+    if (filters?.createdAfter) where.createdAt = { gte: filters.createdAfter };
     if (filters?.createdBefore) {
-      where.createdAt = {
-        ...where.createdAt,
-        lte: filters.createdBefore,
-      };
+      where.createdAt = { ...where.createdAt, lte: filters.createdBefore };
     }
-
-    return (this.prisma as any).paymentIntent.count({ where });
+    return this.prisma.paymentIntent.count({ where });
   }
 
-  async exists(intentId: string): Promise<boolean> {
-    const count = await (this.prisma as any).paymentIntent.count({
-      where: { intentId },
+  async exists(id: PaymentIntentId): Promise<boolean> {
+    const count = await this.prisma.paymentIntent.count({
+      where: { intentId: id.getValue() },
     });
     return count > 0;
   }
 
   private hydrate(record: any): PaymentIntent {
-    return PaymentIntent.reconstitute({
-      intentId: PaymentIntentId.fromString(record.intentId),
-      orderId: record.orderId,
-      checkoutId: record.checkoutId,
-      idempotencyKey: record.idempotencyKey,
+    return PaymentIntent.fromPersistence({
+      id: PaymentIntentId.fromString(record.intentId),
+      orderId: record.orderId ?? null,
+      checkoutId: record.checkoutId ?? null,
+      idempotencyKey: record.idempotencyKey ?? undefined,
       provider: record.provider,
       status: PaymentIntentStatus.fromString(record.status),
-      amount: Money.fromAmount(
-        Number(record.amount),
-        Currency.create(record.currency),
-      ),
-      clientSecret: record.clientSecret,
-      metadata: record.metadata,
+      amount: Money.fromAmount(Number(record.amount), Currency.create(record.currency)),
+      clientSecret: record.clientSecret ?? undefined,
+      metadata: record.metadata ?? {},
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });
   }
 
-  private dehydrate(paymentIntent: PaymentIntent): any {
+  private dehydrate(intent: PaymentIntent): any {
     return {
-      intentId: paymentIntent.intentId.getValue(),
-      orderId: paymentIntent.orderIdOrNull,
-      checkoutId: paymentIntent.checkoutId,
-      idempotencyKey: paymentIntent.idempotencyKey,
-      provider: paymentIntent.provider,
-      status: paymentIntent.status.getValue(),
-      // DB expects Decimal (Units)
-      amount: paymentIntent.amount.getAmount(),
-      currency: paymentIntent.amount.getCurrency().getValue(),
-      clientSecret: paymentIntent.clientSecret,
-      metadata: paymentIntent.metadata,
-      createdAt: paymentIntent.createdAt,
-      updatedAt: paymentIntent.updatedAt,
+      intentId: intent.id.getValue(),
+      orderId: intent.orderId,
+      checkoutId: intent.checkoutId,
+      idempotencyKey: intent.idempotencyKey ?? null,
+      provider: intent.provider,
+      status: intent.status.getValue(),
+      amount: intent.amount.getAmount(),
+      currency: intent.amount.getCurrency().getValue(),
+      clientSecret: intent.clientSecret ?? null,
+      metadata: intent.metadata,
+      createdAt: intent.createdAt,
+      updatedAt: intent.updatedAt,
     };
   }
 }

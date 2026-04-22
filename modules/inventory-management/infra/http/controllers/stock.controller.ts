@@ -16,6 +16,17 @@ import {
   GetOutOfStockItemsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  StockParams,
+  VariantParams,
+  AddStockBody,
+  AdjustStockBody,
+  TransferStockBody,
+  ReserveStockBody,
+  FulfillReservationBody,
+  SetStockThresholdsBody,
+  ListStocksQuery,
+} from "../validation/stock.schema";
 
 export class StockController {
   constructor(
@@ -44,9 +55,7 @@ export class StockController {
   }
 
   async getStock(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string; locationId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: StockParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -59,9 +68,7 @@ export class StockController {
   }
 
   async getStockByVariant(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -74,9 +81,7 @@ export class StockController {
   }
 
   async getTotalAvailableStock(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: VariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -89,21 +94,20 @@ export class StockController {
   }
 
   async listStocks(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        limit?: number;
-        offset?: number;
-        search?: string;
-        status?: "low_stock" | "out_of_stock" | "in_stock";
-        locationId?: string;
-        sortBy?: "available" | "onHand" | "location" | "product";
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListStocksQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listStocksHandler.handle(request.query);
+      const { limit, offset, search, status, locationId, sortBy, sortOrder } = request.query;
+      const result = await this.listStocksHandler.handle({
+        limit,
+        offset,
+        search,
+        status,
+        locationId,
+        sortBy,
+        sortOrder,
+      });
       return ResponseHelper.ok(reply, "Stocks retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -129,13 +133,12 @@ export class StockController {
   }
 
   async addStock(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; locationId: string; quantity: number; reason: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: AddStockBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.addStockHandler.handle(request.body);
+      const { variantId, locationId, quantity, reason } = request.body;
+      const result = await this.addStockHandler.handle({ variantId, locationId, quantity, reason });
       return ResponseHelper.fromCommand(reply, result, "Stock added successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -143,13 +146,12 @@ export class StockController {
   }
 
   async adjustStock(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; locationId: string; quantityDelta: number; reason: string; referenceId?: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: AdjustStockBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.adjustStockHandler.handle(request.body);
+      const { variantId, locationId, quantityDelta, reason } = request.body;
+      const result = await this.adjustStockHandler.handle({ variantId, locationId, quantityDelta, reason });
       return ResponseHelper.fromCommand(reply, result, "Stock adjusted successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -157,13 +159,12 @@ export class StockController {
   }
 
   async transferStock(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; fromLocationId: string; toLocationId: string; quantity: number };
-    }>,
+    request: AuthenticatedRequest<{ Body: TransferStockBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.transferStockHandler.handle(request.body);
+      const { variantId, fromLocationId, toLocationId, quantity } = request.body;
+      const result = await this.transferStockHandler.handle({ variantId, fromLocationId, toLocationId, quantity });
       return ResponseHelper.fromCommand(reply, result, "Stock transferred successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -171,13 +172,12 @@ export class StockController {
   }
 
   async reserveStock(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; locationId: string; quantity: number };
-    }>,
+    request: AuthenticatedRequest<{ Body: ReserveStockBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.reserveStockHandler.handle(request.body);
+      const { variantId, locationId, quantity } = request.body;
+      const result = await this.reserveStockHandler.handle({ variantId, locationId, quantity });
       return ResponseHelper.fromCommand(reply, result, "Stock reserved successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -185,13 +185,12 @@ export class StockController {
   }
 
   async fulfillReservation(
-    request: AuthenticatedRequest<{
-      Body: { variantId: string; locationId: string; quantity: number };
-    }>,
+    request: AuthenticatedRequest<{ Body: FulfillReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.fulfillReservationHandler.handle(request.body);
+      const { variantId, locationId, quantity } = request.body;
+      const result = await this.fulfillReservationHandler.handle({ variantId, locationId, quantity });
       return ResponseHelper.fromCommand(reply, result, "Reservation fulfilled successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -199,10 +198,7 @@ export class StockController {
   }
 
   async setStockThresholds(
-    request: AuthenticatedRequest<{
-      Params: { variantId: string; locationId: string };
-      Body: { lowStockThreshold?: number; safetyStock?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: StockParams; Body: SetStockThresholdsBody }>,
     reply: FastifyReply,
   ) {
     try {

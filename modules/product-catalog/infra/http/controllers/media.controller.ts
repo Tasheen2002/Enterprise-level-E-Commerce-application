@@ -8,6 +8,12 @@ import {
   SearchMediaAssetsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  MediaParams,
+  ListMediaQuery,
+  CreateMediaBody,
+  UpdateMediaBody,
+} from "../validation/media.schema";
 
 export class MediaController {
   constructor(
@@ -19,24 +25,7 @@ export class MediaController {
   ) {}
 
   async getMediaAssets(
-    request: AuthenticatedRequest<{
-      Querystring: {
-        page?: number;
-        limit?: number;
-        mimeType?: string;
-        isImage?: boolean;
-        isVideo?: boolean;
-        hasRenditions?: boolean;
-        sortBy?: "createdAt" | "bytes" | "width" | "height" | "version";
-        sortOrder?: "asc" | "desc";
-        minBytes?: number;
-        maxBytes?: number;
-        minWidth?: number;
-        maxWidth?: number;
-        minHeight?: number;
-        maxHeight?: number;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ListMediaQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -48,7 +37,7 @@ export class MediaController {
   }
 
   async getMediaAsset(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: MediaParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -60,19 +49,7 @@ export class MediaController {
   }
 
   async createMediaAsset(
-    request: AuthenticatedRequest<{
-      Body: {
-        storageKey: string;
-        mime: string;
-        width?: number;
-        height?: number;
-        bytes?: number;
-        altText?: string;
-        focalX?: number;
-        focalY?: number;
-        renditions?: Record<string, unknown>;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateMediaBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -84,19 +61,7 @@ export class MediaController {
   }
 
   async updateMediaAsset(
-    request: AuthenticatedRequest<{
-      Params: { id: string };
-      Body: {
-        mime?: string;
-        width?: number;
-        height?: number;
-        bytes?: number;
-        altText?: string;
-        focalX?: number;
-        focalY?: number;
-        renditions?: Record<string, unknown>;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: MediaParams; Body: UpdateMediaBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -108,7 +73,7 @@ export class MediaController {
   }
 
   async deleteMediaAsset(
-    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    request: AuthenticatedRequest<{ Params: MediaParams }>,
     reply: FastifyReply,
   ) {
     try {

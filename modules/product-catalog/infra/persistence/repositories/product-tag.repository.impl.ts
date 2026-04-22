@@ -4,63 +4,66 @@ import {
   ProductTagQueryOptions,
   ProductTagCountOptions,
 } from "../../../domain/repositories/product-tag.repository";
-import {
-  ProductTag,
-  ProductTagId,
-} from "../../../domain/entities/product-tag.entity";
+import { ProductTag } from "../../../domain/entities/product-tag.entity";
+import { ProductTagId } from "../../../domain/value-objects/product-tag-id.vo";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
-export class ProductTagRepositoryImpl implements IProductTagRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ProductTagRepositoryImpl
+  extends PrismaRepository<ProductTag>
+  implements IProductTagRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
-  // Helper to access productTag model with proper typing
+  private hydrate(row: any): ProductTag {
+    if (!row.createdAt || !row.updatedAt) {
+      throw new Error(`ProductTag row is missing timestamps for id=${row.id}`);
+    }
+    return ProductTag.fromPersistence({
+      id: ProductTagId.fromString(row.id),
+      tag: row.tag,
+      kind: row.kind ?? null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    });
+  }
+
   private get productTagModel() {
     return (this.prisma as any).productTag;
   }
 
-  // Helper to access productTagAssociation model with proper typing
   private get productTagAssociationModel() {
     return (this.prisma as any).productTagAssociation;
   }
 
   async save(tag: ProductTag): Promise<void> {
-    const data = { tag: tag.tag, kind: tag.kind };
+    const updateData = {
+      tag: tag.tag,
+      kind: tag.kind,
+      updatedAt: tag.updatedAt,
+    };
     await this.productTagModel.upsert({
       where: { id: tag.id.getValue() },
-      create: { id: tag.id.getValue(), ...data },
-      update: data,
+      create: { id: tag.id.getValue(), createdAt: tag.createdAt, ...updateData },
+      update: updateData,
     });
+    await this.dispatchEvents(tag);
   }
 
   async findById(id: ProductTagId): Promise<ProductTag | null> {
-    const tagData = await this.productTagModel.findUnique({
+    const row = await this.productTagModel.findUnique({
       where: { id: id.getValue() },
     });
-
-    if (!tagData) {
-      return null;
-    }
-
-    return ProductTag.fromPersistence({
-      id: ProductTagId.fromString(tagData.id),
-      tag: tagData.tag,
-      kind: tagData.kind,
-    });
+    return row ? this.hydrate(row) : null;
   }
 
   async findByTag(tagName: string): Promise<ProductTag | null> {
-    const tagData = await this.productTagModel.findUnique({
+    const row = await this.productTagModel.findUnique({
       where: { tag: tagName },
     });
-
-    if (!tagData) {
-      return null;
-    }
-
-    return ProductTag.fromPersistence({
-      id: ProductTagId.fromString(tagData.id),
-      tag: tagData.tag,
-      kind: tagData.kind,
-    });
+    return row ? this.hydrate(row) : null;
   }
 
   async findAll(options?: ProductTagQueryOptions): Promise<ProductTag[]> {
@@ -72,52 +75,34 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
       kind,
     } = options || {};
 
-    const whereClause: any = {};
-    if (kind) {
-      whereClause.kind = kind;
-    }
+    const where: Record<string, unknown> = {};
+    if (kind) where.kind = kind;
 
-    const tags = await this.productTagModel.findMany({
-      where: whereClause,
+    const rows = await this.productTagModel.findMany({
+      where,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return tags.map((tagData: any) =>
-      ProductTag.fromPersistence({
-        id: ProductTagId.fromString(tagData.id),
-        tag: tagData.tag,
-        kind: tagData.kind,
-      }),
-    );
+    return rows.map((row: any) => this.hydrate(row));
   }
 
   async findByKind(
     kind: string,
     options?: ProductTagQueryOptions,
   ): Promise<ProductTag[]> {
-    const {
-      limit = 100,
-      offset = 0,
-      sortBy = "tag",
-      sortOrder = "asc",
-    } = options || {};
+    const { limit = 100, offset = 0, sortBy = "tag", sortOrder = "asc" } =
+      options || {};
 
-    const tags = await this.productTagModel.findMany({
+    const rows = await this.productTagModel.findMany({
       where: { kind },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return tags.map((tagData: any) =>
-      ProductTag.fromPersistence({
-        id: ProductTagId.fromString(tagData.id),
-        tag: tagData.tag,
-        kind: tagData.kind,
-      }),
-    );
+    return rows.map((row: any) => this.hydrate(row));
   }
 
   async findByProductId(productId: string): Promise<ProductTag[]> {
@@ -125,75 +110,40 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
       where: { productId },
       include: { tag: true },
     });
-
-    return associations.map((assoc: any) =>
-      ProductTag.fromPersistence({
-        id: ProductTagId.fromString(assoc.tag.id),
-        tag: assoc.tag.tag,
-        kind: assoc.tag.kind,
-      }),
-    );
+    return associations.map((assoc: any) => this.hydrate(assoc.tag));
   }
 
   async search(
     query: string,
     options?: ProductTagQueryOptions,
   ): Promise<ProductTag[]> {
-    const {
-      limit = 50,
-      offset = 0,
-      sortBy = "tag",
-      sortOrder = "asc",
-    } = options || {};
+    const { limit = 50, offset = 0, sortBy = "tag", sortOrder = "asc" } =
+      options || {};
 
-    const tags = await this.productTagModel.findMany({
-      where: {
-        tag: {
-          contains: query,
-          mode: "insensitive",
-        },
-      },
+    const rows = await this.productTagModel.findMany({
+      where: { tag: { contains: query, mode: "insensitive" } },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return tags.map((tagData: any) =>
-      ProductTag.fromPersistence({
-        id: ProductTagId.fromString(tagData.id),
-        tag: tagData.tag,
-        kind: tagData.kind,
-      }),
-    );
+    return rows.map((row: any) => this.hydrate(row));
   }
 
   async getMostUsed(
     limit: number = 10,
   ): Promise<Array<{ tag: ProductTag; count: number }>> {
     const results = await this.productTagModel.findMany({
-      include: {
-        _count: {
-          select: { products: true },
-        },
-      },
-      orderBy: {
-        products: {
-          _count: "desc",
-        },
-      },
+      include: { _count: { select: { products: true } } },
+      orderBy: { products: { _count: "desc" } },
       take: limit,
     });
 
     return results.map((result: any) => ({
-      tag: ProductTag.fromPersistence({
-        id: ProductTagId.fromString(result.id),
-        tag: result.tag,
-        kind: result.kind,
-      }),
+      tag: this.hydrate(result),
       count: result._count.products,
     }));
   }
-
 
   async delete(id: ProductTagId): Promise<void> {
     await this.productTagModel.delete({
@@ -216,32 +166,88 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
   }
 
   async count(options?: ProductTagCountOptions): Promise<number> {
-    const whereClause: any = {};
+    const where: Record<string, unknown> = {};
 
-    if (options?.kind) {
-      whereClause.kind = options.kind;
-    }
-
+    if (options?.kind) where.kind = options.kind;
     if (options?.productId) {
-      whereClause.products = {
-        some: {
-          productId: options.productId,
-        },
-      };
+      where.products = { some: { productId: options.productId } };
     }
 
-    return await this.productTagModel.count({
-      where: whereClause,
+    return this.productTagModel.count({ where });
+  }
+
+  async getStatistics(): Promise<{
+    tagsByKind: Array<{ kind: string | null; count: number }>;
+    averageTagLength: number;
+  }> {
+    const kindStats = await this.productTagModel.groupBy({
+      by: ["kind"],
+      _count: { id: true },
+    });
+
+    const allTags = await this.productTagModel.findMany({
+      select: { tag: true },
+    });
+
+    const averageTagLength =
+      allTags.length > 0
+        ? allTags.reduce((sum: number, t: any) => sum + t.tag.length, 0) /
+          allTags.length
+        : 0;
+
+    return {
+      tagsByKind: kindStats.map((stat: any) => ({
+        kind: stat.kind,
+        count: stat._count.id,
+      })),
+      averageTagLength,
+    };
+  }
+
+  async associateProductTags(
+    productId: string,
+    tagIds: string[],
+  ): Promise<void> {
+    await this.productTagAssociationModel.deleteMany({ where: { productId } });
+    await this.productTagAssociationModel.createMany({
+      data: tagIds.map((tagId) => ({ productId, tagId })),
+      skipDuplicates: true,
     });
   }
 
-  // Product-Tag association methods
+  async findProductIdsByTagId(
+    tagId: string,
+    options?: { limit?: number; offset?: number },
+  ): Promise<string[]> {
+    const { limit = 20, offset = 0 } = options || {};
+    const associations = await this.productTagAssociationModel.findMany({
+      where: { tagId },
+      select: { productId: true },
+      take: limit,
+      skip: offset,
+    });
+    return associations.map((assoc: any) => assoc.productId);
+  }
+
+  async isTagAssociatedWithProduct(
+    productId: string,
+    tagId: string,
+  ): Promise<boolean> {
+    const association = await this.productTagAssociationModel.findFirst({
+      where: { productId, tagId },
+    });
+    return !!association;
+  }
+
+  // ── Extra association helpers (not on interface) ──────────────────
+
   async addTagToProduct(productId: string, tagId: ProductTagId): Promise<void> {
-    await this.productTagAssociationModel.create({
-      data: {
-        productId,
-        tagId: tagId.getValue(),
+    await this.productTagAssociationModel.upsert({
+      where: {
+        productId_tagId: { productId, tagId: tagId.getValue() },
       },
+      create: { productId, tagId: tagId.getValue() },
+      update: {},
     });
   }
 
@@ -251,10 +257,7 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
   ): Promise<void> {
     await this.productTagAssociationModel.delete({
       where: {
-        productId_tagId: {
-          productId,
-          tagId: tagId.getValue(),
-        },
+        productId_tagId: { productId, tagId: tagId.getValue() },
       },
     });
   }
@@ -264,10 +267,7 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
       where: { productId },
       select: { tagId: true },
     });
-
-    return associations.map((assoc: any) =>
-      ProductTagId.fromString(assoc.tagId),
-    );
+    return associations.map((assoc: any) => ProductTagId.fromString(assoc.tagId));
   }
 
   async getTagProductAssociations(tagId: ProductTagId): Promise<string[]> {
@@ -275,123 +275,12 @@ export class ProductTagRepositoryImpl implements IProductTagRepository {
       where: { tagId: tagId.getValue() },
       select: { productId: true },
     });
-
     return associations.map((assoc: any) => assoc.productId);
-  }
-
-  async getStatistics(): Promise<{
-    tagsByKind: Array<{ kind: string | null; count: number }>;
-    averageTagLength: number;
-  }> {
-    // Use database aggregation for better performance
-    const kindStats = await this.productTagModel.groupBy({
-      by: ["kind"],
-      _count: {
-        id: true,
-      },
-    });
-
-    const allTags = await this.productTagModel.findMany({
-      select: { tag: true },
-    });
-
-    const averageTagLength =
-      allTags.length > 0
-        ? allTags.reduce((sum: number, t: any) => sum + t.tag.length, 0) / allTags.length
-        : 0;
-
-    const tagsByKind = kindStats.map((stat: any) => ({
-      kind: stat.kind,
-      count: stat._count.id,
-    }));
-
-    return {
-      tagsByKind,
-      averageTagLength,
-    };
-  }
-
-  // Bulk association methods
-  async associateProductTags(
-    productId: string,
-    tagIds: string[],
-  ): Promise<void> {
-    // First, delete existing associations for this product to avoid duplicates
-    await this.productTagAssociationModel.deleteMany({
-      where: { productId },
-    });
-
-    // Create new associations
-    const associations = tagIds.map((tagId) => ({
-      productId,
-      tagId,
-    }));
-
-    await this.productTagAssociationModel.createMany({
-      data: associations,
-      skipDuplicates: true,
-    });
   }
 
   async removeProductTag(productId: string, tagId: string): Promise<void> {
     await this.productTagAssociationModel.deleteMany({
-      where: {
-        productId,
-        tagId,
-      },
+      where: { productId, tagId },
     });
-  }
-
-  async isTagAssociatedWithProduct(
-    productId: string,
-    tagId: string,
-  ): Promise<boolean> {
-    const association = await this.productTagAssociationModel.findFirst({
-      where: {
-        productId,
-        tagId,
-      },
-    });
-
-    return !!association;
-  }
-
-  async findProductsByTagId(
-    tagId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<{
-    products: any[];
-    total: number;
-  }> {
-    const { limit = 20, offset = 0 } = options || {};
-
-    const [associations, total] = await Promise.all([
-      this.productTagAssociationModel.findMany({
-        where: { tagId },
-        include: {
-          product: {
-            select: {
-              id: true,
-              title: true,
-              slug: true,
-              brand: true,
-              status: true,
-            },
-          },
-        },
-        take: limit,
-        skip: offset,
-      }),
-      this.productTagAssociationModel.count({
-        where: { tagId },
-      }),
-    ]);
-
-    const products = associations.map((assoc: any) => assoc.product);
-
-    return {
-      products,
-      total,
-    };
   }
 }

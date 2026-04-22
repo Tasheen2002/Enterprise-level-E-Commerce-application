@@ -4,6 +4,7 @@ export { ProductVariantRepositoryImpl } from "./product-variant.repository.impl"
 export { CategoryRepositoryImpl } from "./category.repository.impl";
 export { MediaAssetRepositoryImpl } from "./media-asset.repository.impl";
 export { ProductTagRepositoryImpl } from "./product-tag.repository.impl";
+export { ProductTagAssociationRepositoryImpl } from "./product-tag-association.repository.impl";
 export { SizeGuideRepositoryImpl } from "./size-guide.repository.impl";
 export { EditorialLookRepositoryImpl } from "./editorial-look.repository.impl";
 export { ProductMediaRepositoryImpl } from "./product-media.repository.impl";

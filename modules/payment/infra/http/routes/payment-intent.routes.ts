@@ -1,49 +1,45 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { PaymentIntentController } from "../controllers/payment-intent.controller";
 import {
-  PaymentIntentController,
-  CreatePaymentIntentRequest,
-  ProcessPaymentRequest,
-  RefundPaymentRequest,
-  VoidPaymentRequest,
-  GetPaymentIntentQuerystring,
-} from "../controllers/payment-intent.controller";
-import { authenticateUser, requireRole } from "@/api/src/shared/middleware";
+  RolePermissions,
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  createPaymentIntentSchema,
+  processPaymentSchema,
+  refundPaymentSchema,
+  voidPaymentSchema,
+  getPaymentIntentQuerySchema,
+  intentIdParamsSchema,
+  paymentIntentResponseSchema,
+  paymentTransactionResponseSchema,
+} from "../validation/payment-intent.schema";
 
-const errorResponses = {
-  400: {
-    description: "Bad request - validation failed",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string" },
-    },
-  },
-  401: {
-    description: "Unauthorized",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string" },
-    },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: {
-      success: { type: "boolean", example: false },
-      error: { type: "string" },
-    },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function registerPaymentIntentRoutes(
   fastify: FastifyInstance,
   controller: PaymentIntentController,
 ): Promise<void> {
-  fastify.post<{ Body: CreatePaymentIntentRequest }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /payment-intents
+  fastify.post(
     "/payment-intents",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateBody(createPaymentIntentSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create a new payment intent for processing a payment.",
         tags: ["Payment Intents"],
@@ -55,32 +51,34 @@ export async function registerPaymentIntentRoutes(
           properties: {
             orderId: { type: "string", format: "uuid" },
             provider: { type: "string" },
-            amount: { type: "number", minimum: 0 },
-            currency: { type: "string", default: "USD" },
+            amount: { type: "number", minimum: 0.01 },
+            currency: { type: "string" },
             idempotencyKey: { type: "string" },
             clientSecret: { type: "string" },
           },
         },
         response: {
           201: {
-            description: "Payment intent created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paymentIntentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.create.bind(controller),
+    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
   );
 
-  fastify.post<{ Body: ProcessPaymentRequest }>(
+  // POST /payment-intents/process
+  fastify.post(
     "/payment-intents/process",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateBody(processPaymentSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Process a payment intent — authorize and capture funds.",
         tags: ["Payment Intents"],
@@ -96,27 +94,28 @@ export async function registerPaymentIntentRoutes(
         },
         response: {
           200: {
-            description: "Payment processed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paymentIntentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.process.bind(controller),
+    (request, reply) => controller.process(request as AuthenticatedRequest, reply),
   );
 
-  fastify.post<{ Body: RefundPaymentRequest }>(
+  // POST /payment-intents/refund — Staff/Admin only
+  fastify.post(
     "/payment-intents/refund",
     {
-      preHandler: requireRole(["STAFF"]),
+      preValidation: [validateBody(refundPaymentSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Refund a captured payment (full or partial) — Staff/Admin only.",
+        description: "Refund a captured payment (full or partial) — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Refund Payment",
         security: [{ bearerAuth: [] }],
@@ -125,33 +124,34 @@ export async function registerPaymentIntentRoutes(
           required: ["intentId"],
           properties: {
             intentId: { type: "string", format: "uuid" },
-            amount: { type: "number", minimum: 0 },
+            amount: { type: "number", minimum: 0.01 },
             reason: { type: "string" },
           },
         },
         response: {
           200: {
-            description: "Payment refunded successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paymentIntentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.refund.bind(controller),
+    (request, reply) => controller.refund(request as AuthenticatedRequest, reply),
   );
 
-  fastify.post<{ Body: VoidPaymentRequest }>(
+  // POST /payment-intents/void — Staff/Admin only
+  fastify.post(
     "/payment-intents/void",
     {
-      preHandler: requireRole(["STAFF"]),
+      preValidation: [validateBody(voidPaymentSchema)],
+      preHandler: [RolePermissions.STAFF_LEVEL],
       schema: {
-        description:
-          "Void an authorized (not yet captured) payment — Staff/Admin only.",
+        description: "Void an authorized (not yet captured) payment — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Void Payment",
         security: [{ bearerAuth: [] }],
@@ -165,24 +165,26 @@ export async function registerPaymentIntentRoutes(
         },
         response: {
           200: {
-            description: "Payment voided successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paymentIntentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.void.bind(controller),
+    (request, reply) => controller.void(request as AuthenticatedRequest, reply),
   );
 
-  fastify.get<{ Querystring: GetPaymentIntentQuerystring }>(
+  // GET /payment-intents
+  fastify.get(
     "/payment-intents",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateQuery(getPaymentIntentQuerySchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get payment intent by intentId or orderId.",
         tags: ["Payment Intents"],
@@ -197,17 +199,54 @@ export async function registerPaymentIntentRoutes(
         },
         response: {
           200: {
-            description: "Payment intent retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paymentIntentResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.get.bind(controller),
+    (request, reply) => controller.get(request as AuthenticatedRequest, reply),
+  );
+
+  // GET /payment-intents/:intentId/transactions
+  fastify.get(
+    "/payment-intents/:intentId/transactions",
+    {
+      preValidation: [validateParams(intentIdParamsSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
+      schema: {
+        description: "List all payment transactions for a payment intent.",
+        tags: ["Payment Intents"],
+        summary: "List Payment Transactions",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          required: ["intentId"],
+          properties: {
+            intentId: { type: "string", format: "uuid" },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: {
+                type: "array",
+                items: paymentTransactionResponseSchema,
+              },
+            },
+          },
+        },
+      },
+    },
+    (request, reply) => controller.listTransactions(request as AuthenticatedRequest, reply),
   );
 }

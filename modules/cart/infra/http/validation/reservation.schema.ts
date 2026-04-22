@@ -110,3 +110,61 @@ export const availabilityResponseSchema = {
     availableForReservation: { type: "integer" },
   },
 } as const;
+
+export const reservedQuantityTotalResponseSchema = {
+  type: "object",
+  properties: {
+    variantId: { type: "string", format: "uuid" },
+    totalReserved: { type: "integer" },
+  },
+} as const;
+
+export const reservedQuantityActiveResponseSchema = {
+  type: "object",
+  properties: {
+    variantId: { type: "string", format: "uuid" },
+    activeReserved: { type: "integer" },
+  },
+} as const;
+
+export const reservationStatisticsResponseSchema = {
+  type: "object",
+  properties: {
+    totalReservations: { type: "integer" },
+    activeReservations: { type: "integer" },
+    expiredReservations: { type: "integer" },
+    expiringSoonReservations: { type: "integer" },
+    averageDurationMinutes: { type: "number" },
+    totalQuantityReserved: { type: "integer" },
+    mostReservedVariants: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          variantId: { type: "string", format: "uuid" },
+          totalQuantity: { type: "integer" },
+          reservationCount: { type: "integer" },
+        },
+      },
+    },
+  },
+} as const;
+
+export const bulkReservationResultResponseSchema = {
+  type: "object",
+  properties: {
+    successful: { type: "array", items: reservationResponseSchema },
+    failed: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          variantId: { type: "string", format: "uuid" },
+          error: { type: "string" },
+        },
+      },
+    },
+    totalCreated: { type: "integer" },
+    totalFailed: { type: "integer" },
+  },
+} as const;

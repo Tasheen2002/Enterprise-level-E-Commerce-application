@@ -21,6 +21,17 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
+const paginatedTransactionsSchema = {
+  type: "object",
+  properties: {
+    items: { type: "array", items: inventoryTransactionResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
+  },
+} as const;
+
 export async function inventoryTransactionRoutes(
   fastify: FastifyInstance,
   controller: InventoryTransactionController,
@@ -31,7 +42,49 @@ export async function inventoryTransactionRoutes(
     }
   });
 
-  // Get transaction by ID
+  // Get transactions by variant — MUST be registered before /transactions/:transactionId
+  fastify.get(
+    "/transactions/variant/:variantId",
+    {
+      preValidation: [validateParams(transactionVariantParamsSchema), validateQuery(transactionsByVariantSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
+      schema: {
+        description: "Get inventory transactions for a variant",
+        tags: ["Inventory Transactions"],
+        summary: "Get Transactions By Variant",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            variantId: { type: "string", format: "uuid" },
+          },
+          required: ["variantId"],
+        },
+        querystring: {
+          type: "object",
+          properties: {
+            locationId: { type: "string", format: "uuid" },
+            limit: { type: "integer", minimum: 1, maximum: 100 },
+            offset: { type: "integer", minimum: 0 },
+          },
+        },
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: paginatedTransactionsSchema,
+            },
+          },
+        },
+      },
+    },
+    (request, reply) => controller.getTransactionsByVariant(request as AuthenticatedRequest, reply),
+  );
+
+  // Get transaction by ID — registered after /transactions/variant/:variantId to avoid param collision
   fastify.get(
     "/transactions/:transactionId",
     {
@@ -65,48 +118,6 @@ export async function inventoryTransactionRoutes(
     (request, reply) => controller.getTransaction(request as AuthenticatedRequest, reply),
   );
 
-  // Get transactions by variant
-  fastify.get(
-    "/transactions/variant/:variantId",
-    {
-      preValidation: [validateParams(transactionVariantParamsSchema), validateQuery(transactionsByVariantSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
-      schema: {
-        description: "Get inventory transactions for a variant",
-        tags: ["Inventory Transactions"],
-        summary: "Get Transactions By Variant",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-          },
-          required: ["variantId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: inventoryTransactionResponseSchema },
-            },
-          },
-        },
-      },
-    },
-    (request, reply) => controller.getTransactionsByVariant(request as AuthenticatedRequest, reply),
-  );
-
   // List transactions
   fastify.get(
     "/transactions",
@@ -120,7 +131,6 @@ export async function inventoryTransactionRoutes(
         security: [{ bearerAuth: [] }],
         querystring: {
           type: "object",
-          required: ["variantId"],
           properties: {
             variantId: { type: "string", format: "uuid" },
             locationId: { type: "string", format: "uuid" },
@@ -135,7 +145,7 @@ export async function inventoryTransactionRoutes(
               success: { type: "boolean" },
               statusCode: { type: "number" },
               message: { type: "string" },
-              data: { type: "array", items: inventoryTransactionResponseSchema },
+              data: paginatedTransactionsSchema,
             },
           },
         },

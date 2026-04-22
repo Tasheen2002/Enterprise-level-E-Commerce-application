@@ -9,6 +9,14 @@ import {
   GetUserAppointmentsHandler,
   GetLocationAppointmentsHandler,
 } from "../../../application";
+import {
+  CreateAppointmentBody,
+  UpdateAppointmentBody,
+  AppointmentIdParams,
+  UserIdParams,
+  LocationIdParams,
+  PaginationQuery,
+} from "../validation/appointment.schema";
 
 export class AppointmentController {
   constructor(
@@ -21,16 +29,7 @@ export class AppointmentController {
   ) {}
 
   async createAppointment(
-    request: AuthenticatedRequest<{
-      Body: {
-        userId: string;
-        type: string;
-        locationId?: string;
-        startAt: Date;
-        endAt: Date;
-        notes?: string;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateAppointmentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -50,7 +49,7 @@ export class AppointmentController {
   }
 
   async getAppointment(
-    request: AuthenticatedRequest<{ Params: { appointmentId: string } }>,
+    request: AuthenticatedRequest<{ Params: AppointmentIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -64,10 +63,7 @@ export class AppointmentController {
   }
 
   async getUserAppointments(
-    request: AuthenticatedRequest<{
-      Params: { userId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -81,10 +77,7 @@ export class AppointmentController {
   }
 
   async getLocationAppointments(
-    request: AuthenticatedRequest<{
-      Params: { locationId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: LocationIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -98,15 +91,7 @@ export class AppointmentController {
   }
 
   async updateAppointment(
-    request: AuthenticatedRequest<{
-      Params: { appointmentId: string };
-      Body: {
-        startAt?: Date;
-        endAt?: Date;
-        notes?: string;
-        locationId?: string;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Params: AppointmentIdParams; Body: UpdateAppointmentBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -126,7 +111,7 @@ export class AppointmentController {
   }
 
   async cancelAppointment(
-    request: AuthenticatedRequest<{ Params: { appointmentId: string } }>,
+    request: AuthenticatedRequest<{ Params: AppointmentIdParams }>,
     reply: FastifyReply,
   ) {
     try {

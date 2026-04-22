@@ -29,6 +29,7 @@ import { InitiatePasswordResetHandler } from "../../../modules/user-management/a
 import { ResetPasswordHandler } from "../../../modules/user-management/application/commands/reset-password.command";
 import { VerifyEmailHandler } from "../../../modules/user-management/application/commands/verify-email.command";
 import { DeleteAccountHandler } from "../../../modules/user-management/application/commands/delete-account.command";
+import { ResendVerificationHandler } from "../../../modules/user-management/application/commands/resend-verification.command";
 import { UpdateProfileHandler } from "../../../modules/user-management/application/commands/update-profile.command";
 import { AddAddressHandler } from "../../../modules/user-management/application/commands/add-address.command";
 import { UpdateAddressHandler } from "../../../modules/user-management/application/commands/update-address.command";
@@ -42,7 +43,6 @@ import { UpdateUserRoleHandler } from "../../../modules/user-management/applicat
 import { DeleteUserHandler } from "../../../modules/user-management/application/commands/delete-user.command";
 import { ToggleUserEmailVerifiedHandler } from "../../../modules/user-management/application/commands/toggle-user-email-verified.command";
 import { GetUserProfileHandler } from "../../../modules/user-management/application/queries/get-user-profile.query";
-import { GetUserByEmailHandler } from "../../../modules/user-management/application/queries/get-user-by-email.query";
 import { GetUserDetailsHandler } from "../../../modules/user-management/application/queries/get-user-details.query";
 import { ListAddressesHandler } from "../../../modules/user-management/application/queries/list-addresses.query";
 import { ListPaymentMethodsHandler } from "../../../modules/user-management/application/queries/list-payment-methods.query";
@@ -60,15 +60,16 @@ import { TokenBlacklistService } from "../../../modules/user-management/infra/ht
 
 // Product Catalog — Repositories
 import {
-  ProductRepository,
-  ProductVariantRepository,
-  CategoryRepository,
-  MediaAssetRepository,
-  ProductTagRepository,
-  SizeGuideRepository,
-  EditorialLookRepository,
-  ProductMediaRepository,
-  VariantMediaRepository,
+  ProductRepositoryImpl,
+  ProductVariantRepositoryImpl,
+  CategoryRepositoryImpl,
+  MediaAssetRepositoryImpl,
+  ProductTagRepositoryImpl,
+  ProductTagAssociationRepositoryImpl,
+  SizeGuideRepositoryImpl,
+  EditorialLookRepositoryImpl,
+  ProductMediaRepositoryImpl,
+  VariantMediaRepositoryImpl,
 } from "../../../modules/product-catalog/infra/persistence/repositories";
 
 // Product Catalog — Services
@@ -106,12 +107,127 @@ import {
   DeleteProductVariantHandler,
   GetVariantHandler,
   ListVariantsHandler,
+  // Media asset handlers
+  CreateMediaAssetHandler,
+  UpdateMediaAssetHandler,
+  DeleteMediaAssetHandler,
+  GetMediaAssetHandler,
+  SearchMediaAssetsHandler,
+  // Product media handlers
+  AddMediaToProductHandler,
+  RemoveMediaFromProductHandler,
+  RemoveAllProductMediaHandler,
+  SetProductCoverImageHandler,
+  RemoveCoverImageHandler,
+  ReorderProductMediaHandler,
+  MoveMediaPositionHandler,
+  SetProductMediaHandler,
+  DuplicateProductMediaHandler,
+  CompactProductMediaPositionsHandler,
+  GetProductMediaHandler,
+  GetProductsUsingAssetHandler,
+  GetProductMediaAssetUsageCountHandler,
+  ValidateProductMediaHandler,
+  GetProductMediaStatisticsHandler,
+  // Product tag handlers
+  CreateProductTagHandler,
+  UpdateProductTagHandler,
+  DeleteProductTagHandler,
+  CreateBulkProductTagsHandler,
+  DeleteBulkProductTagsHandler,
+  AssociateProductTagsHandler,
+  RemoveProductTagAssociationHandler,
+  ListProductTagsHandler,
+  GetProductTagHandler,
+  GetProductTagSuggestionsHandler,
+  GetProductTagStatsHandler,
+  GetMostUsedProductTagsHandler,
+  ValidateProductTagHandler,
+  GetProductTagsHandler,
+  GetTagProductsHandler,
+  // Search handlers
+  GetSearchSuggestionsHandler,
+  GetPopularSearchesHandler,
+  GetSearchFiltersHandler,
+  GetSearchStatsHandler,
+  // Size guide handlers
+  CreateSizeGuideHandler,
+  UpdateSizeGuideHandler,
+  DeleteSizeGuideHandler,
+  CreateRegionalSizeGuideHandler,
+  CreateCategorySizeGuideHandler,
+  UpdateSizeGuideContentHandler,
+  ClearSizeGuideContentHandler,
+  CreateBulkSizeGuidesHandler,
+  DeleteBulkSizeGuidesHandler,
+  ListSizeGuidesHandler,
+  GetSizeGuideHandler,
+  GetRegionalSizeGuidesHandler,
+  GetGeneralSizeGuidesHandler,
+  GetSizeGuideStatsHandler,
+  GetAvailableSizeGuideRegionsHandler,
+  GetAvailableSizeGuideCategoriesHandler,
+  ValidateSizeGuideUniquenessHandler,
+  // Editorial look handlers
+  CreateEditorialLookHandler,
+  UpdateEditorialLookHandler,
+  DeleteEditorialLookHandler,
+  PublishEditorialLookHandler,
+  UnpublishEditorialLookHandler,
+  ScheduleEditorialLookPublicationHandler,
+  ProcessScheduledEditorialLookPublicationsHandler,
+  SetEditorialLookHeroImageHandler,
+  RemoveEditorialLookHeroImageHandler,
+  AddProductToEditorialLookHandler,
+  RemoveProductFromEditorialLookHandler,
+  SetEditorialLookProductsHandler,
+  UpdateEditorialLookStoryContentHandler,
+  ClearEditorialLookStoryContentHandler,
+  CreateBulkEditorialLooksHandler,
+  DeleteBulkEditorialLooksHandler,
+  PublishBulkEditorialLooksHandler,
+  DuplicateEditorialLookHandler,
+  ListEditorialLooksHandler,
+  GetEditorialLookHandler,
+  GetReadyToPublishEditorialLooksHandler,
+  GetEditorialLooksByHeroAssetHandler,
+  GetEditorialLookProductsHandler,
+  GetProductEditorialLooksHandler,
+  GetEditorialLooksByProductHandler,
+  GetEditorialLookStatsHandler,
+  GetPopularEditorialLookProductsHandler,
+  ValidateEditorialLookForPublicationHandler,
+  // Variant media handlers
+  AddMediaToVariantHandler,
+  RemoveMediaFromVariantHandler,
+  RemoveAllVariantMediaHandler,
+  SetVariantMediaHandler,
+  AddMediaToMultipleVariantsHandler,
+  AddMultipleMediaToVariantHandler,
+  DuplicateVariantMediaHandler,
+  CopyProductVariantMediaHandler,
+  GetVariantMediaHandler,
+  GetProductVariantMediaHandler,
+  GetVariantsUsingAssetHandler,
+  GetVariantMediaAssetUsageCountHandler,
+  GetColorVariantMediaHandler,
+  GetSizeVariantMediaHandler,
+  GetUnusedVariantMediaAssetsHandler,
+  ValidateVariantMediaHandler,
+  GetVariantMediaStatisticsHandler,
 } from "../../../modules/product-catalog/application";
 
 // Product Catalog — Controllers
 import { ProductController } from "../../../modules/product-catalog/infra/http/controllers/product.controller";
 import { CategoryController } from "../../../modules/product-catalog/infra/http/controllers/category.controller";
 import { VariantController } from "../../../modules/product-catalog/infra/http/controllers/variant.controller";
+import { MediaController } from "../../../modules/product-catalog/infra/http/controllers/media.controller";
+import { ProductMediaController } from "../../../modules/product-catalog/infra/http/controllers/product-media.controller";
+import { ProductTagController } from "../../../modules/product-catalog/infra/http/controllers/product-tag.controller";
+import { SearchController } from "../../../modules/product-catalog/infra/http/controllers/search.controller";
+import { SizeGuideController } from "../../../modules/product-catalog/infra/http/controllers/size-guide.controller";
+import { EditorialLookController } from "../../../modules/product-catalog/infra/http/controllers/editorial-look.controller";
+import { VariantMediaController } from "../../../modules/product-catalog/infra/http/controllers/variant-media.controller";
 
 // Inventory Management — Repositories
 import {
@@ -231,7 +347,6 @@ import { LocationType } from "../../../modules/inventory-management/domain/value
 import {
   IExternalVariantService,
   IExternalProductService,
-  IExternalProductMediaService,
   IExternalStockService as IOrderExternalStockService,
 } from "../../../modules/order-management/domain/external-services";
 
@@ -265,9 +380,9 @@ import {
   GiftCardService,
   PromotionService,
   PaymentWebhookService,
-  LoyaltyService,
-  LoyaltyTransactionService,
 } from "../../../modules/payment/application/services";
+import { LoyaltyService } from "../../../modules/loyalty/application/services/loyalty.service";
+import { LoyaltyTransactionService } from "../../../modules/loyalty/application/services/loyalty-transaction.service";
 import type { IExternalOrderQueryPort } from "../../../modules/payment/domain/external-services";
 
 /**
@@ -362,16 +477,16 @@ export class Container {
 
     // Handlers
     const registerHandler = new RegisterUserHandler(authService);
-    const loginHandler = new LoginUserHandler(authService);
-    const logoutHandler = new LogoutHandler(TokenBlacklistService);
+    const loginHandler = new LoginUserHandler(authService, TokenBlacklistService);
+    const logoutHandler = new LogoutHandler(authService, TokenBlacklistService);
     const refreshTokenHandler = new RefreshTokenHandler(authService, TokenBlacklistService);
     const changePasswordHandler = new ChangePasswordHandler(authService);
     const changeEmailHandler = new ChangeEmailHandler(authService);
-    const initiatePasswordResetHandler = new InitiatePasswordResetHandler(authService);
-    const resetPasswordHandler = new ResetPasswordHandler(authService);
-    const verifyEmailHandler = new VerifyEmailHandler(authService);
-    const getUserByEmailHandler = new GetUserByEmailHandler(authService);
-    const deleteAccountHandler = new DeleteAccountHandler(authService, userService, TokenBlacklistService);
+    const initiatePasswordResetHandler = new InitiatePasswordResetHandler(authService, TokenBlacklistService);
+    const resetPasswordHandler = new ResetPasswordHandler(authService, TokenBlacklistService);
+    const verifyEmailHandler = new VerifyEmailHandler(authService, TokenBlacklistService);
+    const resendVerificationHandler = new ResendVerificationHandler(authService, TokenBlacklistService);
+    const deleteAccountHandler = new DeleteAccountHandler(authService, TokenBlacklistService);
     const getProfileHandler = new GetUserProfileHandler(profileService);
     const updateProfileHandler = new UpdateProfileHandler(profileService);
     const addAddressHandler = new AddAddressHandler(addressService);
@@ -394,8 +509,8 @@ export class Container {
     const authController = new AuthController(
       registerHandler, loginHandler, logoutHandler, refreshTokenHandler,
       changePasswordHandler, changeEmailHandler, initiatePasswordResetHandler,
-      resetPasswordHandler, verifyEmailHandler, getUserByEmailHandler,
-      deleteAccountHandler, TokenBlacklistService,
+      resetPasswordHandler, verifyEmailHandler, deleteAccountHandler,
+      resendVerificationHandler,
     );
     const profileController = new ProfileController(getProfileHandler, updateProfileHandler);
     const addressesController = new AddressesController(addAddressHandler, updateAddressHandler, deleteAddressHandler, listAddressesHandler);
@@ -414,14 +529,15 @@ export class Container {
     // ============================================
 
     // Repositories
-    const productRepository = new ProductRepository(prisma);
-    const productVariantRepository = new ProductVariantRepository(prisma);
-    const categoryRepository = new CategoryRepository(prisma);
-    const mediaAssetRepository = new MediaAssetRepository(prisma);
-    const productTagRepository = new ProductTagRepository(prisma);
-    const sizeGuideRepository = new SizeGuideRepository(prisma);
-    const editorialLookRepository = new EditorialLookRepository(prisma);
-    const productMediaRepository = new ProductMediaRepository(prisma);
+    const productRepository = new ProductRepositoryImpl(prisma);
+    const productVariantRepository = new ProductVariantRepositoryImpl(prisma);
+    const categoryRepository = new CategoryRepositoryImpl(prisma);
+    const mediaAssetRepository = new MediaAssetRepositoryImpl(prisma);
+    const productTagRepository = new ProductTagRepositoryImpl(prisma);
+    const productTagAssociationRepository = new ProductTagAssociationRepositoryImpl(prisma);
+    const sizeGuideRepository = new SizeGuideRepositoryImpl(prisma);
+    const editorialLookRepository = new EditorialLookRepositoryImpl(prisma);
+    const productMediaRepository = new ProductMediaRepositoryImpl(prisma);
 
     // Services
     const slugGeneratorService = new SlugGeneratorService();
@@ -451,6 +567,7 @@ export class Container {
 
     const productTagManagementService = new ProductTagManagementService(
       productTagRepository,
+      productTagAssociationRepository,
     );
 
     const sizeGuideManagementService = new SizeGuideManagementService(
@@ -469,7 +586,7 @@ export class Container {
       productRepository,
     );
 
-    const variantMediaRepository = new VariantMediaRepository(prisma);
+    const variantMediaRepository = new VariantMediaRepositoryImpl(prisma);
 
     const variantMediaManagementService = new VariantMediaManagementService(
       variantMediaRepository,
@@ -552,9 +669,152 @@ export class Container {
       getVariantHandler,
     );
 
+    // Media asset handlers + controller
+    const createMediaAssetHandler = new CreateMediaAssetHandler(mediaManagementService);
+    const updateMediaAssetHandler = new UpdateMediaAssetHandler(mediaManagementService);
+    const deleteMediaAssetHandler = new DeleteMediaAssetHandler(mediaManagementService);
+    const getMediaAssetHandler = new GetMediaAssetHandler(mediaManagementService);
+    const searchMediaAssetsHandler = new SearchMediaAssetsHandler(mediaManagementService);
+
+    const mediaController = new MediaController(
+      createMediaAssetHandler,
+      updateMediaAssetHandler,
+      deleteMediaAssetHandler,
+      getMediaAssetHandler,
+      searchMediaAssetsHandler,
+    );
+
+    // Product media handlers + controller
+    const productMediaController = new ProductMediaController(
+      new AddMediaToProductHandler(productMediaManagementService),
+      new RemoveMediaFromProductHandler(productMediaManagementService),
+      new RemoveAllProductMediaHandler(productMediaManagementService),
+      new SetProductCoverImageHandler(productMediaManagementService),
+      new RemoveCoverImageHandler(productMediaManagementService),
+      new ReorderProductMediaHandler(productMediaManagementService),
+      new MoveMediaPositionHandler(productMediaManagementService),
+      new SetProductMediaHandler(productMediaManagementService),
+      new DuplicateProductMediaHandler(productMediaManagementService),
+      new CompactProductMediaPositionsHandler(productMediaManagementService),
+      new GetProductMediaHandler(productMediaManagementService),
+      new GetProductsUsingAssetHandler(productMediaManagementService),
+      new GetProductMediaAssetUsageCountHandler(productMediaManagementService),
+      new ValidateProductMediaHandler(productMediaManagementService),
+      new GetProductMediaStatisticsHandler(productMediaManagementService),
+    );
+
+    // Product tag handlers + controller
+    const productTagController = new ProductTagController(
+      new CreateProductTagHandler(productTagManagementService),
+      new UpdateProductTagHandler(productTagManagementService),
+      new DeleteProductTagHandler(productTagManagementService),
+      new CreateBulkProductTagsHandler(productTagManagementService),
+      new DeleteBulkProductTagsHandler(productTagManagementService),
+      new AssociateProductTagsHandler(productTagManagementService),
+      new RemoveProductTagAssociationHandler(productTagManagementService),
+      new ListProductTagsHandler(productTagManagementService),
+      new GetProductTagHandler(productTagManagementService),
+      new GetProductTagSuggestionsHandler(productTagManagementService),
+      new GetProductTagStatsHandler(productTagManagementService),
+      new GetMostUsedProductTagsHandler(productTagManagementService),
+      new ValidateProductTagHandler(productTagManagementService),
+      new GetProductTagsHandler(productTagManagementService),
+      new GetTagProductsHandler(productTagManagementService),
+    );
+
+    // Search handlers + controller
+    const searchController = new SearchController(
+      searchProductsHandler,
+      new GetSearchSuggestionsHandler(productSearchService),
+      new GetPopularSearchesHandler(productSearchService),
+      new GetSearchFiltersHandler(productSearchService),
+      new GetSearchStatsHandler(productSearchService),
+    );
+
+    // Size guide handlers + controller
+    const sizeGuideController = new SizeGuideController(
+      new CreateSizeGuideHandler(sizeGuideManagementService),
+      new UpdateSizeGuideHandler(sizeGuideManagementService),
+      new DeleteSizeGuideHandler(sizeGuideManagementService),
+      new CreateRegionalSizeGuideHandler(sizeGuideManagementService),
+      new CreateCategorySizeGuideHandler(sizeGuideManagementService),
+      new UpdateSizeGuideContentHandler(sizeGuideManagementService),
+      new ClearSizeGuideContentHandler(sizeGuideManagementService),
+      new CreateBulkSizeGuidesHandler(sizeGuideManagementService),
+      new DeleteBulkSizeGuidesHandler(sizeGuideManagementService),
+      new ListSizeGuidesHandler(sizeGuideManagementService),
+      new GetSizeGuideHandler(sizeGuideManagementService),
+      new GetRegionalSizeGuidesHandler(sizeGuideManagementService),
+      new GetGeneralSizeGuidesHandler(sizeGuideManagementService),
+      new GetSizeGuideStatsHandler(sizeGuideManagementService),
+      new GetAvailableSizeGuideRegionsHandler(sizeGuideManagementService),
+      new GetAvailableSizeGuideCategoriesHandler(sizeGuideManagementService),
+      new ValidateSizeGuideUniquenessHandler(sizeGuideManagementService),
+    );
+
+    // Editorial look handlers + controller
+    const editorialLookController = new EditorialLookController(
+      new CreateEditorialLookHandler(editorialLookManagementService),
+      new UpdateEditorialLookHandler(editorialLookManagementService),
+      new DeleteEditorialLookHandler(editorialLookManagementService),
+      new PublishEditorialLookHandler(editorialLookManagementService),
+      new UnpublishEditorialLookHandler(editorialLookManagementService),
+      new ScheduleEditorialLookPublicationHandler(editorialLookManagementService),
+      new ProcessScheduledEditorialLookPublicationsHandler(editorialLookManagementService),
+      new SetEditorialLookHeroImageHandler(editorialLookManagementService),
+      new RemoveEditorialLookHeroImageHandler(editorialLookManagementService),
+      new AddProductToEditorialLookHandler(editorialLookManagementService),
+      new RemoveProductFromEditorialLookHandler(editorialLookManagementService),
+      new SetEditorialLookProductsHandler(editorialLookManagementService),
+      new UpdateEditorialLookStoryContentHandler(editorialLookManagementService),
+      new ClearEditorialLookStoryContentHandler(editorialLookManagementService),
+      new CreateBulkEditorialLooksHandler(editorialLookManagementService),
+      new DeleteBulkEditorialLooksHandler(editorialLookManagementService),
+      new PublishBulkEditorialLooksHandler(editorialLookManagementService),
+      new DuplicateEditorialLookHandler(editorialLookManagementService),
+      new ListEditorialLooksHandler(editorialLookManagementService),
+      new GetEditorialLookHandler(editorialLookManagementService),
+      new GetReadyToPublishEditorialLooksHandler(editorialLookManagementService),
+      new GetEditorialLooksByHeroAssetHandler(editorialLookManagementService),
+      new GetEditorialLookProductsHandler(editorialLookManagementService),
+      new GetProductEditorialLooksHandler(editorialLookManagementService),
+      new GetEditorialLooksByProductHandler(editorialLookManagementService),
+      new GetEditorialLookStatsHandler(editorialLookManagementService),
+      new GetPopularEditorialLookProductsHandler(editorialLookManagementService),
+      new ValidateEditorialLookForPublicationHandler(editorialLookManagementService),
+    );
+
+    // Variant media handlers + controller
+    const variantMediaController = new VariantMediaController(
+      new AddMediaToVariantHandler(variantMediaManagementService),
+      new RemoveMediaFromVariantHandler(variantMediaManagementService),
+      new RemoveAllVariantMediaHandler(variantMediaManagementService),
+      new SetVariantMediaHandler(variantMediaManagementService),
+      new AddMediaToMultipleVariantsHandler(variantMediaManagementService),
+      new AddMultipleMediaToVariantHandler(variantMediaManagementService),
+      new DuplicateVariantMediaHandler(variantMediaManagementService),
+      new CopyProductVariantMediaHandler(variantMediaManagementService),
+      new GetVariantMediaHandler(variantMediaManagementService),
+      new GetProductVariantMediaHandler(variantMediaManagementService),
+      new GetVariantsUsingAssetHandler(variantMediaManagementService),
+      new GetVariantMediaAssetUsageCountHandler(variantMediaManagementService),
+      new GetColorVariantMediaHandler(variantMediaManagementService),
+      new GetSizeVariantMediaHandler(variantMediaManagementService),
+      new GetUnusedVariantMediaAssetsHandler(variantMediaManagementService),
+      new ValidateVariantMediaHandler(variantMediaManagementService),
+      new GetVariantMediaStatisticsHandler(variantMediaManagementService),
+    );
+
     this.services.set("productController", productController);
     this.services.set("categoryController", categoryController);
     this.services.set("variantController", variantController);
+    this.services.set("mediaController", mediaController);
+    this.services.set("productMediaController", productMediaController);
+    this.services.set("productTagController", productTagController);
+    this.services.set("searchController", searchController);
+    this.services.set("sizeGuideController", sizeGuideController);
+    this.services.set("editorialLookController", editorialLookController);
+    this.services.set("variantMediaController", variantMediaController);
 
     // ============================================
     // Inventory Management Module
@@ -589,7 +849,8 @@ export class Container {
     const purchaseOrderManagementService = new PurchaseOrderManagementService(
       purchaseOrderRepository,
       purchaseOrderItemRepository,
-      stockManagementService,
+      stockRepository,
+      inventoryTransactionRepository,
     );
     const stockAlertService = new StockAlertService(
       stockAlertRepository,
@@ -597,7 +858,8 @@ export class Container {
     );
     const pickupReservationService = new PickupReservationService(
       pickupReservationRepository,
-      stockManagementService,
+      stockRepository,
+      inventoryTransactionRepository,
     );
 
     // Store Inventory Management services
@@ -823,19 +1085,6 @@ export class Container {
       },
     };
 
-    const externalProductMediaService: IExternalProductMediaService = {
-      getProductMedia: async (productId: string, options?: { coverOnly?: boolean }) => {
-        const summary = await productMediaManagementService.getProductMedia(productId, {
-          coverOnly: options?.coverOnly,
-        });
-        return {
-          mediaAssets: summary.mediaAssets.map((a) => ({
-            isCover: a.isCover,
-            storageKey: a.storageKey,
-          })),
-        };
-      },
-    };
 
     const externalStockService: IOrderExternalStockService = {
       getStock: async (variantId: string, locationId: string) => {
@@ -852,14 +1101,11 @@ export class Container {
     const orderManagementService = new OrderManagementService(
       orderRepository,
       orderAddressRepository,
-      orderItemRepository,
       orderShipmentRepository,
       orderStatusHistoryRepository,
       externalVariantService,
       externalProductService,
-      externalProductMediaService,
       externalStockService,
-      orderEventService,
     );
 
     const orderItemManagementService = new OrderItemManagementService(
@@ -948,7 +1194,6 @@ export class Container {
     );
     const loyaltyService = new LoyaltyService(
       loyaltyAccountRepository,
-      loyaltyProgramRepository,
       loyaltyTransactionRepository,
     );
     const loyaltyTransactionService = new LoyaltyTransactionService(
@@ -963,6 +1208,7 @@ export class Container {
     this.services.set("paymentWebhookService", paymentWebhookService);
     this.services.set("loyaltyService", loyaltyService);
     this.services.set("loyaltyTransactionService", loyaltyTransactionService);
+    this.services.set("loyaltyProgramRepository", loyaltyProgramRepository);
   }
 
   get<T>(name: string): T {
@@ -1008,34 +1254,13 @@ export class Container {
       productController: this.get<ProductController>("productController"),
       categoryController: this.get<CategoryController>("categoryController"),
       variantController: this.get<VariantController>("variantController"),
-      productService: this.get<ProductManagementService>(
-        "productManagementService",
-      ),
-      productSearchService: this.get<ProductSearchService>(
-        "productSearchService",
-      ),
-      categoryService: this.get<CategoryManagementService>(
-        "categoryManagementService",
-      ),
-      variantService: this.get<VariantManagementService>(
-        "variantManagementService",
-      ),
-      mediaService: this.get<MediaManagementService>("mediaManagementService"),
-      productTagService: this.get<ProductTagManagementService>(
-        "productTagManagementService",
-      ),
-      sizeGuideService: this.get<SizeGuideManagementService>(
-        "sizeGuideManagementService",
-      ),
-      editorialLookService: this.get<EditorialLookManagementService>(
-        "editorialLookManagementService",
-      ),
-      productMediaService: this.get<ProductMediaManagementService>(
-        "productMediaManagementService",
-      ),
-      variantMediaService: this.get<VariantMediaManagementService>(
-        "variantMediaManagementService",
-      ),
+      mediaController: this.get<MediaController>("mediaController"),
+      productMediaController: this.get<ProductMediaController>("productMediaController"),
+      productTagController: this.get<ProductTagController>("productTagController"),
+      searchController: this.get<SearchController>("searchController"),
+      sizeGuideController: this.get<SizeGuideController>("sizeGuideController"),
+      editorialLookController: this.get<EditorialLookController>("editorialLookController"),
+      variantMediaController: this.get<VariantMediaController>("variantMediaController"),
     };
   }
 
@@ -1076,6 +1301,9 @@ export class Container {
       loyaltyService: this.get<LoyaltyService>("loyaltyService"),
       loyaltyTxnService: this.get<LoyaltyTransactionService>(
         "loyaltyTransactionService",
+      ),
+      loyaltyProgramRepository: this.get<LoyaltyProgramRepository>(
+        "loyaltyProgramRepository",
       ),
     };
   }

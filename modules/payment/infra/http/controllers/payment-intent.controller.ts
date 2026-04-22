@@ -1,158 +1,127 @@
-import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import {
-  CreatePaymentIntentCommand,
   CreatePaymentIntentHandler,
-  ProcessPaymentCommand,
   ProcessPaymentHandler,
-  RefundPaymentCommand,
   RefundPaymentHandler,
-  VoidPaymentCommand,
   VoidPaymentHandler,
-  GetPaymentIntentQuery,
   GetPaymentIntentHandler,
+  GetPaymentTransactionsHandler,
 } from "../../../application";
-import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-
-export interface CreatePaymentIntentRequest {
-  orderId: string;
-  provider: string;
-  amount: number;
-  currency?: string;
-  idempotencyKey?: string;
-  clientSecret?: string;
-}
-export interface ProcessPaymentRequest {
-  intentId: string;
-  pspReference?: string;
-}
-export interface RefundPaymentRequest {
-  intentId: string;
-  amount?: number;
-  reason?: string;
-}
-export interface VoidPaymentRequest {
-  intentId: string;
-  pspReference?: string;
-}
-export interface GetPaymentIntentQuerystring {
-  intentId?: string;
-  orderId?: string;
-}
+import {
+  CreatePaymentIntentBody,
+  ProcessPaymentBody,
+  RefundPaymentBody,
+  VoidPaymentBody,
+  GetPaymentIntentQuery,
+  IntentIdParams,
+} from "../validation/payment-intent.schema";
 
 export class PaymentIntentController {
-  private createHandler: CreatePaymentIntentHandler;
-  private processHandler: ProcessPaymentHandler;
-  private refundHandler: RefundPaymentHandler;
-  private voidHandler: VoidPaymentHandler;
-  private getHandler: GetPaymentIntentHandler;
-
-  constructor(private readonly paymentService: PaymentService) {
-    this.createHandler = new CreatePaymentIntentHandler(paymentService);
-    this.processHandler = new ProcessPaymentHandler(paymentService);
-    this.refundHandler = new RefundPaymentHandler(paymentService);
-    this.voidHandler = new VoidPaymentHandler(paymentService);
-    this.getHandler = new GetPaymentIntentHandler(paymentService);
-  }
+  constructor(
+    private readonly createHandler: CreatePaymentIntentHandler,
+    private readonly processHandler: ProcessPaymentHandler,
+    private readonly refundHandler: RefundPaymentHandler,
+    private readonly voidHandler: VoidPaymentHandler,
+    private readonly getHandler: GetPaymentIntentHandler,
+    private readonly listTransactionsHandler: GetPaymentTransactionsHandler,
+  ) {}
 
   async create(
-    request: FastifyRequest<{ Body: CreatePaymentIntentRequest }>,
+    request: AuthenticatedRequest<{ Body: CreatePaymentIntentBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.createHandler.handle({
+        ...request.body,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Payment intent created", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const cmd: CreatePaymentIntentCommand = {
-      ...request.body,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.createHandler.handle(cmd);
-    return ResponseHelper.fromCommand(
-      reply,
-      result,
-      "Payment intent created",
-      201,
-    );
   }
 
   async process(
-    request: FastifyRequest<{ Body: ProcessPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: ProcessPaymentBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.processHandler.handle({
+        ...request.body,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Payment processed");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const cmd: ProcessPaymentCommand = {
-      ...request.body,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.processHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Payment processed");
   }
 
   async refund(
-    request: FastifyRequest<{ Body: RefundPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: RefundPaymentBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.refundHandler.handle({
+        ...request.body,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Payment refunded");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const cmd: RefundPaymentCommand = {
-      ...request.body,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.refundHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Payment refunded");
   }
 
   async void(
-    request: FastifyRequest<{ Body: VoidPaymentRequest }>,
+    request: AuthenticatedRequest<{ Body: VoidPaymentBody }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.voidHandler.handle({
+        ...request.body,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Payment voided");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
-
-    const cmd: VoidPaymentCommand = {
-      ...request.body,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.voidHandler.handle(cmd);
-    return ResponseHelper.fromCommand(reply, result, "Payment voided");
   }
 
   async get(
-    request: FastifyRequest<{ Querystring: GetPaymentIntentQuerystring }>,
+    request: AuthenticatedRequest<{ Querystring: GetPaymentIntentQuery }>,
     reply: FastifyReply,
   ) {
-    const userId = (request as any).user?.userId;
-    if (!userId) {
-      return ResponseHelper.unauthorized(reply, "Authentication required");
+    try {
+      const result = await this.getHandler.handle({
+        intentId: request.query.intentId,
+        orderId: request.query.orderId,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Payment intent retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
     }
+  }
 
-    const query: GetPaymentIntentQuery = {
-      intentId: request.query.intentId,
-      orderId: request.query.orderId,
-      userId,
-      timestamp: new Date(),
-    };
-    const result = await this.getHandler.handle(query);
-    return ResponseHelper.fromQuery(
-      reply,
-      result,
-      "Payment intent retrieved",
-      "Payment intent not found",
-    );
+  async listTransactions(
+    request: AuthenticatedRequest<{ Params: IntentIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        intentId: request.params.intentId,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Payment transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
   }
 }

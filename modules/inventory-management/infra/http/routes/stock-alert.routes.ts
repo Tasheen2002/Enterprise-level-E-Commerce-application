@@ -48,9 +48,9 @@ export async function stockAlertRoutes(
         querystring: {
           type: "object",
           properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-            includeResolved: { type: "boolean", default: true },
+            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            offset: { type: "integer", minimum: 0, default: 0 },
+            includeResolved: { type: "boolean", default: false },
           },
         },
         response: {
@@ -63,8 +63,11 @@ export async function stockAlertRoutes(
               data: {
                 type: "object",
                 properties: {
-                  alerts: { type: "array", items: stockAlertResponseSchema },
+                  items: { type: "array", items: stockAlertResponseSchema },
                   total: { type: "integer" },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                  hasMore: { type: "boolean" },
                 },
               },
             },
@@ -76,7 +79,7 @@ export async function stockAlertRoutes(
       controller.listAlerts(request as AuthenticatedRequest, reply),
   );
 
-  // Get active alerts
+  // Get active alerts — MUST be registered before /alerts/:alertId
   fastify.get(
     "/alerts/active",
     {
@@ -103,7 +106,7 @@ export async function stockAlertRoutes(
       controller.getActiveAlerts(request as AuthenticatedRequest, reply),
   );
 
-  // Get alert
+  // Get alert by ID
   fastify.get(
     "/alerts/:alertId",
     {
@@ -172,6 +175,33 @@ export async function stockAlertRoutes(
     },
     (request, reply) =>
       controller.createAlert(request as AuthenticatedRequest, reply),
+  );
+
+  // Delete alert
+  fastify.delete(
+    "/alerts/:alertId",
+    {
+      preValidation: [validateParams(alertParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
+      schema: {
+        description: "Delete stock alert",
+        tags: ["Stock Alerts"],
+        summary: "Delete Alert",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            alertId: { type: "string", format: "uuid" },
+          },
+          required: ["alertId"],
+        },
+        response: {
+          204: { description: "Alert deleted successfully", type: "null" },
+        },
+      },
+    },
+    (request, reply) =>
+      controller.deleteAlert(request as AuthenticatedRequest, reply),
   );
 
   // Resolve alert

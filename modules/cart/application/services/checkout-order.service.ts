@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
 import { ICartRepository } from "../../domain/repositories/cart.repository";
 import { IReservationRepository } from "../../domain/repositories/reservation.repository";
@@ -111,15 +112,11 @@ export class CheckoutOrderService {
       );
     }
 
-    if (dto.userId && checkout.cartOwnerId?.toString() !== dto.userId) {
+    if (dto.userId && checkout.cartOwnerId?.getValue() !== dto.userId) {
       throw new CartOwnershipError("Checkout does not belong to user");
     }
 
-    if (
-      dto.guestToken &&
-      checkout.guestToken?.toString() !== dto.guestToken &&
-      !validStatuses.includes(paymentIntent.status)
-    ) {
+    if (dto.guestToken && checkout.guestToken?.getValue() !== dto.guestToken) {
       throw new CartOwnershipError("Checkout does not belong to guest");
     }
 
@@ -134,7 +131,7 @@ export class CheckoutOrderService {
 
     // ---- Phase 4: Prepare order data ----
 
-    const orderNo = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+    const orderNo = `ORD-${Date.now()}-${randomBytes(4).toString("hex").toUpperCase()}`;
 
     const cartSnapshot = cart.toSnapshot();
     const subtotal = cart.subtotal;
@@ -212,15 +209,15 @@ export class CheckoutOrderService {
 
     // Get cart email for address records
     const cartEmail = await this.completionPort.getCartEmail(
-      checkout.cartId.toString(),
+      checkout.cartId.getValue(),
     );
 
     // ---- Phase 5: Atomic persistence via port ----
 
     const result = await this.completionPort.persistCheckoutOrder({
       orderNo,
-      userId: checkout.cartOwnerId?.toString(),
-      guestToken: checkout.guestToken?.toString(),
+      userId: checkout.cartOwnerId?.getValue(),
+      guestToken: checkout.guestToken?.getValue(),
       checkoutId: dto.checkoutId,
       paymentIntentId: dto.paymentIntentId,
       currency: checkout.currency.getValue(),
@@ -232,7 +229,7 @@ export class CheckoutOrderService {
         email: cartEmail,
       },
       email: cartEmail ?? undefined,
-      cartId: checkout.cartId.toString(),
+      cartId: checkout.cartId.getValue(),
       stockAdjustments: (cartSnapshot.items || []).map((item) => ({
         variantId: item.variantId,
         warehouseId,

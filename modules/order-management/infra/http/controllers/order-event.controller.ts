@@ -2,58 +2,33 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
-  LogOrderEventCommand,
-  LogOrderEventCommandHandler,
-  ListOrderEventsQuery,
+  LogOrderEventHandler,
   ListOrderEventsHandler,
-  GetOrderEventQuery,
   GetOrderEventHandler,
 } from "../../../application";
-
-export interface LogEventRequest {
-  Params: { orderId: string };
-  Body: {
-    eventType: string;
-    payload?: Record<string, unknown>;
-  };
-}
-
-export interface GetEventsRequest {
-  Params: { orderId: string };
-  Querystring: {
-    eventType?: string;
-    limit?: number;
-    offset?: number;
-    sortBy?: "createdAt" | "eventId";
-    sortOrder?: "asc" | "desc";
-  };
-}
-
-export interface GetEventRequest {
-  Params: {
-    orderId: string;
-    eventId: number;
-  };
-}
+import {
+  OrderEventsParams,
+  OrderEventParams,
+  ListOrderEventsQuery,
+  LogOrderEventBody,
+} from "../validation/order-event.schema";
 
 export class OrderEventController {
   constructor(
-    private readonly logEventHandler: LogOrderEventCommandHandler,
+    private readonly logEventHandler: LogOrderEventHandler,
     private readonly listOrderEventsHandler: ListOrderEventsHandler,
     private readonly getOrderEventHandler: GetOrderEventHandler,
   ) {}
 
   async logEvent(
-    request: AuthenticatedRequest<LogEventRequest>,
+    request: AuthenticatedRequest<{ Params: OrderEventsParams; Body: LogOrderEventBody }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const command: LogOrderEventCommand = {
+      const result = await this.logEventHandler.handle({
         orderId: request.params.orderId,
-        eventType: request.body.eventType,
-        payload: request.body.payload,
-      };
-      const result = await this.logEventHandler.handle(command);
+        ...request.body,
+      });
       return ResponseHelper.fromCommand(reply, result, "Event logged successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -61,19 +36,14 @@ export class OrderEventController {
   }
 
   async getEvents(
-    request: AuthenticatedRequest<GetEventsRequest>,
+    request: AuthenticatedRequest<{ Params: OrderEventsParams; Querystring: ListOrderEventsQuery }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: ListOrderEventsQuery = {
+      const result = await this.listOrderEventsHandler.handle({
         orderId: request.params.orderId,
-        eventType: request.query.eventType,
-        limit: request.query.limit,
-        offset: request.query.offset,
-        sortBy: request.query.sortBy,
-        sortOrder: request.query.sortOrder,
-      };
-      const result = await this.listOrderEventsHandler.handle(query);
+        ...request.query,
+      });
       return ResponseHelper.ok(reply, "Order events retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -81,12 +51,11 @@ export class OrderEventController {
   }
 
   async getEvent(
-    request: AuthenticatedRequest<GetEventRequest>,
+    request: AuthenticatedRequest<{ Params: OrderEventParams }>,
     reply: FastifyReply,
-  ): Promise<void> {
+  ) {
     try {
-      const query: GetOrderEventQuery = { eventId: request.params.eventId };
-      const result = await this.getOrderEventHandler.handle(query);
+      const result = await this.getOrderEventHandler.handle({ eventId: request.params.eventId });
       return ResponseHelper.ok(reply, "Order event retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

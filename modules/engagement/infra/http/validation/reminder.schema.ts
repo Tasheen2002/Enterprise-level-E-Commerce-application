@@ -31,24 +31,21 @@ export const createReminderSchema = z.object({
   optInAt: z.coerce.date().optional(),
 });
 
-export const updateReminderStatusSchema = z.object({
-  status: z.literal("sent"),
-});
-
 // ── JSON Schema for Swagger docs ─────────────────────────────────────────────
 
 export const reminderResponseSchema = {
   type: "object",
   properties: {
-    reminderId: { type: "string", format: "uuid" },
-    userId: { type: "string", format: "uuid" },
-    variantId: { type: "string", format: "uuid" },
+    id: { type: "string", format: "uuid" },
     type: { type: "string" },
-    contactType: { type: "string" },
+    variantId: { type: "string", format: "uuid" },
+    userId: { type: "string", format: "uuid" },
+    contact: { type: "string" },
+    channel: { type: "string" },
     status: { type: "string" },
-    threshold: { type: "number" },
+    optInAt: { type: "string", format: "date-time" },
     createdAt: { type: "string", format: "date-time" },
-    triggeredAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 
@@ -59,6 +56,3 @@ export type UserIdParams = z.infer<typeof userIdParamsSchema>;
 export type VariantIdParams = z.infer<typeof variantIdParamsSchema>;
 export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type CreateReminderBody = z.infer<typeof createReminderSchema>;
-export type UpdateReminderStatusBody = z.infer<
-  typeof updateReminderStatusSchema
->;

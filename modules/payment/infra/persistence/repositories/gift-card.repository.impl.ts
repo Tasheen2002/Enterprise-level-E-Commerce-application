@@ -1,7 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   IGiftCardRepository,
-  GiftCardFilterOptions,
+  GiftCardFilters,
   GiftCardQueryOptions,
 } from "../../../domain/repositories/gift-card.repository";
 import { GiftCard } from "../../../domain/entities/gift-card.entity";
@@ -9,128 +11,115 @@ import { GiftCardId } from "../../../domain/value-objects/gift-card-id.vo";
 import { GiftCardStatus } from "../../../domain/value-objects/gift-card-status.vo";
 import { Money } from "../../../domain/value-objects/money.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class GiftCardRepository implements IGiftCardRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class GiftCardRepositoryImpl
+  extends PrismaRepository<GiftCard>
+  implements IGiftCardRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(giftCard: GiftCard): Promise<void> {
     const data = this.dehydrate(giftCard);
-    await (this.prisma as any).giftCard.create({ data });
-  }
-
-  async update(giftCard: GiftCard): Promise<void> {
-    const data = this.dehydrate(giftCard);
     const { giftCardId, ...updateData } = data;
-    await (this.prisma as any).giftCard.update({
+    await this.prisma.giftCard.upsert({
       where: { giftCardId },
-      data: updateData,
+      create: data,
+      update: updateData,
+    });
+    await this.dispatchEvents(giftCard);
+  }
+
+  async delete(id: GiftCardId): Promise<void> {
+    await this.prisma.giftCard.delete({
+      where: { giftCardId: id.getValue() },
     });
   }
 
-  async delete(giftCardId: string): Promise<void> {
-    await (this.prisma as any).giftCard.delete({
-      where: { giftCardId },
-    });
-  }
-
-  async findById(giftCardId: string): Promise<GiftCard | null> {
-    const record = await (this.prisma as any).giftCard.findUnique({
-      where: { giftCardId },
+  async findById(id: GiftCardId): Promise<GiftCard | null> {
+    const record = await this.prisma.giftCard.findUnique({
+      where: { giftCardId: id.getValue() },
     });
     return record ? this.hydrate(record) : null;
   }
 
   async findByCode(code: string): Promise<GiftCard | null> {
-    const record = await (this.prisma as any).giftCard.findUnique({
+    const record = await this.prisma.giftCard.findUnique({
       where: { code },
     });
     return record ? this.hydrate(record) : null;
   }
 
   async findWithFilters(
-    filters: GiftCardFilterOptions,
+    filters: GiftCardFilters,
     options?: GiftCardQueryOptions,
-  ): Promise<GiftCard[]> {
+  ): Promise<PaginatedResult<GiftCard>> {
     const where: any = {};
-
-    if (filters.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters.expiresAfter) {
-      where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
-    }
-    if (filters.expiresBefore) {
-      where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
-    }
+    if (filters.status) where.status = filters.status.getValue();
+    if (filters.expiresAfter) where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
+    if (filters.expiresBefore) where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
     if (filters.hasBalance !== undefined) {
-      if (filters.hasBalance) {
-        where.currentBalance = { gt: 0 };
-      } else {
-        where.currentBalance = 0;
-      }
+      where.currentBalance = filters.hasBalance ? { gt: 0 } : 0;
     }
 
-    const records = await (this.prisma as any).giftCard.findMany({
-      where,
-      take: options?.limit,
-      skip: options?.offset,
-      orderBy: options?.sortBy
-        ? { [options.sortBy]: options.sortOrder || "desc" }
-        : { giftCardId: "desc" },
-    });
+    const [records, total] = await Promise.all([
+      this.prisma.giftCard.findMany({
+        where,
+        take: options?.limit,
+        skip: options?.offset,
+        orderBy: options?.sortBy
+          ? { [options.sortBy]: options.sortOrder ?? "desc" }
+          : { createdAt: "desc" },
+      }),
+      this.prisma.giftCard.count({ where }),
+    ]);
 
-    return records.map((record: any) => this.hydrate(record));
+    const items = records.map((r: any) => this.hydrate(r));
+    const limit = options?.limit ?? total;
+    const offset = options?.offset ?? 0;
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    };
   }
 
-  async count(filters?: GiftCardFilterOptions): Promise<number> {
+  async count(filters?: GiftCardFilters): Promise<number> {
     const where: any = {};
-
-    if (filters?.status) {
-      where.status = filters.status.getValue();
-    }
-    if (filters?.expiresAfter) {
-      where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
-    }
-    if (filters?.expiresBefore) {
-      where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
-    }
+    if (filters?.status) where.status = filters.status.getValue();
+    if (filters?.expiresAfter) where.expiresAt = { ...where.expiresAt, gte: filters.expiresAfter };
+    if (filters?.expiresBefore) where.expiresAt = { ...where.expiresAt, lte: filters.expiresBefore };
     if (filters?.hasBalance !== undefined) {
-      if (filters.hasBalance) {
-        where.currentBalance = { gt: 0 };
-      } else {
-        where.currentBalance = 0;
-      }
+      where.currentBalance = filters.hasBalance ? { gt: 0 } : 0;
     }
-
-    return (this.prisma as any).giftCard.count({ where });
+    return this.prisma.giftCard.count({ where });
   }
 
-  async exists(giftCardId: string): Promise<boolean> {
-    const count = await (this.prisma as any).giftCard.count({
-      where: { giftCardId },
+  async exists(id: GiftCardId): Promise<boolean> {
+    const count = await this.prisma.giftCard.count({
+      where: { giftCardId: id.getValue() },
     });
     return count > 0;
   }
 
   private hydrate(record: any): GiftCard {
-    return GiftCard.reconstitute({
+    const currency = Currency.create(record.currency ?? "USD");
+    return GiftCard.fromPersistence({
       id: GiftCardId.fromString(record.giftCardId),
       code: record.code,
-      balance: Money.create(
-        Number(record.currentBalance),
-        Currency.create(record.currency),
-      ),
-      initialAmount: Money.create(
-        Number(record.initialBalance),
-        Currency.create(record.currency),
-      ),
+      balance: Money.fromAmount(Number(record.currentBalance), currency),
+      initialAmount: Money.fromAmount(Number(record.initialBalance), currency),
       status: GiftCardStatus.fromString(record.status),
-      expiresAt: record.expiresAt,
-      recipientEmail: undefined, // Not in DB schema
-      recipientName: undefined, // Not in DB schema
-      message: undefined, // Not in DB schema
-      createdAt: new Date(), // Not in DB schema
-      updatedAt: new Date(), // Not in DB schema
+      expiresAt: record.expiresAt ?? undefined,
+      recipientEmail: record.recipientEmail ?? undefined,
+      recipientName: record.recipientName ?? undefined,
+      message: record.message ?? undefined,
+      createdAt: record.createdAt ?? new Date(),
+      updatedAt: record.updatedAt ?? new Date(),
     });
   }
 
@@ -142,7 +131,10 @@ export class GiftCardRepository implements IGiftCardRepository {
       initialBalance: giftCard.initialAmount.getAmount(),
       currency: giftCard.balance.getCurrency().getValue(),
       status: giftCard.status.getValue(),
-      expiresAt: giftCard.expiresAt,
+      expiresAt: giftCard.expiresAt ?? null,
+      recipientEmail: giftCard.recipientEmail ?? null,
+      recipientName: giftCard.recipientName ?? null,
+      message: giftCard.message ?? null,
     };
   }
 }

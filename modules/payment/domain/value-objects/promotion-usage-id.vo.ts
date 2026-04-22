@@ -13,8 +13,4 @@ export class PromotionUsageId extends UuidId {
   static fromString(value: string): PromotionUsageId {
     return new PromotionUsageId(value);
   }
-
-  equals(other: PromotionUsageId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

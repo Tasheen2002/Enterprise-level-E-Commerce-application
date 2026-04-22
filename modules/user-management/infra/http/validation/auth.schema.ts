@@ -51,6 +51,17 @@ export const deleteAccountSchema = z.object({
   password: z.string().min(1),
 });
 
+export type RegisterBody = z.infer<typeof registerSchema>;
+export type LoginBody = z.infer<typeof loginSchema>;
+export type RefreshTokenBody = z.infer<typeof refreshTokenSchema>;
+export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
+export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordBody = z.infer<typeof resetPasswordSchema>;
+export type VerifyEmailBody = z.infer<typeof verifyEmailSchema>;
+export type ResendVerificationBody = z.infer<typeof resendVerificationSchema>;
+export type ChangeEmailBody = z.infer<typeof changeEmailSchema>;
+export type DeleteAccountBody = z.infer<typeof deleteAccountSchema>;
+
 // JSON Schema response objects (for Swagger docs)
 export const userResponseSchema = {
   type: 'object',

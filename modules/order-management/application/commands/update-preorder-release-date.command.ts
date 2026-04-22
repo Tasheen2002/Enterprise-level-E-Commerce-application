@@ -7,7 +7,7 @@ export interface UpdatePreorderReleaseDateCommand extends ICommand {
   readonly releaseDate: Date;
 }
 
-export class UpdatePreorderReleaseDateCommandHandler implements ICommandHandler<
+export class UpdatePreorderReleaseDateHandler implements ICommandHandler<
   UpdatePreorderReleaseDateCommand,
   CommandResult<PreorderDTO>
 > {

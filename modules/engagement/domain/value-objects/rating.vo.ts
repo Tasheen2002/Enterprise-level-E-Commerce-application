@@ -1,11 +1,12 @@
-import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
+import { DomainValidationError } from "../errors/engagement.errors";
+import { RATING_MIN, RATING_MAX } from "../constants/engagement.constants";
 
 export class Rating {
   private readonly value: number;
 
   private constructor(value: number) {
-    if (!Number.isInteger(value) || value < 1 || value > 5) {
-      throw new InvalidFormatError("Rating", "integer between 1 and 5");
+    if (!Number.isInteger(value) || value < RATING_MIN || value > RATING_MAX) {
+      throw new DomainValidationError(`Rating must be an integer between ${RATING_MIN} and ${RATING_MAX}`);
     }
 
     this.value = value;
@@ -44,6 +45,6 @@ export class Rating {
   }
 
   toStars(): string {
-    return "★".repeat(this.value) + "☆".repeat(5 - this.value);
+    return "★".repeat(this.value) + "☆".repeat(RATING_MAX - this.value);
   }
 }

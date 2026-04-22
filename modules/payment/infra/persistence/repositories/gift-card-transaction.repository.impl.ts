@@ -1,91 +1,103 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   IGiftCardTransactionRepository,
-  GiftCardTransactionFilterOptions,
+  GiftCardTransactionFilters,
+  GiftCardTransactionQueryOptions,
 } from "../../../domain/repositories/gift-card-transaction.repository";
 import { GiftCardTransaction } from "../../../domain/entities/gift-card-transaction.entity";
+import { GiftCardTransactionId } from "../../../domain/value-objects/gift-card-transaction-id.vo";
+import { GiftCardId } from "../../../domain/value-objects/gift-card-id.vo";
 import { GiftCardTransactionType } from "../../../domain/value-objects/gift-card-transaction-type.vo";
 import { Money } from "../../../domain/value-objects/money.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class GiftCardTransactionRepository implements IGiftCardTransactionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class GiftCardTransactionRepositoryImpl
+  extends PrismaRepository<GiftCardTransaction>
+  implements IGiftCardTransactionRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(transaction: GiftCardTransaction): Promise<void> {
     const data = this.dehydrate(transaction);
-    await (this.prisma as any).giftCardTransaction.create({ data });
+    await this.prisma.giftCardTransaction.create({ data });
+    await this.dispatchEvents(transaction);
   }
 
-  async findById(gcTxnId: string): Promise<GiftCardTransaction | null> {
-    const record = await (this.prisma as any).giftCardTransaction.findUnique({
-      where: { gcTxnId },
+  async findById(id: GiftCardTransactionId): Promise<GiftCardTransaction | null> {
+    const record = await this.prisma.giftCardTransaction.findUnique({
+      where: { gcTxnId: id.getValue() },
     });
     return record ? this.hydrate(record) : null;
   }
 
-  async findByGiftCardId(giftCardId: string): Promise<GiftCardTransaction[]> {
-    const records = await (this.prisma as any).giftCardTransaction.findMany({
-      where: { giftCardId },
+  async findByGiftCardId(giftCardId: GiftCardId): Promise<GiftCardTransaction[]> {
+    const records = await this.prisma.giftCardTransaction.findMany({
+      where: { giftCardId: giftCardId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
   async findByOrderId(orderId: string): Promise<GiftCardTransaction[]> {
-    const records = await (this.prisma as any).giftCardTransaction.findMany({
+    const records = await this.prisma.giftCardTransaction.findMany({
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
   async findWithFilters(
-    filters: GiftCardTransactionFilterOptions,
-  ): Promise<GiftCardTransaction[]> {
+    filters: GiftCardTransactionFilters,
+    options?: GiftCardTransactionQueryOptions,
+  ): Promise<PaginatedResult<GiftCardTransaction>> {
     const where: any = {};
+    if (filters.giftCardId) where.giftCardId = filters.giftCardId.getValue();
+    if (filters.orderId) where.orderId = filters.orderId;
+    if (filters.type) where.type = filters.type.getValue();
 
-    if (filters.giftCardId) {
-      where.giftCardId = filters.giftCardId;
-    }
-    if (filters.orderId) {
-      where.orderId = filters.orderId;
-    }
-    if (filters.type) {
-      where.type = filters.type.getValue();
-    }
+    const [records, total] = await Promise.all([
+      this.prisma.giftCardTransaction.findMany({
+        where,
+        take: options?.limit,
+        skip: options?.offset,
+        orderBy: { createdAt: options?.sortOrder ?? "desc" },
+      }),
+      this.prisma.giftCardTransaction.count({ where }),
+    ]);
 
-    const records = await (this.prisma as any).giftCardTransaction.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-
-    return records.map((record: any) => this.hydrate(record));
+    const items = records.map((r: any) => this.hydrate(r));
+    const limit = options?.limit ?? total;
+    const offset = options?.offset ?? 0;
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    };
   }
 
-  async count(filters?: GiftCardTransactionFilterOptions): Promise<number> {
+  async count(filters?: GiftCardTransactionFilters): Promise<number> {
     const where: any = {};
-
-    if (filters?.giftCardId) {
-      where.giftCardId = filters.giftCardId;
-    }
-    if (filters?.orderId) {
-      where.orderId = filters.orderId;
-    }
-    if (filters?.type) {
-      where.type = filters.type.getValue();
-    }
-
-    return (this.prisma as any).giftCardTransaction.count({ where });
+    if (filters?.giftCardId) where.giftCardId = filters.giftCardId.getValue();
+    if (filters?.orderId) where.orderId = filters.orderId;
+    if (filters?.type) where.type = filters.type.getValue();
+    return this.prisma.giftCardTransaction.count({ where });
   }
 
   private hydrate(record: any): GiftCardTransaction {
-    return GiftCardTransaction.reconstitute({
-      gcTxnId: record.gcTxnId,
-      giftCardId: record.giftCardId,
-      orderId: record.orderId,
-      amount: Money.create(
+    return GiftCardTransaction.fromPersistence({
+      id: GiftCardTransactionId.fromString(record.gcTxnId),
+      giftCardId: GiftCardId.fromString(record.giftCardId),
+      orderId: record.orderId ?? null,
+      amount: Money.fromAmount(
         Number(record.amount),
-        Currency.create("USD"), // Currency not stored, using default
+        Currency.create(record.currency ?? "USD"),
       ),
       type: GiftCardTransactionType.fromString(record.type),
       createdAt: record.createdAt,
@@ -94,10 +106,11 @@ export class GiftCardTransactionRepository implements IGiftCardTransactionReposi
 
   private dehydrate(transaction: GiftCardTransaction): any {
     return {
-      gcTxnId: transaction.gcTxnId,
-      giftCardId: transaction.giftCardId,
+      gcTxnId: transaction.id.getValue(),
+      giftCardId: transaction.giftCardId.getValue(),
       orderId: transaction.orderId,
       amount: transaction.amount.getAmount(),
+      currency: transaction.amount.getCurrency().getValue(),
       type: transaction.type.getValue(),
       createdAt: transaction.createdAt,
     };

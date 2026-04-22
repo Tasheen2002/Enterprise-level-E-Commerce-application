@@ -32,6 +32,10 @@ export const addressIdParamsSchema = z.object({
   addressId: z.uuid(),
 });
 
+export type AddAddressBody = z.infer<typeof addAddressSchema>;
+export type UpdateAddressBody = z.infer<typeof updateAddressSchema>;
+export type AddressIdParams = z.infer<typeof addressIdParamsSchema>;
+
 // JSON Schema response objects (for Swagger docs)
 export const addressResponseSchema = {
   type: 'object',

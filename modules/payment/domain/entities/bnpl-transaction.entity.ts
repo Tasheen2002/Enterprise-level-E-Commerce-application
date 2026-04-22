@@ -149,6 +149,12 @@ export class BnplTransaction extends AggregateRoot {
     this.addDomainEvent(new BnplTransactionStatusChangedEvent(this.props.id.getValue(), 'cancelled'));
   }
 
+  fail(): void {
+    this.props.status = BnplStatus.failed();
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(new BnplTransactionStatusChangedEvent(this.props.id.getValue(), 'failed'));
+  }
+
   equals(other: BnplTransaction): boolean {
     return this.props.id.equals(other.props.id);
   }

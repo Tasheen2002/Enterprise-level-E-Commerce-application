@@ -67,7 +67,6 @@ export class AddressRepository
       country: addressData.country,
       phone: addressData.phone || null,
       createdAt: address.createdAt,
-      updatedAt: address.updatedAt,
     };
 
     const { id, userId, createdAt, ...update } = create;

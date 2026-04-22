@@ -1,112 +1,112 @@
 import { PrismaClient } from "@prisma/client";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
   IPaymentWebhookEventRepository,
-  WebhookEventFilterOptions,
+  WebhookEventFilters,
+  WebhookEventQueryOptions,
 } from "../../../domain/repositories/payment-webhook-event.repository";
-import {
-  PaymentWebhookEvent,
-  WebhookEventData,
-} from "../../../domain/entities/payment-webhook-event.entity";
+import { PaymentWebhookEvent, WebhookEventData } from "../../../domain/entities/payment-webhook-event.entity";
+import { WebhookEventId } from "../../../domain/value-objects/webhook-event-id.vo";
+import { WebhookEventType } from "../../../domain/value-objects/webhook-event-type.vo";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-export class PaymentWebhookEventRepository implements IPaymentWebhookEventRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class PaymentWebhookEventRepositoryImpl
+  extends PrismaRepository<PaymentWebhookEvent>
+  implements IPaymentWebhookEventRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(event: PaymentWebhookEvent): Promise<void> {
     const data = this.dehydrate(event);
-    await (this.prisma as any).paymentWebhookEvent.create({ data });
+    await this.prisma.paymentWebhookEvent.create({ data });
+    await this.dispatchEvents(event);
   }
 
-  async findById(eventId: string): Promise<PaymentWebhookEvent | null> {
-    const record = await (this.prisma as any).paymentWebhookEvent.findUnique({
-      where: { eventId },
+  async findById(id: WebhookEventId): Promise<PaymentWebhookEvent | null> {
+    const record = await this.prisma.paymentWebhookEvent.findUnique({
+      where: { eventId: id.getValue() },
     });
     return record ? this.hydrate(record) : null;
   }
 
   async findByProvider(provider: string): Promise<PaymentWebhookEvent[]> {
-    const records = await (this.prisma as any).paymentWebhookEvent.findMany({
+    const records = await this.prisma.paymentWebhookEvent.findMany({
       where: { provider },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
-  async findByEventType(eventType: string): Promise<PaymentWebhookEvent[]> {
-    const records = await (this.prisma as any).paymentWebhookEvent.findMany({
-      where: { eventType },
+  async findByEventType(eventType: WebhookEventType): Promise<PaymentWebhookEvent[]> {
+    const records = await this.prisma.paymentWebhookEvent.findMany({
+      where: { eventType: eventType.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((record: any) => this.hydrate(record));
+    return records.map((r: any) => this.hydrate(r));
   }
 
   async findWithFilters(
-    filters: WebhookEventFilterOptions,
-  ): Promise<PaymentWebhookEvent[]> {
+    filters: WebhookEventFilters,
+    options?: WebhookEventQueryOptions,
+  ): Promise<PaginatedResult<PaymentWebhookEvent>> {
     const where: any = {};
-
-    if (filters.provider) {
-      where.provider = filters.provider;
-    }
-
-    if (filters.eventType) {
-      where.eventType = filters.eventType;
-    }
-
+    if (filters.provider) where.provider = filters.provider;
+    if (filters.eventType) where.eventType = filters.eventType.getValue();
     if (filters.createdAfter || filters.createdBefore) {
       where.createdAt = {};
-      if (filters.createdAfter) {
-        where.createdAt.gte = filters.createdAfter;
-      }
-      if (filters.createdBefore) {
-        where.createdAt.lte = filters.createdBefore;
-      }
+      if (filters.createdAfter) where.createdAt.gte = filters.createdAfter;
+      if (filters.createdBefore) where.createdAt.lte = filters.createdBefore;
     }
 
-    const records = await (this.prisma as any).paymentWebhookEvent.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-    });
-    return records.map((record: any) => this.hydrate(record));
+    const [records, total] = await Promise.all([
+      this.prisma.paymentWebhookEvent.findMany({
+        where,
+        take: options?.limit,
+        skip: options?.offset,
+        orderBy: { createdAt: options?.sortOrder ?? "desc" },
+      }),
+      this.prisma.paymentWebhookEvent.count({ where }),
+    ]);
+
+    const items = records.map((r: any) => this.hydrate(r));
+    const limit = options?.limit ?? total;
+    const offset = options?.offset ?? 0;
+    return {
+      items,
+      total,
+      limit,
+      offset,
+      hasMore: offset + items.length < total,
+    };
   }
 
-  async exists(eventId: string): Promise<boolean> {
-    const count = await (this.prisma as any).paymentWebhookEvent.count({
-      where: { eventId },
+  async count(filters?: WebhookEventFilters): Promise<number> {
+    const where: any = {};
+    if (filters?.provider) where.provider = filters.provider;
+    if (filters?.eventType) where.eventType = filters.eventType.getValue();
+    if (filters?.createdAfter || filters?.createdBefore) {
+      where.createdAt = {};
+      if (filters?.createdAfter) where.createdAt.gte = filters.createdAfter;
+      if (filters?.createdBefore) where.createdAt.lte = filters.createdBefore;
+    }
+    return this.prisma.paymentWebhookEvent.count({ where });
+  }
+
+  async exists(id: WebhookEventId): Promise<boolean> {
+    const count = await this.prisma.paymentWebhookEvent.count({
+      where: { eventId: id.getValue() },
     });
     return count > 0;
   }
 
-  async count(filters?: WebhookEventFilterOptions): Promise<number> {
-    const where: any = {};
-
-    if (filters) {
-      if (filters.provider) {
-        where.provider = filters.provider;
-      }
-
-      if (filters.eventType) {
-        where.eventType = filters.eventType;
-      }
-
-      if (filters.createdAfter || filters.createdBefore) {
-        where.createdAt = {};
-        if (filters.createdAfter) {
-          where.createdAt.gte = filters.createdAfter;
-        }
-        if (filters.createdBefore) {
-          where.createdAt.lte = filters.createdBefore;
-        }
-      }
-    }
-
-    return await (this.prisma as any).paymentWebhookEvent.count({ where });
-  }
-
   private hydrate(record: any): PaymentWebhookEvent {
-    return PaymentWebhookEvent.reconstitute({
-      eventId: record.eventId,
+    return PaymentWebhookEvent.fromPersistence({
+      id: WebhookEventId.fromString(record.eventId),
       provider: record.provider,
-      eventType: record.eventType,
+      eventType: WebhookEventType.fromString(record.eventType),
       eventData: record.eventData as WebhookEventData,
       createdAt: record.createdAt,
     });
@@ -114,9 +114,9 @@ export class PaymentWebhookEventRepository implements IPaymentWebhookEventReposi
 
   private dehydrate(event: PaymentWebhookEvent): any {
     return {
-      eventId: event.eventId,
+      eventId: event.id.getValue(),
       provider: event.provider,
-      eventType: event.eventType,
+      eventType: event.eventType.getValue(),
       eventData: event.eventData,
       createdAt: event.createdAt,
     };

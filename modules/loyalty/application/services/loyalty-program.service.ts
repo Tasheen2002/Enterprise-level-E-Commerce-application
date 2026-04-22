@@ -1,16 +1,35 @@
 import { ILoyaltyProgramRepository } from '../../domain/repositories/loyalty-program.repository';
-import { LoyaltyProgram, LoyaltyProgramDTO } from '../../domain/entities/loyalty-program.entity';
+import { LoyaltyProgram, LoyaltyProgramDTO, EarnRule, BurnRule, LoyaltyTierConfig } from '../../domain/entities/loyalty-program.entity';
 import { LoyaltyProgramId } from '../../domain/value-objects/loyalty-program-id.vo';
-import { LoyaltyProgramNotFoundError } from '../../domain/errors/loyalty.errors';
+import { LoyaltyProgramNotFoundError } from '../../domain/errors';
+
+export interface CreateLoyaltyProgramData {
+  name: string;
+  earnRules: EarnRule[];
+  burnRules: BurnRule[];
+  tiers: LoyaltyTierConfig[];
+}
 
 export class LoyaltyProgramService {
   constructor(private readonly loyaltyProgramRepository: ILoyaltyProgramRepository) {}
 
-  async getLoyaltyProgram(programId: string): Promise<LoyaltyProgramDTO | null> {
+  async createLoyaltyProgram(data: CreateLoyaltyProgramData): Promise<LoyaltyProgramDTO> {
+    const program = LoyaltyProgram.create({
+      name: data.name,
+      earnRules: data.earnRules,
+      burnRules: data.burnRules,
+      tiers: data.tiers,
+    });
+    await this.loyaltyProgramRepository.save(program);
+    return LoyaltyProgram.toDTO(program);
+  }
+
+  async getLoyaltyProgram(programId: string): Promise<LoyaltyProgramDTO> {
     const program = await this.loyaltyProgramRepository.findById(
       LoyaltyProgramId.fromString(programId),
     );
-    return program ? LoyaltyProgram.toDTO(program) : null;
+    if (!program) throw new LoyaltyProgramNotFoundError(programId);
+    return LoyaltyProgram.toDTO(program);
   }
 
   async getLoyaltyProgramByName(name: string): Promise<LoyaltyProgramDTO | null> {

@@ -8,10 +8,10 @@ import { IProductRepository } from "../../domain/repositories/product.repository
 import {
   EditorialLook,
   EditorialLookDTO,
-  EditorialLookId as EntityEditorialLookId,
   CreateEditorialLookData,
 } from "../../domain/entities/editorial-look.entity";
-import { MediaAssetId as EntityMediaAssetId } from "../../domain/entities/media-asset.entity";
+import { EditorialLookId as EntityEditorialLookId } from "../../domain/value-objects/editorial-look-id.vo";
+import { MediaAssetId as EntityMediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import {
   ProductNotFoundError,

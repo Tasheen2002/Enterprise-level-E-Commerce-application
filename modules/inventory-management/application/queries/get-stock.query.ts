@@ -1,5 +1,6 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { StockDTO } from "../../domain/entities/stock.entity";
+import { StockNotFoundError } from "../../domain/errors";
 import { StockManagementService } from "../services/stock-management.service";
 
 export interface GetStockQuery extends IQuery {
@@ -16,6 +17,10 @@ export class GetStockHandler implements IQueryHandler<
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(query: GetStockQuery): Promise<StockResult> {
-    return this.stockService.getStock(query.variantId, query.locationId);
+    const stock = await this.stockService.getStock(query.variantId, query.locationId);
+    if (!stock) {
+      throw new StockNotFoundError(`${query.variantId} at ${query.locationId}`);
+    }
+    return stock;
   }
 }

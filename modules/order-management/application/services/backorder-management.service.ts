@@ -15,7 +15,6 @@ import {
 interface CreateBackorderParams {
   orderItemId: string;
   promisedEta?: Date;
-  notifiedAt?: Date;
 }
 
 export class BackorderManagementService {
@@ -40,7 +39,6 @@ export class BackorderManagementService {
     const backorder = Backorder.create({
       orderItemId: params.orderItemId,
       promisedEta: params.promisedEta,
-      notifiedAt: params.notifiedAt,
     });
 
     await this.backorderRepository.save(backorder);
@@ -143,20 +141,19 @@ export class BackorderManagementService {
       throw new DomainValidationError("At least one order item ID is required");
     }
 
-    const notifiedBackorders: Backorder[] = [];
+    const backorders = await Promise.all(
+      orderItemIds.map((id) => this.backorderRepository.findByOrderItemId(id)),
+    );
 
-    for (const orderItemId of orderItemIds) {
-      const backorder =
-        await this.backorderRepository.findByOrderItemId(orderItemId);
+    const toNotify = backorders.filter(
+      (b): b is Backorder => b !== null && !b.isCustomerNotified(),
+    );
 
-      if (backorder && !backorder.isCustomerNotified()) {
-        backorder.markAsNotified();
-        await this.backorderRepository.save(backorder);
-        notifiedBackorders.push(backorder);
-      }
-    }
+    toNotify.forEach((b) => b.markAsNotified());
 
-    return notifiedBackorders.map((b) => Backorder.toDTO(b));
+    await Promise.all(toNotify.map((b) => this.backorderRepository.save(b)));
+
+    return toNotify.map((b) => Backorder.toDTO(b));
   }
 
   async deleteBackorder(orderItemId: string): Promise<void> {
@@ -176,6 +173,10 @@ export class BackorderManagementService {
 
   async getUnnotifiedCount(): Promise<number> {
     return this.backorderRepository.countUnnotified();
+  }
+
+  async getOverdueCount(): Promise<number> {
+    return this.backorderRepository.countByPromisedEtaBefore(new Date());
   }
 
   async backorderExists(orderItemId: string): Promise<boolean> {

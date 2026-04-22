@@ -31,14 +31,14 @@ export const listOrdersQuerySchema = z.object({
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
 const addressSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  addressLine1: z.string().optional(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  addressLine1: z.string().min(1),
   addressLine2: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  postalCode: z.string().optional(),
-  country: z.string().optional(),
+  city: z.string().min(1),
+  state: z.string().min(1),
+  postalCode: z.string().min(1),
+  country: z.string().min(1),
   phone: z.string().optional(),
   email: z.email().optional(),
 });
@@ -55,7 +55,7 @@ export const createOrderSchema = z.object({
       }),
     )
     .min(1),
-  shippingAddress: addressSchema.optional(),
+  shippingAddress: addressSchema,
   source: z.enum(["web", "mobile"]).optional().default("web"),
   currency: z.string().optional().default("USD"),
 });
@@ -83,6 +83,22 @@ export type UpdateOrderStatusBody = z.infer<typeof updateOrderStatusSchema>;
 export type UpdateOrderTotalsBody = z.infer<typeof updateOrderTotalsSchema>;
 
 // ── JSON Schema for Swagger docs ──────────────────────────────────────────────
+
+export const trackOrderResponseSchema = {
+  type: "object",
+  properties: {
+    orderId: { type: "string" },
+    orderNumber: { type: "string" },
+    status: { type: "string" },
+    items: { type: "array", items: { type: "object", additionalProperties: true } },
+    totals: { type: "object", additionalProperties: true },
+    shipments: { type: "array", items: { type: "object", additionalProperties: true } },
+    billingAddress: { type: "object", additionalProperties: true },
+    shippingAddress: { type: "object", additionalProperties: true },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" },
+  },
+} as const;
 
 export const orderResponseSchema = {
   type: "object",

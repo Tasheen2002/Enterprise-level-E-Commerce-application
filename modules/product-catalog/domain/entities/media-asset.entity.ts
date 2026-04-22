@@ -100,13 +100,13 @@ export class MediaAsset extends AggregateRoot {
       id: assetId,
       storageKey: params.storageKey,
       mime: params.mime,
-      width: params.width || null,
-      height: params.height || null,
-      bytes: params.bytes || null,
-      altText: params.altText || null,
-      focalX: params.focalX || null,
-      focalY: params.focalY || null,
-      renditions: params.renditions || {},
+      width: params.width ?? null,
+      height: params.height ?? null,
+      bytes: params.bytes ?? null,
+      altText: params.altText ?? null,
+      focalX: params.focalX ?? null,
+      focalY: params.focalY ?? null,
+      renditions: params.renditions ?? {},
       version: 1,
       createdAt: now,
       updatedAt: now,
@@ -225,37 +225,37 @@ export class MediaAsset extends AggregateRoot {
     }
 
     if (fields.width !== undefined && fields.width !== this.props.width) {
-      this.props.width = fields.width || null;
+      this.props.width = fields.width ?? null;
       changed = true;
     }
 
     if (fields.height !== undefined && fields.height !== this.props.height) {
-      this.props.height = fields.height || null;
+      this.props.height = fields.height ?? null;
       changed = true;
     }
 
     if (fields.bytes !== undefined && fields.bytes !== this.props.bytes) {
-      this.props.bytes = fields.bytes || null;
+      this.props.bytes = fields.bytes ?? null;
       changed = true;
     }
 
     if (fields.altText !== undefined && fields.altText !== this.props.altText) {
-      this.props.altText = fields.altText || null;
+      this.props.altText = fields.altText ?? null;
       changed = true;
     }
 
     if (fields.focalX !== undefined && fields.focalX !== this.props.focalX) {
-      this.props.focalX = fields.focalX || null;
+      this.props.focalX = fields.focalX ?? null;
       changed = true;
     }
 
     if (fields.focalY !== undefined && fields.focalY !== this.props.focalY) {
-      this.props.focalY = fields.focalY || null;
+      this.props.focalY = fields.focalY ?? null;
       changed = true;
     }
 
     if (fields.renditions !== undefined) {
-      this.props.renditions = fields.renditions || {};
+      this.props.renditions = fields.renditions ?? {};
       changed = true;
     }
 

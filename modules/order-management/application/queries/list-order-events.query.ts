@@ -1,6 +1,6 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { OrderEventService } from "../services/order-event.service";
-import { OrderEvent, OrderEventDTO } from "../../domain/entities/order-event.entity";
+import { OrderEventDTO } from "../../domain/entities/order-event.entity";
 import { OrderEventQueryOptions } from "../../domain/repositories/order-event.repository";
 
 export interface ListOrderEventsQuery extends IQuery {
@@ -22,9 +22,8 @@ export class ListOrderEventsHandler implements IQueryHandler<ListOrderEventsQuer
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     };
-    const events = query.eventType
-      ? await this.orderEventService.getEventsByOrderAndType(query.orderId, query.eventType, options)
-      : await this.orderEventService.getEventsByOrderId(query.orderId, options);
-    return events.map(OrderEvent.toDTO);
+    return query.eventType
+      ? this.orderEventService.getEventsByOrderAndType(query.orderId, query.eventType, options)
+      : this.orderEventService.getEventsByOrderId(query.orderId, options);
   }
 }

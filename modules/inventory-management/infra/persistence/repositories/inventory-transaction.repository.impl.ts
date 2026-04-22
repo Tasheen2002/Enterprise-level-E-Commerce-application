@@ -1,172 +1,141 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, InvTxnReasonEnum } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { InventoryTransaction } from "../../../domain/entities/inventory-transaction.entity";
 import { TransactionId } from "../../../domain/value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../../../domain/value-objects/transaction-reason.vo";
-import { IInventoryTransactionRepository } from "../../../domain/repositories/inventory-transaction.repository";
+import {
+  IInventoryTransactionRepository,
+  InventoryTransactionPageOptions,
+  InventoryTransactionQueryOptions,
+} from "../../../domain/repositories/inventory-transaction.repository";
 
-interface InventoryTransactionDatabaseRow {
-  invTxnId: string;
-  variantId: string;
-  locationId: string;
-  qtyDelta: number;
-  reason: string;
-  referenceId: string | null;
-  createdAt: Date;
-}
-
-export class InventoryTransactionRepositoryImpl extends PrismaRepository<InventoryTransaction> implements IInventoryTransactionRepository {
+export class InventoryTransactionRepositoryImpl
+  extends PrismaRepository<InventoryTransaction>
+  implements IInventoryTransactionRepository
+{
   constructor(prisma: PrismaClient, eventBus?: IEventBus) {
     super(prisma, eventBus);
   }
 
-  private toEntity(row: InventoryTransactionDatabaseRow): InventoryTransaction {
+  private toEntity(row: {
+    invTxnId: string;
+    variantId: string;
+    locationId: string;
+    qtyDelta: number;
+    reason: string;
+    referenceId: string | null;
+    createdAt: Date;
+  }): InventoryTransaction {
     return InventoryTransaction.fromPersistence({
       invTxnId: TransactionId.fromString(row.invTxnId),
       variantId: row.variantId,
       locationId: row.locationId,
       qtyDelta: row.qtyDelta,
       reason: TransactionReasonVO.create(row.reason),
-      referenceId: row.referenceId || undefined,
+      referenceId: row.referenceId ?? undefined,
       createdAt: row.createdAt,
     });
   }
 
   async save(transaction: InventoryTransaction): Promise<void> {
-    await (this.prisma as any).inventoryTransaction.upsert({
-      where: { invTxnId: transaction.invTxnId.getValue() },
-      create: {
+    await this.prisma.inventoryTransaction.create({
+      data: {
         invTxnId: transaction.invTxnId.getValue(),
         variantId: transaction.variantId,
         locationId: transaction.locationId,
         qtyDelta: transaction.qtyDelta,
-        reason: transaction.reason.getValue(),
-        referenceId: transaction.referenceId,
+        reason: transaction.reason.getValue() as InvTxnReasonEnum,
+        referenceId: transaction.referenceId ?? null,
         createdAt: transaction.createdAt,
-      },
-      update: {
-        qtyDelta: transaction.qtyDelta,
-        reason: transaction.reason.getValue(),
-        referenceId: transaction.referenceId,
       },
     });
 
     await this.dispatchEvents(transaction);
   }
 
-  async findById(
-    invTxnId: TransactionId,
-  ): Promise<InventoryTransaction | null> {
-    const transaction = await (
-      this.prisma as any
-    ).inventoryTransaction.findUnique({
+  async findById(invTxnId: TransactionId): Promise<InventoryTransaction | null> {
+    const row = await this.prisma.inventoryTransaction.findUnique({
       where: { invTxnId: invTxnId.getValue() },
     });
 
-    if (!transaction) {
-      return null;
-    }
-
-    return this.toEntity(transaction as InventoryTransactionDatabaseRow);
+    return row ? this.toEntity(row) : null;
   }
 
   async findByVariant(
     variantId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<{ transactions: InventoryTransaction[]; total: number }> {
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
 
-    const [transactions, total] = await Promise.all([
-      (this.prisma as any).inventoryTransaction.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.inventoryTransaction.findMany({
         where: { variantId },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      (this.prisma as any).inventoryTransaction.count({ where: { variantId } }),
+      this.prisma.inventoryTransaction.count({ where: { variantId } }),
     ]);
 
-    return {
-      transactions: transactions.map((txn: InventoryTransactionDatabaseRow) =>
-        this.toEntity(txn),
-      ),
-      total,
-    };
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
   async findByLocation(
     locationId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<{ transactions: InventoryTransaction[]; total: number }> {
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
 
-    const [transactions, total] = await Promise.all([
-      (this.prisma as any).inventoryTransaction.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.inventoryTransaction.findMany({
         where: { locationId },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      (this.prisma as any).inventoryTransaction.count({
-        where: { locationId },
-      }),
+      this.prisma.inventoryTransaction.count({ where: { locationId } }),
     ]);
 
-    return {
-      transactions: transactions.map((txn: InventoryTransactionDatabaseRow) =>
-        this.toEntity(txn),
-      ),
-      total,
-    };
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
   async findByVariantAndLocation(
     variantId: string,
     locationId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<{ transactions: InventoryTransaction[]; total: number }> {
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
 
-    const [transactions, total] = await Promise.all([
-      (this.prisma as any).inventoryTransaction.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.inventoryTransaction.findMany({
         where: { variantId, locationId },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      (this.prisma as any).inventoryTransaction.count({
-        where: { variantId, locationId },
-      }),
+      this.prisma.inventoryTransaction.count({ where: { variantId, locationId } }),
     ]);
 
-    return {
-      transactions: transactions.map((txn: InventoryTransactionDatabaseRow) =>
-        this.toEntity(txn),
-      ),
-      total,
-    };
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
   async findByReference(referenceId: string): Promise<InventoryTransaction[]> {
-    const transactions = await (
-      this.prisma as any
-    ).inventoryTransaction.findMany({
+    const rows = await this.prisma.inventoryTransaction.findMany({
       where: { referenceId },
       orderBy: { createdAt: "desc" },
     });
 
-    return transactions.map((txn: InventoryTransactionDatabaseRow) =>
-      this.toEntity(txn),
-    );
+    return rows.map((r) => this.toEntity(r));
   }
 
-  async findAll(options?: {
-    limit?: number;
-    offset?: number;
-    sortBy?: "createdAt";
-    sortOrder?: "asc" | "desc";
-  }): Promise<{ transactions: InventoryTransaction[]; total: number }> {
+  async findAll(
+    options?: InventoryTransactionQueryOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>> {
     const {
       limit = 50,
       offset = 0,
@@ -174,20 +143,16 @@ export class InventoryTransactionRepositoryImpl extends PrismaRepository<Invento
       sortOrder = "desc",
     } = options || {};
 
-    const [transactions, total] = await Promise.all([
-      (this.prisma as any).inventoryTransaction.findMany({
+    const [rows, total] = await Promise.all([
+      this.prisma.inventoryTransaction.findMany({
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
       }),
-      (this.prisma as any).inventoryTransaction.count(),
+      this.prisma.inventoryTransaction.count(),
     ]);
 
-    return {
-      transactions: transactions.map((txn: InventoryTransactionDatabaseRow) =>
-        this.toEntity(txn),
-      ),
-      total,
-    };
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 }

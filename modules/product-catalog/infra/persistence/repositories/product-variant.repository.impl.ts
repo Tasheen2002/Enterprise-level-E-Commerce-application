@@ -8,11 +8,21 @@ import { ProductVariant } from "../../../domain/entities/product-variant.entity"
 import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { SKU } from "../../../domain/value-objects/sku.vo";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
-export class ProductVariantRepositoryImpl implements IProductVariantRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class ProductVariantRepositoryImpl
+  extends PrismaRepository<ProductVariant>
+  implements IProductVariantRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   private mapRow(row: any): ProductVariant {
+    if (!row.createdAt || !row.updatedAt) {
+      throw new Error(`ProductVariant row is missing timestamps for id=${row.id}`);
+    }
     return ProductVariant.fromPersistence({
       id: VariantId.fromString(row.id),
       productId: ProductId.fromString(row.productId),
@@ -56,6 +66,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       },
       update: updateData,
     });
+    await this.dispatchEvents(variant);
   }
 
   async findById(id: VariantId): Promise<ProductVariant | null> {
@@ -88,7 +99,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
   async findAll(options?: VariantQueryOptions): Promise<ProductVariant[]> {
@@ -105,7 +116,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
   async findBySize(
@@ -126,7 +137,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
   async findByColor(
@@ -147,7 +158,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
   async findAvailableForBackorder(): Promise<ProductVariant[]> {
@@ -156,7 +167,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
   async findAvailableForPreorder(): Promise<ProductVariant[]> {
@@ -165,7 +176,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map(mapRow);
+    return variants.map((v) => this.mapRow(v));
   }
 
 
@@ -196,7 +207,7 @@ export class ProductVariantRepositoryImpl implements IProductVariantRepository {
   }
 
   async count(options?: VariantCountOptions): Promise<number> {
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     if (options?.productId) {
       whereClause.productId = options.productId;

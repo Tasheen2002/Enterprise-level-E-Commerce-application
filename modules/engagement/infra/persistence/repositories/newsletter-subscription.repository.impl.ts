@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import {
@@ -7,10 +7,7 @@ import {
   NewsletterSubscriptionFilters,
 } from "../../../domain/repositories/newsletter-subscription.repository";
 import { NewsletterSubscription } from "../../../domain/entities/newsletter-subscription.entity";
-import {
-  SubscriptionId,
-  SubscriptionStatus,
-} from "../../../domain/value-objects";
+import { SubscriptionId, SubscriptionStatus } from "../../../domain/value-objects";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
 // ============================================================================
@@ -53,15 +50,14 @@ export class NewsletterSubscriptionRepositoryImpl
       create: {
         id: subscription.id.getValue(),
         email: subscription.email.toLowerCase(),
-        status: subscription.status.getValue() as any,
+        status: subscription.status.getValue(),
         source: subscription.source,
         createdAt: subscription.createdAt,
         updatedAt: subscription.updatedAt,
       },
       update: {
-        status: subscription.status.getValue() as any,
+        status: subscription.status.getValue(),
         source: subscription.source,
-        updatedAt: subscription.updatedAt,
       },
     });
     await this.dispatchEvents(subscription);
@@ -92,7 +88,7 @@ export class NewsletterSubscriptionRepositoryImpl
   }
 
   async findByStatus(
-    status: SubscriptionStatus,
+    status: string,
     options?: NewsletterSubscriptionQueryOptions,
   ): Promise<PaginatedResult<NewsletterSubscription>> {
     const {
@@ -102,7 +98,7 @@ export class NewsletterSubscriptionRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where = { status: status.getValue() as any };
+    const where = { status };
 
     const [records, total] = await Promise.all([
       this.prisma.newsletterSubscription.findMany({
@@ -194,14 +190,16 @@ export class NewsletterSubscriptionRepositoryImpl
       sortOrder = "desc",
     } = options || {};
 
-    const where: any = {};
-    if (filters.status) where.status = filters.status.getValue() as any;
-    if (filters.source) where.source = filters.source;
-    if (filters.startDate || filters.endDate) {
-      where.createdAt = {};
-      if (filters.startDate) where.createdAt.gte = filters.startDate;
-      if (filters.endDate) where.createdAt.lte = filters.endDate;
-    }
+    const where: Prisma.NewsletterSubscriptionWhereInput = {
+      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.source ? { source: filters.source } : {}),
+      ...((filters.startDate || filters.endDate) ? {
+        createdAt: {
+          ...(filters.startDate ? { gte: filters.startDate } : {}),
+          ...(filters.endDate ? { lte: filters.endDate } : {}),
+        },
+      } : {}),
+    };
 
     const [records, total] = await Promise.all([
       this.prisma.newsletterSubscription.findMany({
@@ -315,9 +313,9 @@ export class NewsletterSubscriptionRepositoryImpl
     };
   }
 
-  async countByStatus(status: SubscriptionStatus): Promise<number> {
+  async countByStatus(status: string): Promise<number> {
     return await this.prisma.newsletterSubscription.count({
-      where: { status: status.getValue() as any },
+      where: { status },
     });
   }
 
@@ -334,14 +332,16 @@ export class NewsletterSubscriptionRepositoryImpl
   }
 
   async count(filters?: NewsletterSubscriptionFilters): Promise<number> {
-    const where: any = {};
-    if (filters?.status) where.status = filters.status.getValue() as any;
-    if (filters?.source) where.source = filters.source;
-    if (filters?.startDate || filters?.endDate) {
-      where.createdAt = {};
-      if (filters.startDate) where.createdAt.gte = filters.startDate;
-      if (filters.endDate) where.createdAt.lte = filters.endDate;
-    }
+    const where: Prisma.NewsletterSubscriptionWhereInput = {
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.source ? { source: filters.source } : {}),
+      ...((filters?.startDate || filters?.endDate) ? {
+        createdAt: {
+          ...(filters.startDate ? { gte: filters.startDate } : {}),
+          ...(filters.endDate ? { lte: filters.endDate } : {}),
+        },
+      } : {}),
+    };
 
     return await this.prisma.newsletterSubscription.count({ where });
   }

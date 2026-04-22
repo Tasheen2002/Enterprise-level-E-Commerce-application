@@ -91,14 +91,14 @@ export class Wishlist extends AggregateRoot {
     super();
   }
 
-  static create(params: Omit<WishlistProps, "id" | "createdAt" | "updatedAt">): Wishlist {
+  static create(params: Omit<WishlistProps, "id" | "createdAt" | "updatedAt" | "isDefault" | "isPublic"> & { isDefault?: boolean; isPublic?: boolean }): Wishlist {
     Wishlist.validateOwnership(params.userId, params.guestToken);
 
     const entity = new Wishlist({
       ...params,
       id: WishlistId.create(),
-      isDefault: params.isDefault || false,
-      isPublic: params.isPublic || false,
+      isDefault: params.isDefault ?? false,
+      isPublic: params.isPublic ?? false,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -162,7 +162,11 @@ export class Wishlist extends AggregateRoot {
 
   // Business methods
   updateName(name: string): void {
-    this.props.name = name.trim();
+    const trimmed = name.trim();
+    if (trimmed.length === 0) {
+      throw new DomainValidationError("Wishlist name cannot be empty");
+    }
+    this.props.name = trimmed;
     this.props.updatedAt = new Date();
   }
 
@@ -192,10 +196,6 @@ export class Wishlist extends AggregateRoot {
   }
 
   transferToUser(userId: string): void {
-    if (!userId) {
-      throw new DomainValidationError("User ID cannot be empty");
-    }
-
     const oldGuestToken = this.props.guestToken;
     this.props.userId = userId;
     this.props.guestToken = undefined;

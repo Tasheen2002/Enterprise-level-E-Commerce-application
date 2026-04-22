@@ -57,7 +57,7 @@ export default fp(
     // Payment & Loyalty Module
     // ============================================
     const paymentLoyaltyServices = container.getPaymentLoyaltyServices();
-    await registerPaymentLoyaltyRoutes(fastify, paymentLoyaltyServices);
+    await registerPaymentRoutes(fastify, paymentLoyaltyServices);
     fastify.log.info("✓ Payment & Loyalty module registered");
 
     fastify.log.info("All modules registered successfully");

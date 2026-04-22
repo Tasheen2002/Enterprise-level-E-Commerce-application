@@ -61,6 +61,20 @@ export class StockReservationFulfilledEvent extends DomainEvent {
   }
 }
 
+export class StockUnreservedEvent extends DomainEvent {
+  constructor(
+    public readonly variantId: string,
+    public readonly locationId: string,
+    public readonly quantity: number,
+  ) {
+    super(`${variantId}:${locationId}`, "Stock");
+  }
+  get eventType(): string { return "stock.unreserved"; }
+  getPayload(): Record<string, unknown> {
+    return { variantId: this.variantId, locationId: this.locationId, quantity: this.quantity };
+  }
+}
+
 export class StockThresholdsUpdatedEvent extends DomainEvent {
   constructor(
     public readonly variantId: string,
@@ -162,6 +176,13 @@ export class Stock extends AggregateRoot {
     this.props.stockLevel = this.props.stockLevel.fulfillReservation(quantity);
     this.addDomainEvent(
       new StockReservationFulfilledEvent(this.props.variantId, this.props.locationId, quantity),
+    );
+  }
+
+  unreserveStock(quantity: number): void {
+    this.props.stockLevel = this.props.stockLevel.unreserveStock(quantity);
+    this.addDomainEvent(
+      new StockUnreservedEvent(this.props.variantId, this.props.locationId, quantity),
     );
   }
 

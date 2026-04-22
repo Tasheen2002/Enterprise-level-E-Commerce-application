@@ -1,39 +1,44 @@
 import { FastifyInstance } from "fastify";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { GiftCardController } from "../controllers/gift-card.controller";
 import {
-  GiftCardController,
-  CreateGiftCardRequest,
-  RedeemGiftCardRequest,
-} from "../controllers/gift-card.controller";
-import { GiftCardTransactionController } from "../controllers/gift-card-transaction.controller";
-import { authenticateUser, requireAdmin } from "@/api/src/shared/middleware";
+  RolePermissions,
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware";
+import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  createGiftCardSchema,
+  redeemGiftCardSchema,
+  giftCardIdParamsSchema,
+  giftCardBalanceQuerySchema,
+  giftCardResponseSchema,
+  giftCardTransactionResponseSchema,
+  giftCardBalanceResponseSchema,
+} from "../validation/gift-card.schema";
 
-const errorResponses = {
-  400: {
-    description: "Bad request",
-    type: "object",
-    properties: { success: { type: "boolean" }, error: { type: "string" } },
-  },
-  401: {
-    description: "Unauthorized",
-    type: "object",
-    properties: { success: { type: "boolean" }, error: { type: "string" } },
-  },
-  404: {
-    description: "Not found",
-    type: "object",
-    properties: { success: { type: "boolean" }, error: { type: "string" } },
-  },
-};
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
 
 export async function registerGiftCardRoutes(
   fastify: FastifyInstance,
   controller: GiftCardController,
-  txnController: GiftCardTransactionController,
 ): Promise<void> {
-  fastify.post<{ Body: CreateGiftCardRequest }>(
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // POST /gift-cards — Admin only
+  fastify.post(
     "/gift-cards",
     {
-      preHandler: requireAdmin,
+      preValidation: [validateBody(createGiftCardSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Create a new gift card — Admin only.",
         tags: ["Gift Cards"],
@@ -44,8 +49,8 @@ export async function registerGiftCardRoutes(
           required: ["code", "initialBalance"],
           properties: {
             code: { type: "string" },
-            initialBalance: { type: "number", minimum: 0 },
-            currency: { type: "string", default: "USD" },
+            initialBalance: { type: "number", minimum: 0.01 },
+            currency: { type: "string" },
             expiresAt: { type: "string", format: "date-time" },
             recipientEmail: { type: "string", format: "email" },
             recipientName: { type: "string" },
@@ -54,24 +59,26 @@ export async function registerGiftCardRoutes(
         },
         response: {
           201: {
-            description: "Gift card created successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: giftCardResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.create.bind(controller),
+    (request, reply) => controller.create(request as AuthenticatedRequest, reply),
   );
 
-  fastify.post<{ Params: { giftCardId: string }; Body: RedeemGiftCardRequest }>(
+  // POST /gift-cards/:giftCardId/redeem
+  fastify.post(
     "/gift-cards/:giftCardId/redeem",
     {
-      preHandler: authenticateUser,
+      preValidation: [validateParams(giftCardIdParamsSchema), validateBody(redeemGiftCardSchema)],
+      preHandler: [RolePermissions.AUTHENTICATED],
       schema: {
         description: "Redeem a gift card towards an order.",
         tags: ["Gift Cards"],
@@ -86,29 +93,31 @@ export async function registerGiftCardRoutes(
           type: "object",
           required: ["amount", "orderId"],
           properties: {
-            amount: { type: "number", minimum: 0 },
+            amount: { type: "number", minimum: 0.01 },
             orderId: { type: "string", format: "uuid" },
           },
         },
         response: {
           200: {
-            description: "Gift card redeemed successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: giftCardResponseSchema,
             },
           },
-          ...errorResponses,
         },
       },
     },
-    controller.redeem.bind(controller),
+    (request, reply) => controller.redeem(request as AuthenticatedRequest, reply),
   );
 
-  fastify.get<{ Querystring: { codeOrId: string } }>(
+  // GET /gift-cards/balance — public
+  fastify.get(
     "/gift-cards/balance",
     {
+      preValidation: [validateQuery(giftCardBalanceQuerySchema)],
       schema: {
         description: "Get gift card balance by code or ID.",
         tags: ["Gift Cards"],
@@ -120,24 +129,26 @@ export async function registerGiftCardRoutes(
         },
         response: {
           200: {
-            description: "Balance retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
-              data: { type: "object", additionalProperties: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
+              data: giftCardBalanceResponseSchema,
             },
           },
-          404: errorResponses[404],
         },
       },
     },
-    controller.getBalance.bind(controller),
+    (request, reply) => controller.getBalance(request as AuthenticatedRequest, reply),
   );
 
-  fastify.get<{ Params: { giftCardId: string } }>(
+  // GET /gift-cards/:giftCardId/transactions — Admin only
+  fastify.get(
     "/gift-cards/:giftCardId/transactions",
     {
-      preHandler: requireAdmin,
+      preValidation: [validateParams(giftCardIdParamsSchema)],
+      preHandler: [RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all transactions for a gift card — Admin only.",
         tags: ["Gift Cards"],
@@ -150,19 +161,20 @@ export async function registerGiftCardRoutes(
         },
         response: {
           200: {
-            description: "Transactions retrieved successfully",
             type: "object",
             properties: {
-              success: { type: "boolean", example: true },
+              success: { type: "boolean" },
+              statusCode: { type: "number" },
+              message: { type: "string" },
               data: {
                 type: "array",
-                items: { type: "object", additionalProperties: true },
+                items: giftCardTransactionResponseSchema,
               },
             },
           },
         },
       },
     },
-    txnController.list.bind(txnController),
+    (request, reply) => controller.listTransactions(request as AuthenticatedRequest, reply),
   );
 }

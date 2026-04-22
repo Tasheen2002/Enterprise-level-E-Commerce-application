@@ -3,71 +3,25 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   CreateOrderHandler,
-  UpdateOrderStatusCommandHandler,
-  UpdateOrderTotalsCommandHandler,
-  MarkOrderPaidCommandHandler,
-  MarkOrderFulfilledCommandHandler,
-  CancelOrderCommandHandler,
-  DeleteOrderCommandHandler,
+  UpdateOrderStatusHandler,
+  UpdateOrderTotalsHandler,
+  MarkOrderPaidHandler,
+  MarkOrderFulfilledHandler,
+  CancelOrderHandler,
+  DeleteOrderHandler,
   GetOrderHandler,
   ListOrdersHandler,
   TrackOrderHandler,
 } from "../../../application";
-
-export interface AddressInput {
-  firstName: string;
-  lastName: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  phone?: string;
-  email?: string;
-}
-
-export interface CreateOrderBody {
-  guestToken?: string;
-  items: Array<{
-    variantId: string;
-    quantity: number;
-    isGift?: boolean;
-    giftMessage?: string;
-  }>;
-  shippingAddress: AddressInput;
-  billingAddress?: AddressInput;
-  source?: string;
-  currency?: string;
-}
-
-export interface TrackOrderQuerystring {
-  orderNumber?: string;
-  contact?: string;
-  trackingNumber?: string;
-}
-
-export interface ListOrdersQuerystring {
-  limit?: number;
-  offset?: number;
-  status?: string;
-  startDate?: Date;
-  endDate?: Date;
-  sortBy?: "createdAt" | "updatedAt" | "orderNumber";
-  sortOrder?: "asc" | "desc";
-}
-
-export interface UpdateOrderStatusBody {
-  status: string;
-}
-
-export interface UpdateOrderTotalsBody {
-  totals: {
-    tax: number;
-    shipping: number;
-    discount: number;
-  };
-}
+import {
+  OrderIdParams,
+  OrderNumberParams,
+  TrackOrderQuery,
+  ListOrdersQuery,
+  CreateOrderBody,
+  UpdateOrderStatusBody,
+  UpdateOrderTotalsBody,
+} from "../validation/order.schema";
 
 const STAFF_ROLES = ["ADMIN", "INVENTORY_STAFF", "CUSTOMER_SERVICE", "ANALYST"];
 
@@ -76,17 +30,17 @@ export class OrderController {
     private readonly createOrderHandler: CreateOrderHandler,
     private readonly getOrderHandler: GetOrderHandler,
     private readonly listOrdersHandler: ListOrdersHandler,
-    private readonly updateOrderStatusHandler: UpdateOrderStatusCommandHandler,
-    private readonly updateOrderTotalsHandler: UpdateOrderTotalsCommandHandler,
-    private readonly markOrderPaidHandler: MarkOrderPaidCommandHandler,
-    private readonly markOrderFulfilledHandler: MarkOrderFulfilledCommandHandler,
-    private readonly cancelOrderHandler: CancelOrderCommandHandler,
-    private readonly deleteOrderHandler: DeleteOrderCommandHandler,
+    private readonly updateOrderStatusHandler: UpdateOrderStatusHandler,
+    private readonly updateOrderTotalsHandler: UpdateOrderTotalsHandler,
+    private readonly markOrderPaidHandler: MarkOrderPaidHandler,
+    private readonly markOrderFulfilledHandler: MarkOrderFulfilledHandler,
+    private readonly cancelOrderHandler: CancelOrderHandler,
+    private readonly deleteOrderHandler: DeleteOrderHandler,
     private readonly trackOrderHandler: TrackOrderHandler,
   ) {}
 
   async getOrder(
-    request: AuthenticatedRequest<{ Params: { orderId: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -106,7 +60,7 @@ export class OrderController {
   }
 
   async getOrderByOrderNumber(
-    request: AuthenticatedRequest<{ Params: { orderNumber: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderNumberParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -131,7 +85,7 @@ export class OrderController {
   ) {
     try {
       const authenticatedUserId = request.user?.userId;
-      const { guestToken, items, shippingAddress, billingAddress, source, currency } = request.body;
+      const { guestToken, items, shippingAddress, source, currency } = request.body;
 
       if (!authenticatedUserId && !guestToken) {
         return ResponseHelper.badRequest(reply, "Order requires either authentication or guest token");
@@ -146,7 +100,6 @@ export class OrderController {
         guestToken,
         items,
         shippingAddress,
-        billingAddress,
         source,
         currency,
       });
@@ -158,7 +111,7 @@ export class OrderController {
   }
 
   async listOrders(
-    request: AuthenticatedRequest<{ Querystring: ListOrdersQuerystring }>,
+    request: AuthenticatedRequest<{ Querystring: ListOrdersQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -186,7 +139,7 @@ export class OrderController {
   }
 
   async updateOrderStatus(
-    request: AuthenticatedRequest<{ Params: { orderId: string }; Body: UpdateOrderStatusBody }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams; Body: UpdateOrderStatusBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -201,7 +154,7 @@ export class OrderController {
   }
 
   async updateOrderTotals(
-    request: AuthenticatedRequest<{ Params: { orderId: string }; Body: UpdateOrderTotalsBody }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams; Body: UpdateOrderTotalsBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -216,7 +169,7 @@ export class OrderController {
   }
 
   async markOrderAsPaid(
-    request: AuthenticatedRequest<{ Params: { orderId: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -228,7 +181,7 @@ export class OrderController {
   }
 
   async markOrderAsFulfilled(
-    request: AuthenticatedRequest<{ Params: { orderId: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -240,7 +193,7 @@ export class OrderController {
   }
 
   async cancelOrder(
-    request: AuthenticatedRequest<{ Params: { orderId: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -252,7 +205,7 @@ export class OrderController {
   }
 
   async deleteOrder(
-    request: AuthenticatedRequest<{ Params: { orderId: string } }>,
+    request: AuthenticatedRequest<{ Params: OrderIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -264,7 +217,7 @@ export class OrderController {
   }
 
   async trackOrder(
-    request: AuthenticatedRequest<{ Querystring: TrackOrderQuerystring }>,
+    request: AuthenticatedRequest<{ Querystring: TrackOrderQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -279,12 +232,8 @@ export class OrderController {
       }
 
       const result = await this.trackOrderHandler.handle({ orderNumber, contact, trackingNumber });
-
       return ResponseHelper.ok(reply, "Order tracking retrieved successfully", result);
     } catch (error: unknown) {
-      if (error instanceof Error && error.message === "CONTACT_MISMATCH") {
-        return ResponseHelper.forbidden(reply, "The email or phone number does not match our records for this order.");
-      }
       return ResponseHelper.error(reply, error);
     }
   }

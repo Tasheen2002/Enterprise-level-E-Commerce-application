@@ -1,14 +1,27 @@
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { InventoryTransaction } from "../entities/inventory-transaction.entity";
 import { TransactionId } from "../value-objects/transaction-id.vo";
 
 export interface IInventoryTransactionRepository {
   save(transaction: InventoryTransaction): Promise<void>;
   findById(invTxnId: TransactionId): Promise<InventoryTransaction | null>;
-  findByVariant(variantId: string, options?: InventoryTransactionPageOptions): Promise<{ transactions: InventoryTransaction[]; total: number }>;
-  findByLocation(locationId: string, options?: InventoryTransactionPageOptions): Promise<{ transactions: InventoryTransaction[]; total: number }>;
-  findByVariantAndLocation(variantId: string, locationId: string, options?: InventoryTransactionPageOptions): Promise<{ transactions: InventoryTransaction[]; total: number }>;
+  findByVariant(
+    variantId: string,
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>>;
+  findByLocation(
+    locationId: string,
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>>;
+  findByVariantAndLocation(
+    variantId: string,
+    locationId: string,
+    options?: InventoryTransactionPageOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>>;
   findByReference(referenceId: string): Promise<InventoryTransaction[]>;
-  findAll(options?: InventoryTransactionQueryOptions): Promise<{ transactions: InventoryTransaction[]; total: number }>;
+  findAll(
+    options?: InventoryTransactionQueryOptions,
+  ): Promise<PaginatedResult<InventoryTransaction>>;
 }
 
 export interface InventoryTransactionPageOptions {

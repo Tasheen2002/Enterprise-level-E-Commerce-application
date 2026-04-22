@@ -1,5 +1,5 @@
 import { Appointment } from "../entities/appointment.entity";
-import { AppointmentId, AppointmentType } from "../value-objects";
+import { AppointmentId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -11,7 +11,7 @@ import {
 export interface AppointmentFilters {
   userId?: string;
   locationId?: string;
-  type?: AppointmentType;
+  type?: string;
   startDate?: Date;
   endDate?: Date;
 }
@@ -35,7 +35,7 @@ export interface IAppointmentRepository {
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedResult<Appointment>>;
   findByType(
-    type: AppointmentType,
+    type: string,
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedResult<Appointment>>;
   findAll(
@@ -65,12 +65,13 @@ export interface IAppointmentRepository {
     userId: string,
     startAt: Date,
     endAt: Date,
+    excludeId?: string,
   ): Promise<Appointment[]>; // Conflicts return raw array as it's usually small and for validation
 
   // Counts and statistics
   countByUserId(userId: string): Promise<number>;
   countByLocationId(locationId: string): Promise<number>;
-  countByType(type: AppointmentType): Promise<number>;
+  countByType(type: string): Promise<number>;
   count(filters?: AppointmentFilters): Promise<number>;
 
   // Existence checks
@@ -80,7 +81,7 @@ export interface IAppointmentRepository {
     startAt: Date,
     endAt: Date,
   ): Promise<boolean>;
-  hasConflict(userId: string, startAt: Date, endAt: Date): Promise<boolean>;
+  hasConflict(userId: string, startAt: Date, endAt: Date, excludeId?: string): Promise<boolean>;
 }
 
 // ============================================================================

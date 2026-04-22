@@ -56,6 +56,21 @@ export const checkoutResponseSchema = {
   },
 } as const;
 
+export const addressSchema = {
+  type: "object",
+  properties: {
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    addressLine1: { type: "string" },
+    addressLine2: { type: "string" },
+    city: { type: "string" },
+    state: { type: "string" },
+    postalCode: { type: "string" },
+    country: { type: "string" },
+    phone: { type: "string" },
+  },
+} as const;
+
 export const checkoutOrderResponseSchema = {
   type: "object",
   properties: {

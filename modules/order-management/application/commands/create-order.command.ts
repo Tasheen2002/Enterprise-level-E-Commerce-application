@@ -31,10 +31,10 @@ export interface CreateOrderCommand extends ICommand {
   readonly shippingAddress: AddressInput;
   readonly billingAddress?: AddressInput;
   readonly source?: string;
-  readonly currency: string;
+  readonly currency?: string;
 }
 
-export class CreateOrderCommandHandler implements ICommandHandler<
+export class CreateOrderHandler implements ICommandHandler<
   CreateOrderCommand,
   CommandResult<OrderDTO>
 > {

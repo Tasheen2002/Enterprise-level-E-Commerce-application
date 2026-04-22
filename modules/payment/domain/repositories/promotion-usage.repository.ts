@@ -9,5 +9,5 @@ export interface IPromotionUsageRepository {
   findByOrderId(orderId: string): Promise<PromotionUsage[]>;
   findByPromoIdAndOrderId(promoId: PromotionId, orderId: string): Promise<PromotionUsage | null>;
   countUsageByPromoId(promoId: PromotionId): Promise<number>;
-  delete(promoId: PromotionId, orderId: string): Promise<void>;
+  delete(id: PromotionUsageId): Promise<void>;
 }

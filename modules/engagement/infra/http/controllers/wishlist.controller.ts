@@ -12,6 +12,15 @@ import {
   GetPublicWishlistsHandler,
   GetWishlistItemsHandler,
 } from "../../../application";
+import {
+  CreateWishlistBody,
+  AddToWishlistBody,
+  UpdateWishlistBody,
+  WishlistIdParams,
+  WishlistItemParams,
+  UserIdParams,
+  PaginationQuery,
+} from "../validation/wishlist.schema";
 
 export class WishlistController {
   constructor(
@@ -27,16 +36,7 @@ export class WishlistController {
   ) {}
 
   async createWishlist(
-    request: AuthenticatedRequest<{
-      Body: {
-        userId?: string;
-        guestToken?: string;
-        name?: string;
-        isDefault?: boolean;
-        isPublic?: boolean;
-        description?: string;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateWishlistBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -58,7 +58,7 @@ export class WishlistController {
   }
 
   async getWishlist(
-    request: AuthenticatedRequest<{ Params: { wishlistId: string } }>,
+    request: AuthenticatedRequest<{ Params: WishlistIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -70,10 +70,7 @@ export class WishlistController {
   }
 
   async getUserWishlists(
-    request: AuthenticatedRequest<{
-      Params: { userId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -87,9 +84,7 @@ export class WishlistController {
   }
 
   async getPublicWishlists(
-    request: AuthenticatedRequest<{
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -102,10 +97,7 @@ export class WishlistController {
   }
 
   async getWishlistItems(
-    request: AuthenticatedRequest<{
-      Params: { wishlistId: string };
-      Querystring: { limit?: number; offset?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: WishlistIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -119,10 +111,7 @@ export class WishlistController {
   }
 
   async addToWishlist(
-    request: AuthenticatedRequest<{
-      Params: { wishlistId: string };
-      Body: { variantId: string; guestToken?: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: WishlistIdParams; Body: AddToWishlistBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -141,25 +130,20 @@ export class WishlistController {
   }
 
   async removeFromWishlist(
-    request: AuthenticatedRequest<{
-      Params: { wishlistId: string; variantId: string };
-    }>,
+    request: AuthenticatedRequest<{ Params: WishlistItemParams }>,
     reply: FastifyReply,
   ) {
     try {
       const { wishlistId, variantId } = request.params;
       const result = await this.removeFromWishlistHandler.handle({ wishlistId, variantId });
-      return ResponseHelper.fromCommand(reply, result, "Item removed from wishlist successfully");
+      return ResponseHelper.fromCommand(reply, result, "Item removed from wishlist successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async updateWishlist(
-    request: AuthenticatedRequest<{
-      Params: { wishlistId: string };
-      Body: { name?: string; description?: string; isPublic?: boolean };
-    }>,
+    request: AuthenticatedRequest<{ Params: WishlistIdParams; Body: UpdateWishlistBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -173,12 +157,12 @@ export class WishlistController {
   }
 
   async deleteWishlist(
-    request: AuthenticatedRequest<{ Params: { wishlistId: string } }>,
+    request: AuthenticatedRequest<{ Params: WishlistIdParams }>,
     reply: FastifyReply,
   ) {
     try {
       const result = await this.deleteWishlistHandler.handle({ wishlistId: request.params.wishlistId });
-      return ResponseHelper.fromCommand(reply, result, "Wishlist deleted successfully");
+      return ResponseHelper.fromCommand(reply, result, "Wishlist deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

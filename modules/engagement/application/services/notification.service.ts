@@ -10,7 +10,6 @@ import {
 import {
   NotificationId,
   NotificationType,
-  NotificationStatus,
   ChannelType,
 } from "../../domain/value-objects";
 import { NotificationNotFoundError } from "../../domain/errors/engagement.errors";
@@ -33,7 +32,7 @@ export class NotificationService {
     type: string;
     channel?: string;
     templateId?: string;
-    payload?: Record<string, any>;
+    payload?: Record<string, unknown>;
     scheduledAt?: Date;
   }): Promise<NotificationDTO> {
     const notification = Notification.create({
@@ -57,7 +56,7 @@ export class NotificationService {
 
   async updateNotificationPayload(
     notificationId: string,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
   ): Promise<void> {
     const notification = await this.notificationRepository.findById(
       NotificationId.fromString(notificationId),
@@ -124,10 +123,7 @@ export class NotificationService {
     type: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByType(
-      NotificationType.fromString(type),
-      options,
-    );
+    const result = await this.notificationRepository.findByType(type, options);
     return this.mapPaginated(result);
   }
 
@@ -135,10 +131,7 @@ export class NotificationService {
     channel: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByChannel(
-      ChannelType.fromString(channel),
-      options,
-    );
+    const result = await this.notificationRepository.findByChannel(channel, options);
     return this.mapPaginated(result);
   }
 
@@ -146,10 +139,7 @@ export class NotificationService {
     status: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByStatus(
-      NotificationStatus.fromString(status),
-      options,
-    );
+    const result = await this.notificationRepository.findByStatus(status, options);
     return this.mapPaginated(result);
   }
 
@@ -201,15 +191,15 @@ export class NotificationService {
   }
 
   async countNotificationsByType(type: string): Promise<number> {
-    return this.notificationRepository.countByType(NotificationType.fromString(type));
+    return this.notificationRepository.countByType(type);
   }
 
   async countNotificationsByChannel(channel: string): Promise<number> {
-    return this.notificationRepository.countByChannel(ChannelType.fromString(channel));
+    return this.notificationRepository.countByChannel(channel);
   }
 
   async countNotificationsByStatus(status: string): Promise<number> {
-    return this.notificationRepository.countByStatus(NotificationStatus.fromString(status));
+    return this.notificationRepository.countByStatus(status);
   }
 
   async notificationExists(notificationId: string): Promise<boolean> {

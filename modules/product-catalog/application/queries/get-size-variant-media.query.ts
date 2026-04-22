@@ -20,6 +20,6 @@ export class GetSizeVariantMediaHandler implements IQueryHandler<GetSizeVariantM
   constructor(private readonly variantMediaManagementService: VariantMediaManagementService) {}
 
   async handle(query: GetSizeVariantMediaQuery): Promise<SizeVariantMediaResult> {
-    return this.variantMediaManagementService.getSizeVariantMedia(query.productId, decodeURIComponent(query.size));
+    return this.variantMediaManagementService.getSizeVariantMedia(query.productId, query.size);
   }
 }

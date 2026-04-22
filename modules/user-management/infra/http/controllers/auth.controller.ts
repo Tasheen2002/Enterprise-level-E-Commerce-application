@@ -12,8 +12,20 @@ import {
   ResetPasswordHandler,
   VerifyEmailHandler,
   DeleteAccountHandler,
-  GetUserByEmailHandler,
+  ResendVerificationHandler,
 } from '../../../application';
+import {
+  RegisterBody,
+  LoginBody,
+  RefreshTokenBody,
+  ChangePasswordBody,
+  ForgotPasswordBody,
+  ResetPasswordBody,
+  VerifyEmailBody,
+  ResendVerificationBody,
+  ChangeEmailBody,
+  DeleteAccountBody,
+} from '../validation/auth.schema';
 import { UserRole } from '../../../domain/enums/user-role.enum';
 
 export class AuthController {
@@ -27,23 +39,12 @@ export class AuthController {
     private readonly initiatePasswordResetHandler: InitiatePasswordResetHandler,
     private readonly resetPasswordHandler: ResetPasswordHandler,
     private readonly verifyEmailHandler: VerifyEmailHandler,
-    private readonly getUserByEmailHandler: GetUserByEmailHandler,
     private readonly deleteAccountHandler: DeleteAccountHandler,
+    private readonly resendVerificationHandler: ResendVerificationHandler,
   ) {}
 
   async register(
-    request: FastifyRequest<{
-      Body: {
-        email: string;
-        password: string;
-        confirmPassword: string;
-        phone?: string;
-        firstName?: string;
-        lastName?: string;
-        acceptTerms: boolean;
-        role?: UserRole;
-      };
-    }>,
+    request: FastifyRequest<{ Body: RegisterBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -55,7 +56,7 @@ export class AuthController {
         phone,
         firstName,
         lastName,
-        role,
+        role: role as UserRole | undefined,
       });
 
       return ResponseHelper.fromCommand(reply, result, 'Registration successful', 201);
@@ -65,13 +66,7 @@ export class AuthController {
   }
 
   async login(
-    request: FastifyRequest<{
-      Body: {
-        email: string;
-        password: string;
-        rememberMe?: boolean;
-      };
-    }>,
+    request: FastifyRequest<{ Body: LoginBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -113,7 +108,7 @@ export class AuthController {
   }
 
   async refreshToken(
-    request: FastifyRequest<{ Body: { refreshToken: string } }>,
+    request: FastifyRequest<{ Body: RefreshTokenBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -136,7 +131,7 @@ export class AuthController {
   }
 
   async forgotPassword(
-    request: FastifyRequest<{ Body: { email: string } }>,
+    request: FastifyRequest<{ Body: ForgotPasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -156,16 +151,14 @@ export class AuthController {
   }
 
   async initiatePasswordReset(
-    request: FastifyRequest<{ Body: { email: string } }>,
+    request: FastifyRequest<{ Body: ForgotPasswordBody }>,
     reply: FastifyReply,
   ) {
     return this.forgotPassword(request, reply);
   }
 
   async resetPassword(
-    request: FastifyRequest<{
-      Body: { token: string; newPassword: string; confirmPassword: string };
-    }>,
+    request: FastifyRequest<{ Body: ResetPasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -188,7 +181,7 @@ export class AuthController {
   }
 
   async verifyEmail(
-    request: FastifyRequest<{ Body: { token: string } }>,
+    request: FastifyRequest<{ Body: VerifyEmailBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -209,44 +202,31 @@ export class AuthController {
   }
 
   async resendVerification(
-    request: FastifyRequest<{ Body: { email: string } }>,
+    request: FastifyRequest<{ Body: ResendVerificationBody }>,
     reply: FastifyReply,
   ) {
     try {
       const { email } = request.body;
 
-      let isAlreadyVerified = false;
+      // Silently handle all cases to prevent email enumeration
       try {
-        const queryResult = await this.getUserByEmailHandler.handle({ email });
-        if (queryResult?.emailVerified) {
-          isAlreadyVerified = true;
-        }
+        await this.resendVerificationHandler.handle({ email });
       } catch {
-        // Do not reveal whether the email exists
+        // Do not reveal whether the email exists or any other error
       }
 
-      if (isAlreadyVerified) {
-        return ResponseHelper.ok(
-          reply,
-          'If an account with that email exists, verification email has been sent.',
-          { action: 'verification_sent' },
-        );
-      }
-
-      await this.initiatePasswordResetHandler.handle({ email });
-
-      return ResponseHelper.ok(reply, 'Verification email has been sent.', {
-        action: 'verification_sent',
-      });
+      return ResponseHelper.ok(
+        reply,
+        'If an account with that email exists and is unverified, a verification email has been sent.',
+        { action: 'verification_sent' },
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
   async changePassword(
-    request: AuthenticatedRequest<{
-      Body: { currentPassword: string; newPassword: string; confirmPassword: string };
-    }>,
+    request: AuthenticatedRequest<{ Body: ChangePasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -271,7 +251,7 @@ export class AuthController {
   }
 
   async changeEmail(
-    request: AuthenticatedRequest<{ Body: { newEmail: string; password: string } }>,
+    request: AuthenticatedRequest<{ Body: ChangeEmailBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -298,7 +278,7 @@ export class AuthController {
   }
 
   async deleteAccount(
-    request: AuthenticatedRequest<{ Body: { password: string } }>,
+    request: AuthenticatedRequest<{ Body: DeleteAccountBody }>,
     reply: FastifyReply,
   ) {
     try {

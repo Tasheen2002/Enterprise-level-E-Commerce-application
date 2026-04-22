@@ -20,6 +20,11 @@ export const listPurchaseOrdersSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
+export const createPurchaseOrderSchema = z.object({
+  supplierId: z.uuid(),
+  eta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+});
+
 export const createPurchaseOrderWithItemsSchema = z.object({
   supplierId: z.uuid(),
   eta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
@@ -61,6 +66,7 @@ export const updatePOItemSchema = z.object({
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type POParams = z.infer<typeof poParamsSchema>;
+export type CreatePurchaseOrderBody = z.infer<typeof createPurchaseOrderSchema>;
 export type POItemParams = z.infer<typeof poItemParamsSchema>;
 export type ListPurchaseOrdersQuery = z.infer<typeof listPurchaseOrdersSchema>;
 export type CreatePurchaseOrderWithItemsBody = z.infer<typeof createPurchaseOrderWithItemsSchema>;

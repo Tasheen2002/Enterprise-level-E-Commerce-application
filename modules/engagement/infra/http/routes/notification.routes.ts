@@ -62,7 +62,7 @@ export async function notificationRoutes(
     (request, reply) => controller.getNotification(request as AuthenticatedRequest, reply),
   );
 
-  // GET /engagement/notifications — Get user notifications by type
+  // GET /engagement/notifications — Get notifications by type
   fastify.get(
     "/engagement/notifications",
     {
@@ -97,7 +97,7 @@ export async function notificationRoutes(
         },
       },
     },
-    (request, reply) => controller.getUserNotifications(request as AuthenticatedRequest, reply),
+    (request, reply) => controller.getNotificationsByType(request as AuthenticatedRequest, reply),
   );
 
   // POST /engagement/notifications/schedule — Schedule notification (admin)

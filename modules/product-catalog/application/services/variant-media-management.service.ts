@@ -3,7 +3,6 @@ import { IMediaAssetRepository } from "../../domain/repositories/media-asset.rep
 import { IProductVariantRepository } from "../../domain/repositories/product-variant.repository";
 import { IProductRepository } from "../../domain/repositories/product.repository";
 import { VariantMedia } from "../../domain/entities/variant-media.entity";
-import { MediaAssetId as EntityMediaAssetId } from "../../domain/entities/media-asset.entity";
 import { VariantId } from "../../domain/value-objects/variant-id.vo";
 import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
@@ -85,7 +84,7 @@ export class VariantMediaManagementService {
     }
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -150,7 +149,7 @@ export class VariantMediaManagementService {
     // Get asset details for each variant media
     const mediaAssets = await Promise.all(
       variantMediaList.map(async (variantMedia) => {
-        const assetIdEntity = EntityMediaAssetId.fromString(
+        const assetIdEntity = MediaAssetId.fromString(
           variantMedia.mediaAssetId.getValue(),
         );
         const asset = await this.mediaAssetRepository.findById(assetIdEntity);
@@ -186,7 +185,7 @@ export class VariantMediaManagementService {
     const assetIdVos = [];
     for (const assetId of assetIds) {
       const assetIdVo = MediaAssetId.fromString(assetId);
-      const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+      const assetIdEntity = MediaAssetId.fromString(assetId);
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (!asset) {
         throw new MediaAssetNotFoundError(assetId);
@@ -204,7 +203,7 @@ export class VariantMediaManagementService {
     const assetIdVo = MediaAssetId.fromString(assetId);
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -243,7 +242,7 @@ export class VariantMediaManagementService {
     const assetIdVos = [];
     for (const assetId of assetIds) {
       const assetIdVo = MediaAssetId.fromString(assetId);
-      const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+      const assetIdEntity = MediaAssetId.fromString(assetId);
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
       if (!asset) {
         throw new MediaAssetNotFoundError(assetId);
@@ -307,7 +306,7 @@ export class VariantMediaManagementService {
         );
         const mediaAssets = await Promise.all(
           item.media.map(async (vm) => {
-            const assetIdEntity = EntityMediaAssetId.fromString(
+            const assetIdEntity = MediaAssetId.fromString(
               vm.mediaAssetId.getValue(),
             );
             const asset =
@@ -359,20 +358,14 @@ export class VariantMediaManagementService {
       throw new ProductNotFoundError(targetProductId);
     }
 
-    // Convert string mapping to VariantId mapping
-    const variantIdMapping = new Map<VariantId, VariantId>();
-    for (const [sourceVariantId, targetVariantId] of Object.entries(
-      variantMapping,
-    )) {
-      variantIdMapping.set(
-        VariantId.fromString(sourceVariantId),
-        VariantId.fromString(targetVariantId),
-      );
+    // Map keys are raw source variant ID strings so Map.get() works by value equality.
+    const variantIdMapping = new Map<string, VariantId>();
+    for (const [sourceVariantId, targetVariantId] of Object.entries(variantMapping)) {
+      variantIdMapping.set(sourceVariantId, VariantId.fromString(targetVariantId));
     }
 
     await this.variantMediaRepository.copyProductVariantMedia(
       sourceProductIdVo,
-      targetProductIdVo,
       variantIdMapping,
     );
   }
@@ -381,7 +374,7 @@ export class VariantMediaManagementService {
     const assetIdVo = MediaAssetId.fromString(assetId);
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -396,7 +389,7 @@ export class VariantMediaManagementService {
     const assetIdVo = MediaAssetId.fromString(assetId);
 
     // Validate asset exists
-    const assetIdEntity = EntityMediaAssetId.fromString(assetId);
+    const assetIdEntity = MediaAssetId.fromString(assetId);
     const asset = await this.mediaAssetRepository.findById(assetIdEntity);
     if (!asset) {
       throw new MediaAssetNotFoundError(assetId);
@@ -442,7 +435,7 @@ export class VariantMediaManagementService {
 
           const mediaAssets = await Promise.all(
             mediaList.map(async (vm) => {
-              const assetIdEntity = EntityMediaAssetId.fromString(
+              const assetIdEntity = MediaAssetId.fromString(
                 vm.mediaAssetId.getValue(),
               );
               const asset =
@@ -519,7 +512,7 @@ export class VariantMediaManagementService {
 
           const mediaAssets = await Promise.all(
             mediaList.map(async (vm) => {
-              const assetIdEntity = EntityMediaAssetId.fromString(
+              const assetIdEntity = MediaAssetId.fromString(
                 vm.mediaAssetId.getValue(),
               );
               const asset =
@@ -590,7 +583,7 @@ export class VariantMediaManagementService {
 
     // Check if all referenced assets exist
     for (const vm of variantMedia) {
-      const assetIdEntity = EntityMediaAssetId.fromString(
+      const assetIdEntity = MediaAssetId.fromString(
         vm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);
@@ -632,7 +625,7 @@ export class VariantMediaManagementService {
     let totalSize = 0;
 
     for (const vm of variantMedia) {
-      const assetIdEntity = EntityMediaAssetId.fromString(
+      const assetIdEntity = MediaAssetId.fromString(
         vm.mediaAssetId.getValue(),
       );
       const asset = await this.mediaAssetRepository.findById(assetIdEntity);

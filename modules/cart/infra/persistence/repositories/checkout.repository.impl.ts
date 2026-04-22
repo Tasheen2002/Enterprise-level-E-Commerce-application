@@ -1,4 +1,4 @@
-import { PrismaClient, CheckoutStatusEnum } from "@prisma/client";
+import { PrismaClient, CheckoutStatusEnum, Prisma } from "@prisma/client";
 import { ICheckoutRepository } from "../../../domain/repositories/checkout.repository";
 import {
   Checkout,
@@ -41,7 +41,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
 
   async findById(checkoutId: CheckoutId): Promise<Checkout | null> {
     const checkoutData = await this.prisma.checkout.findUnique({
-      where: { id: checkoutId.toString() },
+      where: { id: checkoutId.getValue() },
     });
 
     if (!checkoutData) {
@@ -56,7 +56,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     // If we have completed checkouts, we ignore them here so the service creates a new one
     const checkoutData = await this.prisma.checkout.findFirst({
       where: {
-        cartId: cartId.toString(),
+        cartId: cartId.getValue(),
         status: CheckoutStatusEnum.pending,
       },
       orderBy: { createdAt: "desc" },
@@ -71,13 +71,13 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
 
   async delete(checkoutId: CheckoutId): Promise<void> {
     await this.prisma.checkout.delete({
-      where: { id: checkoutId.toString() },
+      where: { id: checkoutId.getValue() },
     });
   }
 
   async findByCartOwnerId(userId: CartOwnerId): Promise<Checkout[]> {
     const checkouts = await this.prisma.checkout.findMany({
-      where: { userId: userId.toString() },
+      where: { userId: userId.getValue() },
       orderBy: { createdAt: "desc" },
     });
 
@@ -86,7 +86,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
 
   async findByGuestToken(guestToken: GuestToken): Promise<Checkout[]> {
     const checkouts = await this.prisma.checkout.findMany({
-      where: { guestToken: guestToken.toString() },
+      where: { guestToken: guestToken.getValue() },
       orderBy: { createdAt: "desc" },
     });
 
@@ -120,7 +120,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     completedAt: Date,
   ): Promise<void> {
     await this.prisma.checkout.update({
-      where: { id: checkoutId.toString() },
+      where: { id: checkoutId.getValue() },
       data: {
         status: CheckoutStatusEnum.completed,
         completedAt,
@@ -131,7 +131,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
 
   async markAsExpired(checkoutId: CheckoutId): Promise<void> {
     await this.prisma.checkout.update({
-      where: { id: checkoutId.toString() },
+      where: { id: checkoutId.getValue() },
       data: {
         status: CheckoutStatusEnum.expired,
         updatedAt: new Date(),
@@ -141,7 +141,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
 
   async markAsCancelled(checkoutId: CheckoutId): Promise<void> {
     await this.prisma.checkout.update({
-      where: { id: checkoutId.toString() },
+      where: { id: checkoutId.getValue() },
       data: {
         status: CheckoutStatusEnum.cancelled,
         updatedAt: new Date(),
@@ -165,7 +165,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     return result.count;
   }
 
-  private mapPrismaToEntity(prismaData: any): Checkout {
+  private mapPrismaToEntity(prismaData: Prisma.CheckoutGetPayload<Record<string, never>>): Checkout {
     const entityData: CheckoutEntityData = {
       checkoutId: prismaData.id,
       cartId: prismaData.cartId,
@@ -173,7 +173,7 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
       // If both userId and guestToken exist (invalid state), prioritize userId
       guestToken: prismaData.userId ? undefined : (prismaData.guestToken ?? undefined),
       status: prismaData.status,
-      totalAmount: prismaData.totalAmount,
+      totalAmount: Number(prismaData.totalAmount),
       currency: prismaData.currency,
       expiresAt: prismaData.expiresAt,
       completedAt: prismaData.completedAt ?? undefined,

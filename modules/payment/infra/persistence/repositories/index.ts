@@ -6,6 +6,3 @@ export * from "./gift-card.repository.impl";
 export * from "./gift-card-transaction.repository.impl";
 export * from "./promotion.repository.impl";
 export * from "./promotion-usage.repository.impl";
-export * from "./loyalty-account.repository.impl";
-export * from "./loyalty-program.repository.impl";
-export * from "./loyalty-transaction.repository.impl";

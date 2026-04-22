@@ -8,7 +8,7 @@ export interface GetTagProductsQuery extends IQuery {
 }
 
 export interface GetTagProductsResult {
-  readonly products: unknown[];
+  readonly products: string[];
   readonly pagination: {
     readonly page: number;
     readonly limit: number;
@@ -24,14 +24,11 @@ export class GetTagProductsHandler implements IQueryHandler<GetTagProductsQuery,
     const page = Math.max(1, query.page ?? 1);
     const limit = Math.min(100, Math.max(1, query.limit ?? 20));
 
-    const result = await this.productTagManagementService.getTagProducts(query.tagId, {
+    const products = await this.productTagManagementService.getTagProducts(query.tagId, {
       limit,
       offset: (page - 1) * limit,
     });
 
-    const products = (result as { products?: unknown[] }).products ?? (result as unknown[]);
-    const total = (result as { total?: number }).total ?? 0;
-
-    return { products, pagination: { page, limit, total, total_pages: Math.ceil(total / limit) } };
+    return { products, pagination: { page, limit, total: products.length, total_pages: Math.ceil(products.length / limit) } };
   }
 }

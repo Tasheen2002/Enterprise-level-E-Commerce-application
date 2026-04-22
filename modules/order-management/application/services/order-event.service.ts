@@ -299,27 +299,6 @@ export class OrderEventService {
     return event ? OrderEvent.toDTO(event) : null;
   }
 
-  async getOrderEventHistory(
-    orderId: string,
-    options?: OrderEventQueryOptions,
-  ): Promise<OrderEventDTO[]> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    const defaultOptions: OrderEventQueryOptions = {
-      sortBy: "createdAt",
-      sortOrder: "asc",
-      ...options,
-    };
-
-    const events = await this.orderEventRepository.findByOrderId(
-      orderId,
-      defaultOptions,
-    );
-    return events.map((e) => OrderEvent.toDTO(e));
-  }
-
   async deleteEvent(eventId: number): Promise<void> {
     if (eventId === undefined || eventId === null || eventId < 0) {
       throw new DomainValidationError("Valid event ID is required");

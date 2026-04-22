@@ -18,6 +18,20 @@ import {
 } from "../../../application";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  ReservationIdParams,
+  CartIdParams,
+  VariantIdParams,
+  CartReservationParams,
+  CartReservationsQuery,
+  CheckAvailabilityQuery,
+  ReservationsByStatusQuery,
+  CreateReservationBody,
+  ExtendReservationBody,
+  RenewReservationBody,
+  AdjustReservationBody,
+  CreateBulkReservationsBody,
+} from "../validation/reservation.schema";
 
 export class ReservationController {
   constructor(
@@ -39,9 +53,7 @@ export class ReservationController {
   ) {}
 
   async createReservation(
-    request: AuthenticatedRequest<{
-      Body: { cartId: string; variantId: string; quantity: number; durationMinutes?: number };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -54,7 +66,7 @@ export class ReservationController {
   }
 
   async getReservation(
-    request: AuthenticatedRequest<{ Params: { reservationId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReservationIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -68,10 +80,7 @@ export class ReservationController {
   }
 
   async getCartReservations(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string };
-      Querystring: { activeOnly?: boolean };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartIdParams; Querystring: CartReservationsQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -85,7 +94,7 @@ export class ReservationController {
   }
 
   async getVariantReservations(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -98,7 +107,7 @@ export class ReservationController {
   }
 
   async getReservationByVariant(
-    request: AuthenticatedRequest<{ Params: { cartId: string; variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: CartReservationParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -112,10 +121,7 @@ export class ReservationController {
   }
 
   async extendReservation(
-    request: AuthenticatedRequest<{
-      Params: { reservationId: string };
-      Body: { additionalMinutes: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: ExtendReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -129,10 +135,7 @@ export class ReservationController {
   }
 
   async renewReservation(
-    request: AuthenticatedRequest<{
-      Params: { reservationId: string };
-      Body: { durationMinutes?: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: RenewReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -146,7 +149,7 @@ export class ReservationController {
   }
 
   async releaseReservation(
-    request: AuthenticatedRequest<{ Params: { reservationId: string } }>,
+    request: AuthenticatedRequest<{ Params: ReservationIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -159,10 +162,7 @@ export class ReservationController {
   }
 
   async adjustReservation(
-    request: AuthenticatedRequest<{
-      Params: { cartId: string; variantId: string };
-      Body: { newQuantity: number };
-    }>,
+    request: AuthenticatedRequest<{ Params: CartReservationParams; Body: AdjustReservationBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -176,9 +176,7 @@ export class ReservationController {
   }
 
   async checkAvailability(
-    request: AuthenticatedRequest<{
-      Querystring: { variantId: string; requestedQuantity: number };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: CheckAvailabilityQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -191,7 +189,7 @@ export class ReservationController {
   }
 
   async getTotalReservedQuantity(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -204,7 +202,7 @@ export class ReservationController {
   }
 
   async getActiveReservedQuantity(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantIdParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -217,13 +215,7 @@ export class ReservationController {
   }
 
   async createBulkReservations(
-    request: AuthenticatedRequest<{
-      Body: {
-        cartId: string;
-        items: Array<{ variantId: string; quantity: number }>;
-        durationMinutes?: number;
-      };
-    }>,
+    request: AuthenticatedRequest<{ Body: CreateBulkReservationsBody }>,
     reply: FastifyReply,
   ) {
     try {
@@ -246,7 +238,7 @@ export class ReservationController {
 
   async getReservationStatistics(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getReservationStatisticsHandler.handle();
+      const result = await this.getReservationStatisticsHandler.handle({});
       return ResponseHelper.ok(reply, "Reservation statistics retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -254,9 +246,7 @@ export class ReservationController {
   }
 
   async getReservationsByStatus(
-    request: AuthenticatedRequest<{
-      Querystring: { status?: "active" | "expiring_soon" | "expired" | "recently_expired" };
-    }>,
+    request: AuthenticatedRequest<{ Querystring: ReservationsByStatusQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -269,7 +259,7 @@ export class ReservationController {
   }
 
   async resolveReservationConflicts(
-    request: AuthenticatedRequest<{ Params: { variantId: string } }>,
+    request: AuthenticatedRequest<{ Params: VariantIdParams }>,
     reply: FastifyReply,
   ) {
     try {

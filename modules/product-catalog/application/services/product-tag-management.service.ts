@@ -4,11 +4,8 @@ import {
   ProductTagCountOptions,
 } from "../../domain/repositories/product-tag.repository";
 import { IProductTagAssociationRepository } from "../../domain/repositories/iproduct-tag-association.repository";
-import {
-  ProductTag,
-  ProductTagDTO,
-  ProductTagId,
-} from "../../domain/entities/product-tag.entity";
+import { ProductTag, ProductTagDTO } from "../../domain/entities/product-tag.entity";
+import { ProductTagId } from "../../domain/value-objects/product-tag-id.vo";
 import { ProductTagAssociation } from "../../domain/entities/product-tag-association.entity";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import {

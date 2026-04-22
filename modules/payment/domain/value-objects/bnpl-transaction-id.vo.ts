@@ -13,8 +13,4 @@ export class BnplTransactionId extends UuidId {
   static fromString(value: string): BnplTransactionId {
     return new BnplTransactionId(value);
   }
-
-  equals(other: BnplTransactionId | null | undefined): boolean {
-    return super.equals(other);
-  }
 }

@@ -134,7 +134,7 @@ export interface ICartRepository {
     cartId: CartId,
     data: CartAddressData,
   ): Promise<void>;
-  getCartWithCheckoutInfo(cartId: string): Promise<CartWithCheckoutInfo | null>;
+  getCartWithCheckoutInfo(cartId: CartId): Promise<CartWithCheckoutInfo | null>;
 }
 
 export interface CartWithCheckoutInfo {

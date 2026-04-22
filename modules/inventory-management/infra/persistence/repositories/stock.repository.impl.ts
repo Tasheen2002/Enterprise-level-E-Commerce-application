@@ -1,27 +1,27 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
-import { Stock, StockProps } from "../../../domain/entities/stock.entity";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { Stock } from "../../../domain/entities/stock.entity";
 import { StockLevel } from "../../../domain/value-objects/stock-level.vo";
 import { IStockRepository } from "../../../domain/repositories/stock.repository";
 
-interface StockDatabaseRow {
-  variantId: string;
-  locationId: string;
-  onHand: number;
-  reserved: number;
-  lowStockThreshold: number | null;
-  safetyStock: number | null;
-  variant?: any;
-  location?: any;
-}
-
-export class StockRepositoryImpl extends PrismaRepository<Stock> implements IStockRepository {
+export class StockRepositoryImpl
+  extends PrismaRepository<Stock>
+  implements IStockRepository
+{
   constructor(prisma: PrismaClient, eventBus?: IEventBus) {
     super(prisma, eventBus);
   }
 
-  private toEntity(row: StockDatabaseRow): Stock {
+  private toEntity(row: {
+    variantId: string;
+    locationId: string;
+    onHand: number;
+    reserved: number;
+    lowStockThreshold: number | null;
+    safetyStock: number | null;
+  }): Stock {
     return Stock.fromPersistence({
       variantId: row.variantId,
       locationId: row.locationId,
@@ -37,7 +37,7 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
   async save(stock: Stock): Promise<void> {
     const stockLevel = stock.stockLevel;
 
-    await (this.prisma as any).inventoryStock.upsert({
+    await this.prisma.inventoryStock.upsert({
       where: {
         variantId_locationId: {
           variantId: stock.variantId,
@@ -67,47 +67,33 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
     variantId: string,
     locationId: string,
   ): Promise<Stock | null> {
-    const stock = await (this.prisma as any).inventoryStock.findUnique({
-      where: {
-        variantId_locationId: {
-          variantId,
-          locationId,
-        },
-      },
+    const row = await this.prisma.inventoryStock.findUnique({
+      where: { variantId_locationId: { variantId, locationId } },
     });
 
-    if (!stock) {
-      return null;
-    }
-
-    return this.toEntity(stock);
+    return row ? this.toEntity(row) : null;
   }
 
   async delete(variantId: string, locationId: string): Promise<void> {
-    await (this.prisma as any).inventoryStock.delete({
-      where: {
-        variantId_locationId: {
-          variantId,
-          locationId,
-        },
-      },
+    await this.prisma.inventoryStock.delete({
+      where: { variantId_locationId: { variantId, locationId } },
     });
   }
 
   async findByVariant(variantId: string): Promise<Stock[]> {
-    const stocks = await (this.prisma as any).inventoryStock.findMany({
+    const rows = await this.prisma.inventoryStock.findMany({
       where: { variantId },
     });
 
-    return stocks.map((stock: StockDatabaseRow) => this.toEntity(stock));
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findByLocation(locationId: string): Promise<Stock[]> {
-    const stocks = await (this.prisma as any).inventoryStock.findMany({
+    const rows = await this.prisma.inventoryStock.findMany({
       where: { locationId },
     });
 
-    return stocks.map((stock: StockDatabaseRow) => this.toEntity(stock));
+    return rows.map((r) => this.toEntity(r));
   }
 
   async findAll(options?: {
@@ -118,7 +104,7 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
     locationId?: string;
     sortBy?: "available" | "onHand" | "location" | "product";
     sortOrder?: "asc" | "desc";
-  }): Promise<{ stocks: Stock[]; total: number }> {
+  }): Promise<PaginatedResult<Stock>> {
     const {
       limit = 50,
       offset = 0,
@@ -129,33 +115,14 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
       sortOrder = "asc",
     } = options || {};
 
-    const where: any = {};
+    const where: Prisma.InventoryStockWhereInput = {};
 
     if (search) {
       where.variant = {
         OR: [
-          {
-            sku: {
-              contains: search,
-              mode: "insensitive",
-            },
-          },
-          {
-            product: {
-              title: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-          },
-          {
-            product: {
-              brand: {
-                contains: search,
-                mode: "insensitive",
-              },
-            },
-          },
+          { sku: { contains: search, mode: "insensitive" } },
+          { product: { title: { contains: search, mode: "insensitive" } } },
+          { product: { brand: { contains: search, mode: "insensitive" } } },
         ],
       };
     }
@@ -164,7 +131,7 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
       where.locationId = locationId;
     }
 
-    let orderBy: any = { variantId: "asc" };
+    let orderBy: Prisma.InventoryStockOrderByWithRelationInput = { variantId: "asc" };
     if (sortBy === "onHand") {
       orderBy = { onHand: sortOrder };
     } else if (sortBy === "location") {
@@ -176,7 +143,7 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
     const shouldFetchAll = status || sortBy === "available";
 
     const [stocks, total] = await Promise.all([
-      (this.prisma as any).inventoryStock.findMany({
+      this.prisma.inventoryStock.findMany({
         take: shouldFetchAll ? undefined : limit,
         skip: shouldFetchAll ? undefined : offset,
         where,
@@ -205,9 +172,7 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
                         },
                       },
                     },
-                    orderBy: {
-                      position: "asc",
-                    },
+                    orderBy: { position: "asc" },
                     take: 1,
                   },
                 },
@@ -216,121 +181,88 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
           },
         },
       }),
-      (this.prisma as any).inventoryStock.count({ where }),
+      this.prisma.inventoryStock.count({ where }),
     ]);
 
-    const variantIds = stocks.map((s: any) => s.variantId);
+    const variantIds = stocks.map((s) => s.variantId);
     const now = new Date();
 
-    const activeReservations = await (this.prisma as any).reservation.groupBy({
+    const activeReservations = await this.prisma.reservation.groupBy({
       by: ["variantId"],
       where: {
         variantId: { in: variantIds },
         expiresAt: { gt: now },
       },
-      _sum: {
-        qty: true,
-      },
+      _sum: { qty: true },
     });
 
     const reservationMap = new Map<string, number>();
-    activeReservations.forEach((r: any) => {
+    activeReservations.forEach((r) => {
       if (r.variantId && r._sum.qty) {
         reservationMap.set(r.variantId, r._sum.qty);
       }
     });
 
-    let stockEntities = stocks.map((stock: StockDatabaseRow) => {
-      const reservedInCart = reservationMap.get(stock.variantId) || 0;
-
-      const modifiedRow = {
-        ...stock,
-        reserved: stock.reserved + reservedInCart,
-      };
-
-      return this.toEntity(modifiedRow);
+    let stockEntities = stocks.map((stock) => {
+      const reservedInCart = reservationMap.get(stock.variantId) ?? 0;
+      return this.toEntity({ ...stock, reserved: stock.reserved + reservedInCart });
     });
 
     if (status) {
-      stockEntities = stockEntities.filter((stock: Stock) => {
+      stockEntities = stockEntities.filter((stock) => {
         const stockLevel = stock.stockLevel;
-        if (status === "out_of_stock") {
-          return stockLevel.isOutOfStock();
-        } else if (status === "low_stock") {
-          return stockLevel.isLowStock() && !stockLevel.isOutOfStock();
-        } else if (status === "in_stock") {
-          return !stockLevel.isLowStock() && !stockLevel.isOutOfStock();
-        }
+        if (status === "out_of_stock") return stockLevel.isOutOfStock();
+        if (status === "low_stock") return stockLevel.isLowStock() && !stockLevel.isOutOfStock();
+        if (status === "in_stock") return !stockLevel.isLowStock() && !stockLevel.isOutOfStock();
         return true;
       });
     }
 
     if (sortBy === "available") {
-      stockEntities.sort((a: Stock, b: Stock) => {
-        const availableA = a.stockLevel.available;
-        const availableB = b.stockLevel.available;
-        return sortOrder === "asc"
-          ? availableA - availableB
-          : availableB - availableA;
+      stockEntities.sort((a, b) => {
+        const diff = a.stockLevel.available - b.stockLevel.available;
+        return sortOrder === "asc" ? diff : -diff;
       });
     }
 
-    const finalTotal = stockEntities.length;
-    const paginatedStocks = shouldFetchAll
+    const finalTotal = shouldFetchAll ? stockEntities.length : total;
+    const items = shouldFetchAll
       ? stockEntities.slice(offset, offset + limit)
       : stockEntities;
 
-    return {
-      stocks: paginatedStocks,
-      total: shouldFetchAll ? finalTotal : total,
-    };
+    return { items, total: finalTotal, limit, offset, hasMore: offset + items.length < finalTotal };
   }
 
   async findLowStockItems(): Promise<Stock[]> {
-    const stocks = await (this.prisma as any).inventoryStock.findMany({
-      where: {
-        lowStockThreshold: { not: null },
-      },
+    const rows = await this.prisma.inventoryStock.findMany({
+      where: { lowStockThreshold: { not: null } },
     });
 
-    return stocks
-      .filter((s: StockDatabaseRow) =>
-        s.lowStockThreshold !== null && s.onHand <= s.lowStockThreshold,
-      )
-      .map((s: StockDatabaseRow) => this.toEntity(s));
+    return rows
+      .filter((r) => r.lowStockThreshold !== null && r.onHand <= r.lowStockThreshold)
+      .map((r) => this.toEntity(r));
   }
 
   async findOutOfStockItems(): Promise<Stock[]> {
-    const stocks = await (this.prisma as any).inventoryStock.findMany({
-      where: {
-        onHand: { lte: 0 },
-      },
+    const rows = await this.prisma.inventoryStock.findMany({
+      where: { onHand: { lte: 0 } },
     });
 
-    return stocks.map((s: StockDatabaseRow) => this.toEntity(s));
+    return rows.map((r) => this.toEntity(r));
   }
 
   async getTotalAvailableStock(variantId: string): Promise<number> {
-    const result = await (this.prisma as any).inventoryStock.aggregate({
+    const result = await this.prisma.inventoryStock.aggregate({
       where: { variantId },
-      _sum: {
-        onHand: true,
-        reserved: true,
-      },
+      _sum: { onHand: true, reserved: true },
     });
 
-    const totalOnHand = result._sum.onHand || 0;
-    const totalReserved = result._sum.reserved || 0;
-
-    return totalOnHand - totalReserved;
+    return (result._sum.onHand ?? 0) - (result._sum.reserved ?? 0);
   }
 
   async exists(variantId: string, locationId: string): Promise<boolean> {
-    const count = await (this.prisma as any).inventoryStock.count({
-      where: {
-        variantId,
-        locationId,
-      },
+    const count = await this.prisma.inventoryStock.count({
+      where: { variantId, locationId },
     });
 
     return count > 0;
@@ -343,23 +275,18 @@ export class StockRepositoryImpl extends PrismaRepository<Stock> implements ISto
     totalValue: number;
   }> {
     const [totalStats, allStocks] = await Promise.all([
-      (this.prisma as any).inventoryStock.aggregate({
-        _sum: { onHand: true },
-      }),
-      (this.prisma as any).inventoryStock.findMany(),
+      this.prisma.inventoryStock.aggregate({ _sum: { onHand: true } }),
+      this.prisma.inventoryStock.findMany(),
     ]);
 
     const lowStockCount = allStocks.filter(
-      (s: StockDatabaseRow) =>
-        s.lowStockThreshold !== null && s.onHand <= s.lowStockThreshold,
+      (s) => s.lowStockThreshold !== null && s.onHand <= s.lowStockThreshold,
     ).length;
 
-    const outOfStockCount = allStocks.filter(
-      (s: StockDatabaseRow) => s.onHand <= s.reserved,
-    ).length;
+    const outOfStockCount = allStocks.filter((s) => s.onHand <= s.reserved).length;
 
     return {
-      totalItems: totalStats._sum.onHand || 0,
+      totalItems: totalStats._sum.onHand ?? 0,
       lowStockCount,
       outOfStockCount,
       totalValue: 0,

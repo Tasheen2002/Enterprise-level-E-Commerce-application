@@ -64,7 +64,7 @@ export const setLookProductsSchema = z.object({
 });
 
 export const duplicateEditorialLookSchema = z.object({
-  newTitle: z.string().min(1).optional(),
+  newTitle: z.string().min(1),
 });
 
 export const bulkCreateEditorialLooksSchema = z.object({
