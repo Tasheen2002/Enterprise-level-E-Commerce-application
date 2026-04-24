@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";fdg
+import { PrismaClient } from "@prisma/client";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
 
 // ============================================================
