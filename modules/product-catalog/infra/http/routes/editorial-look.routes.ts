@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { EditorialLookController } from "../controllers/editorial-look.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -11,7 +12,12 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   editorialLookParamsSchema,
   editorialLookProductParamsSchema,
@@ -34,6 +40,10 @@ import {
   popularProductsResponseSchema,
   lookProductsResponseSchema,
   productLooksResponseSchema,
+  paginatedEditorialLooksResponseSchema,
+  editorialLooksArrayResponseSchema,
+  bulkPublishLooksResponseSchema,
+  scheduledPublicationsResponseSchema,
 } from "../validation/editorial-look.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -41,17 +51,34 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const editorialLookParamsJson = toJsonSchema(editorialLookParamsSchema);
+const editorialLookProductParamsJson = toJsonSchema(editorialLookProductParamsSchema);
+const productLooksParamsJson = toJsonSchema(productLooksParamsSchema);
+const listEditorialLooksQueryJson = toJsonSchema(listEditorialLooksSchema);
+const popularProductsQueryJson = toJsonSchema(popularProductsQuerySchema);
+const createEditorialLookBodyJson = toJsonSchema(createEditorialLookSchema);
+const updateEditorialLookBodyJson = toJsonSchema(updateEditorialLookSchema);
+const schedulePublicationBodyJson = toJsonSchema(schedulePublicationSchema);
+const setHeroImageBodyJson = toJsonSchema(setHeroImageSchema);
+const updateStoryContentBodyJson = toJsonSchema(updateStoryContentSchema);
+const setLookProductsBodyJson = toJsonSchema(setLookProductsSchema);
+const duplicateEditorialLookBodyJson = toJsonSchema(duplicateEditorialLookSchema);
+const bulkCreateEditorialLooksBodyJson = toJsonSchema(bulkCreateEditorialLooksSchema);
+const bulkPublishEditorialLooksBodyJson = toJsonSchema(bulkPublishEditorialLooksSchema);
+const bulkDeleteEditorialLooksBodyJson = toJsonSchema(bulkDeleteEditorialLooksSchema);
+
 export async function editorialLookRoutes(
   fastify: FastifyInstance,
   controller: EditorialLookController,
 ): Promise<void> {
-  const lookSchema = editorialLookResponseSchema;
-
   fastify.addHook("onRequest", async (request, reply) => {
     if (request.method !== "GET") {
       await writeRateLimiter(request, reply);
     }
   });
+
+  // ── Reads ──────────────────────────────────────────────────────────────
 
   // GET /editorial-looks — List editorial looks (public)
   fastify.get(
@@ -59,49 +86,12 @@ export async function editorialLookRoutes(
     {
       preValidation: [validateQuery(listEditorialLooksSchema)],
       schema: {
-        description:
-          "Get paginated list of editorial looks with filtering options",
+        description: "Get paginated list of editorial looks with filtering options",
         tags: ["Editorial Looks"],
         summary: "List Editorial Looks",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            published: { type: "boolean" },
-            scheduled: { type: "boolean" },
-            draft: { type: "boolean" },
-            hasContent: { type: "boolean" },
-            hasHeroImage: { type: "boolean" },
-            includeUnpublished: { type: "boolean" },
-            sortBy: {
-              type: "string",
-              enum: ["title", "publishedAt", "id"],
-              default: "publishedAt",
-            },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "desc",
-            },
-          },
-        },
+        querystring: listEditorialLooksQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  looks: { type: "array", items: lookSchema },
-                  meta: { type: "object" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedEditorialLooksResponseSchema),
         },
       },
     },
@@ -113,22 +103,14 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/stats",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get editorial look statistics",
         tags: ["Editorial Looks"],
         summary: "Get Editorial Look Statistics",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: editorialLookStatsResponseSchema,
-            },
-          },
+          200: successResponse(editorialLookStatsResponseSchema),
         },
       },
     },
@@ -140,22 +122,14 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/ready-to-publish",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get editorial looks that are ready to be published",
         tags: ["Editorial Looks"],
         summary: "Get Ready to Publish Looks",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: readyToPublishLooksResponseSchema,
-            },
-          },
+          200: successResponse(readyToPublishLooksResponseSchema),
         },
       },
     },
@@ -163,7 +137,7 @@ export async function editorialLookRoutes(
       controller.getReadyToPublishLooks(request as AuthenticatedRequest, reply),
   );
 
-  // GET /editorial-looks/popular-products — Get popular products in editorial looks (public, before /:id)
+  // GET /editorial-looks/popular-products — Popular products in looks (public, before /:id)
   fastify.get(
     "/editorial-looks/popular-products",
     {
@@ -172,22 +146,9 @@ export async function editorialLookRoutes(
         description: "Get products most frequently featured in editorial looks",
         tags: ["Editorial Looks"],
         summary: "Get Popular Products in Looks",
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
-          },
-        },
+        querystring: popularProductsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: popularProductsResponseSchema,
-            },
-          },
+          200: successResponse(popularProductsResponseSchema),
         },
       },
     },
@@ -204,21 +165,9 @@ export async function editorialLookRoutes(
         description: "Get editorial look by ID",
         tags: ["Editorial Looks"],
         summary: "Get Editorial Look",
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -235,21 +184,9 @@ export async function editorialLookRoutes(
         description: "Get all products featured in an editorial look",
         tags: ["Editorial Looks"],
         summary: "Get Look Products",
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookProductsResponseSchema,
-            },
-          },
+          200: successResponse(lookProductsResponseSchema),
         },
       },
     },
@@ -257,7 +194,7 @@ export async function editorialLookRoutes(
       controller.getLookProducts(request as AuthenticatedRequest, reply),
   );
 
-  // GET /products/:productId/editorial-looks — Get editorial looks featuring a product (public)
+  // GET /products/:productId/editorial-looks — Looks featuring a product (public)
   fastify.get(
     "/products/:productId/editorial-looks",
     {
@@ -266,21 +203,9 @@ export async function editorialLookRoutes(
         description: "Get editorial looks that feature a specific product",
         tags: ["Editorial Looks"],
         summary: "Get Product Editorial Looks",
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
+        params: productLooksParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: productLooksResponseSchema,
-            },
-          },
+          200: successResponse(productLooksResponseSchema),
         },
       },
     },
@@ -288,181 +213,80 @@ export async function editorialLookRoutes(
       controller.getProductLooks(request as AuthenticatedRequest, reply),
   );
 
-  // POST /editorial-looks/bulk — Bulk create editorial looks (Admin only, before POST /editorial-looks)
+  // ── Writes ─────────────────────────────────────────────────────────────
+
+  // POST /editorial-looks/bulk — Bulk create (Admin only, before POST /editorial-looks)
   fastify.post(
     "/editorial-looks/bulk",
     {
-      preValidation: [validateBody(bulkCreateEditorialLooksSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(bulkCreateEditorialLooksSchema)],
       schema: {
         description: "Bulk create editorial looks",
         tags: ["Editorial Looks"],
         summary: "Bulk Create Editorial Looks",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["looks"],
-          properties: {
-            looks: {
-              type: "array",
-              minItems: 1,
-              items: {
-                type: "object",
-                required: ["title"],
-                properties: {
-                  title: { type: "string" },
-                  storyHtml: { type: "string" },
-                  heroAssetId: { type: "string", format: "uuid" },
-                  publishedAt: { type: "string", format: "date-time" },
-                  productIds: {
-                    type: "array",
-                    items: { type: "string", format: "uuid" },
-                  },
-                },
-              },
-            },
-          },
-        },
+        body: bulkCreateEditorialLooksBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: lookSchema },
-            },
-          },
+          201: successResponse(editorialLooksArrayResponseSchema, 201),
         },
       },
     },
     (request, reply) =>
-      controller.createBulkEditorialLooks(
-        request as AuthenticatedRequest,
-        reply,
-      ),
+      controller.createBulkEditorialLooks(request as AuthenticatedRequest, reply),
   );
 
-  // POST /editorial-looks/bulk/publish — Bulk publish editorial looks (Admin only)
+  // POST /editorial-looks/bulk/publish — Bulk publish (Admin only, before POST /editorial-looks)
   fastify.post(
     "/editorial-looks/bulk/publish",
     {
-      preValidation: [validateBody(bulkPublishEditorialLooksSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(bulkPublishEditorialLooksSchema)],
       schema: {
         description: "Publish multiple editorial looks at once",
         tags: ["Editorial Looks"],
         summary: "Bulk Publish Editorial Looks",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["ids"],
-          properties: {
-            ids: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        body: bulkPublishEditorialLooksBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  published: { type: "array", items: lookSchema },
-                  failed: { type: "array", items: { type: "object" } },
-                },
-              },
-            },
-          },
+          200: successResponse(bulkPublishLooksResponseSchema),
         },
       },
     },
     (request, reply) =>
-      controller.publishBulkEditorialLooks(
-        request as AuthenticatedRequest,
-        reply,
-      ),
+      controller.publishBulkEditorialLooks(request as AuthenticatedRequest, reply),
   );
 
   // POST /editorial-looks/process-scheduled — Process scheduled publications (Admin only)
   fastify.post(
     "/editorial-looks/process-scheduled",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
-        description:
-          "Trigger processing of scheduled editorial look publications",
+        description: "Trigger processing of scheduled editorial look publications",
         tags: ["Editorial Looks"],
         summary: "Process Scheduled Publications",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  published: { type: "array", items: lookSchema },
-                  errors: { type: "array", items: { type: "object" } },
-                },
-              },
-            },
-          },
+          200: successResponse(scheduledPublicationsResponseSchema),
         },
       },
     },
     (request, reply) =>
-      controller.processScheduledPublications(
-        request as AuthenticatedRequest,
-        reply,
-      ),
+      controller.processScheduledPublications(request as AuthenticatedRequest, reply),
   );
 
   // POST /editorial-looks — Create editorial look (Admin only)
   fastify.post(
     "/editorial-looks",
     {
-      preValidation: [validateBody(createEditorialLookSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createEditorialLookSchema)],
       schema: {
         description: "Create a new editorial look",
         tags: ["Editorial Looks"],
         summary: "Create Editorial Look",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["title"],
-          properties: {
-            title: { type: "string" },
-            storyHtml: { type: "string" },
-            heroAssetId: { type: "string", format: "uuid" },
-            publishedAt: { type: "string", format: "date-time" },
-            productIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        body: createEditorialLookBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          201: successResponse(editorialLookResponseSchema, 201),
         },
       },
     },
@@ -475,27 +299,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id/publish",
     {
       preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Publish an editorial look",
         tags: ["Editorial Looks"],
         summary: "Publish Editorial Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -508,27 +320,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id/unpublish",
     {
       preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Unpublish an editorial look",
         tags: ["Editorial Looks"],
         summary: "Unpublish Editorial Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -540,33 +340,17 @@ export async function editorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/schedule",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(schedulePublicationSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(schedulePublicationSchema)],
       schema: {
         description: "Schedule an editorial look for future publication",
         tags: ["Editorial Looks"],
         summary: "Schedule Editorial Look Publication",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["publishDate"],
-          properties: { publishDate: { type: "string", format: "date-time" } },
-        },
+        params: editorialLookParamsJson,
+        body: schedulePublicationBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -578,32 +362,17 @@ export async function editorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/duplicate",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(duplicateEditorialLookSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(duplicateEditorialLookSchema)],
       schema: {
         description: "Duplicate an editorial look",
         tags: ["Editorial Looks"],
         summary: "Duplicate Editorial Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: { newTitle: { type: "string" } },
-        },
+        params: editorialLookParamsJson,
+        body: duplicateEditorialLookBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          201: successResponse(editorialLookResponseSchema, 201),
         },
       },
     },
@@ -615,33 +384,17 @@ export async function editorialLookRoutes(
   fastify.post(
     "/editorial-looks/:id/hero",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(setHeroImageSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(setHeroImageSchema)],
       schema: {
         description: "Set the hero image for an editorial look",
         tags: ["Editorial Looks"],
         summary: "Set Hero Image",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["assetId"],
-          properties: { assetId: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
+        body: setHeroImageBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -649,42 +402,21 @@ export async function editorialLookRoutes(
       controller.setHeroImage(request as AuthenticatedRequest, reply),
   );
 
-  // POST /editorial-looks/:id/products — Set products in a look (Admin only)
+  // POST /editorial-looks/:id/products — Set (replace) products (Admin only)
   fastify.post(
     "/editorial-looks/:id/products",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(setLookProductsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(setLookProductsSchema)],
       schema: {
         description: "Set (replace) all products featured in an editorial look",
         tags: ["Editorial Looks"],
         summary: "Set Look Products",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["productIds"],
-          properties: {
-            productIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        params: editorialLookParamsJson,
+        body: setLookProductsBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -692,30 +424,20 @@ export async function editorialLookRoutes(
       controller.setLookProducts(request as AuthenticatedRequest, reply),
   );
 
-  // POST /editorial-looks/:id/products/:productId — Add product to look (Admin only)
+  // POST /editorial-looks/:id/products/:productId — Add a single product (Admin only)
   fastify.post(
     "/editorial-looks/:id/products/:productId",
     {
       preValidation: [validateParams(editorialLookProductParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Add a product to an editorial look",
         tags: ["Editorial Looks"],
         summary: "Add Product to Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id", "productId"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-            productId: { type: "string", format: "uuid" },
-          },
-        },
+        params: editorialLookProductParamsJson,
         response: {
-          204: {
-            description: "Product added to editorial look successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -727,33 +449,17 @@ export async function editorialLookRoutes(
   fastify.patch(
     "/editorial-looks/:id/story",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(updateStoryContentSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateStoryContentSchema)],
       schema: {
         description: "Update the story HTML content of an editorial look",
         tags: ["Editorial Looks"],
         summary: "Update Story Content",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["storyHtml"],
-          properties: { storyHtml: { type: "string" } },
-        },
+        params: editorialLookParamsJson,
+        body: updateStoryContentBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -765,41 +471,17 @@ export async function editorialLookRoutes(
   fastify.patch(
     "/editorial-looks/:id",
     {
-      preValidation: [validateParams(editorialLookParamsSchema), validateBody(updateEditorialLookSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(editorialLookParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateEditorialLookSchema)],
       schema: {
         description: "Update an existing editorial look",
         tags: ["Editorial Looks"],
         summary: "Update Editorial Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            storyHtml: { type: "string" },
-            heroAssetId: { type: "string", format: "uuid", nullable: true },
-            publishedAt: {
-              type: "string",
-              format: "date-time",
-              nullable: true,
-            },
-          },
-        },
+        params: editorialLookParamsJson,
+        body: updateEditorialLookBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: lookSchema,
-            },
-          },
+          200: successResponse(editorialLookResponseSchema),
         },
       },
     },
@@ -807,39 +489,24 @@ export async function editorialLookRoutes(
       controller.updateEditorialLook(request as AuthenticatedRequest, reply),
   );
 
-  // DELETE /editorial-looks/bulk — Bulk delete editorial looks (Admin only)
+  // DELETE /editorial-looks/bulk — Bulk delete (Admin only, before /:id)
   fastify.delete(
     "/editorial-looks/bulk",
     {
-      preValidation: [validateBody(bulkDeleteEditorialLooksSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(bulkDeleteEditorialLooksSchema)],
       schema: {
         description: "Bulk delete editorial looks",
         tags: ["Editorial Looks"],
         summary: "Bulk Delete Editorial Looks",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["ids"],
-          properties: {
-            ids: {
-              type: "array",
-              minItems: 1,
-              maxItems: 100,
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        body: bulkDeleteEditorialLooksBodyJson,
         response: {
-          204: { type: "null", description: "No Content" },
+          204: noContentResponse,
         },
       },
     },
     (request, reply) =>
-      controller.deleteBulkEditorialLooks(
-        request as AuthenticatedRequest,
-        reply,
-      ),
+      controller.deleteBulkEditorialLooks(request as AuthenticatedRequest, reply),
   );
 
   // DELETE /editorial-looks/:id/hero — Remove hero image (Admin only)
@@ -847,22 +514,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id/hero",
     {
       preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Remove the hero image from an editorial look",
         tags: ["Editorial Looks"],
         summary: "Remove Hero Image",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          204: {
-            description: "Hero image removed successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -875,22 +535,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id/story",
     {
       preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Clear the story HTML content of an editorial look",
         tags: ["Editorial Looks"],
         summary: "Clear Story Content",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          204: {
-            description: "Story content cleared successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -903,25 +556,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id/products/:productId",
     {
       preValidation: [validateParams(editorialLookProductParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Remove a product from an editorial look",
         tags: ["Editorial Looks"],
         summary: "Remove Product from Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id", "productId"],
-          properties: {
-            id: { type: "string", format: "uuid" },
-            productId: { type: "string", format: "uuid" },
-          },
-        },
+        params: editorialLookProductParamsJson,
         response: {
-          204: {
-            description: "Product removed from editorial look successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -934,22 +577,15 @@ export async function editorialLookRoutes(
     "/editorial-looks/:id",
     {
       preValidation: [validateParams(editorialLookParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete an editorial look",
         tags: ["Editorial Looks"],
         summary: "Delete Editorial Look",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: editorialLookParamsJson,
         response: {
-          204: {
-            description: "Editorial look deleted successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
