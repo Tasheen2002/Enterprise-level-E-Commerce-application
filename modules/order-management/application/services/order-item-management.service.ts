@@ -8,6 +8,8 @@ import {
   ProductSnapshotData,
 } from "../../domain/value-objects/product-snapshot.vo";
 import { OrderItemNotFoundError } from "../../domain/errors/order-management.errors";
+import { OrderId } from "../../domain/value-objects/order-id.vo";
+import { OrderItemId } from "../../domain/value-objects/order-item-id.vo";
 
 interface CreateOrderItemParams {
   orderId: string;
@@ -22,49 +24,24 @@ export class OrderItemManagementService {
   constructor(private readonly orderItemRepository: IOrderItemRepository) {}
 
   async addOrderItem(params: CreateOrderItemParams): Promise<OrderItemDTO> {
-    const productSnapshot = ProductSnapshot.create(params.productSnapshot);
-
-    const orderItem = OrderItem.create({
-      orderId: params.orderId,
-      variantId: params.variantId,
-      quantity: params.quantity,
-      productSnapshot,
-      isGift: params.isGift ?? false,
-      giftMessage: params.giftMessage,
-    });
-
+    const orderItem = this.buildOrderItem(params);
     await this.orderItemRepository.save(orderItem);
-
     return OrderItem.toDTO(orderItem);
   }
 
+  // All-or-nothing batch insert — a failure on any item aborts the whole call.
   async addMultipleOrderItems(
     items: CreateOrderItemParams[],
   ): Promise<OrderItemDTO[]> {
-    const orderItems: OrderItem[] = [];
-
-    for (const itemData of items) {
-      const productSnapshot = ProductSnapshot.create(itemData.productSnapshot);
-
-      const orderItem = OrderItem.create({
-        orderId: itemData.orderId,
-        variantId: itemData.variantId,
-        quantity: itemData.quantity,
-        productSnapshot,
-        isGift: itemData.isGift || false,
-        giftMessage: itemData.giftMessage,
-      });
-
-      orderItems.push(orderItem);
-    }
-
+    const orderItems = items.map((p) => this.buildOrderItem(p));
     await this.orderItemRepository.saveAll(orderItems);
-
     return orderItems.map((item) => OrderItem.toDTO(item));
   }
 
   async getOrderItemById(id: string): Promise<OrderItemDTO | null> {
-    const orderItem = await this.orderItemRepository.findById(id);
+    const orderItem = await this.orderItemRepository.findById(
+      OrderItemId.fromString(id),
+    );
     return orderItem ? OrderItem.toDTO(orderItem) : null;
   }
 
@@ -72,7 +49,10 @@ export class OrderItemManagementService {
     orderId: string,
     options?: OrderItemQueryOptions,
   ): Promise<OrderItemDTO[]> {
-    const items = await this.orderItemRepository.findByOrderId(orderId, options);
+    const items = await this.orderItemRepository.findByOrderId(
+      OrderId.fromString(orderId),
+      options,
+    );
     return items.map((i) => OrderItem.toDTO(i));
   }
 
@@ -85,7 +65,9 @@ export class OrderItemManagementService {
   }
 
   async getGiftItemsByOrderId(orderId: string): Promise<OrderItemDTO[]> {
-    const items = await this.orderItemRepository.findGiftItems(orderId);
+    const items = await this.orderItemRepository.findGiftItems(
+      OrderId.fromString(orderId),
+    );
     return items.map((i) => OrderItem.toDTO(i));
   }
 
@@ -93,12 +75,9 @@ export class OrderItemManagementService {
     id: string,
     newQuantity: number,
   ): Promise<OrderItemDTO> {
-    const orderItem = await this.orderItemRepository.findById(id);
-    if (!orderItem) throw new OrderItemNotFoundError(id);
-
+    const orderItem = await this.requireOrderItem(id);
     orderItem.updateQuantity(newQuantity);
     await this.orderItemRepository.save(orderItem);
-
     return OrderItem.toDTO(orderItem);
   }
 
@@ -106,38 +85,37 @@ export class OrderItemManagementService {
     id: string,
     giftMessage?: string,
   ): Promise<OrderItemDTO> {
-    const orderItem = await this.orderItemRepository.findById(id);
-    if (!orderItem) throw new OrderItemNotFoundError(id);
-
+    const orderItem = await this.requireOrderItem(id);
     orderItem.setAsGift(giftMessage);
     await this.orderItemRepository.save(orderItem);
-
     return OrderItem.toDTO(orderItem);
   }
 
   async removeGiftFromOrderItem(id: string): Promise<OrderItemDTO> {
-    const orderItem = await this.orderItemRepository.findById(id);
-    if (!orderItem) throw new OrderItemNotFoundError(id);
-
+    const orderItem = await this.requireOrderItem(id);
     orderItem.removeGift();
     await this.orderItemRepository.save(orderItem);
-
     return OrderItem.toDTO(orderItem);
   }
 
   async deleteOrderItem(id: string): Promise<void> {
-    const exists = await this.orderItemRepository.exists(id);
-    if (!exists) throw new OrderItemNotFoundError(id);
+    const itemId = OrderItemId.fromString(id);
+    const exists = await this.orderItemRepository.exists(itemId);
+    if (!exists) throw new OrderItemNotFoundError(itemId.getValue());
 
-    await this.orderItemRepository.delete(id);
+    await this.orderItemRepository.delete(itemId);
   }
 
   async deleteAllOrderItemsByOrderId(orderId: string): Promise<void> {
-    await this.orderItemRepository.deleteByOrderId(orderId);
+    await this.orderItemRepository.deleteByOrderId(
+      OrderId.fromString(orderId),
+    );
   }
 
   async getOrderItemCount(orderId: string): Promise<number> {
-    return this.orderItemRepository.countByOrderId(orderId);
+    return this.orderItemRepository.countByOrderId(
+      OrderId.fromString(orderId),
+    );
   }
 
   async getVariantOrderCount(variantId: string): Promise<number> {
@@ -149,7 +127,7 @@ export class OrderItemManagementService {
   }
 
   async orderItemExists(id: string): Promise<boolean> {
-    return this.orderItemRepository.exists(id);
+    return this.orderItemRepository.exists(OrderItemId.fromString(id));
   }
 
   async variantExistsInOrder(
@@ -157,23 +135,43 @@ export class OrderItemManagementService {
     variantId: string,
   ): Promise<boolean> {
     return this.orderItemRepository.existsByOrderIdAndVariantId(
-      orderId,
+      OrderId.fromString(orderId),
       variantId,
     );
   }
 
   async calculateOrderItemSubtotal(id: string): Promise<number> {
-    const orderItem = await this.orderItemRepository.findById(id);
-    if (!orderItem) throw new OrderItemNotFoundError(id);
-
+    const orderItem = await this.requireOrderItem(id);
     return orderItem.calculateSubtotal();
   }
 
-  async calculateOrderTotal(orderId: string): Promise<number> {
-    const orderItems = await this.orderItemRepository.findByOrderId(orderId);
+  // Sums the per-item subtotals (price × quantity) across the order. NOT the
+  // full order total — tax, shipping, and discount are tracked on the Order
+  // aggregate's `totals` (OrderTotals VO).
+  async calculateItemsSubtotal(orderId: string): Promise<number> {
+    const orderItems = await this.orderItemRepository.findByOrderId(
+      OrderId.fromString(orderId),
+    );
+    return orderItems.reduce((sum, item) => sum + item.calculateSubtotal(), 0);
+  }
 
-    return orderItems.reduce((total, item) => {
-      return total + item.calculateSubtotal();
-    }, 0);
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private buildOrderItem(params: CreateOrderItemParams): OrderItem {
+    return OrderItem.create({
+      orderId: params.orderId,
+      variantId: params.variantId,
+      quantity: params.quantity,
+      productSnapshot: ProductSnapshot.create(params.productSnapshot),
+      isGift: params.isGift ?? false,
+      giftMessage: params.giftMessage,
+    });
+  }
+
+  private async requireOrderItem(id: string): Promise<OrderItem> {
+    const itemId = OrderItemId.fromString(id);
+    const orderItem = await this.orderItemRepository.findById(itemId);
+    if (!orderItem) throw new OrderItemNotFoundError(itemId.getValue());
+    return orderItem;
   }
 }
