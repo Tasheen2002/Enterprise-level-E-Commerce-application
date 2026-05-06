@@ -2,7 +2,7 @@ import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-ro
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AlertId } from "../value-objects/alert-id.vo";
 import { AlertTypeVO } from "../value-objects/alert-type.vo";
-import { InvalidOperationError } from "../errors";
+import { StockAlertAlreadyResolvedError } from "../errors";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -108,7 +108,7 @@ export class StockAlert extends AggregateRoot {
 
   resolve(resolvedAt: Date): void {
     if (this.isResolved()) {
-      throw new InvalidOperationError("Alert is already resolved");
+      throw new StockAlertAlreadyResolvedError(this.props.alertId.getValue());
     }
     this.props.resolvedAt = resolvedAt;
     this.props.updatedAt = new Date();
