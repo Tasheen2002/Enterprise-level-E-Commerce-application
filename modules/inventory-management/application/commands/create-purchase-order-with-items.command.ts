@@ -28,14 +28,9 @@ export class CreatePurchaseOrderWithItemsHandler implements ICommandHandler<
       command.eta,
     );
 
-    const items = await Promise.all(
-      command.items.map((item) =>
-        this.poService.addPurchaseOrderItem(
-          purchaseOrder.poId,
-          item.variantId,
-          item.orderedQty,
-        ),
-      ),
+    const items = await this.poService.addPurchaseOrderItems(
+      purchaseOrder.poId,
+      [...command.items],
     );
 
     return CommandResult.success({ purchaseOrder, items });
