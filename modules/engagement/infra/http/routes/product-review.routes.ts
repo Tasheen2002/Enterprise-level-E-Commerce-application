@@ -1,13 +1,25 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+  noContentResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { ProductReviewController } from "../controllers/product-review.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+  toJsonSchema,
+} from "../validation/validator";
 import {
   reviewIdParamsSchema,
   productIdParamsSchema,
@@ -18,9 +30,17 @@ import {
   productReviewResponseSchema,
 } from "../validation/product-review.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const reviewIdParamsJson = toJsonSchema(reviewIdParamsSchema);
+const productIdParamsJson = toJsonSchema(productIdParamsSchema);
+const userIdParamsJson = toJsonSchema(userIdParamsSchema);
+const paginationQueryJson = toJsonSchema(paginationQuerySchema);
+const createProductReviewBodyJson = toJsonSchema(createProductReviewSchema);
+const updateReviewStatusBodyJson = toJsonSchema(updateReviewStatusSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function productReviewRoutes(
@@ -42,21 +62,9 @@ export async function productReviewRoutes(
         description: "Get a specific product review by ID",
         summary: "Get Product Review",
         tags: ["Engagement - Reviews"],
-        params: {
-          type: "object",
-          required: ["reviewId"],
-          properties: {
-            reviewId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reviewIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: productReviewResponseSchema,
-            },
-          },
+          200: successResponse(productReviewResponseSchema),
         },
       },
     },
@@ -72,29 +80,10 @@ export async function productReviewRoutes(
         description: "Get all reviews for a specific product",
         summary: "Get Product Reviews",
         tags: ["Engagement - Reviews"],
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: {
-            productId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: productIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: productReviewResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(productReviewResponseSchema)),
         },
       },
     },
@@ -106,35 +95,16 @@ export async function productReviewRoutes(
     "/engagement/users/:userId/reviews",
     {
       preValidation: [validateParams(userIdParamsSchema), validateQuery(paginationQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get all reviews by a specific user",
         summary: "Get User Reviews",
         tags: ["Engagement - Reviews"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: userIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: productReviewResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(productReviewResponseSchema)),
         },
       },
     },
@@ -146,32 +116,15 @@ export async function productReviewRoutes(
     "/engagement/reviews",
     {
       preValidation: [validateBody(createProductReviewSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create a new product review",
         summary: "Create Product Review",
         tags: ["Engagement - Reviews"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["productId", "userId", "rating", "title", "body"],
-          properties: {
-            productId: { type: "string", format: "uuid" },
-            userId: { type: "string", format: "uuid" },
-            rating: { type: "integer", minimum: 1, maximum: 5 },
-            title: { type: "string", minLength: 1, maxLength: 255 },
-            body: { type: "string", minLength: 1, maxLength: 5000 },
-          },
-        },
+        body: createProductReviewBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: productReviewResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(productReviewResponseSchema, 201),
         },
       },
     },
@@ -183,34 +136,16 @@ export async function productReviewRoutes(
     "/engagement/reviews/:reviewId/status",
     {
       preValidation: [validateParams(reviewIdParamsSchema), validateBody(updateReviewStatusSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Update product review status (admin only)",
         summary: "Update Review Status",
         tags: ["Engagement - Reviews"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reviewId"],
-          properties: {
-            reviewId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["status"],
-          properties: {
-            status: { type: "string", enum: ["approved", "rejected", "flagged"] },
-          },
-        },
+        params: reviewIdParamsJson,
+        body: updateReviewStatusBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -222,21 +157,15 @@ export async function productReviewRoutes(
     "/engagement/reviews/:reviewId",
     {
       preValidation: [validateParams(reviewIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Delete a product review",
         summary: "Delete Product Review",
         tags: ["Engagement - Reviews"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reviewId"],
-          properties: {
-            reviewId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reviewIdParamsJson,
         response: {
-          204: { description: "Product review deleted successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },
