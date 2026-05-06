@@ -16,7 +16,7 @@ export class GetStockStatsHandler implements IQueryHandler<
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(): Promise<StockStatsResult> {
+  async handle(_query: GetStockStatsQuery): Promise<StockStatsResult> {
     return this.stockService.getStats();
   }
 }

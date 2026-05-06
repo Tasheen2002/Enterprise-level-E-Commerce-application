@@ -10,7 +10,7 @@ export class GetActiveAlertsHandler implements IQueryHandler<
 > {
   constructor(private readonly stockAlertService: StockAlertService) {}
 
-  async handle(): Promise<StockAlertResult[]> {
+  async handle(_query: GetActiveAlertsQuery): Promise<StockAlertResult[]> {
     return this.stockAlertService.getActiveAlerts();
   }
 }
