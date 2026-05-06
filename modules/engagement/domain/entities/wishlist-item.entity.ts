@@ -1,37 +1,10 @@
-// ============================================================================
-// 1. Imports
-// ============================================================================
-import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
-import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { WishlistId, WishlistItemId } from "../value-objects";
 import { DomainValidationError } from "../errors/engagement.errors";
 
 // ============================================================================
-// 2. Domain Events
+// Props & DTO
 // ============================================================================
-export class WishlistItemAddedEvent extends DomainEvent {
-  constructor(
-    public readonly wishlistId: string,
-    public readonly variantId: string
-  ) {
-    super(wishlistId, "Wishlist");
-  }
 
-  get eventType(): string {
-    return "wishlist.item_added";
-  }
-
-  getPayload(): Record<string, unknown> {
-    return {
-      wishlistId: this.wishlistId,
-      variantId: this.variantId,
-    };
-  }
-}
-
-// ============================================================================
-// 3. Props Interface
-// ============================================================================
 export interface WishlistItemProps {
   id: WishlistItemId;
   wishlistId: WishlistId;
@@ -40,9 +13,6 @@ export interface WishlistItemProps {
   updatedAt: Date;
 }
 
-// ============================================================================
-// 4. DTO Interface
-// ============================================================================
 export interface WishlistItemDTO {
   id: string;
   wishlistId: string;
@@ -52,33 +22,28 @@ export interface WishlistItemDTO {
 }
 
 // ============================================================================
-// 5. Entity Class
+// Entity
 // ============================================================================
-export class WishlistItem extends AggregateRoot {
+
+// Plain entity (NOT AggregateRoot) — `WishlistItem` is a child of the
+// `Wishlist` aggregate. The root emits `WishlistItemAddedEvent` /
+// `WishlistItemRemovedEvent` on the items collection's behalf;
+// persistence flows through `IWishlistRepository.save(wishlist)`. There
+// is no separate write-capable item repository.
+export class WishlistItem {
   private constructor(private props: WishlistItemProps) {
-    super();
+    WishlistItem.validateVariantId(props.variantId);
   }
 
   static create(
-    params: Omit<WishlistItemProps, "id" | "createdAt" | "updatedAt">
+    params: Omit<WishlistItemProps, "id" | "createdAt" | "updatedAt">,
   ): WishlistItem {
-    WishlistItem.validateVariantId(params.variantId);
-
-    const entity = new WishlistItem({
+    return new WishlistItem({
       ...params,
       id: WishlistItemId.create(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-
-    entity.addDomainEvent(
-      new WishlistItemAddedEvent(
-        entity.props.wishlistId.getValue(),
-        entity.props.variantId
-      )
-    );
-
-    return entity;
   }
 
   static fromPersistence(props: WishlistItemProps): WishlistItem {
@@ -86,27 +51,17 @@ export class WishlistItem extends AggregateRoot {
   }
 
   private static validateVariantId(variantId: string): void {
-    if (variantId.trim().length === 0) {
+    if (!variantId || variantId.trim().length === 0) {
       throw new DomainValidationError("Variant ID is required");
     }
   }
 
   // Getters
-  get id(): WishlistItemId {
-    return this.props.id;
-  }
-  get wishlistId(): WishlistId {
-    return this.props.wishlistId;
-  }
-  get variantId(): string {
-    return this.props.variantId;
-  }
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
+  get id(): WishlistItemId { return this.props.id; }
+  get wishlistId(): WishlistId { return this.props.wishlistId; }
+  get variantId(): string { return this.props.variantId; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
 
   equals(other: WishlistItem): boolean {
     return this.props.id.equals(other.props.id);
@@ -124,8 +79,9 @@ export class WishlistItem extends AggregateRoot {
 }
 
 // ============================================================================
-// 6. Supporting input types
+// Supporting Input Types
 // ============================================================================
+
 export interface CreateWishlistItemData {
   wishlistId: string;
   variantId: string;
