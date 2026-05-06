@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductController } from "../controllers/product.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -11,7 +12,12 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   listProductsSchema,
   createProductSchema,
@@ -19,12 +25,20 @@ import {
   productParamsSchema,
   productSlugParamsSchema,
   productResponseSchema,
+  paginatedProductsResponseSchema,
 } from "../validation/product.schema";
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const productParamsJson = toJsonSchema(productParamsSchema);
+const productSlugParamsJson = toJsonSchema(productSlugParamsSchema);
+const listProductsQueryJson = toJsonSchema(listProductsSchema);
+const createProductBodyJson = toJsonSchema(createProductSchema);
+const updateProductBodyJson = toJsonSchema(updateProductSchema);
 
 export async function productRoutes(
   fastify: FastifyInstance,
@@ -36,7 +50,10 @@ export async function productRoutes(
     }
   });
 
-  // GET /products — List products (public)
+  // ── Reads ──────────────────────────────────────────────────────────────
+
+  // GET /products — List products (public).
+  // Search lives at /search (SearchController) — do not advertise a `search` field here.
   fastify.get(
     "/products",
     {
@@ -45,39 +62,9 @@ export async function productRoutes(
         description: "Get paginated list of products with filtering options",
         tags: ["Products"],
         summary: "List Products",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            status: { type: "string", enum: ["draft", "published", "scheduled", "archived"] },
-            brand: { type: "string" },
-            categoryId: { type: "string", format: "uuid" },
-            search: { type: "string" },
-            includeDrafts: { type: "boolean", default: false },
-            sortBy: { type: "string", enum: ["title", "createdAt", "updatedAt", "publishAt"], default: "createdAt" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "desc" },
-          },
-        },
+        querystring: listProductsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: productResponseSchema },
-                  total: { type: "integer" },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                  hasMore: { type: "boolean" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedProductsResponseSchema),
         },
       },
     },
@@ -94,21 +81,9 @@ export async function productRoutes(
         description: "Get product by slug",
         tags: ["Products"],
         summary: "Get Product by Slug",
-        params: {
-          type: "object",
-          required: ["slug"],
-          properties: { slug: { type: "string" } },
-        },
+        params: productSlugParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: productResponseSchema,
-            },
-          },
+          200: successResponse(productResponseSchema),
         },
       },
     },
@@ -125,21 +100,9 @@ export async function productRoutes(
         description: "Get product by ID",
         tags: ["Products"],
         summary: "Get Product by ID",
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
+        params: productParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: productResponseSchema,
-            },
-          },
+          200: successResponse(productResponseSchema),
         },
       },
     },
@@ -147,54 +110,21 @@ export async function productRoutes(
       controller.getProduct(request as AuthenticatedRequest, reply),
   );
 
+  // ── Writes ─────────────────────────────────────────────────────────────
+
   // POST /products — Create product (Admin only)
   fastify.post(
     "/products",
     {
-      preValidation: [validateBody(createProductSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createProductSchema)],
       schema: {
         description: "Create a new product",
         tags: ["Products"],
         summary: "Create Product",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["title"],
-          properties: {
-            title: { type: "string" },
-            brand: { type: "string" },
-            shortDesc: { type: "string" },
-            longDescHtml: { type: "string" },
-            status: {
-              type: "string",
-              enum: ["draft", "published", "scheduled"],
-            },
-            publishAt: { type: "string", format: "date-time" },
-            countryOfOrigin: { type: "string" },
-            seoTitle: { type: "string" },
-            seoDescription: { type: "string" },
-            price: { type: "number" },
-            priceSgd: { type: "number" },
-            priceUsd: { type: "number" },
-            compareAtPrice: { type: "number" },
-            categoryIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-            },
-            tags: { type: "array", items: { type: "string" } },
-          },
-        },
+        body: createProductBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: productResponseSchema,
-            },
-          },
+          201: successResponse(productResponseSchema, 201),
         },
       },
     },
@@ -206,54 +136,17 @@ export async function productRoutes(
   fastify.patch(
     "/products/:productId",
     {
-      preValidation: [validateParams(productParamsSchema), validateBody(updateProductSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(productParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateProductSchema)],
       schema: {
         description: "Update an existing product",
         tags: ["Products"],
         summary: "Update Product",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            brand: { type: "string" },
-            shortDesc: { type: "string" },
-            longDescHtml: { type: "string" },
-            status: {
-              type: "string",
-              enum: ["draft", "published", "scheduled"],
-            },
-            publishAt: { type: "string", format: "date-time" },
-            countryOfOrigin: { type: "string" },
-            seoTitle: { type: "string" },
-            seoDescription: { type: "string" },
-            price: { type: "number" },
-            priceSgd: { type: "number" },
-            priceUsd: { type: "number" },
-            compareAtPrice: { type: "number" },
-            categoryIds: {
-              type: "array",
-              items: { type: "string", format: "uuid" },
-            },
-            tags: { type: "array", items: { type: "string" } },
-          },
-        },
+        params: productParamsJson,
+        body: updateProductBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: productResponseSchema,
-            },
-          },
+          200: successResponse(productResponseSchema),
         },
       },
     },
@@ -266,22 +159,15 @@ export async function productRoutes(
     "/products/:productId",
     {
       preValidation: [validateParams(productParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a product",
         tags: ["Products"],
         summary: "Delete Product",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
+        params: productParamsJson,
         response: {
-          204: {
-            description: "Product deleted successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
