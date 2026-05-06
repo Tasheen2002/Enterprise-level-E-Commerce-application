@@ -4,6 +4,7 @@ import { MediaAssetId } from "../value-objects/media-asset-id.vo";
 export interface IMediaAssetRepository {
   save(asset: MediaAsset): Promise<void>;
   findById(id: MediaAssetId): Promise<MediaAsset | null>;
+  findByIds(ids: MediaAssetId[]): Promise<MediaAsset[]>;
   findByStorageKey(storageKey: string): Promise<MediaAsset | null>;
   findAll(options?: MediaAssetQueryOptions): Promise<MediaAsset[]>;
   findByMimeType(
