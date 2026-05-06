@@ -1,6 +1,7 @@
 import { Location, LocationDTO } from "../../domain/entities/location.entity";
 import { LocationId } from "../../domain/value-objects/location-id.vo";
-import { LocationType } from "../../domain/value-objects/location-type.vo";
+import { LocationName } from "../../domain/value-objects/location-name.vo";
+import { LocationTypeVO } from "../../domain/value-objects/location-type.vo";
 import { LocationAddress, LocationAddressProps } from "../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../domain/repositories/location.repository";
 import {
@@ -16,7 +17,10 @@ export class LocationManagementService {
     name: string,
     address?: LocationAddressProps,
   ): Promise<LocationDTO> {
-    const existingLocation = await this.locationRepository.findByName(name);
+    // Wrap raw string in VO at the service boundary; the repo no longer
+    // accepts raw `string` for name. VO factory validates length/emptiness.
+    const nameVo = LocationName.create(name);
+    const existingLocation = await this.locationRepository.findByName(nameVo);
     if (existingLocation) {
       throw new LocationAlreadyExistsError(name);
     }
@@ -43,11 +47,12 @@ export class LocationManagementService {
     }
 
     if (data.name) {
-      const existingLocation = await this.locationRepository.findByName(data.name);
+      const newNameVo = LocationName.create(data.name);
+      const existingLocation = await this.locationRepository.findByName(newNameVo);
       if (existingLocation && existingLocation.locationId.getValue() !== locationId) {
         throw new LocationAlreadyExistsError(data.name);
       }
-      location.updateName(data.name);
+      location.updateName(newNameVo);
     }
 
     if (data.address) {
@@ -80,7 +85,7 @@ export class LocationManagementService {
   }
 
   async getLocationByName(name: string): Promise<LocationDTO> {
-    const location = await this.locationRepository.findByName(name);
+    const location = await this.locationRepository.findByName(LocationName.create(name));
     if (!location) {
       throw new LocationNotFoundError(name);
     }
@@ -93,8 +98,10 @@ export class LocationManagementService {
     type?: string;
   }): Promise<{ locations: LocationDTO[]; total: number }> {
     if (options?.type) {
-      const locationType = options.type.toLowerCase() as LocationType;
-      const locations = await this.locationRepository.findByType(locationType);
+      // Wrap raw string in VO at the service boundary; VO factory validates
+      // and the repo no longer accepts the underlying enum primitive.
+      const locationTypeVo = LocationTypeVO.create(options.type);
+      const locations = await this.locationRepository.findByType(locationTypeVo);
       return { locations: locations.map(Location.toDTO), total: locations.length };
     }
 
