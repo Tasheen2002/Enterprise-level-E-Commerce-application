@@ -5,21 +5,13 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
+import { AddressSnapshotData } from "../../domain/value-objects/address-snapshot.vo";
 
 export interface UpdateBillingAddressCommand extends ICommand {
   readonly orderId: string;
-  readonly billingAddress: {
-    readonly firstName: string;
-    readonly lastName: string;
-    readonly addressLine1: string;
-    readonly addressLine2?: string;
-    readonly city: string;
-    readonly state: string;
-    readonly postalCode: string;
-    readonly country: string;
-    readonly phone?: string;
-    readonly email?: string;
-  };
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
+  readonly billingAddress: Readonly<AddressSnapshotData>;
 }
 
 export class UpdateBillingAddressHandler implements ICommandHandler<
@@ -34,6 +26,8 @@ export class UpdateBillingAddressHandler implements ICommandHandler<
     const orderAddress = await this.orderService.updateBillingAddress(
       command.orderId,
       command.billingAddress,
+      command.requestingUserId,
+      command.isStaff,
     );
     return CommandResult.success(orderAddress);
   }
