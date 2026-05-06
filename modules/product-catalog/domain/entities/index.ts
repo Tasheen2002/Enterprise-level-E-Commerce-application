@@ -3,54 +3,52 @@ export {
   type ProductProps,
   type ProductDTO,
   ProductCreatedEvent,
-  ProductUpdatedEvent,
   ProductPublishedEvent,
   ProductArchivedEvent,
-  ProductDeletedEvent,
 } from "./product.entity";
 export {
   ProductVariant,
   type ProductVariantProps,
   type ProductVariantDTO,
+  type VariantDimensions,
   VariantCreatedEvent,
-  VariantUpdatedEvent,
-  VariantDeletedEvent,
 } from "./product-variant.entity";
 export {
   Category,
   type CategoryProps,
   type CategoryDTO,
+  CategoryCreatedEvent,
 } from "./category.entity";
 export {
   MediaAsset,
   type MediaAssetProps,
   type MediaAssetDTO,
   MediaAssetCreatedEvent,
-  MediaAssetUpdatedEvent,
-  MediaAssetDeletedEvent,
 } from "./media-asset.entity";
 export {
   ProductTag,
   type ProductTagProps,
   type ProductTagDTO,
+  TagCreatedEvent,
 } from "./product-tag.entity";
 export {
   SizeGuide,
   type SizeGuideProps,
   type SizeGuideDTO,
+  SizeGuideCreatedEvent,
 } from "./size-guide.entity";
 export {
   EditorialLook,
   type EditorialLookProps,
   type EditorialLookDTO,
+  type CreateEditorialLookData,
+  EditorialLookCreatedEvent,
+  EditorialLookPublishedEvent,
 } from "./editorial-look.entity";
 
 // Association entities
-export {
-  ProductCategory,
-  type ProductCategoryProps,
-  type ProductCategoryDTO,
-} from "./product-category.entity";
+// (Product↔Category and Look↔Product are managed directly via Prisma relations
+// on their parent aggregates — no domain entity needed for those join tables.)
 export {
   ProductMedia,
   type ProductMediaProps,
@@ -66,8 +64,3 @@ export {
   type ProductTagAssociationProps,
   type ProductTagAssociationDTO,
 } from "./product-tag-association.entity";
-export {
-  EditorialLookProduct,
-  type EditorialLookProductProps,
-  type EditorialLookProductDTO,
-} from "./editorial-look-product.entity";
