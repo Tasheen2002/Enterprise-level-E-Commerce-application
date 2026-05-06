@@ -28,6 +28,39 @@ export class PaymentIntentController {
     private readonly listTransactionsHandler: GetPaymentTransactionsHandler,
   ) {}
 
+  async get(
+    request: AuthenticatedRequest<{ Querystring: GetPaymentIntentQuery }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.getHandler.handle({
+        intentId: request.query.intentId,
+        orderId: request.query.orderId,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Payment intent retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listTransactions(
+    request: AuthenticatedRequest<{ Params: IntentIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        intentId: request.params.intentId,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Payment transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     request: AuthenticatedRequest<{ Body: CreatePaymentIntentBody }>,
     reply: FastifyReply,
@@ -87,39 +120,6 @@ export class PaymentIntentController {
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Payment voided");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async get(
-    request: AuthenticatedRequest<{ Querystring: GetPaymentIntentQuery }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.getHandler.handle({
-        intentId: request.query.intentId,
-        orderId: request.query.orderId,
-        userId: request.user.userId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Payment intent retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listTransactions(
-    request: AuthenticatedRequest<{ Params: IntentIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.listTransactionsHandler.handle({
-        intentId: request.params.intentId,
-        userId: request.user.userId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Payment transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
