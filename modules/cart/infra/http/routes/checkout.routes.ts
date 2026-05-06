@@ -4,7 +4,7 @@ import { CheckoutController } from "../controllers/checkout.controller";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
@@ -14,7 +14,9 @@ import {
 import {
   validateBody,
   validateParams,
+  toJsonSchema,
 } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
 import {
   checkoutIdParamsSchema,
   initializeCheckoutSchema,
@@ -22,12 +24,20 @@ import {
   completeCheckoutWithOrderSchema,
   checkoutResponseSchema,
   checkoutOrderResponseSchema,
-  addressSchema,
 } from "../validation/checkout.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const checkoutIdParamsJson = toJsonSchema(checkoutIdParamsSchema);
+const initializeCheckoutBodyJson = toJsonSchema(initializeCheckoutSchema);
+const completeCheckoutBodyJson = toJsonSchema(completeCheckoutSchema);
+const completeCheckoutWithOrderBodyJson = toJsonSchema(completeCheckoutWithOrderSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  // Checkout routes are gated by `optionalAuth` + `requireCartAuth` (guest
+  // checkout flow). Per-IP keying for guests prevents the global anonymous
+  // bucket from being saturated by the whole guest population.
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function checkoutRoutes(
@@ -50,24 +60,9 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Initialize Checkout",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-            expiresInMinutes: { type: "integer", default: 15 },
-          },
-        },
+        body: initializeCheckoutBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutResponseSchema,
-            },
-          },
+          201: successResponse(checkoutResponseSchema, 201),
         },
       },
     },
@@ -86,23 +81,9 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Get Checkout",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["checkoutId"],
-          properties: {
-            checkoutId: { type: "string", format: "uuid" },
-          },
-        },
+        params: checkoutIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutResponseSchema,
-            },
-          },
+          200: successResponse(checkoutResponseSchema),
         },
       },
     },
@@ -121,30 +102,10 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Complete Checkout",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["checkoutId"],
-          properties: {
-            checkoutId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["paymentIntentId"],
-          properties: {
-            paymentIntentId: { type: "string" },
-          },
-        },
+        params: checkoutIdParamsJson,
+        body: completeCheckoutBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutResponseSchema,
-            },
-          },
+          200: successResponse(checkoutResponseSchema),
         },
       },
     },
@@ -163,23 +124,9 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Cancel Checkout",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["checkoutId"],
-          properties: {
-            checkoutId: { type: "string", format: "uuid" },
-          },
-        },
+        params: checkoutIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutResponseSchema,
-            },
-          },
+          200: successResponse(checkoutResponseSchema),
         },
       },
     },
@@ -198,32 +145,10 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Complete Checkout and Create Order",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["checkoutId"],
-          properties: {
-            checkoutId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["paymentIntentId", "shippingAddress"],
-          properties: {
-            paymentIntentId: { type: "string" },
-            shippingAddress: addressSchema,
-            billingAddress: addressSchema,
-          },
-        },
+        params: checkoutIdParamsJson,
+        body: completeCheckoutWithOrderBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutOrderResponseSchema,
-            },
-          },
+          200: successResponse(checkoutOrderResponseSchema),
         },
       },
     },
@@ -242,23 +167,9 @@ export async function checkoutRoutes(
         tags: ["Checkout"],
         summary: "Get Order by Checkout ID",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["checkoutId"],
-          properties: {
-            checkoutId: { type: "string", format: "uuid" },
-          },
-        },
+        params: checkoutIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: checkoutOrderResponseSchema,
-            },
-          },
+          200: successResponse(checkoutOrderResponseSchema),
         },
       },
     },
