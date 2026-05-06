@@ -1,10 +1,11 @@
 import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-root';
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
+import { DEFAULT_CURRENCY } from '../../../../packages/core/src/domain/value-objects/currency.constants';
 import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
-import { Price } from "../value-objects/price.vo";
+import { Money } from "../value-objects/money.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
-import { ProductStatus } from "../enums/product-catalog.enums";
+import { ProductStatus } from "../value-objects";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -18,16 +19,6 @@ export class ProductCreatedEvent extends DomainEvent {
   get eventType(): string { return 'product.created'; }
   getPayload(): Record<string, unknown> {
     return { productId: this.productId, title: this.title };
-  }
-}
-
-export class ProductUpdatedEvent extends DomainEvent {
-  constructor(public readonly productId: string) {
-    super(productId, 'Product');
-  }
-  get eventType(): string { return 'product.updated'; }
-  getPayload(): Record<string, unknown> {
-    return { productId: this.productId };
   }
 }
 
@@ -54,16 +45,6 @@ export class ProductArchivedEvent extends DomainEvent {
   }
 }
 
-export class ProductDeletedEvent extends DomainEvent {
-  constructor(public readonly productId: string) {
-    super(productId, 'Product');
-  }
-  get eventType(): string { return 'product.deleted'; }
-  getPayload(): Record<string, unknown> {
-    return { productId: this.productId };
-  }
-}
-
 // ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface ProductProps {
@@ -78,10 +59,10 @@ export interface ProductProps {
   countryOfOrigin: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
-  price: Price;
-  priceSgd: Price | null;
-  priceUsd: Price | null;
-  compareAtPrice: Price | null;
+  price: Money;
+  priceSgd: Money | null;
+  priceUsd: Money | null;
+  compareAtPrice: Money | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -99,6 +80,7 @@ export interface ProductDTO {
   seoTitle: string | null;
   seoDescription: string | null;
   price: number;
+  currency: string;
   priceSgd: number | null;
   priceUsd: number | null;
   compareAtPrice: number | null;
@@ -111,55 +93,55 @@ export interface ProductDTO {
 export class Product extends AggregateRoot {
   private constructor(private props: ProductProps) {
     super();
+    Product.validate(props);
   }
 
   static create(params: {
     title: string;
-    brand?: string;
-    shortDesc?: string;
-    longDescHtml?: string;
+    brand?: string | null;
+    shortDesc?: string | null;
+    longDescHtml?: string | null;
     status?: ProductStatus;
     publishAt?: Date;
-    countryOfOrigin?: string;
-    seoTitle?: string;
-    seoDescription?: string;
+    countryOfOrigin?: string | null;
+    seoTitle?: string | null;
+    seoDescription?: string | null;
     price?: number;
+    currency?: string;
     priceSgd?: number | null;
     priceUsd?: number | null;
     compareAtPrice?: number | null;
-    categoryIds?: string[];
-    tags?: string[];
   }): Product {
-    if (!params.title || params.title.trim().length === 0) {
-      throw new DomainValidationError("Product title is required");
-    }
-
     const productId = ProductId.create();
     const slug = Slug.create(params.title);
+    const baseCurrency = params.currency ?? DEFAULT_CURRENCY;
     const now = new Date();
 
     const product = new Product({
       id: productId,
-      title: params.title,
+      title: params.title.trim(),
       slug,
-      brand: params.brand || null,
-      shortDesc: params.shortDesc || null,
-      longDescHtml: params.longDescHtml || null,
-      status: params.status || ProductStatus.DRAFT,
-      publishAt: params.publishAt || null,
-      countryOfOrigin: params.countryOfOrigin || null,
-      seoTitle: params.seoTitle || null,
-      seoDescription: params.seoDescription || null,
-      price: Price.create(params.price ?? 0),
-      priceSgd: params.priceSgd ? Price.create(params.priceSgd) : null,
-      priceUsd: params.priceUsd ? Price.create(params.priceUsd) : null,
-      compareAtPrice: params.compareAtPrice ? Price.create(params.compareAtPrice) : null,
+      brand: params.brand ?? null,
+      shortDesc: params.shortDesc ?? null,
+      longDescHtml: params.longDescHtml ?? null,
+      status: params.status ?? ProductStatus.DRAFT,
+      publishAt: params.publishAt ?? null,
+      countryOfOrigin: params.countryOfOrigin ?? null,
+      seoTitle: params.seoTitle ?? null,
+      seoDescription: params.seoDescription ?? null,
+      price: Money.create(params.price ?? 0, baseCurrency),
+      priceSgd: params.priceSgd != null ? Money.create(params.priceSgd, "SGD") : null,
+      priceUsd: params.priceUsd != null ? Money.create(params.priceUsd, "USD") : null,
+      compareAtPrice:
+        params.compareAtPrice != null
+          ? Money.create(params.compareAtPrice, baseCurrency)
+          : null,
       createdAt: now,
       updatedAt: now,
     });
 
     product.addDomainEvent(
-      new ProductCreatedEvent(productId.getValue(), params.title),
+      new ProductCreatedEvent(productId.getValue(), params.title.trim()),
     );
 
     return product;
@@ -167,6 +149,19 @@ export class Product extends AggregateRoot {
 
   static fromPersistence(props: ProductProps): Product {
     return new Product(props);
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: ProductProps): void {
+    Product.validateTitle(props.title);
+  }
+
+  private static validateTitle(title: string): void {
+    if (!title || title.trim().length === 0) {
+      throw new DomainValidationError("Product title is required");
+    }
   }
 
   // ── Getters ────────────────────────────────────────────────────────
@@ -182,74 +177,71 @@ export class Product extends AggregateRoot {
   get countryOfOrigin(): string | null { return this.props.countryOfOrigin; }
   get seoTitle(): string | null { return this.props.seoTitle; }
   get seoDescription(): string | null { return this.props.seoDescription; }
-  get price(): Price { return this.props.price; }
-  get priceSgd(): Price | null { return this.props.priceSgd; }
-  get priceUsd(): Price | null { return this.props.priceUsd; }
-  get compareAtPrice(): Price | null { return this.props.compareAtPrice; }
+  get price(): Money { return this.props.price; }
+  get priceSgd(): Money | null { return this.props.priceSgd; }
+  get priceUsd(): Money | null { return this.props.priceUsd; }
+  get compareAtPrice(): Money | null { return this.props.compareAtPrice; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
   updateTitle(newTitle: string): void {
-    if (!newTitle || newTitle.trim().length === 0) {
-      throw new DomainValidationError("Title cannot be empty");
-    }
-
+    Product.validateTitle(newTitle);
     this.props.title = newTitle.trim();
     this.props.slug = Slug.create(newTitle);
-    this.touch();
+    this.markUpdated();
   }
 
   updateSlug(newSlug: string): void {
     this.props.slug = Slug.fromString(newSlug);
-    this.touch();
+    this.markUpdated();
   }
 
   updateBrand(newBrand: string | null): void {
-    this.props.brand = newBrand?.trim() || null;
-    this.touch();
+    this.props.brand = newBrand?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateShortDesc(newShortDesc: string | null): void {
-    this.props.shortDesc = newShortDesc?.trim() || null;
-    this.touch();
+    this.props.shortDesc = newShortDesc?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateLongDescHtml(newLongDescHtml: string | null): void {
-    this.props.longDescHtml = newLongDescHtml?.trim() || null;
-    this.touch();
+    this.props.longDescHtml = newLongDescHtml?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateSeoInfo(seoTitle: string | null, seoDescription: string | null): void {
-    this.props.seoTitle = seoTitle?.trim() || null;
-    this.props.seoDescription = seoDescription?.trim() || null;
-    this.touch();
+    this.props.seoTitle = seoTitle?.trim() ?? null;
+    this.props.seoDescription = seoDescription?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateCountryOfOrigin(countryOfOrigin: string | null): void {
-    this.props.countryOfOrigin = countryOfOrigin?.trim() || null;
-    this.touch();
+    this.props.countryOfOrigin = countryOfOrigin?.trim() ?? null;
+    this.markUpdated();
   }
 
   updatePrice(newPrice: number): void {
-    this.props.price = Price.create(newPrice);
-    this.touch();
+    this.props.price = Money.create(newPrice, this.props.price.getCurrency());
+    this.markUpdated();
   }
 
   updatePriceSgd(newPrice: number | null): void {
-    this.props.priceSgd = newPrice !== null ? Price.create(newPrice) : null;
-    this.touch();
+    this.props.priceSgd = newPrice !== null ? Money.create(newPrice, "SGD") : null;
+    this.markUpdated();
   }
 
   updatePriceUsd(newPrice: number | null): void {
-    this.props.priceUsd = newPrice !== null ? Price.create(newPrice) : null;
-    this.touch();
+    this.props.priceUsd = newPrice !== null ? Money.create(newPrice, "USD") : null;
+    this.markUpdated();
   }
 
   updateCompareAtPrice(newCompareAtPrice: number | null): void {
     if (newCompareAtPrice !== null) {
-      const comparePrice = Price.create(newCompareAtPrice);
+      const comparePrice = Money.create(newCompareAtPrice, this.props.price.getCurrency());
       if (!comparePrice.isGreaterThan(this.props.price)) {
         throw new InvalidOperationError("Compare at price must be greater than regular price");
       }
@@ -257,17 +249,16 @@ export class Product extends AggregateRoot {
     } else {
       this.props.compareAtPrice = null;
     }
-    this.touch();
+    this.markUpdated();
   }
 
   publish(): void {
     if (this.props.status === ProductStatus.PUBLISHED) {
       return;
     }
-
     this.props.status = ProductStatus.PUBLISHED;
     this.props.publishAt = new Date();
-    this.props.updatedAt = new Date();
+    this.markUpdated();
     this.addDomainEvent(
       new ProductPublishedEvent(this.props.id.getValue(), this.props.publishAt),
     );
@@ -277,15 +268,14 @@ export class Product extends AggregateRoot {
     if (this.props.status === ProductStatus.DRAFT) {
       return;
     }
-
     this.props.status = ProductStatus.DRAFT;
     this.props.publishAt = null;
-    this.touch();
+    this.markUpdated();
   }
 
   archive(): void {
     this.props.status = ProductStatus.ARCHIVED;
-    this.props.updatedAt = new Date();
+    this.markUpdated();
     this.addDomainEvent(
       new ProductArchivedEvent(this.props.id.getValue()),
     );
@@ -295,16 +285,9 @@ export class Product extends AggregateRoot {
     if (publishAt <= new Date()) {
       throw new InvalidOperationError("Scheduled publication date must be in the future");
     }
-
     this.props.status = ProductStatus.SCHEDULED;
     this.props.publishAt = publishAt;
-    this.touch();
-  }
-
-  markDeleted(): void {
-    this.addDomainEvent(
-      new ProductDeletedEvent(this.props.id.getValue()),
-    );
+    this.markUpdated();
   }
 
   // ── Validation / Query Methods ─────────────────────────────────────
@@ -342,9 +325,8 @@ export class Product extends AggregateRoot {
 
   // ── Internal ───────────────────────────────────────────────────────
 
-  private touch(): void {
+  private markUpdated(): void {
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new ProductUpdatedEvent(this.props.id.getValue()));
   }
 
   // ── Serialisation ──────────────────────────────────────────────────
@@ -366,10 +348,11 @@ export class Product extends AggregateRoot {
       countryOfOrigin: entity.props.countryOfOrigin,
       seoTitle: entity.props.seoTitle,
       seoDescription: entity.props.seoDescription,
-      price: entity.props.price.getValue(),
-      priceSgd: entity.props.priceSgd?.getValue() ?? null,
-      priceUsd: entity.props.priceUsd?.getValue() ?? null,
-      compareAtPrice: entity.props.compareAtPrice?.getValue() ?? null,
+      price: entity.props.price.getAmount(),
+      currency: entity.props.price.getCurrency().getValue(),
+      priceSgd: entity.props.priceSgd?.getAmount() ?? null,
+      priceUsd: entity.props.priceUsd?.getAmount() ?? null,
+      compareAtPrice: entity.props.compareAtPrice?.getAmount() ?? null,
       createdAt: entity.props.createdAt.toISOString(),
       updatedAt: entity.props.updatedAt.toISOString(),
     };
