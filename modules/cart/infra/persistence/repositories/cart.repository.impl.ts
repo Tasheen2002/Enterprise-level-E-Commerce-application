@@ -1,21 +1,25 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { ICartRepository, CartWithCheckoutInfo } from "../../../domain/repositories/cart.repository";
 import {
   ShoppingCart,
   ShoppingCartEntityData,
 } from "../../../domain/entities/shopping-cart.entity";
-import {
-  CartItem,
-  CartItemEntityData,
-} from "../../../domain/entities/cart-item.entity";
-import { PromoData } from "../../../domain/value-objects/applied-promos.vo";
+import { CartItemEntityData } from "../../../domain/entities/cart-item.entity";
+import { AppliedPromoData } from "../../../domain/value-objects/applied-promos.vo";
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
-import { Currency } from "../../../domain/value-objects/currency.vo";
+import { Currency } from "../../../../../packages/core/src/domain/value-objects/currency.vo";
 
-export class CartRepositoryImpl implements ICartRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class CartRepositoryImpl
+  extends PrismaRepository<ShoppingCart>
+  implements ICartRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   // Core CRUD operations
   async save(cart: ShoppingCart): Promise<void> {
@@ -30,6 +34,29 @@ export class CartRepositoryImpl implements ICartRepository {
           guestToken: data.guestToken ?? null,
           currency: data.currency,
           reservationExpiresAt: data.reservationExpiresAt,
+          email: data.email ?? null,
+          shippingMethod: data.shippingMethod ?? null,
+          shippingOption: data.shippingOption ?? null,
+          isGift: data.isGift ?? false,
+          shippingFirstName: data.shippingFirstName ?? null,
+          shippingLastName: data.shippingLastName ?? null,
+          shippingAddress1: data.shippingAddress1 ?? null,
+          shippingAddress2: data.shippingAddress2 ?? null,
+          shippingCity: data.shippingCity ?? null,
+          shippingProvince: data.shippingProvince ?? null,
+          shippingPostalCode: data.shippingPostalCode ?? null,
+          shippingCountryCode: data.shippingCountryCode ?? null,
+          shippingPhone: data.shippingPhone ?? null,
+          billingFirstName: data.billingFirstName ?? null,
+          billingLastName: data.billingLastName ?? null,
+          billingAddress1: data.billingAddress1 ?? null,
+          billingAddress2: data.billingAddress2 ?? null,
+          billingCity: data.billingCity ?? null,
+          billingProvince: data.billingProvince ?? null,
+          billingPostalCode: data.billingPostalCode ?? null,
+          billingCountryCode: data.billingCountryCode ?? null,
+          billingPhone: data.billingPhone ?? null,
+          sameAddressForBilling: data.sameAddressForBilling ?? true,
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         },
@@ -38,6 +65,29 @@ export class CartRepositoryImpl implements ICartRepository {
           guestToken: data.guestToken ?? null,
           currency: data.currency,
           reservationExpiresAt: data.reservationExpiresAt,
+          email: data.email ?? null,
+          shippingMethod: data.shippingMethod ?? null,
+          shippingOption: data.shippingOption ?? null,
+          isGift: data.isGift ?? false,
+          shippingFirstName: data.shippingFirstName ?? null,
+          shippingLastName: data.shippingLastName ?? null,
+          shippingAddress1: data.shippingAddress1 ?? null,
+          shippingAddress2: data.shippingAddress2 ?? null,
+          shippingCity: data.shippingCity ?? null,
+          shippingProvince: data.shippingProvince ?? null,
+          shippingPostalCode: data.shippingPostalCode ?? null,
+          shippingCountryCode: data.shippingCountryCode ?? null,
+          shippingPhone: data.shippingPhone ?? null,
+          billingFirstName: data.billingFirstName ?? null,
+          billingLastName: data.billingLastName ?? null,
+          billingAddress1: data.billingAddress1 ?? null,
+          billingAddress2: data.billingAddress2 ?? null,
+          billingCity: data.billingCity ?? null,
+          billingProvince: data.billingProvince ?? null,
+          billingPostalCode: data.billingPostalCode ?? null,
+          billingCountryCode: data.billingCountryCode ?? null,
+          billingPhone: data.billingPhone ?? null,
+          sameAddressForBilling: data.sameAddressForBilling ?? true,
           updatedAt: data.updatedAt,
         },
       });
@@ -79,6 +129,10 @@ export class CartRepositoryImpl implements ICartRepository {
         });
       }
     });
+
+    // Dispatch domain events AFTER the transaction commits (canonical rule:
+    // never dispatch inside `$transaction`).
+    await this.dispatchEvents(cart);
   }
 
   async findById(cartId: CartId): Promise<ShoppingCart | null> {
@@ -844,64 +898,6 @@ export class CartRepositoryImpl implements ICartRepository {
     });
   }
 
-  // Checkout field operations
-  async updateEmail(cartId: CartId, email: string): Promise<void> {
-    await this.prisma.shoppingCart.update({
-      where: { id: cartId.getValue() },
-      data: { email, updatedAt: new Date() },
-    });
-  }
-
-  async updateShippingInfo(
-    cartId: CartId,
-    data: {
-      shippingMethod?: string;
-      shippingOption?: string;
-      isGift?: boolean;
-    },
-  ): Promise<void> {
-    await this.prisma.shoppingCart.update({
-      where: { id: cartId.getValue() },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  async updateAddresses(
-    cartId: CartId,
-    data: {
-      shippingFirstName?: string;
-      shippingLastName?: string;
-      shippingAddress1?: string;
-      shippingAddress2?: string;
-      shippingCity?: string;
-      shippingProvince?: string;
-      shippingPostalCode?: string;
-      shippingCountryCode?: string;
-      shippingPhone?: string;
-      billingFirstName?: string;
-      billingLastName?: string;
-      billingAddress1?: string;
-      billingAddress2?: string;
-      billingCity?: string;
-      billingProvince?: string;
-      billingPostalCode?: string;
-      billingCountryCode?: string;
-      billingPhone?: string;
-      sameAddressForBilling?: boolean;
-    },
-  ): Promise<void> {
-    await this.prisma.shoppingCart.update({
-      where: { id: cartId.getValue() },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
   async getCartWithCheckoutInfo(cartId: CartId): Promise<CartWithCheckoutInfo | null> {
     return await this.prisma.shoppingCart.findUnique({
       where: { id: cartId.getValue() },
@@ -922,20 +918,43 @@ export class CartRepositoryImpl implements ICartRepository {
       createdAt: cartData.createdAt,
       updatedAt: cartData.updatedAt,
       items: (cartData.items ?? []).map((item: Prisma.CartItemGetPayload<Record<string, never>>): CartItemEntityData => {
-        const fallbackDate = new Date(0);
         return {
           id: item.id,
           cartId: item.cartId,
           variantId: item.variantId,
           quantity: item.qty,
           unitPriceSnapshot: Number(item.unitPriceSnapshot),
-          appliedPromos: (item.appliedPromos ?? []) as unknown as PromoData[],
+          appliedPromos: (item.appliedPromos ?? []) as unknown as AppliedPromoData[],
           isGift: item.isGift,
           giftMessage: item.giftMessage ?? undefined,
-          createdAt: fallbackDate,
-          updatedAt: fallbackDate,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
         };
       }),
+      // Pre-checkout fields hydrated from the row.
+      email: cartData.email,
+      shippingMethod: cartData.shippingMethod,
+      shippingOption: cartData.shippingOption,
+      isGift: cartData.isGift,
+      shippingFirstName: cartData.shippingFirstName,
+      shippingLastName: cartData.shippingLastName,
+      shippingAddress1: cartData.shippingAddress1,
+      shippingAddress2: cartData.shippingAddress2,
+      shippingCity: cartData.shippingCity,
+      shippingProvince: cartData.shippingProvince,
+      shippingPostalCode: cartData.shippingPostalCode,
+      shippingCountryCode: cartData.shippingCountryCode,
+      shippingPhone: cartData.shippingPhone,
+      billingFirstName: cartData.billingFirstName,
+      billingLastName: cartData.billingLastName,
+      billingAddress1: cartData.billingAddress1,
+      billingAddress2: cartData.billingAddress2,
+      billingCity: cartData.billingCity,
+      billingProvince: cartData.billingProvince,
+      billingPostalCode: cartData.billingPostalCode,
+      billingCountryCode: cartData.billingCountryCode,
+      billingPhone: cartData.billingPhone,
+      sameAddressForBilling: cartData.sameAddressForBilling,
     };
     return ShoppingCart.fromPersistence(entityData);
   }
