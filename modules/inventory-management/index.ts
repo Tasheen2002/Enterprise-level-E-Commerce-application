@@ -24,7 +24,7 @@ export {
   InsufficientStockError,
   PurchaseOrderNotEditableError,
   PurchaseOrderNotDeletableError,
-  InvalidStockTransitionError,
+  InvalidPurchaseOrderStatusTransitionError,
   StockAlertAlreadyResolvedError,
   ReservationNotActiveError,
 } from "./domain/errors";
