@@ -35,39 +35,7 @@ export class WishlistController {
     private readonly getWishlistItemsHandler: GetWishlistItemsHandler,
   ) {}
 
-  async createWishlist(
-    request: AuthenticatedRequest<{ Body: CreateWishlistBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { userId, guestToken, name, isDefault, isPublic, description } = request.body;
-      const authenticatedUserId = request.user?.userId || userId;
-      const guestAuthToken = guestToken || (request.headers["x-guest-token"] as string);
-      const result = await this.createWishlistHandler.handle({
-        userId: authenticatedUserId,
-        guestToken: authenticatedUserId ? undefined : guestAuthToken,
-        name,
-        isDefault,
-        isPublic,
-        description,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Wishlist created successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getWishlist(
-    request: AuthenticatedRequest<{ Params: WishlistIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const dto = await this.getWishlistHandler.handle({ wishlistId: request.params.wishlistId });
-      return ResponseHelper.ok(reply, "Wishlist retrieved successfully", dto);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ── Reads (queries) ────────────────────────────────────────────────
 
   async getUserWishlists(
     request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
@@ -96,6 +64,18 @@ export class WishlistController {
     }
   }
 
+  async getWishlist(
+    request: AuthenticatedRequest<{ Params: WishlistIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const dto = await this.getWishlistHandler.handle({ wishlistId: request.params.wishlistId });
+      return ResponseHelper.ok(reply, "Wishlist retrieved successfully", dto);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async getWishlistItems(
     request: AuthenticatedRequest<{ Params: WishlistIdParams; Querystring: PaginationQuery }>,
     reply: FastifyReply,
@@ -105,6 +85,30 @@ export class WishlistController {
       const { limit, offset } = request.query;
       const result = await this.getWishlistItemsHandler.handle({ wishlistId, limit, offset });
       return ResponseHelper.ok(reply, "Wishlist items retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
+
+  async createWishlist(
+    request: AuthenticatedRequest<{ Body: CreateWishlistBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId, guestToken, name, isDefault, isPublic, description } = request.body;
+      const authenticatedUserId = request.user?.userId || userId;
+      const guestAuthToken = guestToken || (request.headers["x-guest-token"] as string);
+      const result = await this.createWishlistHandler.handle({
+        userId: authenticatedUserId,
+        guestToken: authenticatedUserId ? undefined : guestAuthToken,
+        name,
+        isDefault,
+        isPublic,
+        description,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Wishlist created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -129,19 +133,6 @@ export class WishlistController {
     }
   }
 
-  async removeFromWishlist(
-    request: AuthenticatedRequest<{ Params: WishlistItemParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { wishlistId, variantId } = request.params;
-      const result = await this.removeFromWishlistHandler.handle({ wishlistId, variantId });
-      return ResponseHelper.fromCommand(reply, result, "Item removed from wishlist successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async updateWishlist(
     request: AuthenticatedRequest<{ Params: WishlistIdParams; Body: UpdateWishlistBody }>,
     reply: FastifyReply,
@@ -151,6 +142,19 @@ export class WishlistController {
       const { name, description, isPublic } = request.body;
       const result = await this.updateWishlistHandler.handle({ wishlistId, name, description, isPublic });
       return ResponseHelper.fromCommand(reply, result, "Wishlist updated successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async removeFromWishlist(
+    request: AuthenticatedRequest<{ Params: WishlistItemParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { wishlistId, variantId } = request.params;
+      const result = await this.removeFromWishlistHandler.handle({ wishlistId, variantId });
+      return ResponseHelper.fromCommand(reply, result, "Item removed from wishlist successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

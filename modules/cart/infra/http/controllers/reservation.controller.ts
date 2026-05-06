@@ -52,18 +52,7 @@ export class ReservationController {
     private readonly getReservationsByStatusHandler: GetReservationsByStatusHandler,
   ) {}
 
-  async createReservation(
-    request: AuthenticatedRequest<{ Body: CreateReservationBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId, variantId, quantity, durationMinutes } = request.body;
-      const result = await this.createReservationHandler.handle({ cartId, variantId, quantity, durationMinutes });
-      return ResponseHelper.fromCommand(reply, result, "Reservation created successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ── Reads (queries) ────────────────────────────────────────────────
 
   async getReservation(
     request: AuthenticatedRequest<{ Params: ReservationIdParams }>,
@@ -120,61 +109,6 @@ export class ReservationController {
     }
   }
 
-  async extendReservation(
-    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: ExtendReservationBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { reservationId } = request.params;
-      const { additionalMinutes } = request.body;
-      const result = await this.extendReservationHandler.handle({ reservationId, additionalMinutes });
-      return ResponseHelper.fromCommand(reply, result, "Reservation extended successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async renewReservation(
-    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: RenewReservationBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { reservationId } = request.params;
-      const { durationMinutes } = request.body;
-      const result = await this.renewReservationHandler.handle({ reservationId, durationMinutes });
-      return ResponseHelper.fromCommand(reply, result, "Reservation renewed successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async releaseReservation(
-    request: AuthenticatedRequest<{ Params: ReservationIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { reservationId } = request.params;
-      const result = await this.releaseReservationHandler.handle({ reservationId });
-      return ResponseHelper.fromCommand(reply, result, "Reservation released successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async adjustReservation(
-    request: AuthenticatedRequest<{ Params: CartReservationParams; Body: AdjustReservationBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId, variantId } = request.params;
-      const { newQuantity } = request.body;
-      const result = await this.adjustReservationHandler.handle({ cartId, variantId, newQuantity });
-      return ResponseHelper.fromCommand(reply, result, "Reservation adjusted successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async checkAvailability(
     request: AuthenticatedRequest<{ Querystring: CheckAvailabilityQuery }>,
     reply: FastifyReply,
@@ -214,28 +148,6 @@ export class ReservationController {
     }
   }
 
-  async createBulkReservations(
-    request: AuthenticatedRequest<{ Body: CreateBulkReservationsBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId, items, durationMinutes } = request.body;
-      const result = await this.createBulkReservationsHandler.handle({ cartId, items, durationMinutes });
-      const allSucceeded = result.data?.totalFailed === 0;
-      if (allSucceeded) {
-        return ResponseHelper.created(reply, "All reservations created successfully", result.data);
-      }
-      return ResponseHelper.success(
-        reply,
-        207,
-        `${result.data?.totalCreated} reservation(s) created, ${result.data?.totalFailed} failed`,
-        result.data,
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async getReservationStatistics(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
       const result = await this.getReservationStatisticsHandler.handle({});
@@ -258,6 +170,85 @@ export class ReservationController {
     }
   }
 
+  // ── Writes (commands) ──────────────────────────────────────────────
+
+  async createReservation(
+    request: AuthenticatedRequest<{ Body: CreateReservationBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId, variantId, quantity, durationMinutes } = request.body;
+      const result = await this.createReservationHandler.handle({ cartId, variantId, quantity, durationMinutes });
+      return ResponseHelper.fromCommand(reply, result, "Reservation created successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async createBulkReservations(
+    request: AuthenticatedRequest<{ Body: CreateBulkReservationsBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId, items, durationMinutes } = request.body;
+      const result = await this.createBulkReservationsHandler.handle({ cartId, items, durationMinutes });
+      const allSucceeded = result.data?.totalFailed === 0;
+      if (allSucceeded) {
+        return ResponseHelper.created(reply, "All reservations created successfully", result.data);
+      }
+      return ResponseHelper.success(
+        reply,
+        207,
+        "Bulk reservation completed with partial failures",
+        result.data,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async extendReservation(
+    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: ExtendReservationBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { reservationId } = request.params;
+      const { additionalMinutes } = request.body;
+      const result = await this.extendReservationHandler.handle({ reservationId, additionalMinutes });
+      return ResponseHelper.fromCommand(reply, result, "Reservation extended successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async renewReservation(
+    request: AuthenticatedRequest<{ Params: ReservationIdParams; Body: RenewReservationBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { reservationId } = request.params;
+      const { durationMinutes } = request.body;
+      const result = await this.renewReservationHandler.handle({ reservationId, durationMinutes });
+      return ResponseHelper.fromCommand(reply, result, "Reservation renewed successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async adjustReservation(
+    request: AuthenticatedRequest<{ Params: CartReservationParams; Body: AdjustReservationBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId, variantId } = request.params;
+      const { newQuantity } = request.body;
+      const result = await this.adjustReservationHandler.handle({ cartId, variantId, newQuantity });
+      return ResponseHelper.fromCommand(reply, result, "Reservation adjusted successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async resolveReservationConflicts(
     request: AuthenticatedRequest<{ Params: VariantIdParams }>,
     reply: FastifyReply,
@@ -266,6 +257,19 @@ export class ReservationController {
       const { variantId } = request.params;
       const result = await this.resolveReservationConflictsHandler.handle({ variantId });
       return ResponseHelper.fromCommand(reply, result, "Reservation conflicts resolved successfully");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async releaseReservation(
+    request: AuthenticatedRequest<{ Params: ReservationIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { reservationId } = request.params;
+      const result = await this.releaseReservationHandler.handle({ reservationId });
+      return ResponseHelper.fromCommand(reply, result, "Reservation released successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

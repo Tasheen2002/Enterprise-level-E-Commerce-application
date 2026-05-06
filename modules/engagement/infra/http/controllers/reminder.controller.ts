@@ -29,37 +29,7 @@ export class ReminderController {
     private readonly getVariantRemindersHandler: GetVariantRemindersHandler,
   ) {}
 
-  async createReminder(
-    request: AuthenticatedRequest<{ Body: CreateReminderBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { type, variantId, contact, channel, optInAt } = request.body;
-      const result = await this.createReminderHandler.handle({
-        type,
-        variantId,
-        userId: request.user?.userId,
-        contact,
-        channel,
-        optInAt,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Reminder created successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getReminder(
-    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const dto = await this.getReminderHandler.handle({ reminderId: request.params.reminderId });
-      return ResponseHelper.ok(reply, "Reminder retrieved successfully", dto);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ── Reads (queries) ────────────────────────────────────────────────
 
   async getUserReminders(
     request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
@@ -84,6 +54,40 @@ export class ReminderController {
       const { limit, offset } = request.query;
       const result = await this.getVariantRemindersHandler.handle({ variantId, limit, offset });
       return ResponseHelper.ok(reply, "Variant reminders retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getReminder(
+    request: AuthenticatedRequest<{ Params: ReminderIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const dto = await this.getReminderHandler.handle({ reminderId: request.params.reminderId });
+      return ResponseHelper.ok(reply, "Reminder retrieved successfully", dto);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
+
+  async createReminder(
+    request: AuthenticatedRequest<{ Body: CreateReminderBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { type, variantId, contact, channel, optInAt } = request.body;
+      const result = await this.createReminderHandler.handle({
+        type,
+        variantId,
+        userId: request.user?.userId,
+        contact,
+        channel,
+        optInAt,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Reminder created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

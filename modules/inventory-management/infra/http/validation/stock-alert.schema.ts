@@ -9,7 +9,7 @@ export const alertParamsSchema = z.object({
 export const listStockAlertsSchema = z.object({
   limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
   offset: z.string().regex(/^\d+$/).optional().default("0").transform(Number),
-  includeResolved: z.string().optional().transform((v) => v === "true"),
+  includeResolved: z.string().default("false").transform((v) => v === "true"),
 });
 
 export const createStockAlertSchema = z.object({

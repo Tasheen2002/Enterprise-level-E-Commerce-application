@@ -1,5 +1,7 @@
 import { Reminder } from "../entities/reminder.entity";
 import { ReminderId } from "../value-objects";
+import { ReminderStatusValue } from "../value-objects/reminder-status.vo";
+import { ReminderTypeValue } from "../value-objects/reminder-type.vo";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -11,8 +13,8 @@ import {
 export interface ReminderFilters {
   userId?: string;
   variantId?: string;
-  type?: string;
-  status?: string;
+  type?: ReminderTypeValue;
+  status?: ReminderStatusValue;
 }
 
 // ============================================================================
@@ -34,11 +36,11 @@ export interface IReminderRepository {
     options?: ReminderQueryOptions,
   ): Promise<PaginatedResult<Reminder>>;
   findByStatus(
-    status: string,
+    status: ReminderStatusValue,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedResult<Reminder>>;
   findByType(
-    type: string,
+    type: ReminderTypeValue,
     options?: ReminderQueryOptions,
   ): Promise<PaginatedResult<Reminder>>;
   findAll(options?: ReminderQueryOptions): Promise<PaginatedResult<Reminder>>;
@@ -57,10 +59,10 @@ export interface IReminderRepository {
   ): Promise<Reminder | null>;
 
   // Counts and statistics
-  countByStatus(status: string): Promise<number>;
+  countByStatus(status: ReminderStatusValue): Promise<number>;
   countByUserId(userId: string): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
-  countByType(type: string): Promise<number>;
+  countByType(type: ReminderTypeValue): Promise<number>;
   count(filters?: ReminderFilters): Promise<number>;
 
   // Existence checks

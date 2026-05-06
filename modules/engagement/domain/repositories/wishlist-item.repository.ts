@@ -1,61 +1,31 @@
 import { WishlistItem } from "../entities/wishlist-item.entity";
-import { WishlistItemId } from "../value-objects";
 import {
   PaginatedResult,
   PaginationOptions,
 } from "../../../../packages/core/src/domain/interfaces";
 
 // ============================================================================
-// 2. Filters interface
+// Filters
 // ============================================================================
+
 export interface WishlistItemFilters {
   wishlistId?: string;
   variantId?: string;
 }
 
-// ============================================================================
-// 3. Repository Interface
-// ============================================================================
-export interface IWishlistItemRepository {
-  // Basic CRUD
-  save(item: WishlistItem): Promise<void>;
-  delete(itemId: WishlistItemId): Promise<void>;
 
-  // Finders
-  findById(itemId: WishlistItemId): Promise<WishlistItem | null>;
-  findByWishlistId(
-    wishlistId: string,
-    options?: WishlistItemQueryOptions,
-  ): Promise<PaginatedResult<WishlistItem>>;
+export interface IWishlistItemRepository {
   findByVariantId(
     variantId: string,
     options?: WishlistItemQueryOptions,
   ): Promise<PaginatedResult<WishlistItem>>;
-  findAll(
-    options?: WishlistItemQueryOptions,
-  ): Promise<PaginatedResult<WishlistItem>>;
-
-  // Batch operations
-  saveMany(items: WishlistItem[]): Promise<void>;
-  deleteByWishlistId(wishlistId: string): Promise<void>;
-  deleteByWishlistIdAndVariantId(wishlistId: string, variantId: string): Promise<void>;
-  deleteMany(itemIds: WishlistItemId[]): Promise<void>;
-
-  // Counts and statistics
-  countByWishlistId(wishlistId: string): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
-
-  // Existence checks
-  exists(itemId: WishlistItemId): Promise<boolean>;
-  isVariantInWishlist(
-    wishlistId: string,
-    variantId: string,
-  ): Promise<boolean>;
 }
 
 // ============================================================================
-// 4. Query Options interface
+// Query Options
 // ============================================================================
+
 export interface WishlistItemQueryOptions extends PaginationOptions {
   sortBy?: "addedAt" | "createdAt";
   sortOrder?: "asc" | "desc";

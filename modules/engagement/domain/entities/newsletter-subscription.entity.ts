@@ -93,7 +93,7 @@ export class NewsletterSubscription extends AggregateRoot {
     const entity = new NewsletterSubscription({
       id: SubscriptionId.create(),
       email: params.email.toLowerCase().trim(),
-      status: SubscriptionStatus.active(),
+      status: SubscriptionStatus.ACTIVE,
       source: params.source,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -164,19 +164,19 @@ export class NewsletterSubscription extends AggregateRoot {
   }
 
   activate(): void {
-    this.updateStatus(SubscriptionStatus.active());
+    this.updateStatus(SubscriptionStatus.ACTIVE);
   }
 
   unsubscribe(): void {
-    this.updateStatus(SubscriptionStatus.unsubscribed());
+    this.updateStatus(SubscriptionStatus.UNSUBSCRIBED);
   }
 
   bounce(): void {
-    this.updateStatus(SubscriptionStatus.bounced());
+    this.updateStatus(SubscriptionStatus.BOUNCED);
   }
 
   markAsSpam(): void {
-    this.updateStatus(SubscriptionStatus.spam());
+    this.updateStatus(SubscriptionStatus.SPAM);
   }
 
   // Helpers

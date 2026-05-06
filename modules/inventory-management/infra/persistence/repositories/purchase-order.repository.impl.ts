@@ -3,12 +3,10 @@ import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastruct
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { PurchaseOrder } from "../../../domain/entities/purchase-order.entity";
+import { PurchaseOrderItem } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { SupplierId } from "../../../domain/value-objects/supplier-id.vo";
-import {
-  PurchaseOrderStatus,
-  PurchaseOrderStatusVO,
-} from "../../../domain/value-objects/purchase-order-status.vo";
+import { PurchaseOrderStatusVO } from "../../../domain/value-objects/purchase-order-status.vo";
 import { IPurchaseOrderRepository } from "../../../domain/repositories/purchase-order.repository";
 
 export class PurchaseOrderRepositoryImpl
@@ -19,40 +17,88 @@ export class PurchaseOrderRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    poId: string;
-    supplierId: string;
-    eta: Date | null;
-    status: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }): PurchaseOrder {
-    return PurchaseOrder.fromPersistence({
-      poId: PurchaseOrderId.fromString(row.poId),
-      supplierId: SupplierId.fromString(row.supplierId),
-      eta: row.eta ?? undefined,
-      status: PurchaseOrderStatusVO.create(row.status),
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+  private toEntity(
+    row: Prisma.PurchaseOrderGetPayload<object>,
+    itemRows: Array<Prisma.PurchaseOrderItemGetPayload<object>> = [],
+  ): PurchaseOrder {
+    const items = itemRows.map((ir) =>
+      PurchaseOrderItem.fromPersistence({
+        poId: PurchaseOrderId.fromString(ir.poId),
+        variantId: ir.variantId,
+        orderedQty: ir.orderedQty,
+        receivedQty: ir.receivedQty,
+      }),
+    );
+    return PurchaseOrder.fromPersistence(
+      {
+        poId: PurchaseOrderId.fromString(row.poId),
+        supplierId: SupplierId.fromString(row.supplierId),
+        eta: row.eta ?? undefined,
+        status: PurchaseOrderStatusVO.create(row.status),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      },
+      items,
+    );
   }
 
+  // Persists the PO root and synchronises its items collection in a single
+  // transaction. Items present on the aggregate are upserted; items in the
+  // DB but absent from the aggregate are deleted (the aggregate is the
+  // source of truth for its children). Events dispatch only after the
+  // transaction commits.
   async save(purchaseOrder: PurchaseOrder): Promise<void> {
-    await this.prisma.purchaseOrder.upsert({
-      where: { poId: purchaseOrder.poId.getValue() },
-      create: {
-        poId: purchaseOrder.poId.getValue(),
-        supplierId: purchaseOrder.supplierId.getValue(),
-        eta: purchaseOrder.eta,
-        status: purchaseOrder.status.getValue() as PoStatusEnum,
-        createdAt: purchaseOrder.createdAt,
-        updatedAt: purchaseOrder.updatedAt,
-      },
-      update: {
-        eta: purchaseOrder.eta,
-        status: purchaseOrder.status.getValue() as PoStatusEnum,
-        updatedAt: purchaseOrder.updatedAt,
-      },
+    const poId = purchaseOrder.poId.getValue();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.purchaseOrder.upsert({
+        where: { poId },
+        create: {
+          poId,
+          supplierId: purchaseOrder.supplierId.getValue(),
+          eta: purchaseOrder.eta,
+          status: purchaseOrder.status.getValue() as PoStatusEnum,
+          createdAt: purchaseOrder.createdAt,
+          updatedAt: purchaseOrder.updatedAt,
+        },
+        update: {
+          eta: purchaseOrder.eta,
+          status: purchaseOrder.status.getValue() as PoStatusEnum,
+          updatedAt: purchaseOrder.updatedAt,
+        },
+      });
+
+      const desiredVariantIds = purchaseOrder.items.map((i) => i.variantId);
+
+      // Delete items removed from the aggregate.
+      await tx.purchaseOrderItem.deleteMany({
+        where: {
+          poId,
+          variantId: { notIn: desiredVariantIds.length > 0 ? desiredVariantIds : ["__none__"] },
+        },
+      });
+
+      // Upsert each item present on the aggregate.
+      for (const item of purchaseOrder.items) {
+        await tx.purchaseOrderItem.upsert({
+          where: {
+            poId_variantId: {
+              poId,
+              variantId: item.variantId,
+            },
+          },
+          create: {
+            poId,
+            variantId: item.variantId,
+            orderedQty: item.orderedQty,
+            receivedQty: item.receivedQty,
+          },
+          update: {
+            orderedQty: item.orderedQty,
+            receivedQty: item.receivedQty,
+          },
+        });
+      }
     });
 
     await this.dispatchEvents(purchaseOrder);
@@ -61,9 +107,10 @@ export class PurchaseOrderRepositoryImpl
   async findById(poId: PurchaseOrderId): Promise<PurchaseOrder | null> {
     const row = await this.prisma.purchaseOrder.findUnique({
       where: { poId: poId.getValue() },
+      include: { items: true },
     });
 
-    return row ? this.toEntity(row) : null;
+    return row ? this.toEntity(row, row.items) : null;
   }
 
   async delete(poId: PurchaseOrderId): Promise<void> {
@@ -72,18 +119,18 @@ export class PurchaseOrderRepositoryImpl
     });
   }
 
-  async findBySupplier(supplierId: string): Promise<PurchaseOrder[]> {
+  async findBySupplier(supplierId: SupplierId): Promise<PurchaseOrder[]> {
     const rows = await this.prisma.purchaseOrder.findMany({
-      where: { supplierId },
+      where: { supplierId: supplierId.getValue() },
       orderBy: { createdAt: "desc" },
     });
 
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findByStatus(status: PurchaseOrderStatus): Promise<PurchaseOrder[]> {
+  async findByStatus(status: PurchaseOrderStatusVO): Promise<PurchaseOrder[]> {
     const rows = await this.prisma.purchaseOrder.findMany({
-      where: { status: status as PoStatusEnum },
+      where: { status: status.getValue() as PoStatusEnum },
       orderBy: { createdAt: "desc" },
     });
 
@@ -93,8 +140,8 @@ export class PurchaseOrderRepositoryImpl
   async findAll(options?: {
     limit?: number;
     offset?: number;
-    status?: PurchaseOrderStatus;
-    supplierId?: string;
+    status?: PurchaseOrderStatusVO;
+    supplierId?: SupplierId;
     sortBy?: "createdAt" | "updatedAt" | "eta";
     sortOrder?: "asc" | "desc";
   }): Promise<PaginatedResult<PurchaseOrder>> {
@@ -108,8 +155,8 @@ export class PurchaseOrderRepositoryImpl
     } = options || {};
 
     const where: Prisma.PurchaseOrderWhereInput = {};
-    if (status) where.status = status as PoStatusEnum;
-    if (supplierId) where.supplierId = supplierId;
+    if (status) where.status = status.getValue() as PoStatusEnum;
+    if (supplierId) where.supplierId = supplierId.getValue();
 
     const [rows, total] = await Promise.all([
       this.prisma.purchaseOrder.findMany({

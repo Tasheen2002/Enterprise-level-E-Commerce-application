@@ -9,8 +9,8 @@ import {
 } from "../../domain/entities/newsletter-subscription.entity";
 import {
   SubscriptionId,
-  SubscriptionStatus,
 } from "../../domain/value-objects";
+import { SubscriptionStatusValue } from "../../domain/value-objects/subscription-status.vo";
 import {
   NewsletterSubscriptionNotFoundError,
   InvalidOperationError,
@@ -49,11 +49,10 @@ export class NewsletterService {
       );
     }
 
-    const subscription = NewsletterSubscription.create({
-      email,
-      source,
-      status: SubscriptionStatus.active(),
-    });
+    // `NewsletterSubscription.create()` always initialises `status` to
+    // `ACTIVE` internally — passing it here is redundant and now rejected
+    // by the entity's typed factory signature.
+    const subscription = NewsletterSubscription.create({ email, source });
     await this.subscriptionRepository.save(subscription);
     return NewsletterSubscription.toDTO(subscription);
   }
@@ -125,7 +124,7 @@ export class NewsletterService {
     options?: NewsletterSubscriptionQueryOptions,
   ): Promise<PaginatedSubscriptionResult> {
     const result = await this.subscriptionRepository.findByStatus(
-      status,
+      status as SubscriptionStatusValue,
       options,
     );
     return this.mapPaginated(result);
@@ -180,7 +179,7 @@ export class NewsletterService {
   }
 
   async countSubscriptionsByStatus(status: string): Promise<number> {
-    return this.subscriptionRepository.countByStatus(status);
+    return this.subscriptionRepository.countByStatus(status as SubscriptionStatusValue);
   }
 
   async countSubscriptionsBySource(source: string): Promise<number> {

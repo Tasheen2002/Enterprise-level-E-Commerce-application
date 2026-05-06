@@ -8,6 +8,7 @@ import {
   AppointmentDTO,
 } from "../../domain/entities/appointment.entity";
 import { AppointmentId, AppointmentType } from "../../domain/value-objects";
+import { AppointmentTypeValue } from "../../domain/value-objects/appointment-type.vo";
 import {
   AppointmentNotFoundError,
   AppointmentSchedulingError,
@@ -115,6 +116,11 @@ export class AppointmentService {
       AppointmentId.fromString(appointmentId),
     );
     if (!appointment) throw new AppointmentNotFoundError(appointmentId);
+    // Emit the cancellation event by mutating + saving first so subscribers
+    // observe the lifecycle change, then delete the row. The save+delete
+    // sequence is intentional: the aggregate is terminal after cancellation.
+    appointment.cancel();
+    await this.appointmentRepository.save(appointment);
     await this.appointmentRepository.delete(appointment.id);
   }
 
@@ -138,7 +144,10 @@ export class AppointmentService {
     type: string,
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedAppointmentResult> {
-    const result = await this.appointmentRepository.findByType(type, options);
+    const result = await this.appointmentRepository.findByType(
+      type as AppointmentTypeValue,
+      options,
+    );
     return this.mapPaginated(result);
   }
 
@@ -217,7 +226,7 @@ export class AppointmentService {
   }
 
   async countAppointmentsByType(type: string): Promise<number> {
-    return this.appointmentRepository.countByType(type);
+    return this.appointmentRepository.countByType(type as AppointmentTypeValue);
   }
 
   async appointmentExists(appointmentId: string): Promise<boolean> {

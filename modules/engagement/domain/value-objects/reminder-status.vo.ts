@@ -1,56 +1,61 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { ReminderStatusEnum } from "../enums/engagement.enums";
 
+export enum ReminderStatusValue {
+  PENDING = "pending",
+  SENT = "sent",
+  UNSUBSCRIBED = "unsubscribed",
+}
+
+/** @deprecated Use `ReminderStatusValue`. */
+export const ReminderStatusEnum = ReminderStatusValue;
+/** @deprecated Use `ReminderStatusValue`. */
+export type ReminderStatusEnum = ReminderStatusValue;
+
+// Pattern D (Enum-Like VO).
 export class ReminderStatus {
-  private constructor(private readonly value: ReminderStatusEnum) {}
+  static readonly PENDING = new ReminderStatus(ReminderStatusValue.PENDING);
+  static readonly SENT = new ReminderStatus(ReminderStatusValue.SENT);
+  static readonly UNSUBSCRIBED = new ReminderStatus(ReminderStatusValue.UNSUBSCRIBED);
+
+  private static readonly ALL: ReadonlyArray<ReminderStatus> = [
+    ReminderStatus.PENDING,
+    ReminderStatus.SENT,
+    ReminderStatus.UNSUBSCRIBED,
+  ];
+
+  private constructor(private readonly value: ReminderStatusValue) {
+    if (!Object.values(ReminderStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid reminder status: ${value}. Must be one of: ${Object.values(ReminderStatusValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): ReminderStatus {
-    return ReminderStatus.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      ReminderStatus.ALL.find((t) => t.value === normalized) ??
+      new ReminderStatus(normalized as ReminderStatusValue)
+    );
   }
 
   static fromString(value: string): ReminderStatus {
-    const normalized = value.toLowerCase().trim();
-
-    if (!Object.values(ReminderStatusEnum).includes(normalized as ReminderStatusEnum)) {
-      throw new DomainValidationError(`Invalid reminder status: ${value}`);
-    }
-
-    return new ReminderStatus(normalized as ReminderStatusEnum);
+    return ReminderStatus.create(value);
   }
 
-  static pending(): ReminderStatus {
-    return new ReminderStatus(ReminderStatusEnum.PENDING);
-  }
+  /** @deprecated Use `ReminderStatus.PENDING`. */
+  static pending(): ReminderStatus { return ReminderStatus.PENDING; }
+  /** @deprecated Use `ReminderStatus.SENT`. */
+  static sent(): ReminderStatus { return ReminderStatus.SENT; }
+  /** @deprecated Use `ReminderStatus.UNSUBSCRIBED`. */
+  static unsubscribed(): ReminderStatus { return ReminderStatus.UNSUBSCRIBED; }
 
-  static sent(): ReminderStatus {
-    return new ReminderStatus(ReminderStatusEnum.SENT);
-  }
+  getValue(): ReminderStatusValue { return this.value; }
 
-  static unsubscribed(): ReminderStatus {
-    return new ReminderStatus(ReminderStatusEnum.UNSUBSCRIBED);
-  }
+  isPending(): boolean { return this.value === ReminderStatusValue.PENDING; }
+  isSent(): boolean { return this.value === ReminderStatusValue.SENT; }
+  isUnsubscribed(): boolean { return this.value === ReminderStatusValue.UNSUBSCRIBED; }
 
-  getValue(): string {
-    return this.value;
-  }
-
-  isPending(): boolean {
-    return this.value === ReminderStatusEnum.PENDING;
-  }
-
-  isSent(): boolean {
-    return this.value === ReminderStatusEnum.SENT;
-  }
-
-  isUnsubscribed(): boolean {
-    return this.value === ReminderStatusEnum.UNSUBSCRIBED;
-  }
-
-  equals(other: ReminderStatus): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: ReminderStatus): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

@@ -145,7 +145,9 @@ export class Stock extends AggregateRoot {
   get locationId(): string { return this.props.locationId; }
   get stockLevel(): StockLevel { return this.props.stockLevel; }
 
-  getStockId(): StockId {
+  // Composite identifier (variantId × locationId). Computed on access rather
+  // than stored, since the underlying components are the canonical primary key.
+  get stockId(): StockId {
     return StockId.create(this.props.variantId, this.props.locationId);
   }
 

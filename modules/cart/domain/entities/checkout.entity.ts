@@ -4,7 +4,7 @@ import { CheckoutId } from "../value-objects/checkout-id.vo";
 import { CartId } from "../value-objects/cart-id.vo";
 import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
-import { Currency } from "../value-objects/currency.vo";
+import { Currency } from "../../../../packages/core/src/domain/value-objects/currency.vo";
 import { CheckoutStatus } from "../value-objects/checkout-status.vo";
 import {
   DomainValidationError,
@@ -196,7 +196,7 @@ export class Checkout extends AggregateRoot {
       cartId: CartId.fromString(data.cartId),
       userId,
       guestToken,
-      status: CheckoutStatus.pending(),
+      status: CheckoutStatus.PENDING,
       totalAmount: data.totalAmount,
       currency: Currency.fromString(data.currency),
       expiresAt,
@@ -231,83 +231,6 @@ export class Checkout extends AggregateRoot {
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
-  }
-
-  // Business methods
-  markAsCompleted(completedAt: Date = new Date()): void {
-    if (this.props.status.isCompleted()) {
-      throw new InvalidCheckoutStateError("Checkout is already completed");
-    }
-    if (this.props.status.isExpired()) {
-      throw new InvalidCheckoutStateError("Cannot complete an expired checkout");
-    }
-    if (this.props.status.isCancelled()) {
-      throw new InvalidCheckoutStateError("Cannot complete a cancelled checkout");
-    }
-    this.props.status = CheckoutStatus.completed();
-    this.props.completedAt = completedAt;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(
-      new CheckoutCompletedEvent(
-        this.props.checkoutId.getValue(),
-        this.props.cartId.getValue(),
-        completedAt.toISOString(),
-      ),
-    );
-  }
-
-  markAsExpired(): void {
-    if (this.props.status.isCompleted()) {
-      throw new InvalidCheckoutStateError("Cannot expire a completed checkout");
-    }
-    this.props.status = CheckoutStatus.expired();
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(
-      new CheckoutExpiredEvent(
-        this.props.checkoutId.getValue(),
-        this.props.cartId.getValue(),
-      ),
-    );
-  }
-
-  markAsCancelled(): void {
-    if (this.props.status.isCompleted()) {
-      throw new InvalidCheckoutStateError("Cannot cancel a completed checkout");
-    }
-    this.props.status = CheckoutStatus.cancelled();
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(
-      new CheckoutCancelledEvent(
-        this.props.checkoutId.getValue(),
-        this.props.cartId.getValue(),
-      ),
-    );
-  }
-
-  transferToUser(userId: string): Checkout {
-    if (this.props.userId) {
-      throw new InvalidOperationError("Checkout already belongs to a user");
-    }
-
-    return new Checkout({
-      ...this.props,
-      userId: CartOwnerId.fromString(userId),
-      guestToken: null,
-      updatedAt: new Date(),
-    });
-  }
-
-  // State checks
-  get isExpired(): boolean {
-    return this.props.expiresAt < new Date() || this.props.status.isExpired();
-  }
-
-  get isPending(): boolean {
-    return this.props.status.isPending();
-  }
-
-  get isCompleted(): boolean {
-    return this.props.status.isCompleted();
   }
 
   // Getters
@@ -353,6 +276,83 @@ export class Checkout extends AggregateRoot {
 
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  // State checks (computed from status / expiry)
+  get isExpired(): boolean {
+    return this.props.expiresAt < new Date() || this.props.status.isExpired();
+  }
+
+  get isPending(): boolean {
+    return this.props.status.isPending();
+  }
+
+  get isCompleted(): boolean {
+    return this.props.status.isCompleted();
+  }
+
+  // Business methods
+  markAsCompleted(completedAt: Date = new Date()): void {
+    if (this.props.status.isCompleted()) {
+      throw new InvalidCheckoutStateError("Checkout is already completed");
+    }
+    if (this.props.status.isExpired()) {
+      throw new InvalidCheckoutStateError("Cannot complete an expired checkout");
+    }
+    if (this.props.status.isCancelled()) {
+      throw new InvalidCheckoutStateError("Cannot complete a cancelled checkout");
+    }
+    this.props.status = CheckoutStatus.COMPLETED;
+    this.props.completedAt = completedAt;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new CheckoutCompletedEvent(
+        this.props.checkoutId.getValue(),
+        this.props.cartId.getValue(),
+        completedAt.toISOString(),
+      ),
+    );
+  }
+
+  markAsExpired(): void {
+    if (this.props.status.isCompleted()) {
+      throw new InvalidCheckoutStateError("Cannot expire a completed checkout");
+    }
+    this.props.status = CheckoutStatus.EXPIRED;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new CheckoutExpiredEvent(
+        this.props.checkoutId.getValue(),
+        this.props.cartId.getValue(),
+      ),
+    );
+  }
+
+  markAsCancelled(): void {
+    if (this.props.status.isCompleted()) {
+      throw new InvalidCheckoutStateError("Cannot cancel a completed checkout");
+    }
+    this.props.status = CheckoutStatus.CANCELLED;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new CheckoutCancelledEvent(
+        this.props.checkoutId.getValue(),
+        this.props.cartId.getValue(),
+      ),
+    );
+  }
+
+  transferToUser(userId: string): Checkout {
+    if (this.props.userId) {
+      throw new InvalidOperationError("Checkout already belongs to a user");
+    }
+
+    return new Checkout({
+      ...this.props,
+      userId: CartOwnerId.fromString(userId),
+      guestToken: null,
+      updatedAt: new Date(),
+    });
   }
 
   equals(other: Checkout): boolean {

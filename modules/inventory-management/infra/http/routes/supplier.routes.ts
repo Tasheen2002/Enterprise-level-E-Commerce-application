@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   createRateLimiter,
@@ -11,7 +12,13 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   supplierParamsSchema,
   listSuppliersSchema,
@@ -19,6 +26,12 @@ import {
   updateSupplierSchema,
   supplierResponseSchema,
 } from "../validation/supplier.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const supplierParamsJson = toJsonSchema(supplierParamsSchema);
+const listSuppliersQueryJson = toJsonSchema(listSuppliersSchema);
+const createSupplierBodyJson = toJsonSchema(createSupplierSchema);
+const updateSupplierBodyJson = toJsonSchema(updateSupplierSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -40,38 +53,15 @@ export async function supplierRoutes(
     "/suppliers",
     {
       preValidation: [validateQuery(listSuppliersSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all suppliers (Staff/Admin only)",
         tags: ["Suppliers"],
         summary: "List Suppliers",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            offset: { type: "integer", minimum: 0, default: 0 },
-          },
-        },
+        querystring: listSuppliersQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: supplierResponseSchema },
-                  total: { type: "integer" },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                  hasMore: { type: "boolean" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(supplierResponseSchema)),
         },
       },
     },
@@ -84,29 +74,15 @@ export async function supplierRoutes(
     "/suppliers/:supplierId",
     {
       preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get supplier by ID (Staff/Admin only)",
         tags: ["Suppliers"],
         summary: "Get Supplier",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            supplierId: { type: "string", format: "uuid" },
-          },
-          required: ["supplierId"],
-        },
+        params: supplierParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: supplierResponseSchema,
-            },
-          },
+          200: successResponse(supplierResponseSchema),
         },
       },
     },
@@ -118,42 +94,15 @@ export async function supplierRoutes(
   fastify.post(
     "/suppliers",
     {
-      preValidation: [validateBody(createSupplierSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createSupplierSchema)],
       schema: {
         description: "Create a new supplier",
         tags: ["Suppliers"],
         summary: "Create Supplier",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["name"],
-          properties: {
-            name: { type: "string", minLength: 2, maxLength: 128 },
-            leadTimeDays: { type: "integer", minimum: 0 },
-            contacts: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  email: { type: "string", format: "email" },
-                  phone: { type: "string" },
-                },
-              },
-            },
-          },
-        },
+        body: createSupplierBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: supplierResponseSchema,
-            },
-          },
+          201: successResponse(supplierResponseSchema, 201),
         },
       },
     },
@@ -165,48 +114,17 @@ export async function supplierRoutes(
   fastify.patch(
     "/suppliers/:supplierId",
     {
-      preValidation: [validateParams(supplierParamsSchema), validateBody(updateSupplierSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(supplierParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateSupplierSchema)],
       schema: {
         description: "Update supplier",
         tags: ["Suppliers"],
         summary: "Update Supplier",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            supplierId: { type: "string", format: "uuid" },
-          },
-          required: ["supplierId"],
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 2, maxLength: 128 },
-            leadTimeDays: { type: "integer", minimum: 0 },
-            contacts: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  name: { type: "string" },
-                  email: { type: "string", format: "email" },
-                  phone: { type: "string" },
-                },
-              },
-            },
-          },
-        },
+        params: supplierParamsJson,
+        body: updateSupplierBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: supplierResponseSchema,
-            },
-          },
+          200: successResponse(supplierResponseSchema),
         },
       },
     },
@@ -219,21 +137,15 @@ export async function supplierRoutes(
     "/suppliers/:supplierId",
     {
       preValidation: [validateParams(supplierParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete supplier",
         tags: ["Suppliers"],
         summary: "Delete Supplier",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            supplierId: { type: "string", format: "uuid" },
-          },
-          required: ["supplierId"],
-        },
+        params: supplierParamsJson,
         response: {
-          204: { description: "Supplier deleted successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },

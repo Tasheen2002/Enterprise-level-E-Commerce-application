@@ -47,7 +47,7 @@ export class StockController {
 
   async getStats(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getStockStatsHandler.handle();
+      const result = await this.getStockStatsHandler.handle({});
       return ResponseHelper.ok(reply, "Stock stats retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -116,7 +116,7 @@ export class StockController {
 
   async getLowStockItems(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getLowStockItemsHandler.handle();
+      const result = await this.getLowStockItemsHandler.handle({});
       return ResponseHelper.ok(reply, "Low stock items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -125,7 +125,7 @@ export class StockController {
 
   async getOutOfStockItems(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getOutOfStockItemsHandler.handle();
+      const result = await this.getOutOfStockItemsHandler.handle({});
       return ResponseHelper.ok(reply, "Out of stock items retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

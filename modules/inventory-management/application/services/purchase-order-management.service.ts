@@ -3,23 +3,21 @@ import { PurchaseOrderItem, PurchaseOrderItemDTO } from "../../domain/entities/p
 import { Stock } from "../../domain/entities/stock.entity";
 import { InventoryTransaction } from "../../domain/entities/inventory-transaction.entity";
 import { PurchaseOrderId } from "../../domain/value-objects/purchase-order-id.vo";
-import { PurchaseOrderStatus, PurchaseOrderStatusVO } from "../../domain/value-objects/purchase-order-status.vo";
+import { PurchaseOrderStatusVO } from "../../domain/value-objects/purchase-order-status.vo";
+import { SupplierId } from "../../domain/value-objects/supplier-id.vo";
+import { LocationId } from "../../domain/value-objects/location-id.vo";
+import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import { IPurchaseOrderRepository } from "../../domain/repositories/purchase-order.repository";
-import { IPurchaseOrderItemRepository } from "../../domain/repositories/purchase-order-item.repository";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
 import {
   PurchaseOrderNotFoundError,
-  PurchaseOrderNotEditableError,
-  PurchaseOrderItemAlreadyExistsError,
-  PurchaseOrderItemNotFoundError,
   InvalidOperationError,
 } from "../../domain/errors/inventory-management.errors";
 
 export class PurchaseOrderManagementService {
   constructor(
     private readonly purchaseOrderRepository: IPurchaseOrderRepository,
-    private readonly purchaseOrderItemRepository: IPurchaseOrderItemRepository,
     private readonly stockRepository: IStockRepository,
     private readonly transactionRepository: IInventoryTransactionRepository,
   ) {}
@@ -74,30 +72,40 @@ export class PurchaseOrderManagementService {
     variantId: string,
     orderedQty: number,
   ): Promise<PurchaseOrderItemDTO> {
-    const poIdVO = PurchaseOrderId.fromString(poId);
-    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.fromString(poId),
+    );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
-    }
+    const item = purchaseOrder.addItem(variantId, orderedQty);
+    await this.purchaseOrderRepository.save(purchaseOrder);
+    return PurchaseOrderItem.toDTO(item);
+  }
 
-    const existingItem = await this.purchaseOrderItemRepository.findByPoAndVariant(
-      poIdVO,
-      variantId,
+  // Adds many items to a draft PO in a single load + mutate + save cycle.
+  // Used by `CreatePurchaseOrderWithItemsHandler` to avoid the previous
+  // race condition where parallel `addPurchaseOrderItem` calls each loaded
+  // a stale PO and last-write-wins.
+  async addPurchaseOrderItems(
+    poId: string,
+    items: Array<{ variantId: string; orderedQty: number }>,
+  ): Promise<PurchaseOrderItemDTO[]> {
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.fromString(poId),
     );
 
-    if (existingItem) {
-      throw new PurchaseOrderItemAlreadyExistsError(variantId);
+    if (!purchaseOrder) {
+      throw new PurchaseOrderNotFoundError(poId);
     }
 
-    const item = PurchaseOrderItem.create({ poId: poIdVO, variantId, orderedQty });
-
-    await this.purchaseOrderItemRepository.save(item);
-    return PurchaseOrderItem.toDTO(item);
+    const added = items.map(({ variantId, orderedQty }) =>
+      purchaseOrder.addItem(variantId, orderedQty),
+    );
+    await this.purchaseOrderRepository.save(purchaseOrder);
+    return added.map(PurchaseOrderItem.toDTO);
   }
 
   async updatePurchaseOrderItem(
@@ -105,25 +113,16 @@ export class PurchaseOrderManagementService {
     variantId: string,
     orderedQty: number,
   ): Promise<PurchaseOrderItemDTO> {
-    const poIdVO = PurchaseOrderId.fromString(poId);
-    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.fromString(poId),
+    );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
-    }
-
-    const item = await this.purchaseOrderItemRepository.findByPoAndVariant(poIdVO, variantId);
-
-    if (!item) {
-      throw new PurchaseOrderItemNotFoundError(variantId);
-    }
-
-    item.updateOrderedQty(orderedQty);
-    await this.purchaseOrderItemRepository.save(item);
+    const item = purchaseOrder.updateItemQty(variantId, orderedQty);
+    await this.purchaseOrderRepository.save(purchaseOrder);
     return PurchaseOrderItem.toDTO(item);
   }
 
@@ -131,18 +130,16 @@ export class PurchaseOrderManagementService {
     poId: string,
     variantId: string,
   ): Promise<void> {
-    const poIdVO = PurchaseOrderId.fromString(poId);
-    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.fromString(poId),
+    );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    if (!purchaseOrder.canEdit()) {
-      throw new PurchaseOrderNotEditableError(purchaseOrder.status.getValue());
-    }
-
-    await this.purchaseOrderItemRepository.delete(poIdVO, variantId);
+    purchaseOrder.removeItem(variantId);
+    await this.purchaseOrderRepository.save(purchaseOrder);
   }
 
   async receivePurchaseOrderItems(
@@ -150,33 +147,26 @@ export class PurchaseOrderManagementService {
     locationId: string,
     items: { variantId: string; receivedQty: number }[],
   ): Promise<{ purchaseOrder: PurchaseOrderDTO; items: PurchaseOrderItemDTO[] }> {
-    const poIdVO = PurchaseOrderId.fromString(poId);
-    const purchaseOrder = await this.purchaseOrderRepository.findById(poIdVO);
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
+      PurchaseOrderId.fromString(poId),
+    );
 
     if (!purchaseOrder) {
       throw new PurchaseOrderNotFoundError(poId);
     }
 
-    if (!purchaseOrder.isSent() && !purchaseOrder.isPartiallyReceived()) {
-      throw new InvalidOperationError(
-        `Cannot receive items for a purchase order in '${purchaseOrder.status.getValue()}' status`,
-      );
-    }
-
     const updatedItems: PurchaseOrderItem[] = [];
+    const locationVo = LocationId.fromString(locationId);
 
     for (const { variantId, receivedQty } of items) {
-      const item = await this.purchaseOrderItemRepository.findByPoAndVariant(poIdVO, variantId);
-
-      if (!item) {
-        throw new PurchaseOrderItemNotFoundError(variantId);
-      }
-
-      item.receiveQuantity(receivedQty);
-      await this.purchaseOrderItemRepository.save(item);
+      // Aggregate enforces canReceive(), item existence, and auto-transitions
+      // status. Throws on violations — no need for additional service-side
+      // pre-checks.
+      const item = purchaseOrder.receiveItem(variantId, receivedQty);
       updatedItems.push(item);
 
-      let stock = await this.stockRepository.findByVariantAndLocation(variantId, locationId);
+      const variantVo = VariantId.fromString(variantId);
+      let stock = await this.stockRepository.findByVariantAndLocation(variantVo, locationVo);
       if (!stock) {
         stock = Stock.create({ variantId, locationId, onHand: receivedQty, reserved: 0 });
       } else {
@@ -191,19 +181,6 @@ export class PurchaseOrderManagementService {
         reason: "po",
       });
       await this.transactionRepository.save(transaction);
-    }
-
-    const allItems = await this.purchaseOrderItemRepository.findByPurchaseOrder(poIdVO);
-
-    const allFullyReceived = allItems.every((item) => item.isFullyReceived());
-    const anyPartiallyReceived = allItems.some((item) => item.isPartiallyReceived());
-
-    if (allFullyReceived) {
-      purchaseOrder.updateStatus(PurchaseOrderStatusVO.create("received"));
-    } else if (anyPartiallyReceived || updatedItems.length > 0) {
-      if (purchaseOrder.status.getValue() === "sent") {
-        purchaseOrder.updateStatus(PurchaseOrderStatusVO.create("part_received"));
-      }
     }
 
     await this.purchaseOrderRepository.save(purchaseOrder);
@@ -240,10 +217,13 @@ export class PurchaseOrderManagementService {
   }
 
   async getPurchaseOrderItems(poId: string): Promise<PurchaseOrderItemDTO[]> {
-    const items = await this.purchaseOrderItemRepository.findByPurchaseOrder(
+    const purchaseOrder = await this.purchaseOrderRepository.findById(
       PurchaseOrderId.fromString(poId),
     );
-    return items.map(PurchaseOrderItem.toDTO);
+    if (!purchaseOrder) {
+      throw new PurchaseOrderNotFoundError(poId);
+    }
+    return purchaseOrder.items.map(PurchaseOrderItem.toDTO);
   }
 
   async listPurchaseOrders(options?: {
@@ -255,10 +235,12 @@ export class PurchaseOrderManagementService {
     sortOrder?: "asc" | "desc";
   }): Promise<{ purchaseOrders: PurchaseOrderDTO[]; total: number }> {
     const result = await this.purchaseOrderRepository.findAll({
-      ...options,
-      status: options?.status
-        ? (options.status.toLowerCase() as PurchaseOrderStatus)
-        : undefined,
+      limit: options?.limit,
+      offset: options?.offset,
+      sortBy: options?.sortBy,
+      sortOrder: options?.sortOrder,
+      status: options?.status ? PurchaseOrderStatusVO.create(options.status) : undefined,
+      supplierId: options?.supplierId ? SupplierId.fromString(options.supplierId) : undefined,
     });
     return {
       purchaseOrders: result.items.map(PurchaseOrder.toDTO),

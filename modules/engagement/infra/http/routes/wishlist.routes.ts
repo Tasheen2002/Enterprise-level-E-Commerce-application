@@ -1,17 +1,25 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+  noContentResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { WishlistController } from "../controllers/wishlist.controller";
 import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
 import {
   wishlistIdParamsSchema,
@@ -25,9 +33,18 @@ import {
   wishlistItemResponseSchema,
 } from "../validation/wishlist.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const wishlistIdParamsJson = toJsonSchema(wishlistIdParamsSchema);
+const wishlistItemParamsJson = toJsonSchema(wishlistItemParamsSchema);
+const userIdParamsJson = toJsonSchema(userIdParamsSchema);
+const paginationQueryJson = toJsonSchema(paginationQuerySchema);
+const createWishlistBodyJson = toJsonSchema(createWishlistSchema);
+const updateWishlistBodyJson = toJsonSchema(updateWishlistSchema);
+const addToWishlistBodyJson = toJsonSchema(addToWishlistSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function wishlistRoutes(
@@ -50,27 +67,9 @@ export async function wishlistRoutes(
         description: "Create a new wishlist",
         summary: "Create Wishlist",
         tags: ["Engagement - Wishlists"],
-        body: {
-          type: "object",
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            guestToken: { type: "string", minLength: 1 },
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            isDefault: { type: "boolean" },
-            isPublic: { type: "boolean" },
-            description: { type: "string", maxLength: 1000 },
-          },
-        },
+        body: createWishlistBodyJson,
         response: {
-          201: {
-            description: "Wishlist created successfully",
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: wishlistResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(wishlistResponseSchema, 201),
         },
       },
     },
@@ -87,22 +86,9 @@ export async function wishlistRoutes(
         description: "Get all public wishlists",
         summary: "Get Public Wishlists",
         tags: ["Engagement - Wishlists"],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: wishlistResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(wishlistResponseSchema)),
         },
       },
     },
@@ -120,21 +106,9 @@ export async function wishlistRoutes(
         description: "Get a specific wishlist by ID",
         summary: "Get Wishlist",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["wishlistId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-          },
-        },
+        params: wishlistIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: wishlistResponseSchema,
-            },
-          },
+          200: successResponse(wishlistResponseSchema),
         },
       },
     },
@@ -152,29 +126,10 @@ export async function wishlistRoutes(
         description: "Get all items in a wishlist",
         summary: "Get Wishlist Items",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["wishlistId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: wishlistIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: wishlistItemResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(wishlistItemResponseSchema)),
         },
       },
     },
@@ -182,7 +137,7 @@ export async function wishlistRoutes(
       controller.getWishlistItems(request as AuthenticatedRequest, reply),
   );
 
-  // GET /engagement/users/:userId/wishlists — Get user wishlists
+  // GET /engagement/users/:userId/wishlists — Get user wishlists (authenticated)
   fastify.get(
     "/engagement/users/:userId/wishlists",
     {
@@ -190,34 +145,21 @@ export async function wishlistRoutes(
         validateParams(userIdParamsSchema),
         validateQuery(paginationQuerySchema),
       ],
-      preHandler: [optionalAuth],
+      // Authenticated-only: anyone with a valid token can request this, but
+      // the controller enforces that callers can only see their own
+      // wishlists unless they're admin. Previously this route used
+      // `optionalAuth`, which allowed anonymous enumeration of any user's
+      // wishlists by guessing userId.
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get all wishlists for a specific user",
         summary: "Get User Wishlists",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        security: [{ bearerAuth: [] }],
+        params: userIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: wishlistResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(wishlistResponseSchema)),
         },
       },
     },
@@ -235,30 +177,10 @@ export async function wishlistRoutes(
         description: "Add an item to a wishlist",
         summary: "Add To Wishlist",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["wishlistId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["variantId"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            guestToken: { type: "string", minLength: 1 },
-          },
-        },
+        params: wishlistIdParamsJson,
+        body: addToWishlistBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: wishlistItemResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(wishlistItemResponseSchema, 201),
         },
       },
     },
@@ -276,29 +198,10 @@ export async function wishlistRoutes(
         description: "Update wishlist details",
         summary: "Update Wishlist",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["wishlistId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            description: { type: "string", maxLength: 1000 },
-            isPublic: { type: "boolean" },
-          },
-        },
+        params: wishlistIdParamsJson,
+        body: updateWishlistBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -316,19 +219,9 @@ export async function wishlistRoutes(
         description: "Remove an item from a wishlist",
         summary: "Remove From Wishlist",
         tags: ["Engagement - Wishlists"],
-        params: {
-          type: "object",
-          required: ["wishlistId", "variantId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-          },
-        },
+        params: wishlistItemParamsJson,
         response: {
-          204: {
-            description: "Item removed from wishlist successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -341,21 +234,15 @@ export async function wishlistRoutes(
     "/engagement/wishlists/:wishlistId",
     {
       preValidation: [validateParams(wishlistIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Delete a wishlist",
         summary: "Delete Wishlist",
         tags: ["Engagement - Wishlists"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["wishlistId"],
-          properties: {
-            wishlistId: { type: "string", format: "uuid" },
-          },
-        },
+        params: wishlistIdParamsJson,
         response: {
-          204: { description: "Wishlist deleted successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },

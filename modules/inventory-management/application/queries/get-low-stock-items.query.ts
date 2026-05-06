@@ -10,7 +10,7 @@ export class GetLowStockItemsHandler implements IQueryHandler<
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(): Promise<StockResult[]> {
+  async handle(_query: GetLowStockItemsQuery): Promise<StockResult[]> {
     return this.stockService.getLowStockItems();
   }
 }

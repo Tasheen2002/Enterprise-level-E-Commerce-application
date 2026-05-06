@@ -3,6 +3,11 @@ import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-
 import { ReservationId } from "../value-objects/reservation-id.vo";
 import { ReservationStatusVO } from "../value-objects/reservation-status.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
+import {
+  RESERVATION_MIN_QTY,
+  RESERVATION_MIN_EXPIRY_MINUTES,
+  RESERVATION_MAX_EXPIRY_MINUTES,
+} from "../constants/inventory-management.constants";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -113,14 +118,35 @@ export interface PickupReservationDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PickupReservation extends AggregateRoot {
+  // Validation lives in the constructor so BOTH `create()` (with bounded
+  // expiresAt window) and `fromPersistence()` (raw DB rebuild) validate.
+  // Previously validateQty was only called from `create()`.
   private constructor(private props: PickupReservationProps) {
     super();
+    PickupReservation.validateQty(props.qty);
   }
 
   private static validateQty(qty: number): void {
-    if (qty <= 0) {
+    if (qty < RESERVATION_MIN_QTY) {
       throw new DomainValidationError(
-        "Reservation quantity must be greater than zero",
+        `Reservation quantity must be at least ${RESERVATION_MIN_QTY}`,
+      );
+    }
+  }
+
+  private static validateExpiresAtForCreate(expiresAt: Date): void {
+    const now = Date.now();
+    const deltaMs = expiresAt.getTime() - now;
+    const minMs = RESERVATION_MIN_EXPIRY_MINUTES * 60 * 1000;
+    const maxMs = RESERVATION_MAX_EXPIRY_MINUTES * 60 * 1000;
+    if (deltaMs < minMs) {
+      throw new DomainValidationError(
+        `Reservation expiry must be at least ${RESERVATION_MIN_EXPIRY_MINUTES} minute(s) in the future`,
+      );
+    }
+    if (deltaMs > maxMs) {
+      throw new DomainValidationError(
+        `Reservation expiry cannot exceed ${RESERVATION_MAX_EXPIRY_MINUTES} minutes from now`,
       );
     }
   }
@@ -132,7 +158,7 @@ export class PickupReservation extends AggregateRoot {
     qty: number;
     expiresAt: Date;
   }): PickupReservation {
-    PickupReservation.validateQty(params.qty);
+    PickupReservation.validateExpiresAtForCreate(params.expiresAt);
     const reservation = new PickupReservation({
       reservationId: ReservationId.create(),
       orderId: params.orderId,

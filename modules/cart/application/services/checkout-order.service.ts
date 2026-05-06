@@ -3,6 +3,7 @@ import { ICheckoutRepository } from "../../domain/repositories/checkout.reposito
 import { ICartRepository } from "../../domain/repositories/cart.repository";
 import { IReservationRepository } from "../../domain/repositories/reservation.repository";
 import { CheckoutId } from "../../domain/value-objects/checkout-id.vo";
+import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import {
   IExternalProductRepository,
   IExternalProductVariantRepository,
@@ -157,9 +158,9 @@ export class CheckoutOrderService {
     }> = [];
 
     for (const item of cartSnapshot.items || []) {
-      const variant = await this.productVariantRepository.findById({
-        getValue: () => item.variantId,
-      });
+      const variant = await this.productVariantRepository.findById(
+        VariantId.fromString(item.variantId),
+      );
 
       if (!variant) {
         throw new DomainValidationError(`Variant not found: ${item.variantId}`);

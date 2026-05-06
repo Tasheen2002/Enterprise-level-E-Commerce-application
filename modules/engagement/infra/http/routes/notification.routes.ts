@@ -1,13 +1,24 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { NotificationController } from "../controllers/notification.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+  toJsonSchema,
+} from "../validation/validator";
 import {
   notificationIdParamsSchema,
   notificationsByTypeQuerySchema,
@@ -15,9 +26,14 @@ import {
   notificationResponseSchema,
 } from "../validation/notification.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const notificationIdParamsJson = toJsonSchema(notificationIdParamsSchema);
+const notificationsByTypeQueryJson = toJsonSchema(notificationsByTypeQuerySchema);
+const scheduleNotificationBodyJson = toJsonSchema(scheduleNotificationSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function notificationRoutes(
@@ -35,27 +51,15 @@ export async function notificationRoutes(
     "/engagement/notifications/:notificationId",
     {
       preValidation: [validateParams(notificationIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get a specific notification by ID",
         summary: "Get Notification",
         tags: ["Engagement - Notifications"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["notificationId"],
-          properties: {
-            notificationId: { type: "string", format: "uuid" },
-          },
-        },
+        params: notificationIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: notificationResponseSchema,
-            },
-          },
+          200: successResponse(notificationResponseSchema),
         },
       },
     },
@@ -67,33 +71,15 @@ export async function notificationRoutes(
     "/engagement/notifications",
     {
       preValidation: [validateQuery(notificationsByTypeQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get notifications by type",
         summary: "Get User Notifications",
         tags: ["Engagement - Notifications"],
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          required: ["type"],
-          properties: {
-            type: {
-              type: "string",
-              enum: ["order_confirm", "shipped", "restock", "review_request", "care_guide", "promo"],
-            },
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        querystring: notificationsByTypeQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: notificationResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(notificationResponseSchema)),
         },
       },
     },
@@ -105,35 +91,15 @@ export async function notificationRoutes(
     "/engagement/notifications/schedule",
     {
       preValidation: [validateBody(scheduleNotificationSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Schedule a notification",
         summary: "Schedule Notification",
         tags: ["Engagement - Notifications"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["type", "scheduledAt"],
-          properties: {
-            type: {
-              type: "string",
-              enum: ["order_confirm", "shipped", "restock", "review_request", "care_guide", "promo"],
-            },
-            channel: { type: "string", enum: ["email", "sms", "push", "in_app"] },
-            templateId: { type: "string" },
-            payload: { type: "object", additionalProperties: true },
-            scheduledAt: { type: "string", format: "date-time" },
-          },
-        },
+        body: scheduleNotificationBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: notificationResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(notificationResponseSchema, 201),
         },
       },
     },
@@ -145,27 +111,15 @@ export async function notificationRoutes(
     "/engagement/notifications/:notificationId/send",
     {
       preValidation: [validateParams(notificationIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Send a scheduled notification immediately",
         summary: "Send Notification",
         tags: ["Engagement - Notifications"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["notificationId"],
-          properties: {
-            notificationId: { type: "string", format: "uuid" },
-          },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+        params: notificationIdParamsJson,
+        response: { 
+          200: actionSuccessResponse(),
         },
       },
     },

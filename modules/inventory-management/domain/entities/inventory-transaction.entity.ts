@@ -49,6 +49,7 @@ export interface InventoryTransactionDTO {
 export class InventoryTransaction extends AggregateRoot {
   private constructor(private props: InventoryTransactionProps) {
     super();
+    InventoryTransaction.validateQtyDelta(props.qtyDelta);
   }
 
   private static validateQtyDelta(qtyDelta: number): void {
@@ -64,7 +65,6 @@ export class InventoryTransaction extends AggregateRoot {
     reason: string;
     referenceId?: string;
   }): InventoryTransaction {
-    InventoryTransaction.validateQtyDelta(params.qtyDelta);
     const txn = new InventoryTransaction({
       invTxnId: TransactionId.create(),
       variantId: params.variantId,

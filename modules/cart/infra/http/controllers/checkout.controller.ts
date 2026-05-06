@@ -29,6 +29,48 @@ export class CheckoutController {
     private readonly getOrderByCheckoutHandler: GetOrderByCheckoutHandler,
   ) {}
 
+  // ── Reads (queries) ────────────────────────────────────────────────
+
+  async get(
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+      const { checkoutId } = request.params;
+
+      const result = await this.getCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      if (result === null) return ResponseHelper.notFound(reply, "Checkout not found");
+      return ResponseHelper.ok(reply, "Checkout retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getOrderByCheckoutId(
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+      const { checkoutId } = request.params;
+
+      if (!userId && !guestToken) {
+        return ResponseHelper.unauthorized(reply, "Authentication required");
+      }
+
+      const result = await this.getOrderByCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      if (result === null) return ResponseHelper.notFound(reply, "Order not found for this checkout");
+      return ResponseHelper.ok(reply, "Order retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
+
   async initialize(
     request: AuthenticatedRequest<{ Body: InitializeCheckoutBody }>,
     reply: FastifyReply,
@@ -54,23 +96,6 @@ export class CheckoutController {
     }
   }
 
-  async get(
-    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user?.userId;
-      const guestToken = request.guestToken;
-      const { checkoutId } = request.params;
-
-      const result = await this.getCheckoutHandler.handle({ checkoutId, userId, guestToken });
-      if (result === null) return ResponseHelper.notFound(reply, "Checkout not found");
-      return ResponseHelper.ok(reply, "Checkout retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async complete(
     request: AuthenticatedRequest<{ Params: CheckoutIdParams; Body: CompleteCheckoutBody }>,
     reply: FastifyReply,
@@ -86,26 +111,6 @@ export class CheckoutController {
 
       const result = await this.completeCheckoutHandler.handle({ checkoutId, userId, guestToken });
       return ResponseHelper.fromCommand(reply, result, "Checkout completed");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async cancel(
-    request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const userId = request.user?.userId;
-      const guestToken = request.guestToken;
-      const { checkoutId } = request.params;
-
-      if (!userId && !guestToken) {
-        return ResponseHelper.unauthorized(reply, "Authentication required");
-      }
-
-      const result = await this.cancelCheckoutHandler.handle({ checkoutId, userId, guestToken });
-      return ResponseHelper.fromCommand(reply, result, "Checkout cancelled");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -139,7 +144,7 @@ export class CheckoutController {
     }
   }
 
-  async getOrderByCheckoutId(
+  async cancel(
     request: AuthenticatedRequest<{ Params: CheckoutIdParams }>,
     reply: FastifyReply,
   ) {
@@ -152,9 +157,8 @@ export class CheckoutController {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
 
-      const result = await this.getOrderByCheckoutHandler.handle({ checkoutId, userId, guestToken });
-      if (result === null) return ResponseHelper.notFound(reply, "Order not found for this checkout");
-      return ResponseHelper.ok(reply, "Order retrieved", result);
+      const result = await this.cancelCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      return ResponseHelper.fromCommand(reply, result, "Checkout cancelled");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

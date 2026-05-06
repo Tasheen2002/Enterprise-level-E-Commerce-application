@@ -1,72 +1,73 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { NotificationStatusEnum } from "../enums/engagement.enums";
 
+export enum NotificationStatusValue {
+  PENDING = "pending",
+  SCHEDULED = "scheduled",
+  SENDING = "sending",
+  SENT = "sent",
+  FAILED = "failed",
+}
+
+/** @deprecated Use `NotificationStatusValue`. */
+export const NotificationStatusEnum = NotificationStatusValue;
+/** @deprecated Use `NotificationStatusValue`. */
+export type NotificationStatusEnum = NotificationStatusValue;
+
+// Pattern D (Enum-Like VO).
 export class NotificationStatus {
-  private constructor(private readonly value: NotificationStatusEnum) {}
+  static readonly PENDING = new NotificationStatus(NotificationStatusValue.PENDING);
+  static readonly SCHEDULED = new NotificationStatus(NotificationStatusValue.SCHEDULED);
+  static readonly SENDING = new NotificationStatus(NotificationStatusValue.SENDING);
+  static readonly SENT = new NotificationStatus(NotificationStatusValue.SENT);
+  static readonly FAILED = new NotificationStatus(NotificationStatusValue.FAILED);
+
+  private static readonly ALL: ReadonlyArray<NotificationStatus> = [
+    NotificationStatus.PENDING,
+    NotificationStatus.SCHEDULED,
+    NotificationStatus.SENDING,
+    NotificationStatus.SENT,
+    NotificationStatus.FAILED,
+  ];
+
+  private constructor(private readonly value: NotificationStatusValue) {
+    if (!Object.values(NotificationStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid notification status: ${value}. Must be one of: ${Object.values(NotificationStatusValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): NotificationStatus {
-    return NotificationStatus.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      NotificationStatus.ALL.find((t) => t.value === normalized) ??
+      new NotificationStatus(normalized as NotificationStatusValue)
+    );
   }
 
   static fromString(value: string): NotificationStatus {
-    const normalized = value.toLowerCase().trim();
-
-    if (!Object.values(NotificationStatusEnum).includes(normalized as NotificationStatusEnum)) {
-      throw new DomainValidationError(`Invalid notification status: ${value}`);
-    }
-
-    return new NotificationStatus(normalized as NotificationStatusEnum);
+    return NotificationStatus.create(value);
   }
 
-  static pending(): NotificationStatus {
-    return new NotificationStatus(NotificationStatusEnum.PENDING);
-  }
+  /** @deprecated Use `NotificationStatus.PENDING`. */
+  static pending(): NotificationStatus { return NotificationStatus.PENDING; }
+  /** @deprecated Use `NotificationStatus.SCHEDULED`. */
+  static scheduled(): NotificationStatus { return NotificationStatus.SCHEDULED; }
+  /** @deprecated Use `NotificationStatus.SENDING`. */
+  static sending(): NotificationStatus { return NotificationStatus.SENDING; }
+  /** @deprecated Use `NotificationStatus.SENT`. */
+  static sent(): NotificationStatus { return NotificationStatus.SENT; }
+  /** @deprecated Use `NotificationStatus.FAILED`. */
+  static failed(): NotificationStatus { return NotificationStatus.FAILED; }
 
-  static scheduled(): NotificationStatus {
-    return new NotificationStatus(NotificationStatusEnum.SCHEDULED);
-  }
+  getValue(): NotificationStatusValue { return this.value; }
 
-  static sending(): NotificationStatus {
-    return new NotificationStatus(NotificationStatusEnum.SENDING);
-  }
+  isPending(): boolean { return this.value === NotificationStatusValue.PENDING; }
+  isScheduled(): boolean { return this.value === NotificationStatusValue.SCHEDULED; }
+  isSending(): boolean { return this.value === NotificationStatusValue.SENDING; }
+  isSent(): boolean { return this.value === NotificationStatusValue.SENT; }
+  isFailed(): boolean { return this.value === NotificationStatusValue.FAILED; }
 
-  static sent(): NotificationStatus {
-    return new NotificationStatus(NotificationStatusEnum.SENT);
-  }
-
-  static failed(): NotificationStatus {
-    return new NotificationStatus(NotificationStatusEnum.FAILED);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  isPending(): boolean {
-    return this.value === NotificationStatusEnum.PENDING;
-  }
-
-  isScheduled(): boolean {
-    return this.value === NotificationStatusEnum.SCHEDULED;
-  }
-
-  isSending(): boolean {
-    return this.value === NotificationStatusEnum.SENDING;
-  }
-
-  isSent(): boolean {
-    return this.value === NotificationStatusEnum.SENT;
-  }
-
-  isFailed(): boolean {
-    return this.value === NotificationStatusEnum.FAILED;
-  }
-
-  equals(other: NotificationStatus): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: NotificationStatus): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

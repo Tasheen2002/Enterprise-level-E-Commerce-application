@@ -1,8 +1,12 @@
 import { PrismaClient } from "@prisma/client";
+import { VariantId } from "../../../../product-catalog/domain/value-objects/variant-id.vo";
 import { PurchaseOrderItem } from "../../../domain/entities/purchase-order-item.entity";
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { IPurchaseOrderItemRepository } from "../../../domain/repositories/purchase-order-item.repository";
 
+// Read-only cross-aggregate query repository. Writes flow through
+// `IPurchaseOrderRepository.save()` after mutating items via the
+// `PurchaseOrder` aggregate root.
 export class PurchaseOrderItemRepositoryImpl
   implements IPurchaseOrderItemRepository
 {
@@ -22,92 +26,13 @@ export class PurchaseOrderItemRepositoryImpl
     });
   }
 
-  async save(item: PurchaseOrderItem): Promise<void> {
-    await this.prisma.purchaseOrderItem.upsert({
-      where: {
-        poId_variantId: {
-          poId: item.poId.getValue(),
-          variantId: item.variantId,
-        },
-      },
-      create: {
-        poId: item.poId.getValue(),
-        variantId: item.variantId,
-        orderedQty: item.orderedQty,
-        receivedQty: item.receivedQty,
-      },
-      update: {
-        orderedQty: item.orderedQty,
-        receivedQty: item.receivedQty,
-      },
-    });
-  }
-
-  async findByPoAndVariant(
-    poId: PurchaseOrderId,
-    variantId: string,
-  ): Promise<PurchaseOrderItem | null> {
-    const row = await this.prisma.purchaseOrderItem.findUnique({
-      where: {
-        poId_variantId: {
-          poId: poId.getValue(),
-          variantId,
-        },
-      },
-    });
-
-    return row ? this.toEntity(row) : null;
-  }
-
-  async delete(poId: PurchaseOrderId, variantId: string): Promise<void> {
-    await this.prisma.purchaseOrderItem.delete({
-      where: {
-        poId_variantId: {
-          poId: poId.getValue(),
-          variantId,
-        },
-      },
-    });
-  }
-
-  async findByPurchaseOrder(poId: PurchaseOrderId): Promise<PurchaseOrderItem[]> {
+  async findByVariant(variantId: VariantId): Promise<PurchaseOrderItem[]> {
     const rows = await this.prisma.purchaseOrderItem.findMany({
-      where: { poId: poId.getValue() },
-      orderBy: { variantId: "asc" },
-    });
-
-    return rows.map((r) => this.toEntity(r));
-  }
-
-  async findByVariant(variantId: string): Promise<PurchaseOrderItem[]> {
-    const rows = await this.prisma.purchaseOrderItem.findMany({
-      where: { variantId },
+      where: { variantId: variantId.getValue() },
       orderBy: { poId: "desc" },
     });
 
     return rows.map((r) => this.toEntity(r));
-  }
-
-  async findPendingItemsByPO(poId: PurchaseOrderId): Promise<PurchaseOrderItem[]> {
-    const rows = await this.prisma.purchaseOrderItem.findMany({
-      where: { poId: poId.getValue() },
-      orderBy: { variantId: "asc" },
-    });
-
-    return rows
-      .filter((r) => r.receivedQty < r.orderedQty)
-      .map((r) => this.toEntity(r));
-  }
-
-  async findFullyReceivedItemsByPO(poId: PurchaseOrderId): Promise<PurchaseOrderItem[]> {
-    const rows = await this.prisma.purchaseOrderItem.findMany({
-      where: { poId: poId.getValue() },
-      orderBy: { variantId: "asc" },
-    });
-
-    return rows
-      .filter((r) => r.receivedQty === r.orderedQty)
-      .map((r) => this.toEntity(r));
   }
 
   async getTotalOrderedQty(poId: PurchaseOrderId): Promise<number> {
@@ -126,16 +51,5 @@ export class PurchaseOrderItemRepositoryImpl
     });
 
     return result._sum.receivedQty ?? 0;
-  }
-
-  async exists(poId: PurchaseOrderId, variantId: string): Promise<boolean> {
-    const count = await this.prisma.purchaseOrderItem.count({
-      where: {
-        poId: poId.getValue(),
-        variantId,
-      },
-    });
-
-    return count > 0;
   }
 }

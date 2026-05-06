@@ -1,80 +1,79 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { NotificationTypeEnum } from "../enums/engagement.enums";
 
+export enum NotificationTypeValue {
+  ORDER_CONFIRM = "order_confirm",
+  SHIPPED = "shipped",
+  RESTOCK = "restock",
+  REVIEW_REQUEST = "review_request",
+  CARE_GUIDE = "care_guide",
+  PROMO = "promo",
+}
+
+/** @deprecated Use `NotificationTypeValue`. */
+export const NotificationTypeEnum = NotificationTypeValue;
+/** @deprecated Use `NotificationTypeValue`. */
+export type NotificationTypeEnum = NotificationTypeValue;
+
+// Pattern D (Enum-Like VO).
 export class NotificationType {
-  private constructor(private readonly value: NotificationTypeEnum) {}
+  static readonly ORDER_CONFIRM = new NotificationType(NotificationTypeValue.ORDER_CONFIRM);
+  static readonly SHIPPED = new NotificationType(NotificationTypeValue.SHIPPED);
+  static readonly RESTOCK = new NotificationType(NotificationTypeValue.RESTOCK);
+  static readonly REVIEW_REQUEST = new NotificationType(NotificationTypeValue.REVIEW_REQUEST);
+  static readonly CARE_GUIDE = new NotificationType(NotificationTypeValue.CARE_GUIDE);
+  static readonly PROMO = new NotificationType(NotificationTypeValue.PROMO);
+
+  private static readonly ALL: ReadonlyArray<NotificationType> = [
+    NotificationType.ORDER_CONFIRM,
+    NotificationType.SHIPPED,
+    NotificationType.RESTOCK,
+    NotificationType.REVIEW_REQUEST,
+    NotificationType.CARE_GUIDE,
+    NotificationType.PROMO,
+  ];
+
+  private constructor(private readonly value: NotificationTypeValue) {
+    if (!Object.values(NotificationTypeValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid notification type: ${value}. Must be one of: ${Object.values(NotificationTypeValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): NotificationType {
-    return NotificationType.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      NotificationType.ALL.find((t) => t.value === normalized) ??
+      new NotificationType(normalized as NotificationTypeValue)
+    );
   }
 
   static fromString(value: string): NotificationType {
-    const normalized = value.toLowerCase().trim();
-
-    if (!Object.values(NotificationTypeEnum).includes(normalized as NotificationTypeEnum)) {
-      throw new DomainValidationError(`Invalid notification type: ${value}`);
-    }
-
-    return new NotificationType(normalized as NotificationTypeEnum);
+    return NotificationType.create(value);
   }
 
-  static orderConfirm(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.ORDER_CONFIRM);
-  }
+  /** @deprecated Use `NotificationType.ORDER_CONFIRM`. */
+  static orderConfirm(): NotificationType { return NotificationType.ORDER_CONFIRM; }
+  /** @deprecated Use `NotificationType.SHIPPED`. */
+  static shipped(): NotificationType { return NotificationType.SHIPPED; }
+  /** @deprecated Use `NotificationType.RESTOCK`. */
+  static restock(): NotificationType { return NotificationType.RESTOCK; }
+  /** @deprecated Use `NotificationType.REVIEW_REQUEST`. */
+  static reviewRequest(): NotificationType { return NotificationType.REVIEW_REQUEST; }
+  /** @deprecated Use `NotificationType.CARE_GUIDE`. */
+  static careGuide(): NotificationType { return NotificationType.CARE_GUIDE; }
+  /** @deprecated Use `NotificationType.PROMO`. */
+  static promo(): NotificationType { return NotificationType.PROMO; }
 
-  static shipped(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.SHIPPED);
-  }
+  getValue(): NotificationTypeValue { return this.value; }
 
-  static restock(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.RESTOCK);
-  }
+  isOrderConfirm(): boolean { return this.value === NotificationTypeValue.ORDER_CONFIRM; }
+  isShipped(): boolean { return this.value === NotificationTypeValue.SHIPPED; }
+  isRestock(): boolean { return this.value === NotificationTypeValue.RESTOCK; }
+  isReviewRequest(): boolean { return this.value === NotificationTypeValue.REVIEW_REQUEST; }
+  isCareGuide(): boolean { return this.value === NotificationTypeValue.CARE_GUIDE; }
+  isPromo(): boolean { return this.value === NotificationTypeValue.PROMO; }
 
-  static reviewRequest(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.REVIEW_REQUEST);
-  }
-
-  static careGuide(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.CARE_GUIDE);
-  }
-
-  static promo(): NotificationType {
-    return new NotificationType(NotificationTypeEnum.PROMO);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  isOrderConfirm(): boolean {
-    return this.value === NotificationTypeEnum.ORDER_CONFIRM;
-  }
-
-  isShipped(): boolean {
-    return this.value === NotificationTypeEnum.SHIPPED;
-  }
-
-  isRestock(): boolean {
-    return this.value === NotificationTypeEnum.RESTOCK;
-  }
-
-  isReviewRequest(): boolean {
-    return this.value === NotificationTypeEnum.REVIEW_REQUEST;
-  }
-
-  isCareGuide(): boolean {
-    return this.value === NotificationTypeEnum.CARE_GUIDE;
-  }
-
-  isPromo(): boolean {
-    return this.value === NotificationTypeEnum.PROMO;
-  }
-
-  equals(other: NotificationType): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: NotificationType): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

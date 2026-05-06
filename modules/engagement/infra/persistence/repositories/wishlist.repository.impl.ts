@@ -7,7 +7,8 @@ import {
   WishlistFilters,
 } from "../../../domain/repositories/wishlist.repository";
 import { Wishlist } from "../../../domain/entities/wishlist.entity";
-import { WishlistId } from "../../../domain/value-objects";
+import { WishlistItem } from "../../../domain/entities/wishlist-item.entity";
+import { WishlistId, WishlistItemId } from "../../../domain/value-objects";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
 // ============================================================================
@@ -25,6 +26,13 @@ interface WishlistDatabaseRow {
   updatedAt: Date;
 }
 
+interface WishlistItemDatabaseRow {
+  wishlistId: string;
+  variantId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ============================================================================
 // Repository Implementation
 // ============================================================================
@@ -36,45 +44,102 @@ export class WishlistRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: WishlistDatabaseRow): Wishlist {
-    return Wishlist.fromPersistence({
-      id: WishlistId.fromString(row.id),
-      userId: row.userId || undefined,
-      guestToken: row.guestToken || undefined,
-      name: row.name || undefined,
-      isDefault: row.isDefault,
-      isPublic: row.isPublic,
-      description: row.description || undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    });
+  private toEntity(
+    row: WishlistDatabaseRow,
+    itemRows: WishlistItemDatabaseRow[] = [],
+  ): Wishlist {
+    const items = itemRows.map((ir) =>
+      WishlistItem.fromPersistence({
+        id: WishlistItemId.create(),
+        wishlistId: WishlistId.fromString(ir.wishlistId),
+        variantId: ir.variantId,
+        createdAt: ir.createdAt,
+        updatedAt: ir.updatedAt,
+      }),
+    );
+    return Wishlist.fromPersistence(
+      {
+        id: WishlistId.fromString(row.id),
+        userId: row.userId || undefined,
+        guestToken: row.guestToken || undefined,
+        name: row.name || undefined,
+        isDefault: row.isDefault,
+        isPublic: row.isPublic,
+        description: row.description || undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      },
+      items,
+    );
   }
 
+  // Persists the Wishlist root and synchronises its items collection in
+  // a single transaction. Items present on the aggregate are upserted;
+  // items in the DB but absent from the aggregate are deleted (the
+  // aggregate is the source of truth for its children). Events dispatch
+  // only after the transaction commits.
   async save(wishlist: Wishlist): Promise<void> {
-    await this.prisma.wishlist.upsert({
-      where: { id: wishlist.id.getValue() },
-      create: {
-        id: wishlist.id.getValue(),
-        userId: wishlist.userId,
-        guestToken: wishlist.guestToken,
-        name: wishlist.name,
-        isDefault: wishlist.isDefault,
-        isPublic: wishlist.isPublic,
-        description: wishlist.description,
-        createdAt: wishlist.createdAt,
-        updatedAt: wishlist.updatedAt,
-      },
-      update: {
-        name: wishlist.name,
-        isDefault: wishlist.isDefault,
-        isPublic: wishlist.isPublic,
-        description: wishlist.description,
-      },
+    const wishlistIdValue = wishlist.id.getValue();
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.wishlist.upsert({
+        where: { id: wishlistIdValue },
+        create: {
+          id: wishlistIdValue,
+          userId: wishlist.userId,
+          guestToken: wishlist.guestToken,
+          name: wishlist.name,
+          isDefault: wishlist.isDefault,
+          isPublic: wishlist.isPublic,
+          description: wishlist.description,
+          createdAt: wishlist.createdAt,
+          updatedAt: wishlist.updatedAt,
+        },
+        update: {
+          name: wishlist.name,
+          isDefault: wishlist.isDefault,
+          isPublic: wishlist.isPublic,
+          description: wishlist.description,
+        },
+      });
+
+      const desiredVariantIds = wishlist.items.map((i) => i.variantId);
+
+      // Delete items removed from the aggregate.
+      await tx.wishlistItem.deleteMany({
+        where: {
+          wishlistId: wishlistIdValue,
+          variantId: {
+            notIn: desiredVariantIds.length > 0 ? desiredVariantIds : ["__none__"],
+          },
+        },
+      });
+
+      // Upsert each item present on the aggregate. WishlistItem has a
+      // composite PK (wishlistId, variantId).
+      for (const item of wishlist.items) {
+        await tx.wishlistItem.upsert({
+          where: {
+            wishlistId_variantId: {
+              wishlistId: wishlistIdValue,
+              variantId: item.variantId,
+            },
+          },
+          create: {
+            wishlistId: wishlistIdValue,
+            variantId: item.variantId,
+          },
+          update: {},
+        });
+      }
     });
+
     await this.dispatchEvents(wishlist);
   }
 
   async delete(wishlistId: WishlistId): Promise<void> {
+    // `WishlistItem.wishlist` foreign key has `onDelete: Cascade`; child
+    // rows are removed automatically.
     await this.prisma.wishlist.delete({
       where: { id: wishlistId.getValue() },
     });
@@ -83,9 +148,13 @@ export class WishlistRepositoryImpl
   async findById(wishlistId: WishlistId): Promise<Wishlist | null> {
     const record = await this.prisma.wishlist.findUnique({
       where: { id: wishlistId.getValue() },
+      include: { items: true },
     });
-
-    return record ? this.toEntity(record as WishlistDatabaseRow) : null;
+    if (!record) return null;
+    return this.toEntity(
+      record as WishlistDatabaseRow,
+      record.items as WishlistItemDatabaseRow[],
+    );
   }
 
   async findByUserId(

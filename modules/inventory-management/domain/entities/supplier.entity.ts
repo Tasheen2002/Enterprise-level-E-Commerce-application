@@ -4,9 +4,13 @@ import { SupplierId } from "../value-objects/supplier-id.vo";
 import { SupplierName } from "../value-objects/supplier-name.vo";
 import {
   SupplierContact,
-  SupplierContactProps,
+  SupplierContactData,
 } from "../value-objects/supplier-contact.vo";
 import { DomainValidationError } from "../errors";
+import {
+  SUPPLIER_LEAD_TIME_MAX_DAYS,
+  SUPPLIER_MAX_CONTACTS,
+} from "../constants/inventory-management.constants";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -64,7 +68,7 @@ export interface SupplierDTO {
   supplierId: string;
   name: string;
   leadTimeDays?: number;
-  contacts: SupplierContactProps[];
+  contacts: SupplierContactData[];
   createdAt: string;
   updatedAt: string;
 }
@@ -72,22 +76,41 @@ export interface SupplierDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Supplier extends AggregateRoot {
+  // Validation lives in the constructor so BOTH `create()` and
+  // `fromPersistence()` validate. Catches DB drift on hydration.
   private constructor(private props: SupplierProps) {
     super();
+    Supplier.validateLeadTimeDays(props.leadTimeDays);
+    Supplier.validateContactsCount(props.contacts.length);
   }
 
   private static validateLeadTimeDays(leadTimeDays: number | undefined): void {
-    if (leadTimeDays !== undefined && leadTimeDays < 0) {
+    if (leadTimeDays === undefined) return;
+    if (leadTimeDays < 0) {
       throw new DomainValidationError("Lead time days cannot be negative");
+    }
+    if (leadTimeDays > SUPPLIER_LEAD_TIME_MAX_DAYS) {
+      throw new DomainValidationError(
+        `Lead time days cannot exceed ${SUPPLIER_LEAD_TIME_MAX_DAYS}`,
+      );
+    }
+  }
+
+  private static validateContactsCount(count: number): void {
+    if (count > SUPPLIER_MAX_CONTACTS) {
+      throw new DomainValidationError(
+        `Supplier cannot have more than ${SUPPLIER_MAX_CONTACTS} contacts`,
+      );
     }
   }
 
   static create(params: {
     name: string;
     leadTimeDays?: number;
-    contacts?: SupplierContactProps[];
+    contacts?: SupplierContactData[];
   }): Supplier {
     Supplier.validateLeadTimeDays(params.leadTimeDays);
+    Supplier.validateContactsCount((params.contacts ?? []).length);
     const now = new Date();
     const supplier = new Supplier({
       supplierId: SupplierId.create(),
@@ -151,6 +174,7 @@ export class Supplier extends AggregateRoot {
   }
 
   updateContacts(contacts: SupplierContact[]): void {
+    Supplier.validateContactsCount(contacts.length);
     this.props.contacts = contacts;
     this.props.updatedAt = new Date();
     this.addDomainEvent(
@@ -159,6 +183,7 @@ export class Supplier extends AggregateRoot {
   }
 
   addContact(contact: SupplierContact): void {
+    Supplier.validateContactsCount(this.props.contacts.length + 1);
     this.props.contacts = [...this.props.contacts, contact];
     this.props.updatedAt = new Date();
     this.addDomainEvent(
@@ -167,6 +192,7 @@ export class Supplier extends AggregateRoot {
   }
 
   markDeleted(): void {
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new SupplierDeletedEvent(this.props.supplierId.getValue()),
     );
