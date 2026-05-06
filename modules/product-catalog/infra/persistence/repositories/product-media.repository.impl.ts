@@ -3,38 +3,53 @@ import {
   IProductMediaRepository,
   ProductMediaQueryOptions,
   ProductMediaCountOptions,
+  ProductMediaOrderingItem,
+  SetProductMediaItem,
 } from "../../../domain/repositories/product-media.repository";
 import { ProductMedia } from "../../../domain/entities/product-media.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../../domain/value-objects/media-asset-id.vo";
+import { randomUUID } from "crypto";
 
 type ProductMediaRow = Prisma.ProductMediaGetPayload<object>;
 
+// Domain field → Prisma column mapping for sort orders
+const SORT_FIELD_MAP: Record<
+  NonNullable<ProductMediaQueryOptions["sortBy"]>,
+  string
+> = {
+  displayOrder: "position",
+  createdAt: "createdAt",
+  isPrimary: "isCover",
+};
+
+// ProductMedia is a join-table entity, not an aggregate root — no domain events.
+// No PrismaRepository base or dispatchEvents needed; plain Prisma access is correct.
 export class ProductMediaRepositoryImpl implements IProductMediaRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private hydrate(row: ProductMediaRow): ProductMedia {
-    const r = row as any;
-    if (!r.createdAt || !r.updatedAt) {
-      throw new Error(`ProductMedia row is missing timestamps for id=${row.id}`);
-    }
+  private toDomain(row: ProductMediaRow): ProductMedia {
     return ProductMedia.fromPersistence({
       id: row.id,
       productId: ProductId.fromString(row.productId),
       mediaAssetId: MediaAssetId.fromString(row.assetId),
       displayOrder: row.position ?? 0,
       isPrimary: row.isCover,
-      alt: r.alt ?? null,
-      caption: r.caption ?? null,
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      alt: row.alt,
+      caption: row.caption,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
+
+  // ── Core CRUD ────────────────────────────────────────────────────────
 
   async save(productMedia: ProductMedia): Promise<void> {
     const updateData = {
       position: productMedia.displayOrder,
       isCover: productMedia.isPrimary,
+      alt: productMedia.alt,
+      caption: productMedia.caption,
       updatedAt: productMedia.updatedAt,
     };
     await this.prisma.productMedia.upsert({
@@ -52,7 +67,7 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
 
   async findById(id: string): Promise<ProductMedia | null> {
     const row = await this.prisma.productMedia.findUnique({ where: { id } });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async delete(id: string): Promise<void> {
@@ -64,18 +79,36 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
     return count > 0;
   }
 
+  async deleteByProductId(productId: ProductId): Promise<void> {
+    await this.prisma.productMedia.deleteMany({
+      where: { productId: productId.getValue() },
+    });
+  }
+
+  async deleteByAssetId(assetId: MediaAssetId): Promise<void> {
+    await this.prisma.productMedia.deleteMany({
+      where: { assetId: assetId.getValue() },
+    });
+  }
+
+  // ── Association management ───────────────────────────────────────────
+
   async addMediaToProduct(
     productId: ProductId,
     assetId: MediaAssetId,
     position?: number,
-    isCover?: boolean,
+    isPrimary?: boolean,
+    alt?: string | null,
+    caption?: string | null,
   ): Promise<ProductMedia> {
     const entity = ProductMedia.create({
-      id: crypto.randomUUID(),
+      id: randomUUID(),
       productId: productId.getValue(),
       mediaAssetId: assetId.getValue(),
       displayOrder: position ?? 0,
-      isPrimary: isCover ?? false,
+      isPrimary: isPrimary ?? false,
+      alt,
+      caption,
     });
 
     await this.prisma.productMedia.create({
@@ -85,6 +118,8 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
         assetId: entity.mediaAssetId.getValue(),
         position: position ?? null,
         isCover: entity.isPrimary,
+        alt: entity.alt,
+        caption: entity.caption,
         createdAt: entity.createdAt,
         updatedAt: entity.updatedAt,
       },
@@ -106,124 +141,118 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
   }
 
   async removeAllProductMedia(productId: ProductId): Promise<void> {
-    await this.prisma.productMedia.deleteMany({
-      where: { productId: productId.getValue() },
-    });
+    await this.deleteByProductId(productId);
   }
 
-  async removeAllAssetReferences(assetId: MediaAssetId): Promise<void> {
-    await this.prisma.productMedia.deleteMany({
-      where: { assetId: assetId.getValue() },
-    });
-  }
-
-  async findByProductId(
+  async setProductMedia(
     productId: ProductId,
-    options?: ProductMediaQueryOptions,
-  ): Promise<ProductMedia[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "position",
-      sortOrder = "asc",
-      coverOnly = false,
-    } = options || {};
-
-    const where: Prisma.ProductMediaWhereInput = {
-      productId: productId.getValue(),
-    };
-
-    if (coverOnly) {
-      where.isCover = true;
-    }
-
-    const rows = await this.prisma.productMedia.findMany({
-      where,
-      ...(limit && { take: limit }),
-      ...(offset && { skip: offset }),
-      orderBy: { [sortBy]: sortOrder },
+    mediaData: SetProductMediaItem[],
+  ): Promise<void> {
+    const pid = productId.getValue();
+    const creates = mediaData.map((data, index) => {
+      const entity = ProductMedia.create({
+        id: randomUUID(),
+        productId: pid,
+        mediaAssetId: data.assetId.getValue(),
+        displayOrder: data.position ?? index + 1,
+        isPrimary: data.isPrimary ?? false,
+        alt: data.alt,
+        caption: data.caption,
+      });
+      return this.prisma.productMedia.create({
+        data: {
+          id: entity.id,
+          productId: entity.productId.getValue(),
+          assetId: entity.mediaAssetId.getValue(),
+          position: entity.displayOrder,
+          isCover: entity.isPrimary,
+          alt: entity.alt,
+          caption: entity.caption,
+          createdAt: entity.createdAt,
+          updatedAt: entity.updatedAt,
+        },
+      });
     });
 
-    return rows.map((row) => this.hydrate(row));
+    await this.prisma.$transaction([
+      this.prisma.productMedia.deleteMany({ where: { productId: pid } }),
+      ...creates,
+    ]);
   }
 
-  async findByAssetId(assetId: MediaAssetId): Promise<ProductMedia[]> {
-    const rows = await this.prisma.productMedia.findMany({
-      where: { assetId: assetId.getValue() },
-    });
-    return rows.map((row) => this.hydrate(row));
+  async duplicateProductMedia(
+    sourceProductId: ProductId,
+    targetProductId: ProductId,
+  ): Promise<void> {
+    const sourceRows = await this.findByProductId(sourceProductId);
+
+    await this.prisma.$transaction(
+      sourceRows.map((media) => {
+        const entity = ProductMedia.create({
+          id: randomUUID(),
+          productId: targetProductId.getValue(),
+          mediaAssetId: media.mediaAssetId.getValue(),
+          displayOrder: media.displayOrder,
+          isPrimary: media.isPrimary,
+          alt: media.alt,
+          caption: media.caption,
+        });
+        return this.prisma.productMedia.create({
+          data: {
+            id: entity.id,
+            productId: entity.productId.getValue(),
+            assetId: entity.mediaAssetId.getValue(),
+            position: entity.displayOrder,
+            isCover: entity.isPrimary,
+            alt: entity.alt,
+            caption: entity.caption,
+            createdAt: entity.createdAt,
+            updatedAt: entity.updatedAt,
+          },
+        });
+      }),
+    );
   }
 
-  async findAssociation(
-    productId: ProductId,
-    assetId: MediaAssetId,
-  ): Promise<ProductMedia | null> {
-    const row = await this.prisma.productMedia.findFirst({
-      where: {
-        productId: productId.getValue(),
-        assetId: assetId.getValue(),
-      },
-    });
-    return row ? this.hydrate(row) : null;
-  }
+  // ── Primary (cover) image management ─────────────────────────────────
 
-  async findAll(options?: ProductMediaQueryOptions): Promise<ProductMedia[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "position",
-      sortOrder = "asc",
-      coverOnly = false,
-    } = options || {};
-
-    const where: Prisma.ProductMediaWhereInput = {};
-
-    if (coverOnly) {
-      where.isCover = true;
-    }
-
-    const rows = await this.prisma.productMedia.findMany({
-      where,
-      ...(limit && { take: limit }),
-      ...(offset && { skip: offset }),
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return rows.map((row) => this.hydrate(row));
-  }
-
-  async getProductCoverImage(productId: ProductId): Promise<ProductMedia | null> {
+  async getProductPrimaryMedia(productId: ProductId): Promise<ProductMedia | null> {
     const row = await this.prisma.productMedia.findFirst({
       where: { productId: productId.getValue(), isCover: true },
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
-  async setProductCoverImage(
+  async setProductPrimaryMedia(
     productId: ProductId,
     assetId: MediaAssetId,
   ): Promise<void> {
-    await this.removeCoverImageFlag(productId);
+    await this.removePrimaryMediaFlag(productId);
     await this.prisma.productMedia.updateMany({
       where: { productId: productId.getValue(), assetId: assetId.getValue() },
       data: { isCover: true },
     });
   }
 
-  async removeCoverImageFlag(productId: ProductId): Promise<void> {
+  async removePrimaryMediaFlag(productId: ProductId): Promise<void> {
     await this.prisma.productMedia.updateMany({
       where: { productId: productId.getValue(), isCover: true },
       data: { isCover: false },
     });
   }
 
-  async updateCoverImage(productId: ProductId, newAssetId: MediaAssetId): Promise<void> {
-    await this.setProductCoverImage(productId, newAssetId);
+  async hasProductPrimaryMedia(productId: ProductId): Promise<boolean> {
+    const count = await this.prisma.productMedia.count({
+      where: { productId: productId.getValue(), isCover: true },
+    });
+    return count > 0;
   }
+
+  // ── Ordering / positioning ───────────────────────────────────────────
 
   async reorderProductMedia(
     productId: ProductId,
-    mediaOrdering: Array<{ assetId: MediaAssetId; position: number }>,
+    mediaOrdering: ProductMediaOrderingItem[],
   ): Promise<void> {
     await this.prisma.$transaction(
       mediaOrdering.map(({ assetId, position }) =>
@@ -270,79 +299,93 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
     );
   }
 
-  async setProductMedia(
+  // ── Queries ─────────────────────────────────────────────────────────
+
+  async findAll(options?: ProductMediaQueryOptions): Promise<ProductMedia[]> {
+    const {
+      limit,
+      offset,
+      sortBy = "displayOrder",
+      sortOrder = "asc",
+      primaryOnly = false,
+    } = options || {};
+
+    const where: Prisma.ProductMediaWhereInput = {};
+    if (primaryOnly) where.isCover = true;
+
+    const rows = await this.prisma.productMedia.findMany({
+      where,
+      ...(limit && { take: limit }),
+      ...(offset && { skip: offset }),
+      orderBy: { [SORT_FIELD_MAP[sortBy]]: sortOrder },
+    });
+
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  async findByProductId(
     productId: ProductId,
-    mediaData: Array<{ assetId: MediaAssetId; position?: number; isCover?: boolean }>,
-  ): Promise<void> {
-    await this.removeAllProductMedia(productId);
+    options?: ProductMediaQueryOptions,
+  ): Promise<ProductMedia[]> {
+    const {
+      limit,
+      offset,
+      sortBy = "displayOrder",
+      sortOrder = "asc",
+      primaryOnly = false,
+    } = options || {};
 
-    await this.prisma.$transaction(
-      mediaData.map((data, index) => {
-        const entity = ProductMedia.create({
-          id: crypto.randomUUID(),
-          productId: productId.getValue(),
-          mediaAssetId: data.assetId.getValue(),
-          displayOrder: data.position ?? index + 1,
-          isPrimary: data.isCover ?? false,
-        });
-        return this.prisma.productMedia.create({
-          data: {
-            id: entity.id,
-            productId: entity.productId.getValue(),
-            assetId: entity.mediaAssetId.getValue(),
-            position: entity.displayOrder,
-            isCover: entity.isPrimary,
-            createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt,
-          },
-        });
-      }),
-    );
+    const where: Prisma.ProductMediaWhereInput = {
+      productId: productId.getValue(),
+    };
+    if (primaryOnly) where.isCover = true;
+
+    const rows = await this.prisma.productMedia.findMany({
+      where,
+      ...(limit && { take: limit }),
+      ...(offset && { skip: offset }),
+      orderBy: { [SORT_FIELD_MAP[sortBy]]: sortOrder },
+    });
+
+    return rows.map((row) => this.toDomain(row));
   }
 
-  async duplicateProductMedia(
-    sourceProductId: ProductId,
-    targetProductId: ProductId,
-  ): Promise<void> {
-    const sourceRows = await this.findByProductId(sourceProductId);
-
-    await this.prisma.$transaction(
-      sourceRows.map((media) => {
-        const entity = ProductMedia.create({
-          id: crypto.randomUUID(),
-          productId: targetProductId.getValue(),
-          mediaAssetId: media.mediaAssetId.getValue(),
-          displayOrder: media.displayOrder,
-          isPrimary: media.isPrimary,
-        });
-        return this.prisma.productMedia.create({
-          data: {
-            id: entity.id,
-            productId: entity.productId.getValue(),
-            assetId: entity.mediaAssetId.getValue(),
-            position: entity.displayOrder,
-            isCover: entity.isPrimary,
-            createdAt: entity.createdAt,
-            updatedAt: entity.updatedAt,
-          },
-        });
-      }),
-    );
+  async findByAssetId(assetId: MediaAssetId): Promise<ProductMedia[]> {
+    const rows = await this.prisma.productMedia.findMany({
+      where: { assetId: assetId.getValue() },
+    });
+    return rows.map((row) => this.toDomain(row));
   }
 
-  async deleteByProductId(productId: ProductId): Promise<void> {
-    return this.removeAllProductMedia(productId);
+  async findAssociation(
+    productId: ProductId,
+    assetId: MediaAssetId,
+  ): Promise<ProductMedia | null> {
+    const row = await this.prisma.productMedia.findFirst({
+      where: {
+        productId: productId.getValue(),
+        assetId: assetId.getValue(),
+      },
+    });
+    return row ? this.toDomain(row) : null;
   }
 
-  async deleteByAssetId(assetId: MediaAssetId): Promise<void> {
-    return this.removeAllAssetReferences(assetId);
+  // ── Counts / utilities ───────────────────────────────────────────────
+
+  async count(options?: ProductMediaCountOptions): Promise<number> {
+    const where: Prisma.ProductMediaWhereInput = {};
+
+    if (options?.productId) where.productId = options.productId.getValue();
+    if (options?.assetId) where.assetId = options.assetId.getValue();
+    if (options?.isPrimary !== undefined) where.isCover = options.isPrimary;
+    if (options?.hasPosition !== undefined) {
+      where.position = options.hasPosition ? { not: null } : null;
+    }
+
+    return this.prisma.productMedia.count({ where });
   }
 
   async countByProductId(productId: ProductId): Promise<number> {
-    return this.countProductMedia(productId);
-  }
-
-  async countProductMedia(productId: ProductId): Promise<number> {
     return this.prisma.productMedia.count({
       where: { productId: productId.getValue() },
     });
@@ -354,17 +397,13 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
     });
   }
 
-  async count(options?: ProductMediaCountOptions): Promise<number> {
-    const where: Prisma.ProductMediaWhereInput = {};
-
-    if (options?.productId) where.productId = options.productId;
-    if (options?.assetId) where.assetId = options.assetId;
-    if (options?.isCover !== undefined) where.isCover = options.isCover;
-    if (options?.hasPosition !== undefined) {
-      where.position = options.hasPosition ? { not: null } : null;
-    }
-
-    return this.prisma.productMedia.count({ where });
+  async getProductsUsingAsset(assetId: MediaAssetId): Promise<ProductId[]> {
+    const rows = await this.prisma.productMedia.findMany({
+      where: { assetId: assetId.getValue() },
+      select: { productId: true },
+      distinct: ["productId"],
+    });
+    return rows.map((r) => ProductId.fromString(r.productId));
   }
 
   async isMediaAssociatedWithProduct(
@@ -375,21 +414,5 @@ export class ProductMediaRepositoryImpl implements IProductMediaRepository {
       where: { productId: productId.getValue(), assetId: assetId.getValue() },
     });
     return count > 0;
-  }
-
-  async hasProductCoverImage(productId: ProductId): Promise<boolean> {
-    const count = await this.prisma.productMedia.count({
-      where: { productId: productId.getValue(), isCover: true },
-    });
-    return count > 0;
-  }
-
-  async getProductsUsingAsset(assetId: MediaAssetId): Promise<ProductId[]> {
-    const rows = await this.prisma.productMedia.findMany({
-      where: { assetId: assetId.getValue() },
-      select: { productId: true },
-      distinct: ["productId"],
-    });
-    return rows.map((r) => ProductId.fromString(r.productId));
   }
 }
