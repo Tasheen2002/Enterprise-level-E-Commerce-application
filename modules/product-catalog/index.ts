@@ -28,8 +28,11 @@ export {
   InvalidSlugError,
 } from "./domain/errors";
 
-// ─── Domain Enums ─────────────────────────────────────────────────────────────
-export { ProductStatus, Region } from "./domain/enums/product-catalog.enums";
+// ─── Domain Enums (folded into VO files — canonical pattern) ─────────────────
+// Each VO file exports the enum + namespace-augmented helpers
+// (`fromString`, `getDisplayName`, `getAllValues`).
+export { ProductStatus } from "./domain/value-objects/product-status.vo";
+export { Region } from "./domain/value-objects/region.vo";
 
 // ─── Identity Value Objects ───────────────────────────────────────────────────
 // Exported so other modules can reference product-catalog IDs in a type-safe way
