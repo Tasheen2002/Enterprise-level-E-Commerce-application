@@ -12,6 +12,9 @@ import {
   NotificationType,
   ChannelType,
 } from "../../domain/value-objects";
+import { NotificationTypeValue } from "../../domain/value-objects/notification-type.vo";
+import { ChannelTypeValue } from "../../domain/value-objects/channel-type.vo";
+import { NotificationStatusValue } from "../../domain/value-objects/notification-status.vo";
 import { NotificationNotFoundError } from "../../domain/errors/engagement.errors";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
 
@@ -20,7 +23,7 @@ export interface PaginatedNotificationResult {
   total: number;
   limit: number;
   offset: number;
-  hasMore: boolean;
+  hasMore: boolean; 
 }
 
 export class NotificationService {
@@ -123,7 +126,10 @@ export class NotificationService {
     type: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByType(type, options);
+    const result = await this.notificationRepository.findByType(
+      type as NotificationTypeValue,
+      options,
+    );
     return this.mapPaginated(result);
   }
 
@@ -131,7 +137,10 @@ export class NotificationService {
     channel: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByChannel(channel, options);
+    const result = await this.notificationRepository.findByChannel(
+      channel as ChannelTypeValue,
+      options,
+    );
     return this.mapPaginated(result);
   }
 
@@ -139,7 +148,10 @@ export class NotificationService {
     status: string,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedNotificationResult> {
-    const result = await this.notificationRepository.findByStatus(status, options);
+    const result = await this.notificationRepository.findByStatus(
+      status as NotificationStatusValue,
+      options,
+    );
     return this.mapPaginated(result);
   }
 
@@ -191,15 +203,15 @@ export class NotificationService {
   }
 
   async countNotificationsByType(type: string): Promise<number> {
-    return this.notificationRepository.countByType(type);
+    return this.notificationRepository.countByType(type as NotificationTypeValue);
   }
 
   async countNotificationsByChannel(channel: string): Promise<number> {
-    return this.notificationRepository.countByChannel(channel);
+    return this.notificationRepository.countByChannel(channel as ChannelTypeValue);
   }
 
   async countNotificationsByStatus(status: string): Promise<number> {
-    return this.notificationRepository.countByStatus(status);
+    return this.notificationRepository.countByStatus(status as NotificationStatusValue);
   }
 
   async notificationExists(notificationId: string): Promise<boolean> {
