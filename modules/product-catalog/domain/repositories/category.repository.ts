@@ -32,6 +32,6 @@ export interface CategoryQueryOptions {
 }
 
 export interface CategoryCountOptions {
-  parentId?: string;
+  parentId?: CategoryId;
   rootOnly?: boolean;
 }

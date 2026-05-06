@@ -28,6 +28,7 @@ export interface ProductMediaDTO {
 
 export class ProductMedia {
   private constructor(private props: ProductMediaProps) {
+    ProductMedia.validate(props);
   }
 
   static create(params: {
@@ -46,8 +47,8 @@ export class ProductMedia {
       mediaAssetId: MediaAssetId.fromString(params.mediaAssetId),
       displayOrder: params.displayOrder,
       isPrimary: params.isPrimary ?? false,
-      alt: params.alt ?? null,
-      caption: params.caption ?? null,
+      alt: params.alt?.trim() ?? null,
+      caption: params.caption?.trim() ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -57,71 +58,60 @@ export class ProductMedia {
     return new ProductMedia(props);
   }
 
-  // Getters
-  get id(): string {
-    return this.props.id;
+  // ── Validation ─────────────────────────────────────────────────────
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: ProductMediaProps): void {
+    ProductMedia.validateDisplayOrder(props.displayOrder);
   }
 
-  get productId(): ProductId {
-    return this.props.productId;
-  }
-
-  get mediaAssetId(): MediaAssetId {
-    return this.props.mediaAssetId;
-  }
-
-  get displayOrder(): number {
-    return this.props.displayOrder;
-  }
-
-  get isPrimary(): boolean {
-    return this.props.isPrimary;
-  }
-
-  get alt(): string | null {
-    return this.props.alt;
-  }
-
-  get caption(): string | null {
-    return this.props.caption;
-  }
-
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  // Business methods
-  updateDisplayOrder(order: number): void {
+  private static validateDisplayOrder(order: number): void {
     if (order < 0) {
       throw new DomainValidationError('Display order cannot be negative');
     }
+  }
+
+  // ── Getters ────────────────────────────────────────────────────────
+
+  get id(): string { return this.props.id; }
+  get productId(): ProductId { return this.props.productId; }
+  get mediaAssetId(): MediaAssetId { return this.props.mediaAssetId; }
+  get displayOrder(): number { return this.props.displayOrder; }
+  get isPrimary(): boolean { return this.props.isPrimary; }
+  get alt(): string | null { return this.props.alt; }
+  get caption(): string | null { return this.props.caption; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
+
+  // ── Business Logic ─────────────────────────────────────────────────
+
+  updateDisplayOrder(order: number): void {
+    ProductMedia.validateDisplayOrder(order);
     this.props.displayOrder = order;
-    this.props.updatedAt = new Date();
+    this.markUpdated();
   }
 
   markAsPrimary(): void {
     this.props.isPrimary = true;
-    this.props.updatedAt = new Date();
+    this.markUpdated();
   }
 
   unmarkAsPrimary(): void {
     this.props.isPrimary = false;
-    this.props.updatedAt = new Date();
+    this.markUpdated();
   }
 
   updateAlt(alt: string | null): void {
-    this.props.alt = alt;
-    this.props.updatedAt = new Date();
+    this.props.alt = alt?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateCaption(caption: string | null): void {
-    this.props.caption = caption;
-    this.props.updatedAt = new Date();
+    this.props.caption = caption?.trim() ?? null;
+    this.markUpdated();
   }
+
+  // ── Query Methods ──────────────────────────────────────────────────
 
   isForProduct(productId: ProductId): boolean {
     return this.props.productId.equals(productId);
@@ -130,6 +120,14 @@ export class ProductMedia {
   isForAsset(assetId: MediaAssetId): boolean {
     return this.props.mediaAssetId.equals(assetId);
   }
+
+  // ── Internal ───────────────────────────────────────────────────────
+
+  private markUpdated(): void {
+    this.props.updatedAt = new Date();
+  }
+
+  // ── Serialisation ──────────────────────────────────────────────────
 
   equals(other: ProductMedia): boolean {
     return this.props.id === other.props.id;

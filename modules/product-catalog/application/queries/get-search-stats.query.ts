@@ -6,7 +6,7 @@ export interface GetSearchStatsQuery extends IQuery {}
 export class GetSearchStatsHandler implements IQueryHandler<GetSearchStatsQuery, SearchStatistics> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(_input: GetSearchStatsQuery): Promise<SearchStatistics> {
+  async handle(query: GetSearchStatsQuery): Promise<SearchStatistics> {
     return this.productSearchService.getSearchStatistics();
   }
 }

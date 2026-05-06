@@ -1,56 +1,61 @@
-import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
-import { GiftCardTransactionTypeEnum } from "../enums";
+import { DomainValidationError } from "../errors/payment-loyalty.errors";
 
+export enum GiftCardTransactionTypeValue {
+  ISSUE = "issue",
+  REDEEM = "redeem",
+  REFUND = "refund",
+}
+
+/** @deprecated Use `GiftCardTransactionTypeValue`. */
+export const GiftCardTransactionTypeEnum = GiftCardTransactionTypeValue;
+/** @deprecated Use `GiftCardTransactionTypeValue`. */
+export type GiftCardTransactionTypeEnum = GiftCardTransactionTypeValue;
+
+// Pattern D (Enum-Like VO).
 export class GiftCardTransactionType {
-  private constructor(private readonly value: GiftCardTransactionTypeEnum) {}
+  static readonly ISSUE = new GiftCardTransactionType(GiftCardTransactionTypeValue.ISSUE);
+  static readonly REDEEM = new GiftCardTransactionType(GiftCardTransactionTypeValue.REDEEM);
+  static readonly REFUND = new GiftCardTransactionType(GiftCardTransactionTypeValue.REFUND);
+
+  private static readonly ALL: ReadonlyArray<GiftCardTransactionType> = [
+    GiftCardTransactionType.ISSUE,
+    GiftCardTransactionType.REDEEM,
+    GiftCardTransactionType.REFUND,
+  ];
+
+  private constructor(private readonly value: GiftCardTransactionTypeValue) {
+    if (!Object.values(GiftCardTransactionTypeValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid gift card transaction type: ${value}. Must be one of: ${Object.values(GiftCardTransactionTypeValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): GiftCardTransactionType {
-    return GiftCardTransactionType.fromString(value);
-  }
-
-  static issue(): GiftCardTransactionType {
-    return new GiftCardTransactionType(GiftCardTransactionTypeEnum.ISSUE);
-  }
-
-  static redeem(): GiftCardTransactionType {
-    return new GiftCardTransactionType(GiftCardTransactionTypeEnum.REDEEM);
-  }
-
-  static refund(): GiftCardTransactionType {
-    return new GiftCardTransactionType(GiftCardTransactionTypeEnum.REFUND);
+    const normalized = value.trim().toLowerCase();
+    return (
+      GiftCardTransactionType.ALL.find((t) => t.value === normalized) ??
+      new GiftCardTransactionType(normalized as GiftCardTransactionTypeValue)
+    );
   }
 
   static fromString(value: string): GiftCardTransactionType {
-    const enumValue = Object.values(GiftCardTransactionTypeEnum).find(
-      (v) => v === value,
-    );
-    if (!enumValue) {
-      throw new InvalidFormatError("gift card transaction type", Object.values(GiftCardTransactionTypeEnum).join(" | "));
-    }
-    return new GiftCardTransactionType(enumValue);
+    return GiftCardTransactionType.create(value);
   }
 
-  getValue(): string {
-    return this.value;
-  }
+  /** @deprecated Use `GiftCardTransactionType.ISSUE`. */
+  static issue(): GiftCardTransactionType { return GiftCardTransactionType.ISSUE; }
+  /** @deprecated Use `GiftCardTransactionType.REDEEM`. */
+  static redeem(): GiftCardTransactionType { return GiftCardTransactionType.REDEEM; }
+  /** @deprecated Use `GiftCardTransactionType.REFUND`. */
+  static refund(): GiftCardTransactionType { return GiftCardTransactionType.REFUND; }
 
-  equals(other: GiftCardTransactionType): boolean {
-    return this.value === other.value;
-  }
+  getValue(): GiftCardTransactionTypeValue { return this.value; }
 
-  toString(): string {
-    return this.value;
-  }
+  isIssue(): boolean { return this.value === GiftCardTransactionTypeValue.ISSUE; }
+  isRedeem(): boolean { return this.value === GiftCardTransactionTypeValue.REDEEM; }
+  isRefund(): boolean { return this.value === GiftCardTransactionTypeValue.REFUND; }
 
-  isIssue(): boolean {
-    return this.value === GiftCardTransactionTypeEnum.ISSUE;
-  }
-
-  isRedeem(): boolean {
-    return this.value === GiftCardTransactionTypeEnum.REDEEM;
-  }
-
-  isRefund(): boolean {
-    return this.value === GiftCardTransactionTypeEnum.REFUND;
-  }
+  equals(other: GiftCardTransactionType): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

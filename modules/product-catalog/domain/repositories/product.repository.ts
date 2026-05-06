@@ -1,6 +1,10 @@
 import { Product } from "../entities/product.entity";
 import { ProductId } from "../value-objects/product-id.vo";
 import { Slug } from "../value-objects/slug.vo";
+import { CategoryId } from "../value-objects/category-id.vo";
+import { ProductStatus } from "../value-objects";
+
+// ── Enrichment projections (read models) ────────────────────────────────
 
 export interface EnrichedVariantData {
   id: string;
@@ -28,7 +32,7 @@ export interface EnrichedMediaData {
     altText: string | null;
     width: number | null;
     height: number | null;
-    bytes: string | null;
+    bytes: number | null;
     mime: string;
   };
 }
@@ -51,19 +55,21 @@ export interface ProductMediaEnrichment {
   media: EnrichedMediaData[];
 }
 
+// ── Repository interface ───────────────────────────────────────────────
+
 export interface IProductRepository {
   save(product: Product): Promise<void>;
-  saveWithCategories(product: Product, categoryIds: string[]): Promise<void>;
   findById(id: ProductId): Promise<Product | null>;
+  findByIds(ids: ProductId[]): Promise<Product[]>;
   findBySlug(slug: Slug): Promise<Product | null>;
   findAll(options?: ProductQueryOptions): Promise<Product[]>;
   findByStatus(
-    status: string,
+    status: ProductStatus,
     options?: ProductQueryOptions,
   ): Promise<Product[]>;
   findByBrand(brand: string, options?: ProductQueryOptions): Promise<Product[]>;
   findByCategory(
-    categoryId: string,
+    categoryId: CategoryId,
     options?: ProductQueryOptions,
   ): Promise<Product[]>;
   search(query: string, options?: ProductSearchOptions): Promise<Product[]>;
@@ -71,11 +77,15 @@ export interface IProductRepository {
   exists(id: ProductId): Promise<boolean>;
   existsBySlug(slug: Slug): Promise<boolean>;
   count(options?: ProductCountOptions): Promise<number>;
-  addToCategory(productId: string, categoryId: string): Promise<void>;
-  replaceCategories(productId: string, categoryIds: string[]): Promise<void>;
-  findWithEnrichment(ids: string[]): Promise<Map<string, ProductEnrichment>>;
-  findOneWithEnrichment(id: string): Promise<ProductEnrichment>;
-  findMediaEnrichment(id: string): Promise<ProductMediaEnrichment>;
+
+  // ── Category association management ────────────────────────────────
+  // (Categories are an association — atomicity at service layer.)
+  replaceCategories(productId: ProductId, categoryIds: CategoryId[]): Promise<void>;
+
+  // ── Enrichment / read projections ──────────────────────────────────
+  findWithEnrichment(ids: ProductId[]): Promise<Map<string, ProductEnrichment>>;
+  findOneWithEnrichment(id: ProductId): Promise<ProductEnrichment | null>;
+  findMediaEnrichment(id: ProductId): Promise<ProductMediaEnrichment>;
 }
 
 export interface ProductQueryOptions {
@@ -85,13 +95,13 @@ export interface ProductQueryOptions {
   sortOrder?: "asc" | "desc";
   includeDrafts?: boolean;
   brand?: string;
-  categoryId?: string;
-  status?: string;
+  categoryId?: CategoryId;
+  status?: ProductStatus;
 }
 
 export interface ProductSearchOptions extends ProductQueryOptions {
   brands?: string[];
-  categories?: string[];
+  categories?: CategoryId[];
   tags?: string[];
   priceRange?: {
     min?: number;
@@ -100,7 +110,7 @@ export interface ProductSearchOptions extends ProductQueryOptions {
 }
 
 export interface ProductCountOptions {
-  status?: string;
+  status?: ProductStatus;
   brand?: string;
-  categoryId?: string;
+  categoryId?: CategoryId;
 }

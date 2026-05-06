@@ -1,10 +1,17 @@
-import { IProductRepository } from "../../domain/repositories/product.repository";
+import {
+  IProductRepository,
+  type ProductSearchOptions as RepoProductSearchOptions,
+} from "../../domain/repositories/product.repository";
 import { ICategoryRepository } from "../../domain/repositories/category.repository";
 import { Product, ProductDTO } from "../../domain/entities/product.entity";
-import {
-  DomainValidationError,
-  InvalidOperationError,
-} from "../../domain/errors/product-catalog.errors";
+import { CategoryId } from "../../domain/value-objects/category-id.vo";
+import { DomainValidationError } from "../../domain/errors/product-catalog.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+
+// ── Input / result types ─────────────────────────────────────────────
+
+export type ProductSortBy = "relevance" | "price" | "title" | "createdAt" | "publishAt";
+export type SuggestionType = "products" | "categories" | "brands" | "all";
 
 export interface ProductSearchOptions {
   page?: number;
@@ -15,7 +22,7 @@ export interface ProductSearchOptions {
   maxPrice?: number;
   status?: "draft" | "published" | "scheduled" | "archived";
   tags?: string[];
-  sortBy?: "relevance" | "price" | "title" | "createdAt" | "publishAt";
+  sortBy?: ProductSortBy;
   sortOrder?: "asc" | "desc";
 }
 
@@ -28,13 +35,19 @@ export interface SearchSuggestion {
 
 export interface SearchSuggestionsOptions {
   limit?: number;
-  type?: "products" | "categories" | "brands" | "all";
+  type?: SuggestionType;
+}
+
+export interface SearchFilterOption {
+  value: string;
+  label: string;
+  count: number;
 }
 
 export interface SearchFilter {
   name: string;
   type: "select" | "range" | "checkbox";
-  options?: Array<{ value: string; label: string; count: number }>;
+  options?: SearchFilterOption[];
   min?: number;
   max?: number;
 }
@@ -44,14 +57,25 @@ export interface SearchFiltersOptions {
   category?: string;
 }
 
+export interface PopularSearchTerm {
+  term: string;
+  count: number;
+}
+
 export interface SearchStatistics {
   totalSearches: number;
   uniqueQueries: number;
   averageResultsPerSearch: number;
-  topSearchTerms: Array<{ term: string; count: number }>;
+  topSearchTerms: PopularSearchTerm[];
   zeroResultSearches: number;
   searchConversionRate: number;
 }
+
+export interface ProductSearchResult extends PaginatedResult<ProductDTO> {
+  suggestions?: string[];
+}
+
+// ── Service ───────────────────────────────────────────────────────────
 
 export class ProductSearchService {
   constructor(
@@ -59,10 +83,12 @@ export class ProductSearchService {
     private readonly categoryRepository: ICategoryRepository,
   ) {}
 
+  // PERF: total count derived from a second unpaginated search call. A
+  // dedicated `repo.searchCount(query, options)` would be one round-trip.
   async searchProducts(
     query: string,
     options: ProductSearchOptions = {},
-  ): Promise<{ items: ProductDTO[]; totalCount: number; suggestions?: string[] }> {
+  ): Promise<ProductSearchResult> {
     if (!query || query.trim().length === 0) {
       throw new DomainValidationError("Search query cannot be empty");
     }
@@ -81,81 +107,41 @@ export class ProductSearchService {
     } = options;
 
     const offset = (page - 1) * limit;
+    const trimmedQuery = query.trim();
 
-    try {
-      // Use the repository's search method for proper text search
-      const searchOptions = {
-        limit,
-        offset,
-        sortBy:
-          sortBy === "relevance" || sortBy === "price" ? "createdAt" : sortBy,
-        sortOrder,
-        includeDrafts: status === "draft",
-        brands: brand ? [brand] : undefined,
-        categories: category ? [category] : undefined,
-        tags,
-        priceRange:
-          minPrice !== undefined || maxPrice !== undefined
-            ? {
-                min: minPrice,
-                max: maxPrice,
-              }
-            : undefined,
-      };
+    const searchOptions: RepoProductSearchOptions = {
+      limit,
+      offset,
+      sortBy: sortBy === "relevance" || sortBy === "price" ? "createdAt" : sortBy,
+      sortOrder,
+      includeDrafts: status === "draft",
+      brands: brand ? [brand] : undefined,
+      categories: category ? [CategoryId.fromString(category)] : undefined,
+      tags,
+      priceRange:
+        minPrice !== undefined || maxPrice !== undefined
+          ? { min: minPrice, max: maxPrice }
+          : undefined,
+    };
 
-      const products = await this.productRepository.search(
-        query.trim(),
-        searchOptions,
-      );
-
-      // Get total count for the same search criteria
-      // Note: This is a basic implementation - in production you'd want to optimize this
-      const allResults = await this.productRepository.search(query.trim(), {
+    const [products, allMatches] = await Promise.all([
+      this.productRepository.search(trimmedQuery, searchOptions),
+      this.productRepository.search(trimmedQuery, {
         ...searchOptions,
         limit: undefined,
         offset: undefined,
-      });
+      }),
+    ]);
 
-      return {
-        items: products.map((p) => Product.toDTO(p)),
-        totalCount: allResults.length,
-        // Basic suggestions based on search results
-        suggestions: this.generateSearchSuggestions(query, products),
-      };
-    } catch (error) {
-      throw new InvalidOperationError(
-        `Product search failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-  }
-
-  private generateSearchSuggestions(
-    query: string,
-    products: Product[],
-  ): string[] {
-    const suggestions = new Set<string>();
-    const queryWords = query.toLowerCase().split(/\s+/);
-
-    // Extract potential suggestions from product titles and brands
-    products.forEach((product) => {
-      const title = product.title.toLowerCase();
-      const brand = product.brand?.toLowerCase();
-
-      // Add brand suggestions
-      if (brand && !queryWords.includes(brand)) {
-        suggestions.add(brand);
-      }
-
-      // Add title word suggestions
-      const titleWords = title.split(/\s+/);
-      titleWords.forEach((word) => {
-        if (word.length > 3 && !queryWords.includes(word)) {
-          suggestions.add(word);
-        }
-      });
-    });
-
-    return Array.from(suggestions).slice(0, 5);
+    const total = allMatches.length;
+    return {
+      items: products.map((p) => Product.toDTO(p)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + products.length < total,
+      suggestions: this.generateSearchSuggestions(trimmedQuery, products),
+    };
   }
 
   async getSearchSuggestions(
@@ -167,145 +153,117 @@ export class ProductSearchService {
     }
 
     const { limit = 10, type = "all" } = options;
+    const trimmed = query.trim();
+    const lowerQuery = trimmed.toLowerCase();
+    const perTypeLimit = Math.max(1, Math.floor(limit / 3));
 
     const suggestions: SearchSuggestion[] = [];
 
-    try {
-      // Product suggestions from actual search results
-      if (type === "products" || type === "all") {
-        const products = await this.productRepository.search(query.trim(), {
-          limit: Math.floor(limit / 3),
-        });
-        const productSuggestions: SearchSuggestion[] = products.map((p) => ({
-          type: "product" as const,
+    if (type === "products" || type === "all") {
+      const products = await this.productRepository.search(trimmed, { limit: perTypeLimit });
+      suggestions.push(
+        ...products.map<SearchSuggestion>((p) => ({
+          type: "product",
           value: p.id.getValue(),
           label: p.title,
-        }));
-        suggestions.push(...productSuggestions);
-      }
+        })),
+      );
+    }
 
-      // Category suggestions
-      if (type === "categories" || type === "all") {
-        const categories = await this.categoryRepository.findAll({ limit: 5 });
-        const categorySuggestions: SearchSuggestion[] = categories
-          .filter((cat) =>
-            cat.name.toLowerCase().includes(query.toLowerCase()),
-          )
-          .map((cat) => ({
-            type: "category" as const,
-            value: cat.slug.getValue(),
-            label: cat.name,
-          }));
-        suggestions.push(
-          ...categorySuggestions.slice(0, Math.floor(limit / 3)),
-        );
-      }
+    if (type === "categories" || type === "all") {
+      const categories = await this.categoryRepository.findAll({ limit: 5 });
+      const matched = categories.filter((cat) =>
+        cat.name.toLowerCase().includes(lowerQuery),
+      );
+      suggestions.push(
+        ...matched.slice(0, perTypeLimit).map<SearchSuggestion>((cat) => ({
+          type: "category",
+          value: cat.slug.getValue(),
+          label: cat.name,
+        })),
+      );
+    }
 
-      // Brand suggestions extracted from product data
-      if (type === "brands" || type === "all") {
-        const products = await this.productRepository.search(query.trim(), {
-          limit: 50,
-        });
-        const brands = new Set<string>();
-        products.forEach((p) => {
-          const brand = p.brand;
-          if (brand && brand.toLowerCase().includes(query.toLowerCase())) {
-            brands.add(brand);
-          }
-        });
-        const brandSuggestions: SearchSuggestion[] = Array.from(brands)
-          .slice(0, Math.floor(limit / 3))
-          .map((brand) => ({
-            type: "brand" as const,
+    if (type === "brands" || type === "all") {
+      const products = await this.productRepository.search(trimmed, { limit: 50 });
+      const brands = new Set<string>();
+      for (const p of products) {
+        if (p.brand && p.brand.toLowerCase().includes(lowerQuery)) {
+          brands.add(p.brand);
+        }
+      }
+      suggestions.push(
+        ...Array.from(brands)
+          .slice(0, perTypeLimit)
+          .map<SearchSuggestion>((brand) => ({
+            type: "brand",
             value: brand.toLowerCase(),
             label: brand,
-          }));
-        suggestions.push(...brandSuggestions);
-      }
-
-      return suggestions.slice(0, limit);
-    } catch (error) {
-      return [];
+          })),
+      );
     }
+
+    return suggestions.slice(0, limit);
   }
 
-  async getPopularSearches(): Promise<Array<{ term: string; count: number }>> {
-    // No search analytics table exists yet — return empty until analytics is implemented
+  async getAvailableFilters(_options: SearchFiltersOptions = {}): Promise<SearchFilter[]> {
+    const filters: SearchFilter[] = [];
+
+    const categories = await this.categoryRepository.findRootCategories({ limit: 20 });
+    if (categories.length > 0) {
+      filters.push({
+        name: "category",
+        type: "select",
+        options: categories.map((cat) => ({
+          value: cat.id.getValue(),
+          label: cat.name,
+          count: 0,
+        })),
+      });
+    }
+
+    const allProducts = await this.productRepository.findAll({ limit: 200 });
+    const brandCounts = new Map<string, number>();
+    for (const p of allProducts) {
+      if (p.brand) {
+        brandCounts.set(p.brand, (brandCounts.get(p.brand) ?? 0) + 1);
+      }
+    }
+    if (brandCounts.size > 0) {
+      filters.push({
+        name: "brand",
+        type: "select",
+        options: Array.from(brandCounts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([brand, count]) => ({
+            value: brand.toLowerCase(),
+            label: brand,
+            count,
+          })),
+      });
+    }
+
+    filters.push({ name: "price", type: "range", min: 0, max: 10000 });
+
+    filters.push({
+      name: "status",
+      type: "select",
+      options: [
+        { value: "published", label: "Published", count: 0 },
+        { value: "draft", label: "Draft", count: 0 },
+        { value: "scheduled", label: "Scheduled", count: 0 },
+      ],
+    });
+
+    return filters;
+  }
+
+  async getPopularSearches(): Promise<PopularSearchTerm[]> {
     return [];
   }
 
-  async getAvailableFilters(
-    options: SearchFiltersOptions = {},
-  ): Promise<SearchFilter[]> {
-    try {
-      const filters: SearchFilter[] = [];
-
-      // Category filter
-      const categories = await this.categoryRepository.findRootCategories({
-        limit: 20,
-      });
-      if (categories.length > 0) {
-        filters.push({
-          name: "category",
-          type: "select",
-          options: categories.map((cat) => ({
-            value: cat.id.getValue(),
-            label: cat.name,
-            count: 0,
-          })),
-        });
-      }
-
-      // Brand filter from actual product data
-      const allProducts = await this.productRepository.findAll({ limit: 200 });
-      const brandCounts = new Map<string, number>();
-      allProducts.forEach((p) => {
-        const brand = p.brand;
-        if (brand) {
-          brandCounts.set(brand, (brandCounts.get(brand) || 0) + 1);
-        }
-      });
-      if (brandCounts.size > 0) {
-        filters.push({
-          name: "brand",
-          type: "select",
-          options: Array.from(brandCounts.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(([brand, count]) => ({
-              value: brand.toLowerCase(),
-              label: brand,
-              count,
-            })),
-        });
-      }
-
-      // Price range filter — default range; real variant prices need variant repo access
-      filters.push({
-        name: "price",
-        type: "range",
-        min: 0,
-        max: 10000,
-      });
-
-      // Status filter
-      filters.push({
-        name: "status",
-        type: "select",
-        options: [
-          { value: "published", label: "Published", count: 0 },
-          { value: "draft", label: "Draft", count: 0 },
-          { value: "scheduled", label: "Scheduled", count: 0 },
-        ],
-      });
-
-      return filters;
-    } catch (error) {
-      return [];
-    }
-  }
-
+  // STUB: same — needs search-analytics aggregate. Returns zeros.
   async getSearchStatistics(): Promise<SearchStatistics> {
-    // No search analytics table exists yet — return zeros until analytics is implemented
     return {
       totalSearches: 0,
       uniqueQueries: 0,
@@ -316,41 +274,28 @@ export class ProductSearchService {
     };
   }
 
-  async recordSearch(
-    query: string,
-    resultCount: number,
-    userId?: string,
-  ): Promise<void> {
-    // TODO: Implement search analytics recording
-    // This would store search queries, results count, user info, timestamp, etc.
-  }
+  // ── Private helpers ────────────────────────────────────────────────
 
-  async getSimilarProducts(
-    productId: string,
-    limit: number = 5,
-  ): Promise<any[]> {
-    // TODO: Implement similar products algorithm
-    // This could use ML recommendations, category similarity, etc.
+  private generateSearchSuggestions(query: string, products: Product[]): string[] {
+    const suggestions = new Set<string>();
+    const queryWords = query.toLowerCase().split(/\s+/);
 
-    try {
-      // Placeholder: just return some products from the same category
-      return [];
-    } catch (error) {
-      return [];
+    for (const product of products) {
+      const title = product.title.toLowerCase();
+      const brand = product.brand?.toLowerCase();
+
+      if (brand && !queryWords.includes(brand)) {
+        suggestions.add(brand);
+      }
+
+      const titleWords = title.split(/\s+/);
+      for (const word of titleWords) {
+        if (word.length > 3 && !queryWords.includes(word)) {
+          suggestions.add(word);
+        }
+      }
     }
-  }
 
-  async getSearchHistory(
-    userId: string,
-    limit: number = 10,
-  ): Promise<Array<{ query: string; timestamp: Date }>> {
-    // TODO: Implement user search history
-    // This would store and retrieve user's search history
-
-    return [];
-  }
-
-  async clearSearchHistory(userId: string): Promise<void> {
-    // TODO: Implement search history clearing
+    return Array.from(suggestions).slice(0, 5);
   }
 }

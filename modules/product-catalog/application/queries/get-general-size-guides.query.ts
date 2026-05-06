@@ -1,6 +1,6 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { SizeGuideDTO } from "../../domain/entities/size-guide.entity";
-import { Region } from "../../domain/enums/product-catalog.enums";
+import { Region } from "../../domain/value-objects";
 import { SizeGuideManagementService } from "../services/size-guide-management.service";
 
 export interface GetGeneralSizeGuidesQuery extends IQuery {

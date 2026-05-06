@@ -9,7 +9,7 @@ export interface GetSearchFiltersQuery extends IQuery {
 export class GetSearchFiltersHandler implements IQueryHandler<GetSearchFiltersQuery, SearchFilter[]> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(input: GetSearchFiltersQuery): Promise<SearchFilter[]> {
-    return this.productSearchService.getAvailableFilters({ query: input.query, category: input.category });
+  async handle(query: GetSearchFiltersQuery): Promise<SearchFilter[]> {
+    return this.productSearchService.getAvailableFilters({ query: query.query, category: query.category });
   }
 }

@@ -6,7 +6,7 @@ export interface GetCategoryHierarchyQuery extends IQuery {}
 export class GetCategoryHierarchyHandler implements IQueryHandler<GetCategoryHierarchyQuery, CategoryTreeNode[]> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(_input: GetCategoryHierarchyQuery): Promise<CategoryTreeNode[]> {
+  async handle(query: GetCategoryHierarchyQuery): Promise<CategoryTreeNode[]> {
     return this.categoryManagementService.getCategoryHierarchy();
   }
 }

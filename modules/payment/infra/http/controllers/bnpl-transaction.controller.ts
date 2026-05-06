@@ -19,6 +19,22 @@ export class BnplTransactionController {
     private readonly listHandler: GetBnplTransactionsHandler,
   ) {}
 
+  async list(
+    request: AuthenticatedRequest<{ Querystring: ListBnplQuery }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listHandler.handle({
+        ...request.query,
+        userId: request.user.userId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "BNPL transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     request: AuthenticatedRequest<{ Body: CreateBnplTransactionBody }>,
     reply: FastifyReply,
@@ -47,22 +63,6 @@ export class BnplTransactionController {
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "BNPL payment processed");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async list(
-    request: AuthenticatedRequest<{ Querystring: ListBnplQuery }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.listHandler.handle({
-        ...request.query,
-        userId: request.user.userId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "BNPL transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

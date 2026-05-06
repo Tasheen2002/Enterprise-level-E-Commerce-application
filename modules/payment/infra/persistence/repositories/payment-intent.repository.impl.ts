@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, PaymentIntentStatusEnum } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -8,7 +8,7 @@ import {
 } from "../../../domain/repositories/payment-intent.repository";
 import { PaymentIntent } from "../../../domain/entities/payment-intent.entity";
 import { PaymentIntentId } from "../../../domain/value-objects/payment-intent-id.vo";
-import { PaymentIntentStatus } from "../../../domain/value-objects/payment-intent-status.vo";
+import { PaymentIntentStatus, PaymentIntentStatusEnum } from "../../../domain/value-objects/payment-intent-status.vo";
 import { Money } from "../../../domain/value-objects/money.vo";
 import { Currency } from "../../../domain/value-objects/currency.vo";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
@@ -22,7 +22,7 @@ export class PaymentIntentRepositoryImpl
   }
 
   async save(intent: PaymentIntent): Promise<void> {
-    const data = this.dehydrate(intent);
+    const data = this.toPersistence(intent);
     const { intentId, ...updateData } = data;
     await this.prisma.paymentIntent.upsert({
       where: { intentId },
@@ -42,7 +42,7 @@ export class PaymentIntentRepositoryImpl
     const record = await this.prisma.paymentIntent.findUnique({
       where: { intentId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByOrderId(orderId: string): Promise<PaymentIntent[]> {
@@ -50,28 +50,28 @@ export class PaymentIntentRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findByCheckoutId(checkoutId: string): Promise<PaymentIntent | null> {
     const record = await this.prisma.paymentIntent.findFirst({
       where: { checkoutId },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByIdempotencyKey(key: string): Promise<PaymentIntent | null> {
     const record = await this.prisma.paymentIntent.findUnique({
       where: { idempotencyKey: key },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByClientSecret(secret: string): Promise<PaymentIntent | null> {
     const record = await this.prisma.paymentIntent.findFirst({
       where: { clientSecret: secret },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findWithFilters(
@@ -102,7 +102,7 @@ export class PaymentIntentRepositoryImpl
       this.prisma.paymentIntent.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -136,7 +136,7 @@ export class PaymentIntentRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.PaymentIntentGetPayload<Record<string, never>>): PaymentIntent {
+  private toDomain(record: Prisma.PaymentIntentGetPayload<Record<string, never>>): PaymentIntent {
     return PaymentIntent.fromPersistence({
       id: PaymentIntentId.fromString(record.intentId),
       orderId: record.orderId ?? null,
@@ -152,7 +152,7 @@ export class PaymentIntentRepositoryImpl
     });
   }
 
-  private dehydrate(intent: PaymentIntent): Prisma.PaymentIntentUncheckedCreateInput {
+  private toPersistence(intent: PaymentIntent): Prisma.PaymentIntentUncheckedCreateInput {
     return {
       intentId: intent.id.getValue(),
       orderId: intent.orderId,

@@ -22,6 +22,36 @@ export class GiftCardController {
     private readonly listTransactionsHandler: GetGiftCardTransactionsHandler,
   ) {}
 
+  async getBalance(
+    request: AuthenticatedRequest<{ Querystring: GiftCardBalanceQuery }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.balanceHandler.handle({
+        codeOrId: request.query.codeOrId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Gift card balance retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listTransactions(
+    request: AuthenticatedRequest<{ Params: GiftCardIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        giftCardId: request.params.giftCardId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Gift card transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     request: AuthenticatedRequest<{ Body: CreateGiftCardBody }>,
     reply: FastifyReply,
@@ -57,36 +87,6 @@ export class GiftCardController {
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Gift card redeemed");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getBalance(
-    request: AuthenticatedRequest<{ Querystring: GiftCardBalanceQuery }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.balanceHandler.handle({
-        codeOrId: request.query.codeOrId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Gift card balance retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listTransactions(
-    request: AuthenticatedRequest<{ Params: GiftCardIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.listTransactionsHandler.handle({
-        giftCardId: request.params.giftCardId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Gift card transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

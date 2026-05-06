@@ -11,6 +11,7 @@ import {
   CategoryDeletionError,
   InvalidOperationError,
 } from "../../domain/errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 type CreateCategoryData = {
   name: string;
@@ -36,6 +37,15 @@ export interface CategoryTreeNode {
 export interface CategoryReorderItem {
   id: string;
   position: number;
+}
+
+export type CategoryListResult = PaginatedResult<CategoryDTO>;
+
+export interface CategoryStatistics {
+  totalCategories: number;
+  rootCategories: number;
+  maxDepth: number;
+  averageChildrenPerCategory: number;
 }
 
 export class CategoryManagementService {
@@ -90,7 +100,7 @@ export class CategoryManagementService {
 
   async getCategories(
     options: CategoryQueryServiceOptions = {},
-  ): Promise<{ categories: CategoryDTO[]; total: number }> {
+  ): Promise<PaginatedResult<CategoryDTO>> {
     const {
       page = 1,
       limit = 20,
@@ -100,38 +110,45 @@ export class CategoryManagementService {
       sortOrder = "asc",
     } = options;
 
-    const repositoryOptions: CategoryQueryOptions = {
-      limit,
-      offset: (page - 1) * limit,
-      sortBy,
-      sortOrder,
-    };
+    const offset = (page - 1) * limit;
+    const repositoryOptions: CategoryQueryOptions = { limit, offset, sortBy, sortOrder };
+
+    const parentCategoryId = parentId ? CategoryId.fromString(parentId) : null;
 
     let categories: Category[];
+    let total: number;
 
-    if (parentId) {
-      const parentCategoryId = CategoryId.fromString(parentId);
+    if (parentCategoryId) {
       if (includeChildren) {
-        categories =
-          await this.categoryRepository.findDescendants(parentCategoryId);
+        // Descendants: naturally bounded by tree depth — no separate count.
+        categories = await this.categoryRepository.findDescendants(parentCategoryId);
+        total = categories.length;
       } else {
-        categories = await this.categoryRepository.findByParentId(
-          parentCategoryId,
-          repositoryOptions,
-        );
+        [categories, total] = await Promise.all([
+          this.categoryRepository.findByParentId(parentCategoryId, repositoryOptions),
+          this.categoryRepository.count({ parentId: parentCategoryId }),
+        ]);
       }
     } else {
       if (includeChildren) {
-        categories = await this.categoryRepository.findAll(repositoryOptions);
+        [categories, total] = await Promise.all([
+          this.categoryRepository.findAll(repositoryOptions),
+          this.categoryRepository.count(),
+        ]);
       } else {
-        categories =
-          await this.categoryRepository.findRootCategories(repositoryOptions);
+        [categories, total] = await Promise.all([
+          this.categoryRepository.findRootCategories(repositoryOptions),
+          this.categoryRepository.count({ rootOnly: true }),
+        ]);
       }
     }
 
     return {
-      categories: categories.map((c) => Category.toDTO(c)),
-      total: categories.length,
+      items: categories.map((c) => Category.toDTO(c)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + categories.length < total,
     };
   }
 
@@ -156,6 +173,9 @@ export class CategoryManagementService {
     return categories.map((c) => Category.toDTO(c));
   }
 
+  // PERF: recursive findByParentId per node (N+1). Fine for typical catalog
+  // depths/sizes; for large trees, replace with a single self-join query
+  // (e.g., recursive CTE) returning all rows in one round-trip.
   async getCategoryHierarchy(): Promise<CategoryTreeNode[]> {
     const rootCategories = await this.categoryRepository.findRootCategories({
       sortBy: "position",
@@ -237,12 +257,7 @@ export class CategoryManagementService {
           throw new InvalidOperationError("Category cannot be its own parent");
         }
 
-        const descendants =
-          await this.categoryRepository.findDescendants(categoryId);
-        const wouldCreateCircularRef = descendants.some((desc) =>
-          desc.id.equals(newParentId),
-        );
-        if (wouldCreateCircularRef) {
+        if (await this.wouldCreateCycle(categoryId, newParentId)) {
           throw new InvalidOperationError(
             "Invalid category hierarchy - would create circular reference",
           );
@@ -250,7 +265,7 @@ export class CategoryManagementService {
 
         const parentExists = await this.categoryRepository.exists(newParentId);
         if (!parentExists) {
-          throw new CategoryNotFoundError(updateData.parentId!);
+          throw new CategoryNotFoundError(updateData.parentId);
         }
       }
 
@@ -298,14 +313,14 @@ export class CategoryManagementService {
     }
   }
 
-  async getCategoryStatistics(): Promise<{
-    totalCategories: number;
-    rootCategories: number;
-    maxDepth: number;
-    averageChildrenPerCategory: number;
-  }> {
-    const allCategories = await this.categoryRepository.findAll();
-    const rootCategories = await this.categoryRepository.findRootCategories();
+  // PERF: O(N) findChildren queries (N+1) for averageChildrenPerCategory and
+  // recursive depth traversal. Acceptable while category counts are small;
+  // refactor with `groupBy(parentId)` aggregation if categories grow large.
+  async getCategoryStatistics(): Promise<CategoryStatistics> {
+    const [allCategories, rootCategories] = await Promise.all([
+      this.categoryRepository.findAll(),
+      this.categoryRepository.findRootCategories(),
+    ]);
 
     let maxDepth = 0;
     for (const rootCategory of rootCategories) {
@@ -334,29 +349,23 @@ export class CategoryManagementService {
     categoryId: string,
     newParentId?: string,
   ): Promise<boolean> {
-    const id = CategoryId.fromString(categoryId);
-
     if (!newParentId) {
       return true;
     }
 
+    const id = CategoryId.fromString(categoryId);
     const parentId = CategoryId.fromString(newParentId);
+
+    if (id.equals(parentId)) {
+      return false;
+    }
 
     const parentExists = await this.categoryRepository.exists(parentId);
     if (!parentExists) {
       return false;
     }
 
-    if (id.equals(parentId)) {
-      return false;
-    }
-
-    const descendants = await this.categoryRepository.findDescendants(id);
-    const wouldCreateCircularRef = descendants.some((desc) =>
-      desc.id.equals(parentId),
-    );
-
-    return !wouldCreateCircularRef;
+    return !(await this.wouldCreateCycle(id, parentId));
   }
 
   private async getCategory(id: string): Promise<Category> {
@@ -366,6 +375,14 @@ export class CategoryManagementService {
       throw new CategoryNotFoundError(id);
     }
     return category;
+  }
+
+  private async wouldCreateCycle(
+    categoryId: CategoryId,
+    proposedParentId: CategoryId,
+  ): Promise<boolean> {
+    const descendants = await this.categoryRepository.findDescendants(categoryId);
+    return descendants.some((desc) => desc.id.equals(proposedParentId));
   }
 
   private async calculateCategoryDepth(

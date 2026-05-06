@@ -65,7 +65,17 @@ export class MediaController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.updateMediaAssetHandler.handle({ id: request.params.id, ...request.body });
+      const result = await this.updateMediaAssetHandler.handle({
+        id: request.params.id,
+        mime: request.body.mime,
+        width: request.body.width,
+        height: request.body.height,
+        bytes: request.body.bytes,
+        altText: request.body.altText,
+        focalX: request.body.focalX,
+        focalY: request.body.focalY,
+        renditions: request.body.renditions,
+      });
       return ResponseHelper.fromCommand(reply, result, "Media asset updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,7 +1,8 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { EditorialLookDTO } from "../../domain/entities/editorial-look.entity";
 import { EditorialLookManagementService } from "../services/editorial-look-management.service";
-import { EditorialLookQueryOptions } from "../../domain/repositories/editorial-look.repository";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface GetEditorialLooksByProductQuery extends IQuery {
   readonly productId: string;
@@ -12,34 +13,16 @@ export interface GetEditorialLooksByProductQuery extends IQuery {
   readonly sortOrder?: "asc" | "desc";
 }
 
-export interface EditorialLooksByProductResult {
-  readonly looks: EditorialLookDTO[];
-  readonly meta: {
-    readonly productId: string;
-    readonly page: number;
-    readonly limit: number;
-    readonly includeUnpublished: boolean;
-  };
-}
-
-export class GetEditorialLooksByProductHandler implements IQueryHandler<GetEditorialLooksByProductQuery, EditorialLooksByProductResult> {
+export class GetEditorialLooksByProductHandler implements IQueryHandler<GetEditorialLooksByProductQuery, PaginatedResult<EditorialLookDTO>> {
   constructor(private readonly editorialLookManagementService: EditorialLookManagementService) {}
 
-  async handle(query: GetEditorialLooksByProductQuery): Promise<EditorialLooksByProductResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
-    const includeUnpublished = query.includeUnpublished ?? false;
-
-    const serviceOptions: EditorialLookQueryOptions = {
-      limit,
-      offset: (page - 1) * limit,
-      sortBy: query.sortBy ?? "id",
-      sortOrder: query.sortOrder ?? "desc",
-      includeUnpublished,
-    };
-
-    const looks = await this.editorialLookManagementService.getLooksByProduct(query.productId, serviceOptions);
-
-    return { looks, meta: { productId: query.productId, page, limit, includeUnpublished } };
+  async handle(query: GetEditorialLooksByProductQuery): Promise<PaginatedResult<EditorialLookDTO>> {
+    return this.editorialLookManagementService.getLooksByProduct(query.productId, {
+      page: Math.max(MIN_PAGE, query.page ?? MIN_PAGE),
+      limit: Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE)),
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      includeUnpublished: query.includeUnpublished,
+    });
   }
 }
