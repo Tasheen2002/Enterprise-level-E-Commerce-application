@@ -29,6 +29,9 @@ export {
   IProductTagRepository,
   ProductTagQueryOptions,
   ProductTagCountOptions,
+  type TagWithUsageCount,
+  type TagKindBreakdown,
+  type TagStatistics,
 } from "./product-tag.repository";
 export {
   ISizeGuideRepository,
@@ -42,7 +45,10 @@ export {
 } from "./editorial-look.repository";
 
 // Association repository interfaces
-export { IProductTagAssociationRepository } from "./iproduct-tag-association.repository";
+export {
+  IProductTagAssociationRepository,
+  type AssociationPaginationOptions,
+} from "./product-tag-association.repository";
 export {
   IProductMediaRepository,
   ProductMediaQueryOptions,
@@ -51,5 +57,5 @@ export {
 export {
   IVariantMediaRepository,
   VariantMediaQueryOptions,
-  VariantMediaCountOptions,
+  type ProductVariantMediaItem,
 } from "./variant-media.repository";
