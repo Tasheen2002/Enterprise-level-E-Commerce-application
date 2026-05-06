@@ -18,11 +18,7 @@ export {
 } from "./domain/errors/user-management.errors";
 
 // Enums (safe to share cross-module)
-export { UserRole } from "./domain/enums/user-role.enum";
-export { UserStatus } from "./domain/enums/user-status.enum";
-export { ShippingZone } from "./domain/enums/shipping-zone.enum";
-export { VerificationType } from "./domain/enums/verification-type.enum";
-export { VerificationAction } from "./domain/enums/verification-action.enum";
+export { UserRole, UserStatus, ShippingZone } from "./domain/value-objects";
 
 // DTO types only (for cross-module type sharing)
 export type { UserDTO } from "./domain/entities/user.entity";
@@ -32,5 +28,5 @@ export type { PaymentMethodDTO } from "./domain/entities/payment-method.entity";
 
 // Value object IDs (if needed cross-module)
 export { UserId } from "./domain/value-objects/user-id.vo";
-export { AddressId } from "./domain/value-objects/address-id";
-export { PaymentMethodId } from "./domain/value-objects/payment-method-id";
+export { AddressId } from "./domain/value-objects/address-id.vo";
+export { PaymentMethodId } from "./domain/value-objects/payment-method-id.vo";
