@@ -1,5 +1,5 @@
 import { Address } from '../entities/address.entity';
-import { ShippingZone } from '../enums/shipping-zone.enum';
+import { ShippingZone } from '../value-objects/shipping-zone.vo';
 
 export interface AddressLabel {
   recipient: string;
