@@ -3,6 +3,12 @@ import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces
 import { PreorderManagementService } from "../services/preorder-management.service";
 import { PreorderDTO } from "../../domain/entities/preorder.entity";
 import { PreorderQueryOptions } from "../../domain/repositories/preorder.repository";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MIN_LIMIT,
+  MIN_OFFSET,
+} from "../../domain/constants/order-management.constants";
 
 export interface ListPreordersQuery extends IQuery {
   readonly limit?: number;
@@ -16,8 +22,8 @@ export class ListPreordersHandler implements IQueryHandler<ListPreordersQuery, P
   constructor(private readonly preorderService: PreorderManagementService) {}
 
   async handle(query: ListPreordersQuery): Promise<PaginatedResult<PreorderDTO>> {
-    const limit = query.limit ?? 20;
-    const offset = query.offset ?? 0;
+    const limit = Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE));
+    const offset = Math.max(MIN_OFFSET, query.offset ?? MIN_OFFSET);
     const filterType = query.filterType ?? "all";
     const options: PreorderQueryOptions = {
       limit,

@@ -3,6 +3,12 @@ import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces
 import { BackorderManagementService } from "../services/backorder-management.service";
 import { BackorderDTO } from "../../domain/entities/backorder.entity";
 import { BackorderQueryOptions } from "../../domain/repositories/backorder.repository";
+import {
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  MIN_LIMIT,
+  MIN_OFFSET,
+} from "../../domain/constants/order-management.constants";
 
 export interface ListBackordersQuery extends IQuery {
   readonly limit?: number;
@@ -16,8 +22,8 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
   constructor(private readonly backorderService: BackorderManagementService) {}
 
   async handle(query: ListBackordersQuery): Promise<PaginatedResult<BackorderDTO>> {
-    const limit = query.limit ?? 20;
-    const offset = query.offset ?? 0;
+    const limit = Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE));
+    const offset = Math.max(MIN_OFFSET, query.offset ?? MIN_OFFSET);
     const filterType = query.filterType ?? "all";
     const options: BackorderQueryOptions = {
       limit,
@@ -49,8 +55,10 @@ export class ListBackordersHandler implements IQueryHandler<ListBackordersQuery,
         ]);
         break;
       default:
-        backorders = await this.backorderService.getAllBackorders(options);
-        total = await this.backorderService.getBackorderCount();
+        [backorders, total] = await Promise.all([
+          this.backorderService.getAllBackorders(options),
+          this.backorderService.getBackorderCount(),
+        ]);
     }
 
     return {
