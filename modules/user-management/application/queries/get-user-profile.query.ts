@@ -1,15 +1,14 @@
 import { IQuery, IQueryHandler } from '../../../../packages/core/src/application/cqrs';
-import { UserProfileService } from '../services/user-profile.service';
-import { UserProfileDTO } from '../../domain/entities/user-profile.entity';
+import { UserProfileService, UserProfileViewDTO } from '../services/user-profile.service';
 
 export interface GetUserProfileQuery extends IQuery {
   readonly userId: string;
 }
 
-export class GetUserProfileHandler implements IQueryHandler<GetUserProfileQuery, UserProfileDTO> {
-  constructor(private readonly userProfileService: UserProfileService) {}
+export class GetUserProfileHandler implements IQueryHandler<GetUserProfileQuery, UserProfileViewDTO> {
+  constructor(private readonly userProfileService: UserProfileService) { }
 
-  async handle(query: GetUserProfileQuery): Promise<UserProfileDTO> {
+  async handle(query: GetUserProfileQuery): Promise<UserProfileViewDTO> {
     return this.userProfileService.getUserProfile(query.userId);
   }
 }

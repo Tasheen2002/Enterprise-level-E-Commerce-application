@@ -7,7 +7,7 @@ export interface GetUserDetailsQuery extends IQuery {
 }
 
 export class GetUserDetailsHandler implements IQueryHandler<GetUserDetailsQuery, UserDTO> {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   async handle(query: GetUserDetailsQuery): Promise<UserDTO> {
     return this.userService.getUserById(query.userId);
