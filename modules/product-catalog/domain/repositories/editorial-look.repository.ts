@@ -1,6 +1,7 @@
 import { EditorialLook } from "../entities/editorial-look.entity";
 import { EditorialLookId } from "../value-objects/editorial-look-id.vo";
 import { MediaAssetId } from "../value-objects/media-asset-id.vo";
+import { ProductId } from "../value-objects/product-id.vo";
 
 export interface IEditorialLookRepository {
   save(look: EditorialLook): Promise<void>;
@@ -10,7 +11,7 @@ export interface IEditorialLookRepository {
   findScheduled(options?: EditorialLookQueryOptions): Promise<EditorialLook[]>;
   findDrafts(options?: EditorialLookQueryOptions): Promise<EditorialLook[]>;
   findByProductId(
-    productId: string,
+    productId: ProductId,
     options?: EditorialLookQueryOptions,
   ): Promise<EditorialLook[]>;
   findByHeroAsset(assetId: MediaAssetId): Promise<EditorialLook[]>;
