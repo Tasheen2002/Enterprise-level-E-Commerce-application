@@ -28,36 +28,7 @@ export class ProductReviewController {
     private readonly getUserReviewsHandler: GetUserReviewsHandler,
   ) {}
 
-  async createReview(
-    request: AuthenticatedRequest<{ Body: CreateProductReviewBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { productId, userId, rating, title, body } = request.body;
-      const result = await this.createProductReviewHandler.handle({
-        productId,
-        userId,
-        rating,
-        title,
-        body,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Product review created successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getReview(
-    request: AuthenticatedRequest<{ Params: ReviewIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const dto = await this.getProductReviewHandler.handle({ reviewId: request.params.reviewId });
-      return ResponseHelper.ok(reply, "Product review retrieved successfully", dto);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ── Reads (queries) ────────────────────────────────────────────────
 
   async getProductReviews(
     request: AuthenticatedRequest<{ Params: ProductIdParams; Querystring: PaginationQuery }>,
@@ -82,6 +53,39 @@ export class ProductReviewController {
       const { limit, offset } = request.query;
       const result = await this.getUserReviewsHandler.handle({ userId, limit, offset });
       return ResponseHelper.ok(reply, "User reviews retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getReview(
+    request: AuthenticatedRequest<{ Params: ReviewIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const dto = await this.getProductReviewHandler.handle({ reviewId: request.params.reviewId });
+      return ResponseHelper.ok(reply, "Product review retrieved successfully", dto);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
+
+  async createReview(
+    request: AuthenticatedRequest<{ Body: CreateProductReviewBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { productId, userId, rating, title, body } = request.body;
+      const result = await this.createProductReviewHandler.handle({
+        productId,
+        userId,
+        rating,
+        title,
+        body,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Product review created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
