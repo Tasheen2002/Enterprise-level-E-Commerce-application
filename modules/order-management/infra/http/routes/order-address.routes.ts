@@ -1,8 +1,14 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { OrderAddressController } from "../controllers/order-address.controller";
-import { authenticateUser } from "@/api/src/shared/middleware";
-import { validateBody, validateParams } from "../validation/validator";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import { validateBody, validateParams, toJsonSchema } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
 import {
   orderAddressParamsSchema,
   setOrderAddressesSchema,
@@ -11,110 +17,45 @@ import {
   orderAddressResponseSchema,
 } from "../validation/order-address.schema";
 
-const addressBodySchema = {
-  type: "object",
-  required: [
-    "firstName",
-    "lastName",
-    "addressLine1",
-    "city",
-    "state",
-    "postalCode",
-    "country",
-  ],
-  properties: {
-    firstName: { type: "string" },
-    lastName: { type: "string" },
-    addressLine1: { type: "string" },
-    addressLine2: { type: "string" },
-    city: { type: "string" },
-    state: { type: "string" },
-    postalCode: { type: "string" },
-    country: { type: "string" },
-    phone: { type: "string" },
-    email: { type: "string", format: "email" },
-  },
-};
+// All address routes require authentication, so userKeyGenerator gives proper
+// per-user buckets — no anonymous-bucket concern.
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const orderAddressParamsJson = toJsonSchema(orderAddressParamsSchema);
+const setOrderAddressesBodyJson = toJsonSchema(setOrderAddressesSchema);
+const updateBillingAddressBodyJson = toJsonSchema(updateBillingAddressSchema);
+const updateShippingAddressBodyJson = toJsonSchema(updateShippingAddressSchema);
 
 export async function registerOrderAddressRoutes(
   fastify: FastifyInstance,
   orderAddressController: OrderAddressController,
 ): Promise<void> {
-  // Set order addresses (billing & shipping)
-  fastify.post(
-    "/orders/:orderId/addresses",
-    {
-      preValidation: [validateParams(orderAddressParamsSchema), validateBody(setOrderAddressesSchema)],
-      preHandler: [authenticateUser],
-      schema: {
-        description:
-          "Set billing and shipping addresses for an order. Order must be in 'created' status.",
-        tags: ["Order Addresses"],
-        summary: "Set Order Addresses",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["billingAddress", "shippingAddress"],
-          properties: {
-            billingAddress: addressBodySchema,
-            shippingAddress: addressBodySchema,
-          },
-        },
-        response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: orderAddressResponseSchema,
-            },
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      orderAddressController.setAddresses(
-        request as AuthenticatedRequest,
-        reply,
-      ),
-  );
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // ── Reads ──
 
   // Get order addresses
   fastify.get(
     "/orders/:orderId/addresses",
     {
       preValidation: [validateParams(orderAddressParamsSchema)],
-      preHandler: [authenticateUser],
+      preHandler: [authenticate],
       schema: {
         description: "Get billing and shipping addresses for an order",
         tags: ["Order Addresses"],
         summary: "Get Order Addresses",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: orderAddressParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: orderAddressResponseSchema,
-            },
-          },
+          200: successResponse(orderAddressResponseSchema),
         },
       },
     },
@@ -125,35 +66,50 @@ export async function registerOrderAddressRoutes(
       ),
   );
 
-  // Update billing address
-  fastify.patch(
+  // ── Writes ──
+
+  // Set order addresses (billing & shipping)
+  fastify.post(
+    "/orders/:orderId/addresses",
+    {
+      preValidation: [validateParams(orderAddressParamsSchema)],
+      preHandler: [authenticate, validateBody(setOrderAddressesSchema)],
+      schema: {
+        description:
+          "Set billing and shipping addresses for an order. Order must be in 'created' status.",
+        tags: ["Order Addresses"],
+        summary: "Set Order Addresses",
+        security: [{ bearerAuth: [] }],
+        params: orderAddressParamsJson,
+        body: setOrderAddressesBodyJson,
+        response: {
+          201: successResponse(orderAddressResponseSchema, 201),
+        },
+      },
+    },
+    (request, reply) =>
+      orderAddressController.setAddresses(
+        request as AuthenticatedRequest,
+        reply,
+      ),
+  );
+
+  // Replace billing address (PUT — full replace; AddressSnapshot is immutable
+  // so partial PATCH is not supported)
+  fastify.put(
     "/orders/:orderId/addresses/billing",
     {
-      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateBillingAddressSchema)],
-      preHandler: [authenticateUser],
+      preValidation: [validateParams(orderAddressParamsSchema)],
+      preHandler: [authenticate, validateBody(updateBillingAddressSchema)],
       schema: {
-        description: "Update billing address for an order",
+        description: "Replace billing address for an order (full replacement)",
         tags: ["Order Addresses"],
-        summary: "Update Billing Address",
+        summary: "Replace Billing Address",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
-        body: addressBodySchema,
+        params: orderAddressParamsJson,
+        body: updateBillingAddressBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: orderAddressResponseSchema,
-            },
-          },
+          200: successResponse(orderAddressResponseSchema),
         },
       },
     },
@@ -164,35 +120,22 @@ export async function registerOrderAddressRoutes(
       ),
   );
 
-  // Update shipping address
-  fastify.patch(
+  // Replace shipping address (PUT — full replace; AddressSnapshot is immutable
+  // so partial PATCH is not supported)
+  fastify.put(
     "/orders/:orderId/addresses/shipping",
     {
-      preValidation: [validateParams(orderAddressParamsSchema), validateBody(updateShippingAddressSchema)],
-      preHandler: [authenticateUser],
+      preValidation: [validateParams(orderAddressParamsSchema)],
+      preHandler: [authenticate, validateBody(updateShippingAddressSchema)],
       schema: {
-        description: "Update shipping address for an order",
+        description: "Replace shipping address for an order (full replacement)",
         tags: ["Order Addresses"],
-        summary: "Update Shipping Address",
+        summary: "Replace Shipping Address",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
-        body: addressBodySchema,
+        params: orderAddressParamsJson,
+        body: updateShippingAddressBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: orderAddressResponseSchema,
-            },
-          },
+          200: successResponse(orderAddressResponseSchema),
         },
       },
     },
