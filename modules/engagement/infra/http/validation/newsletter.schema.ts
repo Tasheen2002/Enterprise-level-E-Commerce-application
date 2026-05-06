@@ -1,11 +1,7 @@
 import { z } from "zod";
-
-// ── Query Schemas ─────────────────────────────────────────────────────────────
-
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
+// Shared canonical pagination schema — single source of truth.
+export { paginationQuerySchema } from "./validator";
+export type { PaginationQuery } from "./validator";
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
@@ -48,7 +44,6 @@ export const newsletterSubscriptionResponseSchema = {
 
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type SubscribeNewsletterBody = z.infer<typeof subscribeNewsletterSchema>;
 export type UnsubscribeNewsletterBody = z.infer<typeof unsubscribeNewsletterSchema>;
 export type UnsubscribeViaLinkQuery = z.infer<typeof unsubscribeViaLinkSchema>;
