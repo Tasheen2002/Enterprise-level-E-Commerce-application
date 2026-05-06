@@ -1,8 +1,6 @@
-import {
-  PaymentMethod,
-  PaymentMethodType,
-} from "../entities/payment-method.entity";
-import { PaymentMethodId } from "../value-objects/payment-method-id";
+import { PaymentMethod } from "../entities/payment-method.entity";
+import { PaymentMethodType } from "../value-objects/payment-method-type.vo";
+import { PaymentMethodId } from "../value-objects/payment-method-id.vo";
 import { UserId } from "../value-objects/user-id.vo";
 
 export interface IPaymentMethodRepository {

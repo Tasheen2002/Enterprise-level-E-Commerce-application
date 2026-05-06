@@ -1,6 +1,6 @@
 import { Address } from '../entities/address.entity';
-import { AddressId } from '../value-objects/address-id';
-import { AddressType } from '../value-objects/address.vo';
+import { AddressId } from '../value-objects/address-id.vo';
+import { AddressType } from '../value-objects/address-type.vo';
 import { UserId } from '../value-objects/user-id.vo';
 
 export interface IAddressRepository {
