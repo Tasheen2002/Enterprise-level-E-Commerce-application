@@ -109,7 +109,7 @@ export class Reminder extends AggregateRoot {
     const entity = new Reminder({
       ...params,
       id: ReminderId.create(),
-      status: ReminderStatus.pending(),
+      status: ReminderStatus.PENDING,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -199,14 +199,14 @@ export class Reminder extends AggregateRoot {
     if (!this.props.status.isPending()) {
       throw new InvalidOperationError("Can only mark a pending reminder as sent");
     }
-    this.updateStatus(ReminderStatus.sent());
+    this.updateStatus(ReminderStatus.SENT);
   }
 
   unsubscribe(): void {
     if (this.props.status.isUnsubscribed()) {
       throw new InvalidOperationError("Reminder is already unsubscribed");
     }
-    this.updateStatus(ReminderStatus.unsubscribed());
+    this.updateStatus(ReminderStatus.UNSUBSCRIBED);
   }
 
   // Helper methods
