@@ -6,6 +6,7 @@ import {
   BackorderQueryOptions,
 } from "../../../domain/repositories/backorder.repository";
 import { Backorder } from "../../../domain/entities/backorder.entity";
+import { OrderItemId } from "../../../domain/value-objects/order-item-id.vo";
 
 export class BackorderRepositoryImpl
   extends PrismaRepository<Backorder>
@@ -15,167 +16,128 @@ export class BackorderRepositoryImpl
     super(prisma, eventBus);
   }
 
+  // ─── Persistence mapping ──────────────────────────────────────────────────
+
   private toEntity(row: Prisma.BackorderGetPayload<Record<string, never>>): Backorder {
     return Backorder.fromPersistence({
-      orderItemId: row.orderItemId,
+      orderItemId: OrderItemId.fromString(row.orderItemId),
       promisedEta: row.promisedEta ?? undefined,
       notifiedAt: row.notifiedAt ?? undefined,
-      createdAt: new Date(0),
-      updatedAt: new Date(0),
     });
   }
 
+  // ─── Writes ───────────────────────────────────────────────────────────────
+
   async save(backorder: Backorder): Promise<void> {
+    const orderItemId = backorder.orderItemId.getValue();
     const data = {
       promisedEta: backorder.promisedEta ?? null,
       notifiedAt: backorder.notifiedAt ?? null,
     };
     await this.prisma.backorder.upsert({
-      where: { orderItemId: backorder.orderItemId },
-      create: { orderItemId: backorder.orderItemId, ...data },
+      where: { orderItemId },
+      create: { orderItemId, ...data },
       update: data,
     });
 
     await this.dispatchEvents(backorder);
   }
 
-  async delete(orderItemId: string): Promise<void> {
+  async delete(orderItemId: OrderItemId): Promise<void> {
     await this.prisma.backorder.delete({
-      where: { orderItemId },
+      where: { orderItemId: orderItemId.getValue() },
     });
   }
 
-  async findByOrderItemId(orderItemId: string): Promise<Backorder | null> {
-    const backorder = await this.prisma.backorder.findUnique({
-      where: { orderItemId },
+  // ─── Reads ────────────────────────────────────────────────────────────────
+
+  async findByOrderItemId(orderItemId: OrderItemId): Promise<Backorder | null> {
+    const row = await this.prisma.backorder.findUnique({
+      where: { orderItemId: orderItemId.getValue() },
     });
-
-    if (!backorder) {
-      return null;
-    }
-
-    return this.toEntity(backorder);
+    return row ? this.toEntity(row) : null;
   }
 
   async findAll(options?: BackorderQueryOptions): Promise<Backorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "promisedEta",
-      sortOrder = "asc",
-    } = options || {};
-
-    const backorders = await this.prisma.backorder.findMany({
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return backorders.map((backorder) => this.toEntity(backorder));
+    return this.findMany({}, options);
   }
 
   async findNotified(options?: BackorderQueryOptions): Promise<Backorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "notifiedAt",
-      sortOrder = "desc",
-    } = options || {};
-
-    const backorders = await this.prisma.backorder.findMany({
-      where: {
-        notifiedAt: { not: null },
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return backorders.map((backorder) => this.toEntity(backorder));
+    return this.findMany(
+      { notifiedAt: { not: null } },
+      options,
+      "notifiedAt",
+      "desc",
+    );
   }
 
   async findUnnotified(options?: BackorderQueryOptions): Promise<Backorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "promisedEta",
-      sortOrder = "asc",
-    } = options || {};
-
-    const backorders = await this.prisma.backorder.findMany({
-      where: {
-        notifiedAt: null,
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return backorders.map((backorder) => this.toEntity(backorder));
+    return this.findMany({ notifiedAt: null }, options);
   }
 
   async findByPromisedEtaBefore(
     date: Date,
     options?: BackorderQueryOptions,
   ): Promise<Backorder[]> {
+    return this.findMany(
+      { promisedEta: { not: null, lte: date } },
+      options,
+    );
+  }
+
+  // ─── Counts / existence ───────────────────────────────────────────────────
+
+  async count(): Promise<number> {
+    return this.prisma.backorder.count();
+  }
+
+  async countNotified(): Promise<number> {
+    return this.prisma.backorder.count({
+      where: { notifiedAt: { not: null } },
+    });
+  }
+
+  async countUnnotified(): Promise<number> {
+    return this.prisma.backorder.count({
+      where: { notifiedAt: null },
+    });
+  }
+
+  async countByPromisedEtaBefore(date: Date): Promise<number> {
+    return this.prisma.backorder.count({
+      where: { promisedEta: { not: null, lte: date } },
+    });
+  }
+
+  async exists(orderItemId: OrderItemId): Promise<boolean> {
+    const count = await this.prisma.backorder.count({
+      where: { orderItemId: orderItemId.getValue() },
+    });
+    return count > 0;
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async findMany(
+    where: Prisma.BackorderWhereInput,
+    options: BackorderQueryOptions | undefined,
+    defaultSortBy: NonNullable<BackorderQueryOptions["sortBy"]> = "promisedEta",
+    defaultSortOrder: "asc" | "desc" = "asc",
+  ): Promise<Backorder[]> {
     const {
       limit,
       offset,
-      sortBy = "promisedEta",
-      sortOrder = "asc",
+      sortBy = defaultSortBy,
+      sortOrder = defaultSortOrder,
     } = options || {};
 
-    const backorders = await this.prisma.backorder.findMany({
-      where: {
-        promisedEta: {
-          not: null,
-          lte: date,
-        },
-      },
+    const rows = await this.prisma.backorder.findMany({
+      where,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return backorders.map((backorder) => this.toEntity(backorder));
-  }
-
-  async count(): Promise<number> {
-    return await this.prisma.backorder.count();
-  }
-
-  async countNotified(): Promise<number> {
-    return await this.prisma.backorder.count({
-      where: {
-        notifiedAt: { not: null },
-      },
-    });
-  }
-
-  async countUnnotified(): Promise<number> {
-    return await this.prisma.backorder.count({
-      where: {
-        notifiedAt: null,
-      },
-    });
-  }
-
-  async countByPromisedEtaBefore(date: Date): Promise<number> {
-    return await this.prisma.backorder.count({
-      where: {
-        promisedEta: {
-          not: null,
-          lte: date,
-        },
-      },
-    });
-  }
-
-  async exists(orderItemId: string): Promise<boolean> {
-    const count = await this.prisma.backorder.count({
-      where: { orderItemId },
-    });
-
-    return count > 0;
+    return rows.map((r) => this.toEntity(r));
   }
 }

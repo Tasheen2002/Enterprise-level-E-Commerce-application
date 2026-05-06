@@ -4,13 +4,9 @@ import { PurchaseOrderItem } from "../../../domain/entities/purchase-order-item.
 import { PurchaseOrderId } from "../../../domain/value-objects/purchase-order-id.vo";
 import { IPurchaseOrderItemRepository } from "../../../domain/repositories/purchase-order-item.repository";
 
-// Read-only cross-aggregate query repository. Writes flow through
-// `IPurchaseOrderRepository.save()` after mutating items via the
-// `PurchaseOrder` aggregate root.
 export class PurchaseOrderItemRepositoryImpl
-  implements IPurchaseOrderItemRepository
-{
-  constructor(private readonly prisma: PrismaClient) {}
+  implements IPurchaseOrderItemRepository {
+  constructor(private readonly prisma: PrismaClient) { }
 
   private toEntity(row: {
     poId: string;

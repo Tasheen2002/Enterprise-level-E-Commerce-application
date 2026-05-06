@@ -5,14 +5,11 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
+import { OrderTotalsData } from "../../domain/value-objects/order-totals.vo";
 
 export interface UpdateOrderTotalsCommand extends ICommand {
   readonly orderId: string;
-  readonly totals: {
-    readonly tax: number;
-    readonly shipping: number;
-    readonly discount: number;
-  };
+  readonly totals: Readonly<Pick<OrderTotalsData, "tax" | "shipping" | "discount">>;
 }
 
 export class UpdateOrderTotalsHandler implements ICommandHandler<

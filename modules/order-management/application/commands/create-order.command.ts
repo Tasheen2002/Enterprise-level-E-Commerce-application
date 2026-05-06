@@ -5,19 +5,7 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderDTO } from "../../domain/entities/order.entity";
-
-interface AddressInput {
-  readonly firstName: string;
-  readonly lastName: string;
-  readonly addressLine1: string;
-  readonly addressLine2?: string;
-  readonly city: string;
-  readonly state: string;
-  readonly postalCode: string;
-  readonly country: string;
-  readonly phone?: string;
-  readonly email?: string;
-}
+import { AddressSnapshotData } from "../../domain/value-objects/address-snapshot.vo";
 
 export interface CreateOrderCommand extends ICommand {
   readonly userId?: string;
@@ -28,8 +16,8 @@ export interface CreateOrderCommand extends ICommand {
     readonly isGift?: boolean;
     readonly giftMessage?: string;
   }>;
-  readonly shippingAddress: AddressInput;
-  readonly billingAddress?: AddressInput;
+  readonly shippingAddress: Readonly<AddressSnapshotData>;
+  readonly billingAddress?: Readonly<AddressSnapshotData>;
   readonly source?: string;
   readonly currency?: string;
 }

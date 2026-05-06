@@ -1,4 +1,5 @@
 import { Backorder } from "../entities/backorder.entity";
+import { OrderItemId } from "../value-objects/order-item-id.vo";
 
 export interface BackorderQueryOptions {
   limit?: number;
@@ -10,10 +11,10 @@ export interface BackorderQueryOptions {
 export interface IBackorderRepository {
   // Basic CRUD
   save(backorder: Backorder): Promise<void>;
-  delete(orderItemId: string): Promise<void>;
+  delete(orderItemId: OrderItemId): Promise<void>;
 
   // Finders
-  findByOrderItemId(orderItemId: string): Promise<Backorder | null>;
+  findByOrderItemId(orderItemId: OrderItemId): Promise<Backorder | null>;
   findAll(options?: BackorderQueryOptions): Promise<Backorder[]>;
   findNotified(options?: BackorderQueryOptions): Promise<Backorder[]>;
   findUnnotified(options?: BackorderQueryOptions): Promise<Backorder[]>;
@@ -29,5 +30,5 @@ export interface IBackorderRepository {
   countByPromisedEtaBefore(date: Date): Promise<number>;
 
   // Existence checks
-  exists(orderItemId: string): Promise<boolean>;
+  exists(orderItemId: OrderItemId): Promise<boolean>;
 }

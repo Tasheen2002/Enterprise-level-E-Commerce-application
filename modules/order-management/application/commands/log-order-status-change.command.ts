@@ -4,9 +4,11 @@ import { OrderStatusHistoryDTO } from "../../domain/entities/order-status-histor
 
 export interface LogOrderStatusChangeCommand extends ICommand {
   readonly orderId: string;
-  readonly fromStatus?: string;
   readonly toStatus: string;
-  readonly changedBy?: string;
+  // Required at the API boundary — every API-logged status change must record
+  // who logged it (route is staff-gated; controller derives from session).
+  // Internal callers (sagas, system events) pass "system" or a service id.
+  readonly changedBy: string;
 }
 
 export class LogOrderStatusChangeHandler implements ICommandHandler<
@@ -18,7 +20,6 @@ export class LogOrderStatusChangeHandler implements ICommandHandler<
   async handle(command: LogOrderStatusChangeCommand): Promise<CommandResult<OrderStatusHistoryDTO>> {
     const history = await this.orderService.logOrderStatusChange({
       orderId: command.orderId,
-      fromStatus: command.fromStatus,
       toStatus: command.toStatus,
       changedBy: command.changedBy,
     });

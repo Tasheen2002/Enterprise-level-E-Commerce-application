@@ -1,57 +1,61 @@
-import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
-import { PaymentTransactionStatusEnum } from "../enums";
+import { DomainValidationError } from "../errors/payment-loyalty.errors";
 
+export enum PaymentTransactionStatusValue {
+  PENDING = "pending",
+  SUCCEEDED = "succeeded",
+  FAILED = "failed",
+}
+
+/** @deprecated Use `PaymentTransactionStatusValue`. */
+export const PaymentTransactionStatusEnum = PaymentTransactionStatusValue;
+/** @deprecated Use `PaymentTransactionStatusValue`. */
+export type PaymentTransactionStatusEnum = PaymentTransactionStatusValue;
+
+// Pattern D (Enum-Like VO).
 export class PaymentTransactionStatus {
-  private constructor(private readonly value: PaymentTransactionStatusEnum) {}
+  static readonly PENDING = new PaymentTransactionStatus(PaymentTransactionStatusValue.PENDING);
+  static readonly SUCCEEDED = new PaymentTransactionStatus(PaymentTransactionStatusValue.SUCCEEDED);
+  static readonly FAILED = new PaymentTransactionStatus(PaymentTransactionStatusValue.FAILED);
+
+  private static readonly ALL: ReadonlyArray<PaymentTransactionStatus> = [
+    PaymentTransactionStatus.PENDING,
+    PaymentTransactionStatus.SUCCEEDED,
+    PaymentTransactionStatus.FAILED,
+  ];
+
+  private constructor(private readonly value: PaymentTransactionStatusValue) {
+    if (!Object.values(PaymentTransactionStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid payment transaction status: ${value}. Must be one of: ${Object.values(PaymentTransactionStatusValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): PaymentTransactionStatus {
-    return PaymentTransactionStatus.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      PaymentTransactionStatus.ALL.find((t) => t.value === normalized) ??
+      new PaymentTransactionStatus(normalized as PaymentTransactionStatusValue)
+    );
   }
 
   static fromString(value: string): PaymentTransactionStatus {
-    const enumValue = Object.values(PaymentTransactionStatusEnum).find((v) => v === value);
-    if (!enumValue) {
-      throw new InvalidFormatError(
-        "payment transaction status",
-        Object.values(PaymentTransactionStatusEnum).join(" | "),
-      );
-    }
-    return new PaymentTransactionStatus(enumValue);
+    return PaymentTransactionStatus.create(value);
   }
 
-  static pending(): PaymentTransactionStatus {
-    return new PaymentTransactionStatus(PaymentTransactionStatusEnum.PENDING);
-  }
+  /** @deprecated Use `PaymentTransactionStatus.PENDING`. */
+  static pending(): PaymentTransactionStatus { return PaymentTransactionStatus.PENDING; }
+  /** @deprecated Use `PaymentTransactionStatus.SUCCEEDED`. */
+  static succeeded(): PaymentTransactionStatus { return PaymentTransactionStatus.SUCCEEDED; }
+  /** @deprecated Use `PaymentTransactionStatus.FAILED`. */
+  static failed(): PaymentTransactionStatus { return PaymentTransactionStatus.FAILED; }
 
-  static succeeded(): PaymentTransactionStatus {
-    return new PaymentTransactionStatus(PaymentTransactionStatusEnum.SUCCEEDED);
-  }
+  getValue(): PaymentTransactionStatusValue { return this.value; }
 
-  static failed(): PaymentTransactionStatus {
-    return new PaymentTransactionStatus(PaymentTransactionStatusEnum.FAILED);
-  }
+  isPending(): boolean { return this.value === PaymentTransactionStatusValue.PENDING; }
+  isSucceeded(): boolean { return this.value === PaymentTransactionStatusValue.SUCCEEDED; }
+  isFailed(): boolean { return this.value === PaymentTransactionStatusValue.FAILED; }
 
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: PaymentTransactionStatus): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-
-  isPending(): boolean {
-    return this.value === PaymentTransactionStatusEnum.PENDING;
-  }
-
-  isSucceeded(): boolean {
-    return this.value === PaymentTransactionStatusEnum.SUCCEEDED;
-  }
-
-  isFailed(): boolean {
-    return this.value === PaymentTransactionStatusEnum.FAILED;
-  }
+  equals(other: PaymentTransactionStatus): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

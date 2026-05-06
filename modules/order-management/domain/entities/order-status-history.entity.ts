@@ -1,4 +1,6 @@
 import { OrderStatus } from "../value-objects";
+import { DomainValidationError } from "../errors/order-management.errors";
+
 
 export interface OrderStatusHistoryProps {
   historyId: number | null;
@@ -6,8 +8,7 @@ export interface OrderStatusHistoryProps {
   fromStatus?: OrderStatus;
   toStatus: OrderStatus;
   changedBy?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  changedAt: Date;
 }
 
 export interface OrderStatusHistoryDTO {
@@ -16,29 +17,34 @@ export interface OrderStatusHistoryDTO {
   fromStatus?: string;
   toStatus: string;
   changedBy?: string;
-  createdAt: string;
-  updatedAt: string;
+  changedAt: string;
+  isInitialStatus: boolean;
 }
 
 export class OrderStatusHistory {
-  private constructor(private props: OrderStatusHistoryProps) {}
+  private constructor(private props: OrderStatusHistoryProps) {
+    OrderStatusHistory.validate(props);
+  }
 
   static create(
-    params: Omit<
-      OrderStatusHistoryProps,
-      "historyId" | "createdAt" | "updatedAt"
-    >,
+    params: Omit<OrderStatusHistoryProps, "historyId" | "changedAt">,
   ): OrderStatusHistory {
     return new OrderStatusHistory({
       ...params,
       historyId: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      changedAt: new Date(),
     });
   }
 
   static fromPersistence(props: OrderStatusHistoryProps): OrderStatusHistory {
     return new OrderStatusHistory(props);
+  }
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: OrderStatusHistoryProps): void {
+    if (!props.orderId || props.orderId.trim().length === 0) {
+      throw new DomainValidationError("Order ID is required");
+    }
   }
 
   get historyId(): number | null {
@@ -61,12 +67,8 @@ export class OrderStatusHistory {
     return this.props.changedBy;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
+  get changedAt(): Date {
+    return this.props.changedAt;
   }
 
   isInitialStatus(): boolean {
@@ -87,8 +89,8 @@ export class OrderStatusHistory {
       fromStatus: entity.props.fromStatus?.getValue(),
       toStatus: entity.props.toStatus.getValue(),
       changedBy: entity.props.changedBy,
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
+      changedAt: entity.props.changedAt.toISOString(),
+      isInitialStatus: entity.isInitialStatus(),
     };
   }
 }

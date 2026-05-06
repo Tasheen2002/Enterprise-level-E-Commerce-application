@@ -1,9 +1,12 @@
 import { OrderItem } from "../entities/order-item.entity";
+import { OrderId } from "../value-objects/order-id.vo";
+import { OrderItemId } from "../value-objects/order-item-id.vo";
 
 export interface OrderItemQueryOptions {
   limit?: number;
   offset?: number;
-  sortBy?: "createdAt" | "quantity" | "price";
+  // "id" yields stable insertion-ordered results (no createdAt column on this table).
+  sortBy?: "id" | "quantity" | "price";
   sortOrder?: "asc" | "desc";
 }
 
@@ -11,30 +14,30 @@ export interface IOrderItemRepository {
   // Basic CRUD
   save(orderItem: OrderItem): Promise<void>;
   saveAll(orderItems: OrderItem[]): Promise<void>;
-  delete(orderItemId: string): Promise<void>;
-  deleteByOrderId(orderId: string): Promise<void>;
+  delete(orderItemId: OrderItemId): Promise<void>;
+  deleteByOrderId(orderId: OrderId): Promise<void>;
 
   // Finders
-  findById(orderItemId: string): Promise<OrderItem | null>;
+  findById(orderItemId: OrderItemId): Promise<OrderItem | null>;
   findByOrderId(
-    orderId: string,
+    orderId: OrderId,
     options?: OrderItemQueryOptions,
   ): Promise<OrderItem[]>;
   findByVariantId(
     variantId: string,
     options?: OrderItemQueryOptions,
   ): Promise<OrderItem[]>;
-  findGiftItems(orderId: string): Promise<OrderItem[]>;
+  findGiftItems(orderId: OrderId): Promise<OrderItem[]>;
 
   // Queries
-  countByOrderId(orderId: string): Promise<number>;
+  countByOrderId(orderId: OrderId): Promise<number>;
   countByVariantId(variantId: string): Promise<number>;
   getTotalQuantityByVariantId(variantId: string): Promise<number>;
 
   // Existence checks
-  exists(orderItemId: string): Promise<boolean>;
+  exists(orderItemId: OrderItemId): Promise<boolean>;
   existsByOrderIdAndVariantId(
-    orderId: string,
+    orderId: OrderId,
     variantId: string,
   ): Promise<boolean>;
 }

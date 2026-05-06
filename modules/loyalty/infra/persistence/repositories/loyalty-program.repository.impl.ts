@@ -24,7 +24,7 @@ export class LoyaltyProgramRepositoryImpl
   }
 
   async save(program: LoyaltyProgram): Promise<void> {
-    const data = this.dehydrate(program);
+    const data = this.toPersistence(program);
     await this.prisma.loyaltyProgram.upsert({
       where: { programId: data.programId },
       create: data,
@@ -49,14 +49,14 @@ export class LoyaltyProgramRepositoryImpl
     const record = await this.prisma.loyaltyProgram.findUnique({
       where: { programId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByName(name: string): Promise<LoyaltyProgram | null> {
     const record = await this.prisma.loyaltyProgram.findFirst({
       where: { name },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findAll(options?: LoyaltyProgramQueryOptions): Promise<PaginatedResult<LoyaltyProgram>> {
@@ -71,7 +71,7 @@ export class LoyaltyProgramRepositoryImpl
       this.prisma.loyaltyProgram.count(),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -96,7 +96,7 @@ export class LoyaltyProgramRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: {
+  private toDomain(record: {
     programId: string;
     name: string;
     earnRules: unknown;
@@ -116,7 +116,7 @@ export class LoyaltyProgramRepositoryImpl
     });
   }
 
-  private dehydrate(program: LoyaltyProgram) {
+  private toPersistence(program: LoyaltyProgram) {
     return {
       programId: program.id.getValue(),
       name: program.name,

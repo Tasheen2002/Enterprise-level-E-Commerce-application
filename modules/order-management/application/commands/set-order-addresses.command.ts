@@ -5,33 +5,14 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { OrderManagementService } from "../services/order-management.service";
 import { OrderAddressDTO } from "../../domain/entities/order-address.entity";
+import { AddressSnapshotData } from "../../domain/value-objects/address-snapshot.vo";
 
 export interface SetOrderAddressesCommand extends ICommand {
   readonly orderId: string;
-  readonly billingAddress: {
-    readonly firstName: string;
-    readonly lastName: string;
-    readonly addressLine1: string;
-    readonly addressLine2?: string;
-    readonly city: string;
-    readonly state: string;
-    readonly postalCode: string;
-    readonly country: string;
-    readonly phone?: string;
-    readonly email?: string;
-  };
-  readonly shippingAddress: {
-    readonly firstName: string;
-    readonly lastName: string;
-    readonly addressLine1: string;
-    readonly addressLine2?: string;
-    readonly city: string;
-    readonly state: string;
-    readonly postalCode: string;
-    readonly country: string;
-    readonly phone?: string;
-    readonly email?: string;
-  };
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
+  readonly billingAddress: Readonly<AddressSnapshotData>;
+  readonly shippingAddress: Readonly<AddressSnapshotData>;
 }
 
 export class SetOrderAddressesHandler implements ICommandHandler<
@@ -47,6 +28,8 @@ export class SetOrderAddressesHandler implements ICommandHandler<
       command.orderId,
       command.billingAddress,
       command.shippingAddress,
+      command.requestingUserId,
+      command.isStaff,
     );
     return CommandResult.success(orderAddress);
   }

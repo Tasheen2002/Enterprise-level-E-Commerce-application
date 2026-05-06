@@ -1,13 +1,17 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { LoyaltyController } from "../controllers/loyalty.controller";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   RolePermissions,
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateQuery } from "../validation/validator";
+import {
+  successResponse,
+} from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   createLoyaltyProgramSchema,
   awardPointsSchema,
@@ -19,6 +23,14 @@ import {
   loyaltyAccountResponseSchema,
   loyaltyTransactionResponseSchema,
 } from "../validation/loyalty.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createLoyaltyProgramBodyJson = toJsonSchema(createLoyaltyProgramSchema);
+const awardPointsBodyJson = toJsonSchema(awardPointsSchema);
+const redeemPointsBodyJson = toJsonSchema(redeemPointsSchema);
+const adjustPointsBodyJson = toJsonSchema(adjustPointsSchema);
+const getAccountQueryJson = toJsonSchema(getAccountQuerySchema);
+const listTransactionsQueryJson = toJsonSchema(listTransactionsQuerySchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -39,33 +51,15 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/programs",
     {
-      preValidation: [validateBody(createLoyaltyProgramSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createLoyaltyProgramSchema)],
       schema: {
         description: "Create a new loyalty program — Admin only.",
         tags: ["Loyalty Programs"],
         summary: "Create Loyalty Program",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["name", "earnRules", "burnRules", "tiers"],
-          properties: {
-            name: { type: "string" },
-            earnRules: { type: "array", items: { type: "object" } },
-            burnRules: { type: "array", items: { type: "object" } },
-            tiers: { type: "array", items: { type: "object" } },
-          },
-        },
+        body: createLoyaltyProgramBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: loyaltyProgramResponseSchema,
-            },
-          },
+          201: successResponse(loyaltyProgramResponseSchema, 201),
         },
       },
     },
@@ -81,18 +75,10 @@ export async function loyaltyRoutes(
         tags: ["Loyalty Programs"],
         summary: "List Loyalty Programs",
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: loyaltyProgramResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: loyaltyProgramResponseSchema,
+          }),
         },
       },
     },
@@ -104,29 +90,15 @@ export async function loyaltyRoutes(
     "/loyalty/account",
     {
       preValidation: [validateQuery(getAccountQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get loyalty account details for a user.",
         tags: ["Loyalty Accounts"],
         summary: "Get Loyalty Account",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
+        querystring: getAccountQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: loyaltyAccountResponseSchema,
-            },
-          },
+          200: successResponse(loyaltyAccountResponseSchema),
         },
       },
     },
@@ -137,34 +109,15 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/points/award",
     {
-      preValidation: [validateBody(awardPointsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(awardPointsSchema)],
       schema: {
         description: "Award loyalty points to a customer — Staff/Admin only.",
         tags: ["Loyalty Transactions"],
         summary: "Award Loyalty Points",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["userId", "points", "reason"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            points: { type: "number", minimum: 1 },
-            reason: { type: "string" },
-            orderId: { type: "string", format: "uuid" },
-            description: { type: "string" },
-          },
-        },
+        body: awardPointsBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: loyaltyTransactionResponseSchema,
-            },
-          },
+          201: successResponse(loyaltyTransactionResponseSchema, 201),
         },
       },
     },
@@ -175,33 +128,15 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/points/redeem",
     {
-      preValidation: [validateBody(redeemPointsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(redeemPointsSchema)],
       schema: {
         description: "Redeem loyalty points for a discount or reward.",
         tags: ["Loyalty Transactions"],
         summary: "Redeem Loyalty Points",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["userId", "points"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            points: { type: "number", minimum: 1 },
-            orderId: { type: "string", format: "uuid" },
-            reason: { type: "string" },
-          },
-        },
+        body: redeemPointsBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: loyaltyTransactionResponseSchema,
-            },
-          },
+          201: successResponse(loyaltyTransactionResponseSchema, 201),
         },
       },
     },
@@ -212,34 +147,15 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/points/adjust",
     {
-      preValidation: [validateBody(adjustPointsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(adjustPointsSchema)],
       schema: {
         description: "Manually adjust loyalty points for a user — Admin only.",
         tags: ["Loyalty Transactions"],
         summary: "Adjust Loyalty Points",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["userId", "points", "isAddition", "reason", "createdBy"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            points: { type: "number", minimum: 1 },
-            isAddition: { type: "boolean" },
-            reason: { type: "string" },
-            createdBy: { type: "string" },
-          },
-        },
+        body: adjustPointsBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: loyaltyTransactionResponseSchema,
-            },
-          },
+          200: successResponse(loyaltyTransactionResponseSchema),
         },
       },
     },
@@ -251,32 +167,18 @@ export async function loyaltyRoutes(
     "/loyalty/transactions",
     {
       preValidation: [validateQuery(listTransactionsQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "List loyalty transaction history filtered by account or order.",
         tags: ["Loyalty Transactions"],
         summary: "List Loyalty Transactions",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            accountId: { type: "string", format: "uuid" },
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        querystring: listTransactionsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: loyaltyTransactionResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: loyaltyTransactionResponseSchema,
+          }),
         },
       },
     },

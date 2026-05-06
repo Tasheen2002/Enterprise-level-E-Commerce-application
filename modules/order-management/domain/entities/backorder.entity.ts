@@ -4,6 +4,7 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../errors/order-management.errors";
+import { OrderItemId } from "../value-objects/order-item-id.vo";
 
 export class BackorderCreatedEvent extends DomainEvent {
   constructor(
@@ -60,44 +61,35 @@ export class BackorderNotifiedEvent extends DomainEvent {
 }
 
 export interface BackorderProps {
-  orderItemId: string;
+  orderItemId: OrderItemId;
   promisedEta?: Date;
   notifiedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface BackorderDTO {
   orderItemId: string;
   promisedEta?: string;
   notifiedAt?: string;
-  createdAt: string;
-  updatedAt: string;
+  hasPromisedEta: boolean;
+  isCustomerNotified: boolean;
 }
 
 export class Backorder extends AggregateRoot {
   private constructor(private props: BackorderProps) {
     super();
+    Backorder.validate(props);
   }
 
-  static create(
-    params: Omit<BackorderProps, "createdAt" | "updatedAt">,
-  ): Backorder {
-    Backorder.validateOrderItemId(params.orderItemId);
-
-    if (params.promisedEta && params.promisedEta < new Date()) {
+  static create(params: BackorderProps): Backorder {
+    if (params.promisedEta && params.promisedEta <= new Date()) {
       throw new DomainValidationError("Promised ETA must be in the future");
     }
 
-    const backorder = new Backorder({
-      ...params,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const backorder = new Backorder({ ...params });
 
     backorder.addDomainEvent(
       new BackorderCreatedEvent(
-        backorder.props.orderItemId,
+        backorder.props.orderItemId.getValue(),
         backorder.props.promisedEta?.toISOString(),
       ),
     );
@@ -109,13 +101,13 @@ export class Backorder extends AggregateRoot {
     return new Backorder(props);
   }
 
-  private static validateOrderItemId(id: string): void {
-    if (!id || id.trim().length === 0) {
+  private static validate(props: BackorderProps): void {
+    if (!props.orderItemId) {
       throw new DomainValidationError("Order item ID is required");
     }
   }
 
-  get orderItemId(): string {
+  get orderItemId(): OrderItemId {
     return this.props.orderItemId;
   }
 
@@ -127,14 +119,6 @@ export class Backorder extends AggregateRoot {
     return this.props.notifiedAt;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
   hasPromisedEta(): boolean {
     return !!this.props.promisedEta;
   }
@@ -144,15 +128,14 @@ export class Backorder extends AggregateRoot {
   }
 
   updatePromisedEta(eta: Date): void {
-    if (eta < new Date()) {
-      throw new DomainValidationError("Promised ETA cannot be in the past");
+    if (eta <= new Date()) {
+      throw new DomainValidationError("Promised ETA must be in the future");
     }
     this.props.promisedEta = eta;
-    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new BackorderEtaUpdatedEvent(
-        this.props.orderItemId,
+        this.props.orderItemId.getValue(),
         eta.toISOString(),
       ),
     );
@@ -163,27 +146,26 @@ export class Backorder extends AggregateRoot {
       throw new InvalidOperationError("Customer already notified");
     }
     this.props.notifiedAt = new Date();
-    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new BackorderNotifiedEvent(
-        this.props.orderItemId,
+        this.props.orderItemId.getValue(),
         this.props.notifiedAt.toISOString(),
       ),
     );
   }
 
   equals(other: Backorder): boolean {
-    return this.props.orderItemId === other.props.orderItemId;
+    return this.props.orderItemId.equals(other.props.orderItemId);
   }
 
   static toDTO(entity: Backorder): BackorderDTO {
     return {
-      orderItemId: entity.props.orderItemId,
+      orderItemId: entity.props.orderItemId.getValue(),
       promisedEta: entity.props.promisedEta?.toISOString(),
       notifiedAt: entity.props.notifiedAt?.toISOString(),
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
+      hasPromisedEta: entity.hasPromisedEta(),
+      isCustomerNotified: entity.isCustomerNotified(),
     };
   }
 }

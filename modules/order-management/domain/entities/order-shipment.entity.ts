@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { ShipmentId } from "../value-objects/shipment-id.vo";
 import {
   DomainValidationError,
   ShipmentAlreadyShippedError,
@@ -6,9 +6,8 @@ import {
   InvalidOperationError,
 } from "../errors/order-management.errors";
 
-
 export interface OrderShipmentProps {
-  shipmentId: string;
+  shipmentId: ShipmentId;
   orderId: string;
   carrier?: string;
   service?: string;
@@ -17,8 +16,6 @@ export interface OrderShipmentProps {
   pickupLocationId?: string;
   shippedAt?: Date;
   deliveredAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface OrderShipmentDTO {
@@ -31,37 +28,21 @@ export interface OrderShipmentDTO {
   pickupLocationId?: string;
   shippedAt?: string;
   deliveredAt?: string;
-  createdAt: string;
-  updatedAt: string;
+  isShipped: boolean;
+  isDelivered: boolean;
 }
 
 export class OrderShipment {
-  private constructor(private props: OrderShipmentProps) {}
+  private constructor(private props: OrderShipmentProps) {
+    OrderShipment.validate(props);
+  }
 
   static create(
-    params: Omit<OrderShipmentProps, "shipmentId" | "createdAt" | "updatedAt">,
+    params: Omit<OrderShipmentProps, "shipmentId">,
   ): OrderShipment {
-    if (params.deliveredAt && !params.shippedAt) {
-      throw new DomainValidationError(
-        "Cannot have deliveredAt without shippedAt",
-      );
-    }
-
-    if (
-      params.deliveredAt &&
-      params.shippedAt &&
-      params.deliveredAt < params.shippedAt
-    ) {
-      throw new DomainValidationError(
-        "Delivered date cannot be before shipped date",
-      );
-    }
-
     return new OrderShipment({
       ...params,
-      shipmentId: randomUUID(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      shipmentId: ShipmentId.create(),
     });
   }
 
@@ -69,7 +50,25 @@ export class OrderShipment {
     return new OrderShipment(props);
   }
 
-  get shipmentId(): string {
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: OrderShipmentProps): void {
+    if (props.deliveredAt && !props.shippedAt) {
+      throw new DomainValidationError(
+        "Cannot have deliveredAt without shippedAt",
+      );
+    }
+    if (
+      props.deliveredAt &&
+      props.shippedAt &&
+      props.deliveredAt < props.shippedAt
+    ) {
+      throw new DomainValidationError(
+        "Delivered date cannot be before shipped date",
+      );
+    }
+  }
+
+  get shipmentId(): ShipmentId {
     return this.props.shipmentId;
   }
 
@@ -105,18 +104,6 @@ export class OrderShipment {
     return this.props.deliveredAt;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  hasGiftReceipt(): boolean {
-    return this.props.giftReceipt;
-  }
-
   isShipped(): boolean {
     return !!this.props.shippedAt;
   }
@@ -131,17 +118,26 @@ export class OrderShipment {
     trackingNumber: string,
   ): void {
     if (this.props.shippedAt) {
-      throw new ShipmentAlreadyShippedError(this.props.shipmentId);
+      throw new ShipmentAlreadyShippedError(this.props.shipmentId.getValue());
+    }
+    if (!carrier || carrier.trim().length === 0) {
+      throw new DomainValidationError("Carrier is required to mark shipped");
+    }
+    if (!service || service.trim().length === 0) {
+      throw new DomainValidationError("Service is required to mark shipped");
+    }
+    if (!trackingNumber || trackingNumber.trim().length === 0) {
+      throw new DomainValidationError("Tracking number is required to mark shipped");
     }
 
     this.props.carrier = carrier;
     this.props.service = service;
     this.props.trackingNumber = trackingNumber;
     this.props.shippedAt = new Date();
-    this.props.updatedAt = new Date();
   }
 
-  markAsDelivered(): void {
+
+  markAsDelivered(deliveredAt?: Date): void {
     if (!this.props.shippedAt) {
       throw new InvalidOperationError(
         "Cannot mark as delivered before shipped",
@@ -149,35 +145,53 @@ export class OrderShipment {
     }
 
     if (this.props.deliveredAt) {
-      throw new ShipmentAlreadyDeliveredError(this.props.shipmentId);
+      throw new ShipmentAlreadyDeliveredError(this.props.shipmentId.getValue());
     }
 
-    this.props.deliveredAt = new Date();
-    this.props.updatedAt = new Date();
+    const when = deliveredAt ?? new Date();
+
+    if (when < this.props.shippedAt) {
+      throw new DomainValidationError(
+        "Delivered date cannot be before shipped date",
+      );
+    }
+    if (when > new Date()) {
+      throw new DomainValidationError(
+        "Delivered date cannot be in the future",
+      );
+    }
+
+    this.props.deliveredAt = when;
   }
 
   updateTrackingNumber(trackingNumber: string): void {
+    if (!trackingNumber || trackingNumber.trim().length === 0) {
+      throw new DomainValidationError("Tracking number cannot be empty");
+    }
     this.props.trackingNumber = trackingNumber;
-    this.props.updatedAt = new Date();
   }
 
   updateCarrier(carrier: string): void {
+    if (!carrier || carrier.trim().length === 0) {
+      throw new DomainValidationError("Carrier cannot be empty");
+    }
     this.props.carrier = carrier;
-    this.props.updatedAt = new Date();
   }
 
   updateService(service: string): void {
+    if (!service || service.trim().length === 0) {
+      throw new DomainValidationError("Service cannot be empty");
+    }
     this.props.service = service;
-    this.props.updatedAt = new Date();
   }
 
   equals(other: OrderShipment): boolean {
-    return this.props.shipmentId === other.props.shipmentId;
+    return this.props.shipmentId.equals(other.props.shipmentId);
   }
 
   static toDTO(entity: OrderShipment): OrderShipmentDTO {
     return {
-      shipmentId: entity.props.shipmentId,
+      shipmentId: entity.props.shipmentId.getValue(),
       orderId: entity.props.orderId,
       carrier: entity.props.carrier,
       service: entity.props.service,
@@ -186,8 +200,8 @@ export class OrderShipment {
       pickupLocationId: entity.props.pickupLocationId,
       shippedAt: entity.props.shippedAt?.toISOString(),
       deliveredAt: entity.props.deliveredAt?.toISOString(),
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
+      isShipped: entity.isShipped(),
+      isDelivered: entity.isDelivered(),
     };
   }
 }

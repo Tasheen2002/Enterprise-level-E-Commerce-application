@@ -4,6 +4,7 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../errors/order-management.errors";
+import { OrderItemId } from "../value-objects/order-item-id.vo";
 
 export class PreorderCreatedEvent extends DomainEvent {
   constructor(
@@ -60,44 +61,36 @@ export class PreorderNotifiedEvent extends DomainEvent {
 }
 
 export interface PreorderProps {
-  orderItemId: string;
+  orderItemId: OrderItemId;
   releaseDate?: Date;
   notifiedAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface PreorderDTO {
   orderItemId: string;
   releaseDate?: string;
   notifiedAt?: string;
-  createdAt: string;
-  updatedAt: string;
+  hasReleaseDate: boolean;
+  isCustomerNotified: boolean;
+  isReleased: boolean;
 }
 
 export class Preorder extends AggregateRoot {
   private constructor(private props: PreorderProps) {
     super();
+    Preorder.validate(props);
   }
 
-  static create(
-    params: Omit<PreorderProps, "createdAt" | "updatedAt">,
-  ): Preorder {
-    Preorder.validateOrderItemId(params.orderItemId);
-
-    if (params.releaseDate && params.releaseDate < new Date()) {
+  static create(params: PreorderProps): Preorder {
+    if (params.releaseDate && params.releaseDate <= new Date()) {
       throw new DomainValidationError("Release date must be in the future");
     }
 
-    const preorder = new Preorder({
-      ...params,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const preorder = new Preorder({ ...params });
 
     preorder.addDomainEvent(
       new PreorderCreatedEvent(
-        preorder.props.orderItemId,
+        preorder.props.orderItemId.getValue(),
         preorder.props.releaseDate?.toISOString(),
       ),
     );
@@ -109,13 +102,16 @@ export class Preorder extends AggregateRoot {
     return new Preorder(props);
   }
 
-  private static validateOrderItemId(id: string): void {
-    if (!id || id.trim().length === 0) {
+  // Always-applicable invariants. Run on every construction path.
+  // OrderItemId VO already validates non-empty in its base class — kept here
+  // for the explicit "is required" message on the props-level check.
+  private static validate(props: PreorderProps): void {
+    if (!props.orderItemId) {
       throw new DomainValidationError("Order item ID is required");
     }
   }
 
-  get orderItemId(): string {
+  get orderItemId(): OrderItemId {
     return this.props.orderItemId;
   }
 
@@ -125,14 +121,6 @@ export class Preorder extends AggregateRoot {
 
   get notifiedAt(): Date | undefined {
     return this.props.notifiedAt;
-  }
-
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
   }
 
   hasReleaseDate(): boolean {
@@ -149,11 +137,10 @@ export class Preorder extends AggregateRoot {
 
   updateReleaseDate(releaseDate: Date): void {
     this.props.releaseDate = releaseDate;
-    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new PreorderReleaseDateUpdatedEvent(
-        this.props.orderItemId,
+        this.props.orderItemId.getValue(),
         releaseDate.toISOString(),
       ),
     );
@@ -171,27 +158,27 @@ export class Preorder extends AggregateRoot {
     }
 
     this.props.notifiedAt = new Date();
-    this.props.updatedAt = new Date();
 
     this.addDomainEvent(
       new PreorderNotifiedEvent(
-        this.props.orderItemId,
+        this.props.orderItemId.getValue(),
         this.props.notifiedAt.toISOString(),
       ),
     );
   }
 
   equals(other: Preorder): boolean {
-    return this.props.orderItemId === other.props.orderItemId;
+    return this.props.orderItemId.equals(other.props.orderItemId);
   }
 
   static toDTO(entity: Preorder): PreorderDTO {
     return {
-      orderItemId: entity.props.orderItemId,
+      orderItemId: entity.props.orderItemId.getValue(),
       releaseDate: entity.props.releaseDate?.toISOString(),
       notifiedAt: entity.props.notifiedAt?.toISOString(),
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
+      hasReleaseDate: entity.hasReleaseDate(),
+      isCustomerNotified: entity.isCustomerNotified(),
+      isReleased: entity.isReleased(),
     };
   }
 }

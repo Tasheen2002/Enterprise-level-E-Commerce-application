@@ -13,7 +13,7 @@ export class GetActivePromotionsHandler implements IQueryHandler<
 > {
   constructor(private readonly promotionService: PromotionService) {}
 
-  async handle(): Promise<PromotionDTO[]> {
+  async handle(_query: GetActivePromotionsQuery): Promise<PromotionDTO[]> {
     return this.promotionService.getActivePromotions();
   }
 }

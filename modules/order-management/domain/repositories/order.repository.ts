@@ -1,4 +1,5 @@
 import { Order } from "../entities/order.entity";
+import { OrderStatusHistory } from "../entities/order-status-history.entity";
 import { OrderId } from "../value-objects/order-id.vo";
 import { OrderNumber } from "../value-objects/order-number.vo";
 import { OrderStatus } from "../value-objects/order-status.vo";
@@ -22,6 +23,14 @@ export interface OrderFilterOptions {
 export interface IOrderRepository {
   // Basic CRUD
   save(order: Order): Promise<void>;
+  // Atomically save the order aggregate AND its initial status-history audit
+  // entry in the same DB transaction. Used by `createOrder` so a failure
+  // between persisting the order and persisting its first audit row can't
+  // leave a CREATED-but-no-history orphan.
+  saveWithStatusHistory(
+    order: Order,
+    statusHistory: OrderStatusHistory,
+  ): Promise<void>;
   delete(orderId: OrderId): Promise<void>;
 
   // Finders
