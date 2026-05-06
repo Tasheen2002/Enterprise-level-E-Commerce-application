@@ -1,6 +1,6 @@
 import { SizeGuide } from "../entities/size-guide.entity";
 import { SizeGuideId } from "../value-objects/size-guide-id.vo";
-import { Region } from "../enums/product-catalog.enums";
+import { Region } from "../value-objects";
 
 export interface ISizeGuideRepository {
   save(sizeGuide: SizeGuide): Promise<void>;
