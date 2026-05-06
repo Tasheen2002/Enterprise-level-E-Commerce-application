@@ -28,39 +28,7 @@ export class AppointmentController {
     private readonly getLocationAppointmentsHandler: GetLocationAppointmentsHandler,
   ) {}
 
-  async createAppointment(
-    request: AuthenticatedRequest<{ Body: CreateAppointmentBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { userId, type, locationId, startAt, endAt, notes } = request.body;
-      const result = await this.createAppointmentHandler.handle({
-        userId,
-        type,
-        locationId,
-        startAt,
-        endAt,
-        notes,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Appointment created successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getAppointment(
-    request: AuthenticatedRequest<{ Params: AppointmentIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const dto = await this.getAppointmentHandler.handle({
-        appointmentId: request.params.appointmentId,
-      });
-      return ResponseHelper.ok(reply, "Appointment retrieved successfully", dto);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
+  // ── Reads (queries) ────────────────────────────────────────────────
 
   async getUserAppointments(
     request: AuthenticatedRequest<{ Params: UserIdParams; Querystring: PaginationQuery }>,
@@ -85,6 +53,42 @@ export class AppointmentController {
       const { limit, offset } = request.query;
       const result = await this.getLocationAppointmentsHandler.handle({ locationId, limit, offset });
       return ResponseHelper.ok(reply, "Location appointments retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getAppointment(
+    request: AuthenticatedRequest<{ Params: AppointmentIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const dto = await this.getAppointmentHandler.handle({
+        appointmentId: request.params.appointmentId,
+      });
+      return ResponseHelper.ok(reply, "Appointment retrieved successfully", dto);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
+
+  async createAppointment(
+    request: AuthenticatedRequest<{ Body: CreateAppointmentBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId, type, locationId, startAt, endAt, notes } = request.body;
+      const result = await this.createAppointmentHandler.handle({
+        userId,
+        type,
+        locationId,
+        startAt,
+        endAt,
+        notes,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Appointment created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
