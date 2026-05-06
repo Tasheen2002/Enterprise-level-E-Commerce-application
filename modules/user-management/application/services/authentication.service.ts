@@ -5,6 +5,7 @@ import { IJwtService } from "./ijwt.service";
 import { Email } from "../../domain/value-objects/email.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import { User, UserDTO } from "../../domain/entities/user.entity";
+import { UserStatus } from "../../domain/value-objects/user-status.vo";
 import {
   UserNotFoundError,
   UserAlreadyExistsError,
@@ -16,7 +17,6 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors/user-management.errors";
-import { UserStatus } from "../../domain/enums/user-status.enum";
 
 // ============================================================================
 // Local param types
@@ -25,6 +25,7 @@ import { UserStatus } from "../../domain/enums/user-status.enum";
 interface LoginCredentials {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 interface RegisterUserData {
@@ -71,7 +72,51 @@ export class AuthenticationService {
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasherService,
     private readonly jwtService: IJwtService,
-  ) {}
+  ) { }
+
+  // --- Registration & login ---
+
+  async register(userData: RegisterUserData): Promise<AuthResult> {
+    const email = Email.create(userData.email);
+
+    const existingUser = await this.userRepository.findByEmail(email);
+    if (existingUser && !existingUser.isGuest) {
+      throw new UserAlreadyExistsError(userData.email);
+    }
+
+    const validation = this.passwordHasher.validatePasswordStrength(
+      userData.password,
+    );
+    if (!validation.isValid) {
+      throw new InvalidPasswordError(
+        `Password is not strong enough: ${validation.feedback.join(", ")}`,
+      );
+    }
+
+    const passwordHash = await this.passwordHasher.hash(userData.password);
+    if (!passwordHash) {
+      throw new InvalidOperationError("Failed to hash password");
+    }
+
+    let user: User;
+    if (existingUser && existingUser.isGuest) {
+      existingUser.convertFromGuest(userData.email, passwordHash);
+      if (userData.phone) existingUser.updatePhone(userData.phone);
+      user = existingUser;
+    } else {
+      user = User.create({
+        email: userData.email,
+        passwordHash,
+        phone: userData.phone,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        isGuest: false,
+      });
+    }
+
+    await this.userRepository.save(user);
+    return this.buildAuthResult(user);
+  }
 
   async login(credentials: LoginCredentials): Promise<LoginResult> {
     const email = Email.create(credentials.email);
@@ -90,7 +135,7 @@ export class AuthenticationService {
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
     if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
-    return this.buildAuthResult(user);
+    return this.buildAuthResult(user, credentials.rememberMe);
   }
 
   async loginAsGuest(email?: string): Promise<AuthResult> {
@@ -111,17 +156,36 @@ export class AuthenticationService {
         await this.userRepository.save(user);
       }
     } else {
-      const guestEmail = this.generateGuestEmail();
-      user = User.create({
-        email: guestEmail,
-        passwordHash: "",
-        isGuest: true,
-      });
+      user = User.createGuest();
       await this.userRepository.save(user);
     }
 
     return this.buildAuthResult(user);
   }
+
+  async logout(userId: string, accessToken?: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+
+    if (accessToken) {
+      let payload;
+      try {
+        payload = this.jwtService.verifyAccess(accessToken);
+      } catch {
+        payload = null;
+      }
+      if (payload && payload.userId !== userId) {
+        throw new DomainValidationError("Token does not belong to this user");
+      }
+    }
+  }
+
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    const user = await this.verifyUserPassword(userId, password);
+    await this.userRepository.delete(user.id);
+  }
+
+  // --- Token operations ---
 
   async refreshToken(refreshToken: string): Promise<RefreshTokenResult> {
     let payload;
@@ -177,25 +241,11 @@ export class AuthenticationService {
     return User.toDTO(user);
   }
 
-  async logout(userId: string, accessToken?: string): Promise<void> {
-    const user = await this.userRepository.findById(UserId.fromString(userId));
-    if (!user) throw new UserNotFoundError(userId);
-
-    if (accessToken) {
-      let payload;
-      try {
-        payload = this.jwtService.verifyAccess(accessToken);
-      } catch {
-        payload = null;
-      }
-      if (payload && payload.userId !== userId) {
-        throw new DomainValidationError("Token does not belong to this user");
-      }
-    }
-
-    user.recordLogout();
-    await this.userRepository.save(user);
+  getAccessTokenExpirationTimeInSeconds(): number {
+    return this.jwtService.getAccessExpiresInSeconds();
   }
+
+  // --- Credential management ---
 
   async changePassword(
     userId: string,
@@ -204,10 +254,12 @@ export class AuthenticationService {
   ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.isGuest)
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot change password");
-    if (!user.passwordHash)
+    }
+    if (!user.passwordHash) {
       throw new InvalidOperationError("User has no password set");
+    }
 
     const isCurrentPasswordValid = await this.passwordHasher.verify(
       currentPassword,
@@ -215,8 +267,7 @@ export class AuthenticationService {
     );
     if (!isCurrentPasswordValid) throw new InvalidCredentialsError();
 
-    const validation =
-      this.passwordHasher.validatePasswordStrength(newPassword);
+    const validation = this.passwordHasher.validatePasswordStrength(newPassword);
     if (!validation.isValid) {
       throw new InvalidPasswordError(
         `Password is not strong enough: ${validation.feedback.join(", ")}`,
@@ -224,8 +275,9 @@ export class AuthenticationService {
     }
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
-    if (!newPasswordHash)
+    if (!newPasswordHash) {
       throw new InvalidOperationError("Failed to hash password");
+    }
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
@@ -238,10 +290,12 @@ export class AuthenticationService {
   ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.isGuest)
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot change email");
-    if (!user.passwordHash)
+    }
+    if (!user.passwordHash) {
       throw new InvalidOperationError("User has no password set");
+    }
 
     const isPasswordValid = await this.passwordHasher.verify(
       password,
@@ -259,62 +313,6 @@ export class AuthenticationService {
     await this.userRepository.save(user);
   }
 
-  private async verifyUserPassword(userId: string, password: string): Promise<User> {
-    const user = await this.userRepository.findById(UserId.fromString(userId));
-    if (!user) throw new UserNotFoundError(userId);
-    if (!user.passwordHash)
-      throw new InvalidOperationError("User has no password set");
-
-    const isPasswordValid = await this.passwordHasher.verify(
-      password,
-      user.passwordHash,
-    );
-    if (!isPasswordValid) throw new InvalidCredentialsError();
-
-    return user;
-  }
-
-  async register(userData: RegisterUserData): Promise<AuthResult> {
-    const email = Email.create(userData.email);
-
-    const existingUser = await this.userRepository.findByEmail(email);
-    if (existingUser && !existingUser.isGuest) {
-      throw new UserAlreadyExistsError(userData.email);
-    }
-
-    const validation = this.passwordHasher.validatePasswordStrength(
-      userData.password,
-    );
-    if (!validation.isValid) {
-      throw new InvalidPasswordError(
-        `Password is not strong enough: ${validation.feedback.join(", ")}`,
-      );
-    }
-
-    const passwordHash = await this.passwordHasher.hash(userData.password);
-    if (!passwordHash)
-      throw new InvalidOperationError("Failed to hash password");
-
-    let user: User;
-    if (existingUser && existingUser.isGuest) {
-      existingUser.convertFromGuest(userData.email, passwordHash);
-      if (userData.phone) existingUser.updatePhone(userData.phone);
-      user = existingUser;
-    } else {
-      user = User.create({
-        email: userData.email,
-        passwordHash,
-        phone: userData.phone,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        isGuest: false,
-      });
-    }
-
-    await this.userRepository.save(user);
-    return this.buildAuthResult(user);
-  }
-
   async initiatePasswordReset(
     email: string,
   ): Promise<{ exists: boolean; resetToken?: string; userId?: string }> {
@@ -330,11 +328,11 @@ export class AuthenticationService {
     const emailVo = Email.create(email);
     const user = await this.userRepository.findByEmail(emailVo);
     if (!user) throw new UserNotFoundError(email);
-    if (user.isGuest)
+    if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot reset password");
+    }
 
-    const validation =
-      this.passwordHasher.validatePasswordStrength(newPassword);
+    const validation = this.passwordHasher.validatePasswordStrength(newPassword);
     if (!validation.isValid) {
       throw new InvalidPasswordError(
         `Password is not strong enough: ${validation.feedback.join(", ")}`,
@@ -342,10 +340,21 @@ export class AuthenticationService {
     }
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
-    if (!newPasswordHash)
+    if (!newPasswordHash) {
       throw new InvalidOperationError("Failed to hash password");
+    }
 
     user.updatePassword(newPasswordHash);
+    await this.userRepository.save(user);
+  }
+
+  // --- Email verification & lookups ---
+
+  async verifyEmail(userId: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (user.emailVerified) throw new EmailAlreadyVerifiedError();
+    user.verifyEmail();
     await this.userRepository.save(user);
   }
 
@@ -358,23 +367,49 @@ export class AuthenticationService {
     return { userId: user.id.getValue(), emailVerified: user.emailVerified };
   }
 
-  async verifyEmail(userId: string): Promise<void> {
-    const user = await this.userRepository.findById(UserId.fromString(userId));
-    if (!user) throw new UserNotFoundError(userId);
-    if (user.emailVerified) throw new EmailAlreadyVerifiedError();
-    user.verifyEmail();
-    await this.userRepository.save(user);
-  }
+  // Mirrors initiatePasswordReset: service generates the token, handler stores
+  // it via the token blacklist port. Token must never be returned in the
+  // CommandResult — only sent through the email notification side-effect.
+  async resendEmailVerification(
+    email: string,
+  ): Promise<
+    | { alreadyVerified: true }
+    | { alreadyVerified: false; verificationToken: string; userId: string }
+  > {
+    const emailVo = Email.create(email);
+    const user = await this.userRepository.findByEmail(emailVo);
+    if (!user || user.isGuest) throw new UserNotFoundError();
+    if (user.emailVerified) return { alreadyVerified: true };
 
-  getAccessTokenExpirationTimeInSeconds(): number {
-    return this.jwtService.getAccessExpiresInSeconds();
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    return {
+      alreadyVerified: false,
+      verificationToken,
+      userId: user.id.getValue(),
+    };
   }
 
   // ============================================================================
   // Private helpers
   // ============================================================================
 
-  private buildAuthResult(user: User): AuthResult {
+  private async verifyUserPassword(userId: string, password: string): Promise<User> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (!user.passwordHash) {
+      throw new InvalidOperationError("User has no password set");
+    }
+
+    const isPasswordValid = await this.passwordHasher.verify(
+      password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) throw new InvalidCredentialsError();
+
+    return user;
+  }
+
+  private buildAuthResult(user: User, rememberMe: boolean = false): AuthResult {
     const base = {
       userId: user.id.getValue(),
       email: user.email.getValue(),
@@ -383,7 +418,7 @@ export class AuthenticationService {
 
     return {
       accessToken: this.jwtService.signAccess(base),
-      refreshToken: this.jwtService.signRefresh(base),
+      refreshToken: this.jwtService.signRefresh(base, rememberMe),
       user: {
         id: user.id.getValue(),
         email: user.email.getValue(),
@@ -394,16 +429,5 @@ export class AuthenticationService {
       },
       expiresIn: this.jwtService.getAccessExpiresInSeconds(),
     };
-  }
-
-  private generateGuestEmail(): string {
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    return `guest_${timestamp}_${random}@modett.com`;
-  }
-  async deleteAccount(userId: string, password: string): Promise<void> {
-    const user = await this.verifyUserPassword(userId, password);
-    user.markAsDeleted();
-    await this.userRepository.delete(user.id);
   }
 }
