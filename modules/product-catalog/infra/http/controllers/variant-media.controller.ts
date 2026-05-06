@@ -23,6 +23,13 @@ import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   VariantMediaParams,
   VariantMediaAssetParams,
+  VariantDuplicateParams,
+  AssetParams,
+  ProductVariantMediaParams,
+  ColorVariantParams,
+  SizeVariantParams,
+  UnusedAssetsQuery,
+  ProductVariantMediaQuery,
   AddMediaToVariantBody,
   SetVariantMediaBody,
   AddMultipleMediaToVariantBody,
@@ -51,6 +58,8 @@ export class VariantMediaController {
     private readonly getVariantMediaStatisticsHandler: GetVariantMediaStatisticsHandler,
   ) {}
 
+  // ── Reads ──────────────────────────────────────────────────────────────
+
   async getVariantMedia(
     request: AuthenticatedRequest<{ Params: VariantMediaParams }>,
     reply: FastifyReply,
@@ -63,104 +72,8 @@ export class VariantMediaController {
     }
   }
 
-  async addMediaToVariant(
-    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: AddMediaToVariantBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.addMediaToVariantHandler.handle({
-        variantId: request.params.variantId,
-        assetId: request.body.assetId,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Media added to variant successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async removeMediaFromVariant(
-    request: AuthenticatedRequest<{ Params: VariantMediaAssetParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.removeMediaFromVariantHandler.handle(request.params);
-      return ResponseHelper.fromCommand(reply, result, "Media removed from variant successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async removeAllVariantMedia(
-    request: AuthenticatedRequest<{ Params: VariantMediaParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.removeAllVariantMediaHandler.handle({ variantId: request.params.variantId });
-      return ResponseHelper.fromCommand(reply, result, "All variant media removed successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async setVariantMedia(
-    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: SetVariantMediaBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.setVariantMediaHandler.handle({
-        variantId: request.params.variantId,
-        assetIds: request.body.assetIds,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Variant media set successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async addMediaToMultipleVariants(
-    request: AuthenticatedRequest<{ Body: AddMediaToMultipleVariantsBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.addMediaToMultipleVariantsHandler.handle(request.body);
-      return ResponseHelper.fromCommand(reply, result, "Media added to variants successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async addMultipleMediaToVariant(
-    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: AddMultipleMediaToVariantBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.addMultipleMediaToVariantHandler.handle({
-        variantId: request.params.variantId,
-        assetIds: request.body.assetIds,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Media assets added to variant successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async duplicateVariantMedia(
-    request: AuthenticatedRequest<{ Params: { sourceVariantId: string; targetVariantId: string } }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.duplicateVariantMediaHandler.handle(request.params);
-      return ResponseHelper.fromCommand(reply, result, "Variant media duplicated successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async getProductVariantMedia(
-    request: AuthenticatedRequest<{
-      Params: { productId: string };
-      Querystring: { page?: number; limit?: number; sortBy?: "variantId" | "assetId"; sortOrder?: "asc" | "desc" };
-    }>,
+    request: AuthenticatedRequest<{ Params: ProductVariantMediaParams; Querystring: ProductVariantMediaQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -174,20 +87,8 @@ export class VariantMediaController {
     }
   }
 
-  async copyProductVariantMedia(
-    request: AuthenticatedRequest<{ Body: CopyVariantMediaBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.copyProductVariantMediaHandler.handle(request.body);
-      return ResponseHelper.fromCommand(reply, result, "Product variant media copied successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async getVariantsUsingAsset(
-    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: AssetParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -199,7 +100,7 @@ export class VariantMediaController {
   }
 
   async getAssetUsageCount(
-    request: AuthenticatedRequest<{ Params: { assetId: string } }>,
+    request: AuthenticatedRequest<{ Params: AssetParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -211,7 +112,7 @@ export class VariantMediaController {
   }
 
   async getColorVariantMedia(
-    request: AuthenticatedRequest<{ Params: { productId: string; color: string } }>,
+    request: AuthenticatedRequest<{ Params: ColorVariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -223,7 +124,7 @@ export class VariantMediaController {
   }
 
   async getSizeVariantMedia(
-    request: AuthenticatedRequest<{ Params: { productId: string; size: string } }>,
+    request: AuthenticatedRequest<{ Params: SizeVariantParams }>,
     reply: FastifyReply,
   ) {
     try {
@@ -235,7 +136,7 @@ export class VariantMediaController {
   }
 
   async getUnusedAssets(
-    request: AuthenticatedRequest<{ Querystring: { productId?: string } }>,
+    request: AuthenticatedRequest<{ Querystring: UnusedAssetsQuery }>,
     reply: FastifyReply,
   ) {
     try {
@@ -265,6 +166,113 @@ export class VariantMediaController {
     try {
       const statistics = await this.getVariantMediaStatisticsHandler.handle({ variantId: request.params.variantId });
       return ResponseHelper.ok(reply, "Variant media statistics retrieved successfully", statistics);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes ─────────────────────────────────────────────────────────────
+
+  async addMediaToVariant(
+    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: AddMediaToVariantBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.addMediaToVariantHandler.handle({
+        variantId: request.params.variantId,
+        assetId: request.body.assetId,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Media added to variant successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async addMultipleMediaToVariant(
+    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: AddMultipleMediaToVariantBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.addMultipleMediaToVariantHandler.handle({
+        variantId: request.params.variantId,
+        assetIds: request.body.assetIds,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Media assets added to variant successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async addMediaToMultipleVariants(
+    request: AuthenticatedRequest<{ Body: AddMediaToMultipleVariantsBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.addMediaToMultipleVariantsHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Media added to variants successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async duplicateVariantMedia(
+    request: AuthenticatedRequest<{ Params: VariantDuplicateParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.duplicateVariantMediaHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Variant media duplicated successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async copyProductVariantMedia(
+    request: AuthenticatedRequest<{ Body: CopyVariantMediaBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.copyProductVariantMediaHandler.handle(request.body);
+      return ResponseHelper.fromCommand(reply, result, "Product variant media copied successfully", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async setVariantMedia(
+    request: AuthenticatedRequest<{ Params: VariantMediaParams; Body: SetVariantMediaBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.setVariantMediaHandler.handle({
+        variantId: request.params.variantId,
+        assetIds: request.body.assetIds,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Variant media set successfully", undefined, 204);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async removeMediaFromVariant(
+    request: AuthenticatedRequest<{ Params: VariantMediaAssetParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.removeMediaFromVariantHandler.handle(request.params);
+      return ResponseHelper.fromCommand(reply, result, "Media removed from variant successfully", undefined, 204);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async removeAllVariantMedia(
+    request: AuthenticatedRequest<{ Params: VariantMediaParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.removeAllVariantMediaHandler.handle({ variantId: request.params.variantId });
+      return ResponseHelper.fromCommand(reply, result, "All variant media removed successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

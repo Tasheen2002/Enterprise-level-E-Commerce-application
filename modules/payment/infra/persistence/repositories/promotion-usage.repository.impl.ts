@@ -17,7 +17,7 @@ export class PromotionUsageRepositoryImpl
   }
 
   async save(usage: PromotionUsage): Promise<void> {
-    const data = this.dehydrate(usage);
+    const data = this.toPersistence(usage);
     await this.prisma.promotionUsage.create({ data });
     await this.dispatchEvents(usage);
   }
@@ -26,7 +26,7 @@ export class PromotionUsageRepositoryImpl
     const record = await this.prisma.promotionUsage.findUnique({
       where: { usageId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByPromoId(promoId: PromotionId): Promise<PromotionUsage[]> {
@@ -34,7 +34,7 @@ export class PromotionUsageRepositoryImpl
       where: { promoId: promoId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findByOrderId(orderId: string): Promise<PromotionUsage[]> {
@@ -42,7 +42,7 @@ export class PromotionUsageRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findByPromoIdAndOrderId(
@@ -55,7 +55,7 @@ export class PromotionUsageRepositoryImpl
         orderId,
       },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async countUsageByPromoId(promoId: PromotionId): Promise<number> {
@@ -70,7 +70,7 @@ export class PromotionUsageRepositoryImpl
     });
   }
 
-  private hydrate(record: Prisma.PromotionUsageGetPayload<Record<string, never>>): PromotionUsage {
+  private toDomain(record: Prisma.PromotionUsageGetPayload<Record<string, never>>): PromotionUsage {
     return PromotionUsage.fromPersistence({
       id: PromotionUsageId.fromString(record.usageId),
       promoId: PromotionId.fromString(record.promoId),
@@ -83,7 +83,7 @@ export class PromotionUsageRepositoryImpl
     });
   }
 
-  private dehydrate(usage: PromotionUsage): Prisma.PromotionUsageUncheckedCreateInput {
+  private toPersistence(usage: PromotionUsage): Prisma.PromotionUsageUncheckedCreateInput {
     return {
       usageId: usage.id.getValue(),
       promoId: usage.promoId.getValue(),

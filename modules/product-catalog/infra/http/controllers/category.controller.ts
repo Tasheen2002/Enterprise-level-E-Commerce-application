@@ -66,6 +66,18 @@ export class CategoryController {
     }
   }
 
+  async getCategoryHierarchy(
+    _request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.getCategoryHierarchyHandler.handle({});
+      return ResponseHelper.ok(reply, "Category hierarchy retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async createCategory(
     request: AuthenticatedRequest<{ Body: CreateCategoryBody }>,
     reply: FastifyReply,
@@ -83,35 +95,15 @@ export class CategoryController {
     reply: FastifyReply,
   ) {
     try {
+      const { name, slug, parentId, position } = request.body;
       const result = await this.updateCategoryHandler.handle({
         categoryId: request.params.id,
-        ...request.body,
+        name,
+        slug,
+        parentId,
+        position,
       });
       return ResponseHelper.fromCommand(reply, result, "Category updated successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async deleteCategory(
-    request: AuthenticatedRequest<{ Params: CategoryParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.deleteCategoryHandler.handle({ categoryId: request.params.id });
-      return ResponseHelper.fromCommand(reply, result, "Category deleted successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCategoryHierarchy(
-    _request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.getCategoryHierarchyHandler.handle({});
-      return ResponseHelper.ok(reply, "Category hierarchy retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -124,6 +116,18 @@ export class CategoryController {
     try {
       const result = await this.reorderCategoriesHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Categories reordered successfully", undefined, 204);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async deleteCategory(
+    request: AuthenticatedRequest<{ Params: CategoryParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.deleteCategoryHandler.handle({ categoryId: request.params.id });
+      return ResponseHelper.fromCommand(reply, result, "Category deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

@@ -8,6 +8,24 @@ export class DomainValidationError extends DomainError {
   }
 }
 
+export class MissingProductIdentifierError extends DomainError {
+  constructor() {
+    super('Either productId or slug is required', 'MISSING_PRODUCT_IDENTIFIER', 400);
+  }
+}
+
+export class MissingCategoryIdentifierError extends DomainError {
+  constructor() {
+    super('Either categoryId or slug is required', 'MISSING_CATEGORY_IDENTIFIER', 400);
+  }
+}
+
+export class MissingProductTagIdentifierError extends DomainError {
+  constructor() {
+    super('Either id or name is required', 'MISSING_PRODUCT_TAG_IDENTIFIER', 400);
+  }
+}
+
 // ─── Not Found Errors (404) ───────────────────────────────────────────────────
 
 export class ProductNotFoundError extends DomainError {

@@ -20,7 +20,7 @@ export class PaymentWebhookEventRepositoryImpl
   }
 
   async save(event: PaymentWebhookEvent): Promise<void> {
-    const data = this.dehydrate(event);
+    const data = this.toPersistence(event);
     await this.prisma.paymentWebhookEvent.create({ data });
     await this.dispatchEvents(event);
   }
@@ -29,7 +29,7 @@ export class PaymentWebhookEventRepositoryImpl
     const record = await this.prisma.paymentWebhookEvent.findUnique({
       where: { eventId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByProvider(provider: string): Promise<PaymentWebhookEvent[]> {
@@ -37,7 +37,7 @@ export class PaymentWebhookEventRepositoryImpl
       where: { provider },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findByEventType(eventType: WebhookEventType): Promise<PaymentWebhookEvent[]> {
@@ -45,7 +45,7 @@ export class PaymentWebhookEventRepositoryImpl
       where: { eventType: eventType.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -73,7 +73,7 @@ export class PaymentWebhookEventRepositoryImpl
       this.prisma.paymentWebhookEvent.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -106,7 +106,7 @@ export class PaymentWebhookEventRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.PaymentWebhookEventGetPayload<Record<string, never>>): PaymentWebhookEvent {
+  private toDomain(record: Prisma.PaymentWebhookEventGetPayload<Record<string, never>>): PaymentWebhookEvent {
     return PaymentWebhookEvent.fromPersistence({
       id: WebhookEventId.fromString(record.eventId),
       provider: record.provider,
@@ -116,7 +116,7 @@ export class PaymentWebhookEventRepositoryImpl
     });
   }
 
-  private dehydrate(event: PaymentWebhookEvent): Prisma.PaymentWebhookEventUncheckedCreateInput {
+  private toPersistence(event: PaymentWebhookEvent): Prisma.PaymentWebhookEventUncheckedCreateInput {
     return {
       eventId: event.id.getValue(),
       provider: event.provider,

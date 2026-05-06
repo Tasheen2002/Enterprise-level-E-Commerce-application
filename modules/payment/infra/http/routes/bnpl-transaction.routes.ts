@@ -3,11 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { BnplTransactionController } from "../controllers/bnpl-transaction.controller";
 import {
   RolePermissions,
+  authenticate,
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   createBnplTransactionSchema,
   bnplParamsSchema,
@@ -15,9 +17,14 @@ import {
   bnplTransactionResponseSchema,
 } from "../validation/bnpl.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createBnplTransactionBodyJson = toJsonSchema(createBnplTransactionSchema);
+const bnplParamsJson = toJsonSchema(bnplParamsSchema);
+const listBnplQueryJson = toJsonSchema(listBnplQuerySchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function registerBnplTransactionRoutes(
@@ -34,41 +41,15 @@ export async function registerBnplTransactionRoutes(
   fastify.post(
     "/bnpl",
     {
-      preValidation: [validateBody(createBnplTransactionSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createBnplTransactionSchema)],
       schema: {
         description: "Create a Buy Now Pay Later (BNPL) transaction.",
         tags: ["BNPL"],
         summary: "Create BNPL Transaction",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["intentId", "provider", "plan"],
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-            provider: { type: "string" },
-            plan: {
-              type: "object",
-              required: ["installments", "frequency"],
-              properties: {
-                installments: { type: "integer", minimum: 1 },
-                frequency: { type: "string" },
-                downPayment: { type: "number" },
-                interestRate: { type: "number" },
-              },
-            },
-          },
-        },
+        body: createBnplTransactionBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: bnplTransactionResponseSchema,
-            },
-          },
+          201: successResponse(bnplTransactionResponseSchema, 201),
         },
       },
     },
@@ -80,33 +61,15 @@ export async function registerBnplTransactionRoutes(
     "/bnpl/:bnplId/:action",
     {
       preValidation: [validateParams(bnplParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Process a BNPL transaction (approve, reject, activate, complete, cancel, fail) — Staff/Admin only.",
         tags: ["BNPL"],
         summary: "Process BNPL Transaction",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["bnplId", "action"],
-          properties: {
-            bnplId: { type: "string", format: "uuid" },
-            action: {
-              type: "string",
-              enum: ["approve", "reject", "activate", "complete", "cancel", "fail"],
-            },
-          },
-        },
+        params: bnplParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: bnplTransactionResponseSchema,
-            },
-          },
+          200: successResponse(bnplTransactionResponseSchema),
         },
       },
     },
@@ -118,33 +81,18 @@ export async function registerBnplTransactionRoutes(
     "/bnpl",
     {
       preValidation: [validateQuery(listBnplQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "List BNPL transactions with optional filters.",
         tags: ["BNPL"],
         summary: "List BNPL Transactions",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            bnplId: { type: "string", format: "uuid" },
-            intentId: { type: "string", format: "uuid" },
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        querystring: listBnplQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: bnplTransactionResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: bnplTransactionResponseSchema,
+          }),
         },
       },
     },

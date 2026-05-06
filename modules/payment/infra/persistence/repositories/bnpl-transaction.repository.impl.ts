@@ -22,7 +22,7 @@ export class BnplTransactionRepositoryImpl
   }
 
   async save(transaction: BnplTransaction): Promise<void> {
-    const data = this.dehydrate(transaction);
+    const data = this.toPersistence(transaction);
     const { bnplId, ...updateData } = data;
     await this.prisma.bnplTransaction.upsert({
       where: { bnplId },
@@ -42,14 +42,14 @@ export class BnplTransactionRepositoryImpl
     const record = await this.prisma.bnplTransaction.findUnique({
       where: { bnplId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByIntentId(intentId: PaymentIntentId): Promise<BnplTransaction | null> {
     const record = await this.prisma.bnplTransaction.findFirst({
       where: { intentId: intentId.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByOrderId(orderId: string): Promise<BnplTransaction[]> {
@@ -57,7 +57,7 @@ export class BnplTransactionRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -83,7 +83,7 @@ export class BnplTransactionRepositoryImpl
       this.prisma.bnplTransaction.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -112,7 +112,7 @@ export class BnplTransactionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.BnplTransactionGetPayload<Record<string, never>>): BnplTransaction {
+  private toDomain(record: Prisma.BnplTransactionGetPayload<Record<string, never>>): BnplTransaction {
     return BnplTransaction.fromPersistence({
       id: BnplTransactionId.fromString(record.bnplId),
       intentId: PaymentIntentId.fromString(record.intentId ?? ""),
@@ -124,7 +124,7 @@ export class BnplTransactionRepositoryImpl
     });
   }
 
-  private dehydrate(transaction: BnplTransaction): Prisma.BnplTransactionUncheckedCreateInput {
+  private toPersistence(transaction: BnplTransaction): Prisma.BnplTransactionUncheckedCreateInput {
     return {
       bnplId: transaction.id.getValue(),
       intentId: transaction.intentId.getValue(),

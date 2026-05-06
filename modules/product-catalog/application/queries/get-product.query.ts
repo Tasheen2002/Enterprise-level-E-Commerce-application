@@ -1,7 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductDTO } from "../../domain/entities/product.entity";
 import { ProductManagementService } from "../services/product-management.service";
-import { DomainValidationError } from "../../domain/errors/product-catalog.errors";
+import { MissingProductIdentifierError } from "../../domain/errors/product-catalog.errors";
 
 export interface GetProductQuery extends IQuery {
   readonly productId?: string;
@@ -11,13 +11,13 @@ export interface GetProductQuery extends IQuery {
 export class GetProductHandler implements IQueryHandler<GetProductQuery, ProductDTO> {
   constructor(private readonly productManagementService: ProductManagementService) {}
 
-  async handle(input: GetProductQuery): Promise<ProductDTO> {
-    if (!input.productId && !input.slug) {
-      throw new DomainValidationError("Either productId or slug is required");
+  async handle(query: GetProductQuery): Promise<ProductDTO> {
+    if (query.productId) {
+      return this.productManagementService.getProductById(query.productId);
     }
-    if (input.productId) {
-      return this.productManagementService.getProductById(input.productId);
+    if (query.slug) {
+      return this.productManagementService.getProductBySlug(query.slug);
     }
-    return this.productManagementService.getProductBySlug(input.slug!);
+    throw new MissingProductIdentifierError();
   }
 }

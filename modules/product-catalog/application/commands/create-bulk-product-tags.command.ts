@@ -1,9 +1,12 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductTagDTO } from "../../domain/entities/product-tag.entity";
-import { ProductTagManagementService } from "../services/product-tag-management.service";
+import {
+  ProductTagManagementService,
+  CreateProductTagData,
+} from "../services/product-tag-management.service";
 
 export interface CreateBulkProductTagsCommand extends ICommand {
-  readonly tags: Array<{ tag: string; kind?: string }>;
+  readonly tags: CreateProductTagData[];
 }
 
 export class CreateBulkProductTagsHandler implements ICommandHandler<CreateBulkProductTagsCommand, CommandResult<ProductTagDTO[]>> {

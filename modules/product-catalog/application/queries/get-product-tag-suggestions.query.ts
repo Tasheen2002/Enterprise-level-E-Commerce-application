@@ -1,6 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductTagDTO } from "../../domain/entities/product-tag.entity";
 import { ProductTagManagementService } from "../services/product-tag-management.service";
+import { DEFAULT_SUGGESTIONS_LIMIT, MAX_SUGGESTIONS_LIMIT, MIN_LIMIT } from "../../domain/constants/pagination.constants";
 
 export interface GetProductTagSuggestionsQuery extends IQuery {
   readonly query: string;
@@ -10,10 +11,10 @@ export interface GetProductTagSuggestionsQuery extends IQuery {
 export class GetProductTagSuggestionsHandler implements IQueryHandler<GetProductTagSuggestionsQuery, ProductTagDTO[]> {
   constructor(private readonly productTagManagementService: ProductTagManagementService) {}
 
-  async handle(input: GetProductTagSuggestionsQuery): Promise<ProductTagDTO[]> {
+  async handle(query: GetProductTagSuggestionsQuery): Promise<ProductTagDTO[]> {
     return this.productTagManagementService.getTagSuggestions(
-      input.query.trim(),
-      Math.min(50, Math.max(1, input.limit ?? 10)),
+      query.query.trim(),
+      Math.min(MAX_SUGGESTIONS_LIMIT, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_SUGGESTIONS_LIMIT)),
     );
   }
 }

@@ -7,13 +7,11 @@ import {
   PromotionController,
   StripeWebhookController,
 } from "../controllers";
-import { LoyaltyController } from "../../../../loyalty/infra/http/controllers/loyalty.controller";
 import { registerPaymentIntentRoutes } from "./payment-intent.routes";
 import { registerBnplTransactionRoutes } from "./bnpl-transaction.routes";
 import { registerGiftCardRoutes } from "./gift-card.routes";
 import { registerPromotionRoutes } from "./promotion.routes";
 import { registerWebhookRoutes } from "./webhook.routes";
-import { loyaltyRoutes } from "../../../../loyalty/infra/http/routes/loyalty.routes";
 
 export interface PaymentRouteServices {
   paymentIntentController: PaymentIntentController;
@@ -22,7 +20,6 @@ export interface PaymentRouteServices {
   giftCardController: GiftCardController;
   promotionController: PromotionController;
   stripeController: StripeWebhookController | null;
-  loyaltyController: LoyaltyController;
 }
 
 export async function registerPaymentRoutes(
@@ -38,7 +35,6 @@ export async function registerPaymentRoutes(
       if (controllers.stripeController) {
         await registerWebhookRoutes(instance, controllers.paymentWebhookController, controllers.stripeController);
       }
-      await loyaltyRoutes(instance, controllers.loyaltyController);
     },
     { prefix: "/api/v1" },
   );

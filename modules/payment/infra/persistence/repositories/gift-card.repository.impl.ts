@@ -22,7 +22,7 @@ export class GiftCardRepositoryImpl
   }
 
   async save(giftCard: GiftCard): Promise<void> {
-    const data = this.dehydrate(giftCard);
+    const data = this.toPersistence(giftCard);
     const { giftCardId, ...updateData } = data;
     await this.prisma.giftCard.upsert({
       where: { giftCardId },
@@ -42,14 +42,14 @@ export class GiftCardRepositoryImpl
     const record = await this.prisma.giftCard.findUnique({
       where: { giftCardId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByCode(code: string): Promise<GiftCard | null> {
     const record = await this.prisma.giftCard.findUnique({
       where: { code },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findWithFilters(
@@ -81,7 +81,7 @@ export class GiftCardRepositoryImpl
       this.prisma.giftCard.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -116,7 +116,7 @@ export class GiftCardRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.GiftCardGetPayload<Record<string, never>>): GiftCard {
+  private toDomain(record: Prisma.GiftCardGetPayload<Record<string, never>>): GiftCard {
     const currency = Currency.create(record.currency ?? "USD");
     return GiftCard.fromPersistence({
       id: GiftCardId.fromString(record.giftCardId),
@@ -133,7 +133,7 @@ export class GiftCardRepositoryImpl
     });
   }
 
-  private dehydrate(giftCard: GiftCard): Prisma.GiftCardUncheckedCreateInput {
+  private toPersistence(giftCard: GiftCard): Prisma.GiftCardUncheckedCreateInput {
     return {
       giftCardId: giftCard.id.getValue(),
       code: giftCard.code,

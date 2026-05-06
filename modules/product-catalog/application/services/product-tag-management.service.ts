@@ -2,8 +2,12 @@ import {
   IProductTagRepository,
   ProductTagQueryOptions,
   ProductTagCountOptions,
+  TagWithUsageCount,
 } from "../../domain/repositories/product-tag.repository";
-import { IProductTagAssociationRepository } from "../../domain/repositories/iproduct-tag-association.repository";
+import {
+  IProductTagAssociationRepository,
+  AssociationPaginationOptions,
+} from "../../domain/repositories/product-tag-association.repository";
 import { ProductTag, ProductTagDTO } from "../../domain/entities/product-tag.entity";
 import { ProductTagId } from "../../domain/value-objects/product-tag-id.vo";
 import { ProductTagAssociation } from "../../domain/entities/product-tag-association.entity";
@@ -14,9 +18,46 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors";
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-type CreateProductTagData = { tag: string; kind?: string };
+// ── Configuration ────────────────────────────────────────────────────
+
+// Service-level format rule (additional to entity's structural validation).
+// Tags are user-facing labels — restrict to safe characters.
+const TAG_CHARACTER_PATTERN = /^[a-zA-Z0-9\s\-_]+$/;
+
+// ── Input / result types ─────────────────────────────────────────────
+
+export interface CreateProductTagData {
+  tag: string;
+  kind?: string;
+}
+
+export interface UpdateProductTagInput {
+  tag?: string;
+  kind?: string;
+}
+
+export type ProductTagListResult = PaginatedResult<ProductTagDTO>;
+
+export interface TagWithUsageDTO {
+  tag: ProductTagDTO;
+  usageCount: number;
+}
+
+export interface ProductTagStatsResult {
+  totalTags: number;
+  tagsByKind: Array<{ kind: string | null; count: number }>;
+  averageTagLength: number;
+}
+
+export interface BatchDeleteProductTagsResult {
+  deleted: string[];
+  failed: Array<{ id: string; error: string }>;
+}
+
+// ── Service ───────────────────────────────────────────────────────────
 
 export class ProductTagManagementService {
   constructor(
@@ -24,45 +65,32 @@ export class ProductTagManagementService {
     private readonly tagAssociationRepository: IProductTagAssociationRepository,
   ) {}
 
-  // Core CRUD operations
+  // ── Core CRUD ────────────────────────────────────────────────────────
+
   async createTag(data: CreateProductTagData): Promise<ProductTagDTO> {
-    // Validate tag uniqueness
-    if (await this.productTagRepository.existsByTag(data.tag)) {
-      throw new ProductTagAlreadyExistsError(data.tag);
-    }
+    this.assertTagCharacterFormat(data.tag);
+    await this.assertTagAvailable(data.tag);
 
-    // Validate tag format
-    this.validateTagFormat(data.tag);
-
+    // Entity owns non-empty + max-length validation.
     const tag = ProductTag.create(data);
     await this.productTagRepository.save(tag);
-
     return ProductTag.toDTO(tag);
   }
 
   async getTagById(id: string): Promise<ProductTagDTO> {
-    const tag = await this.findTagById(id);
-    return ProductTag.toDTO(tag);
+    return ProductTag.toDTO(await this.findTagById(id));
   }
 
   async getTagByName(tagName: string): Promise<ProductTagDTO> {
     const tag = await this.productTagRepository.findByTag(tagName);
-
     if (!tag) {
       throw new ProductTagNotFoundError(tagName);
     }
-
     return ProductTag.toDTO(tag);
   }
 
-  async getAllTags(options?: ProductTagQueryOptions): Promise<{
-    tags: ProductTagDTO[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    const { limit = 20, offset = 0 } = options || {};
-    const page = Math.floor(offset / limit) + 1;
+  async getAllTags(options?: ProductTagQueryOptions): Promise<PaginatedResult<ProductTagDTO>> {
+    const { limit = 20, offset = 0 } = options ?? {};
 
     const [tags, total] = await Promise.all([
       this.productTagRepository.findAll(options),
@@ -70,24 +98,19 @@ export class ProductTagManagementService {
     ]);
 
     return {
-      tags: tags.map((t) => ProductTag.toDTO(t)),
+      items: tags.map((t) => ProductTag.toDTO(t)),
       total,
-      page,
       limit,
+      offset,
+      hasMore: offset + tags.length < total,
     };
   }
 
   async getTagsByKind(
     kind: string,
     options?: ProductTagQueryOptions,
-  ): Promise<{
-    tags: ProductTagDTO[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
-    const { limit = 20, offset = 0 } = options || {};
-    const page = Math.floor(offset / limit) + 1;
+  ): Promise<PaginatedResult<ProductTagDTO>> {
+    const { limit = 20, offset = 0 } = options ?? {};
 
     const [tags, total] = await Promise.all([
       this.productTagRepository.findByKind(kind, options),
@@ -95,29 +118,26 @@ export class ProductTagManagementService {
     ]);
 
     return {
-      tags: tags.map((t) => ProductTag.toDTO(t)),
+      items: tags.map((t) => ProductTag.toDTO(t)),
       total,
-      page,
       limit,
+      offset,
+      hasMore: offset + tags.length < total,
     };
   }
 
   async updateTag(
     id: string,
-    updates: { tag?: string; kind?: string },
+    updates: UpdateProductTagInput,
   ): Promise<ProductTagDTO> {
     const tag = await this.findTagById(id);
 
-    // Check if new tag name already exists (if changing tag name)
-    if (updates.tag && updates.tag !== tag.tag) {
-      if (await this.productTagRepository.existsByTag(updates.tag)) {
-        throw new ProductTagAlreadyExistsError(updates.tag);
-      }
-      this.validateTagFormat(updates.tag);
+    if (updates.tag !== undefined && updates.tag !== tag.tag) {
+      this.assertTagCharacterFormat(updates.tag);
+      await this.assertTagAvailable(updates.tag);
       tag.updateTag(updates.tag);
     }
 
-    // Update kind if provided
     if (updates.kind !== undefined) {
       tag.updateKind(updates.kind);
     }
@@ -136,40 +156,37 @@ export class ProductTagManagementService {
     await this.productTagRepository.delete(tagId);
   }
 
-  // Search and filtering
+  // ── Search & filtering ─────────────────────────────────────────────
+
   async searchTags(
     query: string,
     options?: ProductTagQueryOptions,
-  ): Promise<{
-    tags: ProductTagDTO[];
-    total: number;
-    page: number;
-    limit: number;
-  }> {
+  ): Promise<PaginatedResult<ProductTagDTO>> {
     if (!query.trim()) {
       return this.getAllTags(options);
     }
 
-    const { limit = 20, offset = 0 } = options || {};
-    const page = Math.floor(offset / limit) + 1;
+    const { limit = 20, offset = 0 } = options ?? {};
+    const trimmed = query.trim();
 
-    const searchQuery = query.trim();
-    const [tags, total] = await Promise.all([
-      this.productTagRepository.search(searchQuery, options),
-      this.productTagRepository
-        .search(searchQuery, {
-          ...options,
-          limit: undefined,
-          offset: undefined,
-        })
-        .then((results) => results.length),
+    // PERF: count derived from a second unpaginated search call. A dedicated
+    // `repo.countSearch(query)` would be one round-trip instead of two.
+    const [tags, allMatches] = await Promise.all([
+      this.productTagRepository.search(trimmed, options),
+      this.productTagRepository.search(trimmed, {
+        ...options,
+        limit: undefined,
+        offset: undefined,
+      }),
     ]);
 
+    const total = allMatches.length;
     return {
-      tags: tags.map((t) => ProductTag.toDTO(t)),
+      items: tags.map((t) => ProductTag.toDTO(t)),
       total,
-      page,
       limit,
+      offset,
+      hasMore: offset + tags.length < total,
     };
   }
 
@@ -186,17 +203,13 @@ export class ProductTagManagementService {
     return suggestions.map((t) => ProductTag.toDTO(t));
   }
 
-  // Analytics and statistics
-  async getTagStats(): Promise<{
-    totalTags: number;
-    tagsByKind: Array<{ kind: string | null; count: number }>;
-    averageTagLength: number;
-  }> {
-    // Get total count efficiently
-    const totalTags = await this.productTagRepository.count();
+  // ── Analytics & statistics ──────────────────────────────────────────
 
-    // Get stats with database aggregation
-    const stats = await this.productTagRepository.getStatistics();
+  async getTagStats(): Promise<ProductTagStatsResult> {
+    const [totalTags, stats] = await Promise.all([
+      this.productTagRepository.count(),
+      this.productTagRepository.getStatistics(),
+    ]);
 
     return {
       totalTags,
@@ -205,31 +218,26 @@ export class ProductTagManagementService {
     };
   }
 
-  async getMostUsedTags(
-    limit: number = 10,
-  ): Promise<Array<{ tag: ProductTagDTO; usageCount: number }>> {
-    const mostUsed = await this.productTagRepository.getMostUsed(limit);
+  async getMostUsedTags(limit: number = 10): Promise<TagWithUsageDTO[]> {
+    const mostUsed: TagWithUsageCount[] = await this.productTagRepository.getMostUsed(limit);
     return mostUsed.map((item) => ({
       tag: ProductTag.toDTO(item.tag),
       usageCount: item.count,
     }));
   }
 
-  async getUnusedTags(): Promise<ProductTagDTO[]> {
-    return [];
-  }
+  // ── Bulk operations ─────────────────────────────────────────────────
 
-  // Bulk operations
   async createMultipleTags(
     tagData: CreateProductTagData[],
   ): Promise<ProductTagDTO[]> {
-    const createdTags: ProductTagDTO[] = [];
+    const created: ProductTagDTO[] = [];
     const errors: string[] = [];
 
     for (const data of tagData) {
       try {
         const tag = await this.createTag(data);
-        createdTags.push(tag);
+        created.push(tag);
       } catch (error) {
         errors.push(
           `Failed to create tag "${data.tag}": ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -237,17 +245,14 @@ export class ProductTagManagementService {
       }
     }
 
-    if (errors.length > 0 && createdTags.length === 0) {
+    if (errors.length > 0 && created.length === 0) {
       throw new InvalidOperationError(`Failed to create any tags: ${errors.join(", ")}`);
     }
 
-    return createdTags;
+    return created;
   }
 
-  async deleteMultipleTags(ids: string[]): Promise<{
-    deleted: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
+  async deleteMultipleTags(ids: string[]): Promise<BatchDeleteProductTagsResult> {
     const deleted: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
 
@@ -266,10 +271,11 @@ export class ProductTagManagementService {
     return { deleted, failed };
   }
 
-  // Validation methods
+  // ── Validation helpers (public) ─────────────────────────────────────
+
   async validateTag(tagName: string): Promise<boolean> {
     try {
-      this.validateTagFormat(tagName);
+      this.assertTagCharacterFormat(tagName);
       return !(await this.productTagRepository.existsByTag(tagName));
     } catch {
       return false;
@@ -280,44 +286,55 @@ export class ProductTagManagementService {
     return !(await this.productTagRepository.existsByTag(tagName));
   }
 
-  // Utility methods
+  // ── Utility ─────────────────────────────────────────────────────────
+
   async getTagCount(options?: ProductTagCountOptions): Promise<number> {
-    return await this.productTagRepository.count(options);
+    return this.productTagRepository.count(options);
   }
 
-  async normalizeTagName(tagName: string): Promise<string> {
-    return tagName.trim().toLowerCase().replace(/\s+/g, "-");
-  }
+  // ── Product↔tag association methods ────────────────────────────────
 
-  // Product Tag Association Methods
+  // Single batched repo call replaces the previous N+1 (associations + N findById).
   async getProductTags(productId: string): Promise<ProductTagDTO[]> {
     const productIdVo = ProductId.fromString(productId);
     const associations = await this.tagAssociationRepository.findByProductId(productIdVo);
-    const tags: ProductTag[] = [];
-    for (const assoc of associations) {
-      const tag = await this.productTagRepository.findById(assoc.tagId);
-      if (tag) tags.push(tag);
-    }
+    if (associations.length === 0) return [];
+
+    const tagIds = associations.map((a) => a.tagId);
+    const tags = await this.productTagRepository.findByIds(tagIds);
     return tags.map((t) => ProductTag.toDTO(t));
   }
 
+  // Single batched validation + per-tag association write. The association
+  // write loop could be a `bulkInsert` repo method for further optimization
+  // when association counts grow large.
   async associateProductTags(
     productId: string,
     tagIds: string[],
   ): Promise<void> {
+    if (tagIds.length === 0) return;
+
     const productIdVo = ProductId.fromString(productId);
-    for (const tagId of tagIds) {
-      await this.getTagById(tagId); // validate tag exists
-      const tagIdVo = ProductTagId.fromString(tagId);
+    const tagIdVos = tagIds.map((id) => ProductTagId.fromString(id));
+
+    // Validate all tags exist in one query.
+    const foundTags = await this.productTagRepository.findByIds(tagIdVos);
+    if (foundTags.length !== tagIds.length) {
+      const foundIdSet = new Set(foundTags.map((t) => t.id.getValue()));
+      const missing = tagIds.filter((id) => !foundIdSet.has(id));
+      throw new ProductTagNotFoundError(missing[0]);
+    }
+
+    for (const tagIdVo of tagIdVos) {
       const alreadyLinked = await this.tagAssociationRepository.exists(productIdVo, tagIdVo);
-      if (!alreadyLinked) {
-        const association = ProductTagAssociation.create({
-          id: randomUUID(),
-          productId,
-          tagId,
-        });
-        await this.tagAssociationRepository.save(association);
-      }
+      if (alreadyLinked) continue;
+
+      const association = ProductTagAssociation.create({
+        id: randomUUID(),
+        productId,
+        tagId: tagIdVo.getValue(),
+      });
+      await this.tagAssociationRepository.save(association);
     }
   }
 
@@ -333,15 +350,23 @@ export class ProductTagManagementService {
 
   async getTagProducts(
     tagId: string,
-    options?: { limit?: number; offset?: number },
-  ): Promise<string[]> {
-    await this.getTagById(tagId); // validate tag exists
+    options?: AssociationPaginationOptions,
+  ): Promise<PaginatedResult<string>> {
+    await this.findTagById(tagId);
     const tagIdVo = ProductTagId.fromString(tagId);
-    const associations = await this.tagAssociationRepository.findByTagId(tagIdVo, options);
-    return associations.map((a) => a.productId.getValue());
+    const { limit = 20, offset = 0 } = options ?? {};
+
+    const [associations, total] = await Promise.all([
+      this.tagAssociationRepository.findByTagId(tagIdVo, options),
+      this.tagAssociationRepository.countByTagId(tagIdVo),
+    ]);
+
+    const items = associations.map((a) => a.productId.getValue());
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
-  // Private helper — returns domain entity for internal mutation
+  // ── Private helpers ─────────────────────────────────────────────────
+
   private async findTagById(id: string): Promise<ProductTag> {
     const tagId = ProductTagId.fromString(id);
     const tag = await this.productTagRepository.findById(tagId);
@@ -351,20 +376,18 @@ export class ProductTagManagementService {
     return tag;
   }
 
-  // Private validation methods
-  private validateTagFormat(tag: string): void {
-    if (!tag || tag.trim().length === 0) {
-      throw new DomainValidationError("Tag cannot be empty");
-    }
-
-    if (tag.trim().length > 50) {
-      throw new DomainValidationError("Tag cannot be longer than 50 characters");
-    }
-
-    if (!/^[a-zA-Z0-9\s\-_]+$/.test(tag)) {
+  // Service-level character allowlist (in addition to entity's non-empty + length checks).
+  private assertTagCharacterFormat(tag: string): void {
+    if (!TAG_CHARACTER_PATTERN.test(tag)) {
       throw new DomainValidationError(
         "Tag can only contain letters, numbers, spaces, hyphens, and underscores",
       );
+    }
+  }
+
+  private async assertTagAvailable(tag: string): Promise<void> {
+    if (await this.productTagRepository.existsByTag(tag)) {
+      throw new ProductTagAlreadyExistsError(tag);
     }
   }
 }

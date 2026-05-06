@@ -4,6 +4,7 @@ import {
 } from "../../domain/repositories/product-media.repository";
 import { IMediaAssetRepository } from "../../domain/repositories/media-asset.repository";
 import { IProductRepository } from "../../domain/repositories/product.repository";
+import { MediaAsset } from "../../domain/entities/media-asset.entity";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
 import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import {
@@ -12,6 +13,8 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors";
+
+// ── Input / result types ─────────────────────────────────────────────
 
 export interface ProductMediaServiceQueryOptions {
   page?: number;
@@ -25,6 +28,8 @@ export interface ProductMediaData {
   assetId: string;
   position?: number;
   isCover?: boolean;
+  alt?: string | null;
+  caption?: string | null;
 }
 
 export interface ProductMediaReorderData {
@@ -32,20 +37,39 @@ export interface ProductMediaReorderData {
   position: number;
 }
 
+export interface ProductMediaSummaryItem {
+  assetId: string;
+  position?: number;
+  isCover: boolean;
+  storageKey: string;
+  mimeType: string;
+  altText?: string;
+}
+
 export interface ProductMediaSummary {
   productId: string;
   totalMedia: number;
   hasCoverImage: boolean;
   coverImageAssetId?: string;
-  mediaAssets: Array<{
-    assetId: string;
-    position?: number;
-    isCover: boolean;
-    storageKey: string;
-    mimeType: string;
-    altText?: string;
-  }>;
+  mediaAssets: ProductMediaSummaryItem[];
 }
+
+export interface ProductMediaValidationResult {
+  isValid: boolean;
+  issues: string[];
+}
+
+export interface ProductMediaStatistics {
+  totalMedia: number;
+  hasCoverImage: boolean;
+  imageCount: number;
+  videoCount: number;
+  otherCount: number;
+  totalSize: number;
+  averageFileSize: number;
+}
+
+// ── Service ───────────────────────────────────────────────────────────
 
 export class ProductMediaManagementService {
   constructor(
@@ -54,90 +78,176 @@ export class ProductMediaManagementService {
     private readonly productRepository: IProductRepository,
   ) {}
 
+  // ── Mutations ────────────────────────────────────────────────────────
+
   async addMediaToProduct(
     productId: string,
     assetId: string,
     position?: number,
     isCover?: boolean,
+    alt?: string | null,
+    caption?: string | null,
   ): Promise<string> {
     const productIdVo = ProductId.fromString(productId);
     const assetIdVo = MediaAssetId.fromString(assetId);
 
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    await this.assertProductExists(productIdVo, productId);
+    await this.assertAssetExists(assetIdVo, assetId);
+    await this.assertNoExistingAssociation(productIdVo, assetIdVo);
 
-    // Validate asset exists
-    const assetIdEntity = MediaAssetId.fromString(assetId);
-    const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-    if (!asset) {
-      throw new MediaAssetNotFoundError(assetId);
-    }
-
-    // Check if association already exists
-    const existingAssociation =
-      await this.productMediaRepository.findAssociation(productIdVo, assetIdVo);
-    if (existingAssociation) {
-      throw new InvalidOperationError("Media asset is already associated with this product");
-    }
-
-    // If setting as cover image, remove existing cover flag
     if (isCover) {
-      await this.productMediaRepository.removeCoverImageFlag(productIdVo);
+      await this.productMediaRepository.removePrimaryMediaFlag(productIdVo);
     }
 
-    // Determine position if not provided
     const finalPosition =
-      position ??
-      (await this.productMediaRepository.getNextPosition(productIdVo));
+      position ?? (await this.productMediaRepository.getNextPosition(productIdVo));
 
-    const productMediaId = await this.productMediaRepository.addMediaToProduct(
+    const created = await this.productMediaRepository.addMediaToProduct(
       productIdVo,
       assetIdVo,
       finalPosition,
       isCover,
+      alt,
+      caption,
     );
-    return productMediaId.toString();
+    return created.id;
   }
 
-  async removeMediaFromProduct(
-    productId: string,
-    assetId: string,
-  ): Promise<void> {
+  async removeMediaFromProduct(productId: string, assetId: string): Promise<void> {
     const productIdVo = ProductId.fromString(productId);
     const assetIdVo = MediaAssetId.fromString(assetId);
 
-    // Check if association exists
-    const association = await this.productMediaRepository.findAssociation(
-      productIdVo,
-      assetIdVo,
-    );
+    const association = await this.productMediaRepository.findAssociation(productIdVo, assetIdVo);
     if (!association) {
       throw new InvalidOperationError("Media asset is not associated with this product");
     }
 
-    await this.productMediaRepository.removeMediaFromProduct(
-      productIdVo,
-      assetIdVo,
-    );
-
-    // Compact positions after removal
+    await this.productMediaRepository.removeMediaFromProduct(productIdVo, assetIdVo);
     await this.productMediaRepository.compactPositions(productIdVo);
   }
 
   async removeAllProductMedia(productId: string): Promise<void> {
     const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
-
+    await this.assertProductExists(productIdVo, productId);
     await this.productMediaRepository.removeAllProductMedia(productIdVo);
   }
+
+  async setProductCoverImage(productId: string, assetId: string): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    const assetIdVo = MediaAssetId.fromString(assetId);
+
+    const association = await this.productMediaRepository.findAssociation(productIdVo, assetIdVo);
+    if (!association) {
+      throw new InvalidOperationError("Media asset is not associated with this product");
+    }
+
+    await this.productMediaRepository.setProductPrimaryMedia(productIdVo, assetIdVo);
+  }
+
+  async removeCoverImage(productId: string): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    await this.assertProductExists(productIdVo, productId);
+    await this.productMediaRepository.removePrimaryMediaFlag(productIdVo);
+  }
+
+  async reorderProductMedia(
+    productId: string,
+    reorderData: ProductMediaReorderData[],
+  ): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    await this.assertProductExists(productIdVo, productId);
+
+    // Single batched validation: fetch all current associations, check that
+    // every assetId in reorderData appears.
+    const existing = await this.productMediaRepository.findByProductId(productIdVo);
+    const existingAssetIds = new Set(existing.map((pm) => pm.mediaAssetId.getValue()));
+
+    for (const item of reorderData) {
+      if (!existingAssetIds.has(item.assetId)) {
+        throw new InvalidOperationError(
+          `Media asset ${item.assetId} is not associated with this product`,
+        );
+      }
+    }
+
+    const mediaOrdering = reorderData.map((item) => ({
+      assetId: MediaAssetId.fromString(item.assetId),
+      position: item.position,
+    }));
+
+    await this.productMediaRepository.reorderProductMedia(productIdVo, mediaOrdering);
+  }
+
+  async moveMediaPosition(
+    productId: string,
+    assetId: string,
+    newPosition: number,
+  ): Promise<void> {
+    if (newPosition < 1) {
+      throw new DomainValidationError("Position must be greater than 0");
+    }
+
+    const productIdVo = ProductId.fromString(productId);
+    const assetIdVo = MediaAssetId.fromString(assetId);
+
+    const association = await this.productMediaRepository.findAssociation(productIdVo, assetIdVo);
+    if (!association) {
+      throw new InvalidOperationError("Media asset is not associated with this product");
+    }
+
+    await this.productMediaRepository.moveMediaPosition(productIdVo, assetIdVo, newPosition);
+  }
+
+  async setProductMedia(productId: string, mediaData: ProductMediaData[]): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    await this.assertProductExists(productIdVo, productId);
+
+    // Single batched asset existence check (was N findById calls).
+    const assetIdVos = mediaData.map((item) => MediaAssetId.fromString(item.assetId));
+    await this.assertAllAssetsExist(assetIdVos, mediaData.map((item) => item.assetId));
+
+    const coverCount = mediaData.filter((item) => item.isCover).length;
+    if (coverCount > 1) {
+      throw new InvalidOperationError("Only one media asset can be set as cover image");
+    }
+
+    // Translate wire term `isCover` → domain term `isPrimary`. Pass alt/caption through.
+    const repositoryData = mediaData.map((item) => ({
+      assetId: MediaAssetId.fromString(item.assetId),
+      position: item.position,
+      isPrimary: item.isCover ?? false,
+      alt: item.alt,
+      caption: item.caption,
+    }));
+
+    await this.productMediaRepository.setProductMedia(productIdVo, repositoryData);
+  }
+
+  async duplicateProductMedia(
+    sourceProductId: string,
+    targetProductId: string,
+  ): Promise<void> {
+    const sourceProductIdVo = ProductId.fromString(sourceProductId);
+    const targetProductIdVo = ProductId.fromString(targetProductId);
+
+    const [sourceProduct, targetProduct] = await Promise.all([
+      this.productRepository.findById(sourceProductIdVo),
+      this.productRepository.findById(targetProductIdVo),
+    ]);
+
+    if (!sourceProduct) throw new ProductNotFoundError(sourceProductId);
+    if (!targetProduct) throw new ProductNotFoundError(targetProductId);
+
+    await this.productMediaRepository.duplicateProductMedia(sourceProductIdVo, targetProductIdVo);
+  }
+
+  async compactProductMediaPositions(productId: string): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    await this.assertProductExists(productIdVo, productId);
+    await this.productMediaRepository.compactPositions(productIdVo);
+  }
+
+  // ── Queries ─────────────────────────────────────────────────────────
 
   async getProductMedia(
     productId: string,
@@ -152,46 +262,39 @@ export class ProductMediaManagementService {
       coverOnly = false,
     } = options;
 
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    await this.assertProductExists(productIdVo, productId);
 
     const repositoryOptions: ProductMediaQueryOptions = {
       limit,
       offset: (page - 1) * limit,
-      sortBy,
+      sortBy: mapServiceSortToRepoSort(sortBy),
       sortOrder,
-      coverOnly,
+      primaryOnly: coverOnly,
     };
 
     const [productMediaList, totalCount, coverImage] = await Promise.all([
-      this.productMediaRepository.findByProductId(
-        productIdVo,
-        repositoryOptions,
-      ),
-      this.productMediaRepository.countProductMedia(productIdVo),
-      this.productMediaRepository.getProductCoverImage(productIdVo),
+      this.productMediaRepository.findByProductId(productIdVo, repositoryOptions),
+      this.productMediaRepository.countByProductId(productIdVo),
+      this.productMediaRepository.getProductPrimaryMedia(productIdVo),
     ]);
 
-    // Get asset details for each product media
-    const mediaAssets = await Promise.all(
-      productMediaList.map(async (productMedia) => {
-        const assetIdEntity = MediaAssetId.fromString(
-          productMedia.mediaAssetId.getValue(),
-        );
-        const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-        return {
-          assetId: productMedia.mediaAssetId.getValue(),
-          position: productMedia.displayOrder ?? undefined,
-          isCover: productMedia.isPrimary,
-          storageKey: asset?.storageKey || "",
-          mimeType: asset?.mime || "",
-          altText: asset?.altText ?? undefined,
-        };
-      }),
+    // Single batched asset fetch (was N findById calls).
+    const assets = await this.mediaAssetRepository.findByIds(
+      productMediaList.map((pm) => pm.mediaAssetId),
     );
+    const assetById = new Map(assets.map((a) => [a.id.getValue(), a]));
+
+    const mediaAssets: ProductMediaSummaryItem[] = productMediaList.map((pm) => {
+      const asset = assetById.get(pm.mediaAssetId.getValue());
+      return {
+        assetId: pm.mediaAssetId.getValue(),
+        position: pm.displayOrder ?? undefined,
+        isCover: pm.isPrimary,
+        storageKey: asset?.storageKey ?? "",
+        mimeType: asset?.mime ?? "",
+        altText: asset?.altText ?? undefined,
+      };
+    });
 
     return {
       productId,
@@ -202,317 +305,83 @@ export class ProductMediaManagementService {
     };
   }
 
-  async setProductCoverImage(
-    productId: string,
-    assetId: string,
-  ): Promise<void> {
-    const productIdVo = ProductId.fromString(productId);
-    const assetIdVo = MediaAssetId.fromString(assetId);
-
-    // Check if media is associated with product
-    const association = await this.productMediaRepository.findAssociation(
-      productIdVo,
-      assetIdVo,
-    );
-    if (!association) {
-      throw new InvalidOperationError("Media asset is not associated with this product");
-    }
-
-    await this.productMediaRepository.setProductCoverImage(
-      productIdVo,
-      assetIdVo,
-    );
-  }
-
-  async removeCoverImage(productId: string): Promise<void> {
-    const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
-
-    await this.productMediaRepository.removeCoverImageFlag(productIdVo);
-  }
-
-  async reorderProductMedia(
-    productId: string,
-    reorderData: ProductMediaReorderData[],
-  ): Promise<void> {
-    const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
-
-    // Validate all assets are associated with the product
-    for (const item of reorderData) {
-      const assetIdVo = MediaAssetId.fromString(item.assetId);
-      const association = await this.productMediaRepository.findAssociation(
-        productIdVo,
-        assetIdVo,
-      );
-      if (!association) {
-        throw new InvalidOperationError(
-          `Media asset ${item.assetId} is not associated with this product`,
-        );
-      }
-    }
-
-    // Convert to repository format
-    const mediaOrdering = reorderData.map((item) => ({
-      assetId: MediaAssetId.fromString(item.assetId),
-      position: item.position,
-    }));
-
-    await this.productMediaRepository.reorderProductMedia(
-      productIdVo,
-      mediaOrdering,
-    );
-  }
-
-  async moveMediaPosition(
-    productId: string,
-    assetId: string,
-    newPosition: number,
-  ): Promise<void> {
-    const productIdVo = ProductId.fromString(productId);
-    const assetIdVo = MediaAssetId.fromString(assetId);
-
-    // Check if association exists
-    const association = await this.productMediaRepository.findAssociation(
-      productIdVo,
-      assetIdVo,
-    );
-    if (!association) {
-      throw new InvalidOperationError("Media asset is not associated with this product");
-    }
-
-    if (newPosition < 1) {
-      throw new DomainValidationError("Position must be greater than 0");
-    }
-
-    await this.productMediaRepository.moveMediaPosition(
-      productIdVo,
-      assetIdVo,
-      newPosition,
-    );
-  }
-
-  async setProductMedia(
-    productId: string,
-    mediaData: ProductMediaData[],
-  ): Promise<void> {
-    const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
-
-    // Validate all assets exist
-    for (const item of mediaData) {
-      const assetIdEntity = MediaAssetId.fromString(item.assetId);
-      const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-      if (!asset) {
-        throw new MediaAssetNotFoundError(item.assetId);
-      }
-    }
-
-    // Ensure only one cover image
-    const coverImages = mediaData.filter((item) => item.isCover);
-    if (coverImages.length > 1) {
-      throw new InvalidOperationError("Only one media asset can be set as cover image");
-    }
-
-    // Convert to repository format
-    const repositoryData = mediaData.map((item) => ({
-      assetId: MediaAssetId.fromString(item.assetId),
-      position: item.position,
-      isCover: item.isCover || false,
-    }));
-
-    await this.productMediaRepository.setProductMedia(
-      productIdVo,
-      repositoryData,
-    );
-  }
-
-  async duplicateProductMedia(
-    sourceProductId: string,
-    targetProductId: string,
-  ): Promise<void> {
-    const sourceProductIdVo = ProductId.fromString(sourceProductId);
-    const targetProductIdVo = ProductId.fromString(targetProductId);
-
-    // Validate both products exist
-    const [sourceProduct, targetProduct] = await Promise.all([
-      this.productRepository.findById(sourceProductIdVo),
-      this.productRepository.findById(targetProductIdVo),
-    ]);
-
-    if (!sourceProduct) {
-      throw new ProductNotFoundError(sourceProductId);
-    }
-
-    if (!targetProduct) {
-      throw new ProductNotFoundError(targetProductId);
-    }
-
-    await this.productMediaRepository.duplicateProductMedia(
-      sourceProductIdVo,
-      targetProductIdVo,
-    );
-  }
-
   async getProductsUsingAsset(assetId: string): Promise<string[]> {
     const assetIdVo = MediaAssetId.fromString(assetId);
+    await this.assertAssetExists(assetIdVo, assetId);
 
-    // Validate asset exists
-    const assetIdEntity = MediaAssetId.fromString(assetId);
-    const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-    if (!asset) {
-      throw new MediaAssetNotFoundError(assetId);
-    }
-
-    const productIds =
-      await this.productMediaRepository.getProductsUsingAsset(assetIdVo);
-    return productIds.map((id) => id.toString());
+    const productIds = await this.productMediaRepository.getProductsUsingAsset(assetIdVo);
+    return productIds.map((id) => id.getValue());
   }
 
   async getAssetUsageCount(assetId: string): Promise<number> {
     const assetIdVo = MediaAssetId.fromString(assetId);
-
-    // Validate asset exists
-    const assetIdEntity = MediaAssetId.fromString(assetId);
-    const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-    if (!asset) {
-      throw new MediaAssetNotFoundError(assetId);
-    }
-
-    return await this.productMediaRepository.countAssetUsage(assetIdVo);
+    await this.assertAssetExists(assetIdVo, assetId);
+    return this.productMediaRepository.countAssetUsage(assetIdVo);
   }
 
-  async compactProductMediaPositions(productId: string): Promise<void> {
+  async validateProductMedia(productId: string): Promise<ProductMediaValidationResult> {
     const productIdVo = ProductId.fromString(productId);
 
-    // Validate product exists
     const product = await this.productRepository.findById(productIdVo);
     if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
-
-    await this.productMediaRepository.compactPositions(productIdVo);
-  }
-
-  async validateProductMedia(productId: string): Promise<{
-    isValid: boolean;
-    issues: string[];
-  }> {
-    const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      return {
-        isValid: false,
-        issues: ["Product not found"],
-      };
+      return { isValid: false, issues: ["Product not found"] };
     }
 
     const issues: string[] = [];
+    const productMedia = await this.productMediaRepository.findByProductId(productIdVo);
 
-    // Get all product media
-    const productMedia =
-      await this.productMediaRepository.findByProductId(productIdVo);
-
-    // Check for duplicate positions
     const positions = productMedia
       .map((pm) => pm.displayOrder)
       .filter((pos) => pos !== null);
-    const uniquePositions = new Set(positions);
-    if (positions.length !== uniquePositions.size) {
+    if (new Set(positions).size !== positions.length) {
       issues.push("Duplicate positions found");
     }
 
-    // Check for multiple cover images
     const coverImages = productMedia.filter((pm) => pm.isPrimary);
     if (coverImages.length > 1) {
       issues.push("Multiple cover images found");
     }
 
-    // Check if all referenced assets exist
+    // Single batched asset existence check (was N findById calls).
+    const assetIdVos = productMedia.map((pm) => pm.mediaAssetId);
+    const assets = await this.mediaAssetRepository.findByIds(assetIdVos);
+    const foundAssetIds = new Set(assets.map((a) => a.id.getValue()));
     for (const pm of productMedia) {
-      const assetIdEntity = MediaAssetId.fromString(
-        pm.mediaAssetId.getValue(),
-      );
-      const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-      if (!asset) {
-        issues.push(
-          `Referenced media asset ${pm.mediaAssetId.getValue()} not found`,
-        );
+      if (!foundAssetIds.has(pm.mediaAssetId.getValue())) {
+        issues.push(`Referenced media asset ${pm.mediaAssetId.getValue()} not found`);
       }
     }
 
-    return {
-      isValid: issues.length === 0,
-      issues,
-    };
+    return { isValid: issues.length === 0, issues };
   }
 
-  async getProductMediaStatistics(productId: string): Promise<{
-    totalMedia: number;
-    hasCoverImage: boolean;
-    imageCount: number;
-    videoCount: number;
-    otherCount: number;
-    totalSize: number;
-    averageFileSize: number;
-  }> {
+  async getProductMediaStatistics(productId: string): Promise<ProductMediaStatistics> {
     const productIdVo = ProductId.fromString(productId);
-
-    // Validate product exists
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    await this.assertProductExists(productIdVo, productId);
 
     const [productMedia, coverImage] = await Promise.all([
       this.productMediaRepository.findByProductId(productIdVo),
-      this.productMediaRepository.getProductCoverImage(productIdVo),
+      this.productMediaRepository.getProductPrimaryMedia(productIdVo),
     ]);
+
+    // Single batched asset fetch (was N findById calls).
+    const assets = await this.mediaAssetRepository.findByIds(
+      productMedia.map((pm) => pm.mediaAssetId),
+    );
 
     let imageCount = 0;
     let videoCount = 0;
     let otherCount = 0;
     let totalSize = 0;
 
-    for (const pm of productMedia) {
-      const assetIdEntity = MediaAssetId.fromString(
-        pm.mediaAssetId.getValue(),
-      );
-      const asset = await this.mediaAssetRepository.findById(assetIdEntity);
-      if (asset) {
-        const mime = asset.mime;
-        const bytes = asset.bytes || 0;
-        totalSize += bytes;
-
-        if (mime.startsWith("image/")) {
-          imageCount++;
-        } else if (mime.startsWith("video/")) {
-          videoCount++;
-        } else {
-          otherCount++;
-        }
-      }
+    for (const asset of assets) {
+      totalSize += asset.bytes ?? 0;
+      if (asset.mime.startsWith("image/")) imageCount++;
+      else if (asset.mime.startsWith("video/")) videoCount++;
+      else otherCount++;
     }
 
-    const averageFileSize =
-      productMedia.length > 0 ? totalSize / productMedia.length : 0;
+    const averageFileSize = productMedia.length > 0 ? totalSize / productMedia.length : 0;
 
     return {
       totalMedia: productMedia.length,
@@ -523,5 +392,56 @@ export class ProductMediaManagementService {
       totalSize,
       averageFileSize,
     };
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────
+
+  private async assertProductExists(productIdVo: ProductId, productId: string): Promise<void> {
+    const product = await this.productRepository.findById(productIdVo);
+    if (!product) {
+      throw new ProductNotFoundError(productId);
+    }
+  }
+
+  private async assertAssetExists(assetIdVo: MediaAssetId, assetId: string): Promise<MediaAsset> {
+    const asset = await this.mediaAssetRepository.findById(assetIdVo);
+    if (!asset) {
+      throw new MediaAssetNotFoundError(assetId);
+    }
+    return asset;
+  }
+
+  private async assertAllAssetsExist(
+    assetIdVos: MediaAssetId[],
+    assetIds: string[],
+  ): Promise<void> {
+    if (assetIdVos.length === 0) return;
+    const found = await this.mediaAssetRepository.findByIds(assetIdVos);
+    if (found.length === assetIdVos.length) return;
+    const foundIds = new Set(found.map((a) => a.id.getValue()));
+    const missing = assetIds.find((id) => !foundIds.has(id));
+    throw new MediaAssetNotFoundError(missing ?? assetIds[0]);
+  }
+
+  private async assertNoExistingAssociation(
+    productIdVo: ProductId,
+    assetIdVo: MediaAssetId,
+  ): Promise<void> {
+    const existing = await this.productMediaRepository.findAssociation(productIdVo, assetIdVo);
+    if (existing) {
+      throw new InvalidOperationError("Media asset is already associated with this product");
+    }
+  }
+
+}
+
+// Service-level "wire" sort term → domain repo sort term.
+function mapServiceSortToRepoSort(
+  sortBy: NonNullable<ProductMediaServiceQueryOptions["sortBy"]>,
+): NonNullable<ProductMediaQueryOptions["sortBy"]> {
+  switch (sortBy) {
+    case "isCover": return "isPrimary";
+    case "position": return "displayOrder";
+    case "createdAt": return "createdAt";
   }
 }

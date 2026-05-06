@@ -6,6 +6,7 @@ import { SKU } from "../value-objects/sku.vo";
 export interface IProductVariantRepository {
   save(variant: ProductVariant): Promise<void>;
   findById(id: VariantId): Promise<ProductVariant | null>;
+  findByIds(ids: VariantId[]): Promise<ProductVariant[]>;
   findBySku(sku: SKU): Promise<ProductVariant | null>;
   findByProductId(productId: ProductId): Promise<ProductVariant[]>;
   findAll(options?: VariantQueryOptions): Promise<ProductVariant[]>;
@@ -35,7 +36,7 @@ export interface VariantQueryOptions {
 }
 
 export interface VariantCountOptions {
-  productId?: string;
+  productId?: ProductId;
   size?: string;
   color?: string;
   availableForBackorder?: boolean;

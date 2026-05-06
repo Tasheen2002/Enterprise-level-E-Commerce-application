@@ -1,1 +1,1 @@
-export * from "./product-catalog.constants";
+export * from "./pagination.constants";

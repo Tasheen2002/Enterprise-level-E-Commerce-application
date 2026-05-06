@@ -24,7 +24,7 @@ export class PaymentTransactionRepositoryImpl
   }
 
   async save(transaction: PaymentTransaction): Promise<void> {
-    const data = this.dehydrate(transaction);
+    const data = this.toPersistence(transaction);
     const { txnId, ...updateData } = data;
     await this.prisma.paymentTransaction.upsert({
       where: { txnId },
@@ -44,7 +44,7 @@ export class PaymentTransactionRepositoryImpl
     const record = await this.prisma.paymentTransaction.findUnique({
       where: { txnId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByIntentId(intentId: PaymentIntentId): Promise<PaymentTransaction[]> {
@@ -52,7 +52,7 @@ export class PaymentTransactionRepositoryImpl
       where: { intentId: intentId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -77,7 +77,7 @@ export class PaymentTransactionRepositoryImpl
       this.prisma.paymentTransaction.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -105,7 +105,7 @@ export class PaymentTransactionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.PaymentTransactionGetPayload<Record<string, never>>): PaymentTransaction {
+  private toDomain(record: Prisma.PaymentTransactionGetPayload<Record<string, never>>): PaymentTransaction {
     return PaymentTransaction.fromPersistence({
       id: PaymentTransactionId.fromString(record.txnId),
       intentId: PaymentIntentId.fromString(record.intentId),
@@ -122,7 +122,7 @@ export class PaymentTransactionRepositoryImpl
     });
   }
 
-  private dehydrate(transaction: PaymentTransaction): Prisma.PaymentTransactionUncheckedCreateInput {
+  private toPersistence(transaction: PaymentTransaction): Prisma.PaymentTransactionUncheckedCreateInput {
     return {
       txnId: transaction.id.getValue(),
       intentId: transaction.intentId.getValue(),

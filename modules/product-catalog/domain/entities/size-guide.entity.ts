@@ -2,32 +2,24 @@ import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-ro
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { DomainValidationError } from '../errors';
 import { SizeGuideId } from '../value-objects/size-guide-id.vo';
-import { Region } from '../enums/product-catalog.enums';
+import { Region } from '../value-objects';
 
-// Domain Events
+// ── Domain Events ──────────────────────────────────────────────────────
+
 export class SizeGuideCreatedEvent extends DomainEvent {
-  constructor(public readonly sizeGuideId: string, public readonly title: string) {
+  constructor(
+    public readonly sizeGuideId: string,
+    public readonly title: string,
+  ) {
     super(sizeGuideId, 'SizeGuide');
   }
   get eventType(): string { return 'size-guide.created'; }
-  getPayload(): Record<string, unknown> { return { sizeGuideId: this.sizeGuideId, title: this.title }; }
+  getPayload(): Record<string, unknown> {
+    return { sizeGuideId: this.sizeGuideId, title: this.title };
+  }
 }
 
-export class SizeGuideUpdatedEvent extends DomainEvent {
-  constructor(public readonly sizeGuideId: string) {
-    super(sizeGuideId, 'SizeGuide');
-  }
-  get eventType(): string { return 'size-guide.updated'; }
-  getPayload(): Record<string, unknown> { return { sizeGuideId: this.sizeGuideId }; }
-}
-
-export class SizeGuideDeletedEvent extends DomainEvent {
-  constructor(public readonly sizeGuideId: string) {
-    super(sizeGuideId, 'SizeGuide');
-  }
-  get eventType(): string { return 'size-guide.deleted'; }
-  getPayload(): Record<string, unknown> { return { sizeGuideId: this.sizeGuideId }; }
-}
+// ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface SizeGuideProps {
   id: SizeGuideId;
@@ -49,31 +41,39 @@ export interface SizeGuideDTO {
   updatedAt: string;
 }
 
+// ── Entity ─────────────────────────────────────────────────────────────
+
 export class SizeGuide extends AggregateRoot {
+  private static readonly TITLE_MAX_LENGTH = 200;
+  private static readonly CATEGORY_MAX_LENGTH = 100;
+
   private constructor(private props: SizeGuideProps) {
     super();
+    SizeGuide.validate(props);
   }
 
   static create(params: {
     title: string;
-    bodyHtml?: string;
+    bodyHtml?: string | null;
     region: Region;
-    category?: string;
+    category?: string | null;
   }): SizeGuide {
     const sizeGuideId = SizeGuideId.create();
-
     const now = new Date();
+
     const sizeGuide = new SizeGuide({
       id: sizeGuideId,
-      title: params.title,
-      bodyHtml: params.bodyHtml || null,
+      title: params.title.trim(),
+      bodyHtml: params.bodyHtml?.trim() ?? null,
       region: params.region,
-      category: params.category || null,
+      category: params.category?.trim() ?? null,
       createdAt: now,
       updatedAt: now,
     });
 
-    sizeGuide.addDomainEvent(new SizeGuideCreatedEvent(sizeGuideId.getValue(), params.title));
+    sizeGuide.addDomainEvent(
+      new SizeGuideCreatedEvent(sizeGuideId.getValue(), params.title.trim()),
+    );
 
     return sizeGuide;
   }
@@ -82,105 +82,86 @@ export class SizeGuide extends AggregateRoot {
     return new SizeGuide(props);
   }
 
-  // Getters
-  get id(): SizeGuideId {
-    return this.props.id;
+  // ── Validation ─────────────────────────────────────────────────────
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: SizeGuideProps): void {
+    SizeGuide.validateTitle(props.title);
+    SizeGuide.validateCategory(props.category);
   }
 
-  get title(): string {
-    return this.props.title;
-  }
-
-  get bodyHtml(): string | null {
-    return this.props.bodyHtml;
-  }
-
-  get region(): Region {
-    return this.props.region;
-  }
-
-  get category(): string | null {
-    return this.props.category;
-  }
-
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  // Business logic methods
-  updateTitle(newTitle: string): void {
-    if (!newTitle || newTitle.trim().length === 0) {
+  private static validateTitle(title: string): void {
+    if (!title || title.trim().length === 0) {
       throw new DomainValidationError('Title cannot be empty');
     }
-
-    if (newTitle.trim().length > 200) {
-      throw new DomainValidationError('Title cannot be longer than 200 characters');
+    if (title.trim().length > SizeGuide.TITLE_MAX_LENGTH) {
+      throw new DomainValidationError(
+        `Title cannot be longer than ${SizeGuide.TITLE_MAX_LENGTH} characters`,
+      );
     }
+  }
 
+  private static validateCategory(category: string | null): void {
+    if (category !== null && category.trim().length > SizeGuide.CATEGORY_MAX_LENGTH) {
+      throw new DomainValidationError(
+        `Category cannot be longer than ${SizeGuide.CATEGORY_MAX_LENGTH} characters`,
+      );
+    }
+  }
+
+  // ── Getters ────────────────────────────────────────────────────────
+
+  get id(): SizeGuideId { return this.props.id; }
+  get title(): string { return this.props.title; }
+  get bodyHtml(): string | null { return this.props.bodyHtml; }
+  get region(): Region { return this.props.region; }
+  get category(): string | null { return this.props.category; }
+  get createdAt(): Date { return this.props.createdAt; }
+  get updatedAt(): Date { return this.props.updatedAt; }
+
+  // ── Business Logic ─────────────────────────────────────────────────
+
+  updateTitle(newTitle: string): void {
+    SizeGuide.validateTitle(newTitle);
     this.props.title = newTitle.trim();
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
+    this.markUpdated();
   }
 
   updateBodyHtml(newBodyHtml: string | null): void {
-    this.props.bodyHtml = newBodyHtml?.trim() || null;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
+    this.props.bodyHtml = newBodyHtml?.trim() ?? null;
+    this.markUpdated();
   }
 
   updateRegion(newRegion: Region): void {
     this.props.region = newRegion;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
+    this.markUpdated();
   }
 
   updateCategory(newCategory: string | null): void {
-    if (newCategory && newCategory.trim().length > 100) {
-      throw new DomainValidationError('Category cannot be longer than 100 characters');
-    }
-
-    this.props.category = newCategory?.trim() || null;
-    this.props.updatedAt = new Date();
-    this.addDomainEvent(new SizeGuideUpdatedEvent(this.props.id.getValue()));
+    SizeGuide.validateCategory(newCategory);
+    this.props.category = newCategory?.trim() ?? null;
+    this.markUpdated();
   }
 
-  // Validation methods
-  isForRegion(region: Region): boolean {
-    return this.props.region === region;
-  }
+  // ── Query Methods ──────────────────────────────────────────────────
 
-  isForCategory(category: string): boolean {
-    return this.props.category === category;
-  }
-
-  isGeneral(): boolean {
-    return this.props.category === null;
-  }
-
+  isForRegion(region: Region): boolean { return this.props.region === region; }
+  isForCategory(category: string): boolean { return this.props.category === category; }
+  isGeneral(): boolean { return this.props.category === null; }
   hasContent(): boolean {
     return this.props.bodyHtml !== null && this.props.bodyHtml.trim().length > 0;
   }
+  isUK(): boolean { return this.props.region === Region.UK; }
+  isUS(): boolean { return this.props.region === Region.US; }
+  isEU(): boolean { return this.props.region === Region.EU; }
 
-  // Helper methods for regions
-  isUK(): boolean {
-    return this.props.region === Region.UK;
+  // ── Internal ───────────────────────────────────────────────────────
+
+  private markUpdated(): void {
+    this.props.updatedAt = new Date();
   }
 
-  isUS(): boolean {
-    return this.props.region === Region.US;
-  }
-
-  isEU(): boolean {
-    return this.props.region === Region.EU;
-  }
-
-  markAsDeleted(): void {
-    this.addDomainEvent(new SizeGuideDeletedEvent(this.props.id.getValue()));
-  }
+  // ── Serialisation ──────────────────────────────────────────────────
 
   equals(other: SizeGuide): boolean {
     return this.props.id.equals(other.props.id);

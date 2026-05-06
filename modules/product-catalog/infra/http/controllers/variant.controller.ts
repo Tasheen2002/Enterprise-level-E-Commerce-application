@@ -32,7 +32,12 @@ export class VariantController {
     try {
       const result = await this.listVariantsHandler.handle({
         productId: request.params.productId,
-        ...request.query,
+        page: request.query.page,
+        limit: request.query.limit,
+        size: request.query.size,
+        color: request.query.color,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
       });
       return ResponseHelper.ok(reply, "Variants retrieved successfully", result);
     } catch (error: unknown) {
@@ -59,7 +64,16 @@ export class VariantController {
     try {
       const result = await this.createVariantHandler.handle({
         productId: request.params.productId,
-        ...request.body,
+        sku: request.body.sku,
+        size: request.body.size,
+        color: request.body.color,
+        barcode: request.body.barcode,
+        weightG: request.body.weightG,
+        dims: request.body.dims,
+        taxClass: request.body.taxClass,
+        allowBackorder: request.body.allowBackorder,
+        allowPreorder: request.body.allowPreorder,
+        restockEta: request.body.restockEta,
       });
       return ResponseHelper.fromCommand(reply, result, "Variant created successfully", 201);
     } catch (error: unknown) {
@@ -74,7 +88,16 @@ export class VariantController {
     try {
       const result = await this.updateVariantHandler.handle({
         variantId: request.params.variantId,
-        ...request.body,
+        sku: request.body.sku,
+        size: request.body.size,
+        color: request.body.color,
+        barcode: request.body.barcode,
+        weightG: request.body.weightG,
+        dims: request.body.dims,
+        taxClass: request.body.taxClass,
+        allowBackorder: request.body.allowBackorder,
+        allowPreorder: request.body.allowPreorder,
+        restockEta: request.body.restockEta,
       });
       return ResponseHelper.fromCommand(reply, result, "Variant updated successfully");
     } catch (error: unknown) {

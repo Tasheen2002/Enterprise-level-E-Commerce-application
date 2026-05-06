@@ -1,5 +1,5 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
-import { Region } from "../../domain/enums/product-catalog.enums";
+import { Region } from "../../domain/value-objects";
 import { SizeGuideManagementService } from "../services/size-guide-management.service";
 
 export interface GetAvailableSizeGuideRegionsQuery extends IQuery {}

@@ -23,7 +23,7 @@ export class GiftCardTransactionRepositoryImpl
   }
 
   async save(transaction: GiftCardTransaction): Promise<void> {
-    const data = this.dehydrate(transaction);
+    const data = this.toPersistence(transaction);
     await this.prisma.giftCardTransaction.create({ data });
     await this.dispatchEvents(transaction);
   }
@@ -32,7 +32,7 @@ export class GiftCardTransactionRepositoryImpl
     const record = await this.prisma.giftCardTransaction.findUnique({
       where: { gcTxnId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByGiftCardId(giftCardId: GiftCardId): Promise<GiftCardTransaction[]> {
@@ -40,7 +40,7 @@ export class GiftCardTransactionRepositoryImpl
       where: { giftCardId: giftCardId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findByOrderId(orderId: string): Promise<GiftCardTransaction[]> {
@@ -48,7 +48,7 @@ export class GiftCardTransactionRepositoryImpl
       where: { orderId },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -71,7 +71,7 @@ export class GiftCardTransactionRepositoryImpl
       this.prisma.giftCardTransaction.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -92,7 +92,7 @@ export class GiftCardTransactionRepositoryImpl
     return this.prisma.giftCardTransaction.count({ where });
   }
 
-  private hydrate(record: Prisma.GiftCardTransactionGetPayload<Record<string, never>>): GiftCardTransaction {
+  private toDomain(record: Prisma.GiftCardTransactionGetPayload<Record<string, never>>): GiftCardTransaction {
     return GiftCardTransaction.fromPersistence({
       id: GiftCardTransactionId.fromString(record.gcTxnId),
       giftCardId: GiftCardId.fromString(record.giftCardId),
@@ -106,7 +106,7 @@ export class GiftCardTransactionRepositoryImpl
     });
   }
 
-  private dehydrate(transaction: GiftCardTransaction): Prisma.GiftCardTransactionUncheckedCreateInput {
+  private toPersistence(transaction: GiftCardTransaction): Prisma.GiftCardTransactionUncheckedCreateInput {
     return {
       gcTxnId: transaction.id.getValue(),
       giftCardId: transaction.giftCardId.getValue(),

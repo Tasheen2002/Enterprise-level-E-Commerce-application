@@ -9,13 +9,13 @@ export interface ProductVariantMediaItem {
 }
 
 export interface IVariantMediaRepository {
-  // Core CRUD
+  // ── Core CRUD ───────────────────────────────────────────────────────
   save(variantMedia: VariantMedia): Promise<void>;
   delete(variantId: VariantId, assetId: MediaAssetId): Promise<void>;
   deleteByVariantId(variantId: VariantId): Promise<void>;
   deleteByAssetId(assetId: MediaAssetId): Promise<void>;
 
-  // Association management
+  // ── Association management ──────────────────────────────────────────
   addMediaToVariant(variantId: VariantId, assetId: MediaAssetId): Promise<void>;
   removeMediaFromVariant(variantId: VariantId, assetId: MediaAssetId): Promise<void>;
   removeAllVariantMedia(variantId: VariantId): Promise<void>;
@@ -23,16 +23,15 @@ export interface IVariantMediaRepository {
   addMediaToMultipleVariants(variantIds: VariantId[], assetId: MediaAssetId): Promise<void>;
   addMultipleMediaToVariant(variantId: VariantId, assetIds: MediaAssetId[]): Promise<void>;
 
-  // Queries
+  // ── Queries ─────────────────────────────────────────────────────────
   findByVariantId(variantId: VariantId): Promise<VariantMedia[]>;
   findByAssetId(assetId: MediaAssetId): Promise<VariantMedia[]>;
-  findByProductVariants(productId: ProductId): Promise<VariantMedia[]>;
   findAssociation(
     variantId: VariantId,
     assetId: MediaAssetId,
   ): Promise<VariantMedia | null>;
 
-  // Color/size specific queries
+  // ── Variant-attribute filtered media (color/size) ───────────────────
   findByVariantColor(
     color: string,
     options?: VariantMediaQueryOptions,
@@ -44,12 +43,18 @@ export interface IVariantMediaRepository {
   getColorVariantMedia(productId: ProductId, color: string): Promise<VariantMedia[]>;
   getSizeVariantMedia(productId: ProductId, size: string): Promise<VariantMedia[]>;
 
-  // Product-level media
+  // ── Product-level variant media ─────────────────────────────────────
   getProductVariantMedia(productId: ProductId): Promise<ProductVariantMediaItem[]>;
-  duplicateVariantMedia(sourceVariantId: VariantId, targetVariantId: VariantId): Promise<void>;
-  copyProductVariantMedia(sourceProductId: ProductId, variantIdMapping: Map<string, VariantId>): Promise<void>;
+  duplicateVariantMedia(
+    sourceVariantId: VariantId,
+    targetVariantId: VariantId,
+  ): Promise<void>;
+  copyProductVariantMedia(
+    sourceProductId: ProductId,
+    variantIdMapping: Map<string, VariantId>,
+  ): Promise<void>;
 
-  // Utility queries
+  // ── Counts / utilities ──────────────────────────────────────────────
   exists(variantId: VariantId, assetId: MediaAssetId): Promise<boolean>;
   countByVariantId(variantId: VariantId): Promise<number>;
   countAssetUsage(assetId: MediaAssetId): Promise<number>;
@@ -62,11 +67,5 @@ export interface VariantMediaQueryOptions {
   offset?: number;
   sortBy?: "variantId" | "assetId";
   sortOrder?: "asc" | "desc";
-  productId?: string;
-}
-
-export interface VariantMediaCountOptions {
-  variantId?: string;
-  assetId?: string;
-  productId?: string;
+  productId?: ProductId;
 }

@@ -1,7 +1,7 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
 import { ProductDTO } from "../../domain/entities/product.entity";
 import { ProductManagementService } from "../services/product-management.service";
-import { ProductStatus } from "../../domain/enums/product-catalog.enums";
+import { ProductStatus } from "../../domain/value-objects";
 
 export interface CreateProductCommand extends ICommand {
   readonly title: string;
@@ -14,6 +14,7 @@ export interface CreateProductCommand extends ICommand {
   readonly seoTitle?: string;
   readonly seoDescription?: string;
   readonly price?: number;
+  readonly currency?: string;
   readonly priceSgd?: number;
   readonly priceUsd?: number;
   readonly compareAtPrice?: number;

@@ -1,8 +1,9 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { SizeGuideDTO } from "../../domain/entities/size-guide.entity";
-import { Region } from "../../domain/enums/product-catalog.enums";
+import { Region } from "../../domain/value-objects";
 import { SizeGuideManagementService } from "../services/size-guide-management.service";
-import { SizeGuideQueryOptions } from "../../domain/repositories/size-guide.repository";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface GetRegionalSizeGuidesQuery extends IQuery {
   readonly region: Region;
@@ -14,46 +15,18 @@ export interface GetRegionalSizeGuidesQuery extends IQuery {
   readonly sortOrder?: "asc" | "desc";
 }
 
-export interface RegionalSizeGuidesResult {
-  readonly sizeGuides: SizeGuideDTO[];
-  readonly pagination: {
-    readonly page: number;
-    readonly limit: number;
-    readonly total: number;
-    readonly total_pages: number;
-  };
-  readonly meta: { region: Region; page: number; limit: number };
-}
-
-export class GetRegionalSizeGuidesHandler implements IQueryHandler<GetRegionalSizeGuidesQuery, RegionalSizeGuidesResult> {
+export class GetRegionalSizeGuidesHandler implements IQueryHandler<GetRegionalSizeGuidesQuery, PaginatedResult<SizeGuideDTO>> {
   constructor(private readonly sizeGuideManagementService: SizeGuideManagementService) {}
 
-  async handle(query: GetRegionalSizeGuidesQuery): Promise<RegionalSizeGuidesResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
-
-    const serviceOptions: SizeGuideQueryOptions = {
-      limit,
-      offset: (page - 1) * limit,
-      sortBy: query.sortBy ?? "title",
-      sortOrder: query.sortOrder ?? "desc",
-      hasContent: query.hasContent,
-    };
-
-    let guides: SizeGuideDTO[];
-    if (query.category) {
-      const guide = await this.sizeGuideManagementService.getSizeGuideByRegionAndCategory(query.region, query.category);
-      guides = guide ? [guide] : [];
-    } else {
-      guides = await this.sizeGuideManagementService.getSizeGuidesByRegion(query.region, serviceOptions);
-    }
-
-    const sizeGuides = guides.filter(Boolean);
-
-    return {
-      sizeGuides,
-      pagination: { page, limit, total: sizeGuides.length, total_pages: Math.ceil(sizeGuides.length / limit) },
-      meta: { region: query.region, page, limit },
-    };
+  async handle(query: GetRegionalSizeGuidesQuery): Promise<PaginatedResult<SizeGuideDTO>> {
+    return this.sizeGuideManagementService.findWithFilters(
+      { region: query.region, category: query.category, hasContent: query.hasContent },
+      {
+        page: Math.max(MIN_PAGE, query.page ?? MIN_PAGE),
+        limit: Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE)),
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+      },
+    );
   }
 }

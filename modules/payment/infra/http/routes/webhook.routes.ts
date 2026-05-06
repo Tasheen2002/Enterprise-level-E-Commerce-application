@@ -4,11 +4,13 @@ import { PaymentWebhookController } from "../controllers/payment-webhook.control
 import { StripeWebhookController } from "../controllers/stripe-webhook.controller";
 import {
   RolePermissions,
+  authenticate,
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateQuery } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateQuery, toJsonSchema } from "../validation/validator";
 import { createStripeIntentSchema } from "../validation/payment-intent.schema";
 import {
   listWebhookEventsQuerySchema,
@@ -16,9 +18,13 @@ import {
   webhookEventResponseSchema,
 } from "../validation/webhook.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createStripeIntentBodyJson = toJsonSchema(createStripeIntentSchema);
+const listWebhookEventsQueryJson = toJsonSchema(listWebhookEventsQuerySchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function registerWebhookRoutes(
@@ -36,33 +42,15 @@ export async function registerWebhookRoutes(
   fastify.post(
     "/payments/stripe/create-intent",
     {
-      preValidation: [validateBody(createStripeIntentSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createStripeIntentSchema)],
       schema: {
         description: "Create a Stripe PaymentIntent. Returns client_secret for the frontend to complete payment with Stripe.js.",
         tags: ["Stripe"],
         summary: "Create Stripe PaymentIntent",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["orderId", "amount"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            amount: { type: "number", minimum: 0.01 },
-            currency: { type: "string" },
-            idempotencyKey: { type: "string" },
-          },
-        },
+        body: createStripeIntentBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stripeIntentResultSchema,
-            },
-          },
+          201: successResponse(stripeIntentResultSchema, 201),
         },
       },
     },
@@ -79,15 +67,7 @@ export async function registerWebhookRoutes(
         tags: ["Stripe"],
         summary: "Stripe Webhook",
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse({ type: "object" }),
         },
       },
     },
@@ -99,34 +79,18 @@ export async function registerWebhookRoutes(
     "/webhooks/events",
     {
       preValidation: [validateQuery(listWebhookEventsQuerySchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all received webhook events — Admin only.",
         tags: ["Webhooks"],
         summary: "List Webhook Events",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            provider: { type: "string" },
-            eventType: { type: "string" },
-            limit: { type: "number", minimum: 1, maximum: 100 },
-            offset: { type: "number", minimum: 0 },
-          },
-        },
+        querystring: listWebhookEventsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: webhookEventResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: webhookEventResponseSchema,
+          }),
         },
       },
     },

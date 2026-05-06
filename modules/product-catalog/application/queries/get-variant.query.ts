@@ -9,7 +9,7 @@ export interface GetVariantQuery extends IQuery {
 export class GetVariantHandler implements IQueryHandler<GetVariantQuery, ProductVariantDTO> {
   constructor(private readonly variantManagementService: VariantManagementService) {}
 
-  async handle(input: GetVariantQuery): Promise<ProductVariantDTO> {
-    return this.variantManagementService.getVariantById(input.variantId);
+  async handle(query: GetVariantQuery): Promise<ProductVariantDTO> {
+    return this.variantManagementService.getVariantById(query.variantId);
   }
 }

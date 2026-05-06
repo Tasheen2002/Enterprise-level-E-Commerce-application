@@ -1,6 +1,6 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
-import { ProductDTO } from "../../domain/entities/product.entity";
-import { ProductSearchService } from "../services/product-search.service";
+import { ProductSearchService, ProductSearchResult } from "../services/product-search.service";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface SearchProductsQuery extends IQuery {
   readonly searchTerm: string;
@@ -16,33 +16,21 @@ export interface SearchProductsQuery extends IQuery {
   readonly sortOrder?: "asc" | "desc";
 }
 
-export interface SearchProductsResult {
-  readonly items: ProductDTO[];
-  readonly totalCount: number;
-  readonly page: number;
-  readonly limit: number;
-  readonly searchTerm: string;
-  readonly suggestions?: string[];
-}
-
-export class SearchProductsHandler implements IQueryHandler<SearchProductsQuery, SearchProductsResult> {
+export class SearchProductsHandler implements IQueryHandler<SearchProductsQuery, ProductSearchResult> {
   constructor(private readonly productSearchService: ProductSearchService) {}
 
-  async handle(input: SearchProductsQuery): Promise<SearchProductsResult> {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
-    const result = await this.productSearchService.searchProducts(input.searchTerm.trim(), {
-      page,
-      limit,
-      category: input.categoryId,
-      minPrice: input.minPrice,
-      maxPrice: input.maxPrice,
-      brand: input.brand,
-      tags: input.tags,
-      status: input.status,
-      sortBy: input.sortBy ?? "relevance",
-      sortOrder: input.sortOrder ?? "desc",
+  async handle(query: SearchProductsQuery): Promise<ProductSearchResult> {
+    return this.productSearchService.searchProducts(query.searchTerm.trim(), {
+      page: Math.max(MIN_PAGE, query.page ?? MIN_PAGE),
+      limit: Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE)),
+      category: query.categoryId,
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      brand: query.brand,
+      tags: query.tags,
+      status: query.status,
+      sortBy: query.sortBy ?? "relevance",
+      sortOrder: query.sortOrder ?? "desc",
     });
-    return { ...result, searchTerm: input.searchTerm, page, limit };
   }
 }

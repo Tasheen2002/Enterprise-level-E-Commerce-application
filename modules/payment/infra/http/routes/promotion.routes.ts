@@ -3,11 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { PromotionController } from "../controllers/promotion.controller";
 import {
   RolePermissions,
+  authenticate,
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateParams } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateParams, toJsonSchema } from "../validation/validator";
 import {
   createPromotionSchema,
   applyPromotionSchema,
@@ -18,9 +20,15 @@ import {
   applyPromotionResponseSchema,
 } from "../validation/promotion.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createPromotionBodyJson = toJsonSchema(createPromotionSchema);
+const applyPromotionBodyJson = toJsonSchema(applyPromotionSchema);
+const recordPromotionUsageBodyJson = toJsonSchema(recordPromotionUsageSchema);
+const promoIdParamsJson = toJsonSchema(promoIdParamsSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function registerPromotionRoutes(
@@ -37,44 +45,15 @@ export async function registerPromotionRoutes(
   fastify.post(
     "/promotions",
     {
-      preValidation: [validateBody(createPromotionSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createPromotionSchema)],
       schema: {
         description: "Create a new promotion — Admin only.",
         tags: ["Promotions"],
         summary: "Create Promotion",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["rule"],
-          properties: {
-            code: { type: "string" },
-            rule: {
-              type: "object",
-              properties: {
-                type: { type: "string" },
-                value: { type: "number" },
-                minPurchase: { type: "number" },
-                maxDiscount: { type: "number" },
-                applicableProducts: { type: "array", items: { type: "string" } },
-                applicableCategories: { type: "array", items: { type: "string" } },
-              },
-            },
-            startsAt: { type: "string", format: "date-time" },
-            endsAt: { type: "string", format: "date-time" },
-            usageLimit: { type: "number", minimum: 1 },
-          },
-        },
+        body: createPromotionBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: promotionResponseSchema,
-            },
-          },
+          201: successResponse(promotionResponseSchema, 201),
         },
       },
     },
@@ -85,33 +64,14 @@ export async function registerPromotionRoutes(
   fastify.post(
     "/promotions/apply",
     {
-      preValidation: [validateBody(applyPromotionSchema)],
+      preHandler: [validateBody(applyPromotionSchema)],
       schema: {
         description: "Apply a promotion code to calculate discount for an order or cart.",
         tags: ["Promotions"],
         summary: "Apply Promotion",
-        body: {
-          type: "object",
-          required: ["promoCode", "orderAmount"],
-          properties: {
-            promoCode: { type: "string" },
-            orderId: { type: "string", format: "uuid" },
-            orderAmount: { type: "number", minimum: 0 },
-            currency: { type: "string" },
-            products: { type: "array", items: { type: "string" } },
-            categories: { type: "array", items: { type: "string" } },
-          },
-        },
+        body: applyPromotionBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: applyPromotionResponseSchema,
-            },
-          },
+          200: successResponse(applyPromotionResponseSchema),
         },
       },
     },
@@ -127,18 +87,10 @@ export async function registerPromotionRoutes(
         tags: ["Promotions"],
         summary: "List Active Promotions",
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: promotionResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: promotionResponseSchema,
+          }),
         },
       },
     },
@@ -149,37 +101,17 @@ export async function registerPromotionRoutes(
   fastify.post(
     "/promotions/:promoId/usage",
     {
-      preValidation: [validateParams(promoIdParamsSchema), validateBody(recordPromotionUsageSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preValidation: [validateParams(promoIdParamsSchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(recordPromotionUsageSchema)],
       schema: {
         description: "Record that a promotion was used in an order.",
         tags: ["Promotions"],
         summary: "Record Promotion Usage",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["promoId"],
-          properties: { promoId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["orderId", "discountAmount"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            discountAmount: { type: "number", minimum: 0 },
-            currency: { type: "string" },
-          },
-        },
+        params: promoIdParamsJson,
+        body: recordPromotionUsageBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: promotionUsageResponseSchema,
-            },
-          },
+          201: successResponse(promotionUsageResponseSchema, 201),
         },
       },
     },
@@ -191,30 +123,18 @@ export async function registerPromotionRoutes(
     "/promotions/:promoId/usage",
     {
       preValidation: [validateParams(promoIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all usage records for a promotion — Admin only.",
         tags: ["Promotions"],
         summary: "List Promotion Usage",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["promoId"],
-          properties: { promoId: { type: "string", format: "uuid" } },
-        },
+        params: promoIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: promotionUsageResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: promotionUsageResponseSchema,
+          }),
         },
       },
     },

@@ -2,6 +2,8 @@ import { IQuery, IQueryHandler } from "../../../../packages/core/src/application
 import { MediaAssetDTO } from "../../domain/entities/media-asset.entity";
 import { MediaManagementService } from "../services/media-management.service";
 import { MediaAssetFilters } from "../../domain/repositories/media-asset.repository";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface SearchMediaAssetsQuery extends IQuery {
   readonly page?: number;
@@ -20,26 +22,10 @@ export interface SearchMediaAssetsQuery extends IQuery {
   readonly maxHeight?: number;
 }
 
-export interface SearchMediaAssetsResult {
-  readonly assets: MediaAssetDTO[];
-  readonly meta: {
-    readonly page: number;
-    readonly limit: number;
-    readonly sortBy: string;
-    readonly sortOrder: string;
-    readonly filters: MediaAssetFilters;
-  };
-}
-
-export class SearchMediaAssetsHandler implements IQueryHandler<SearchMediaAssetsQuery, SearchMediaAssetsResult> {
+export class SearchMediaAssetsHandler implements IQueryHandler<SearchMediaAssetsQuery, PaginatedResult<MediaAssetDTO>> {
   constructor(private readonly mediaManagementService: MediaManagementService) {}
 
-  async handle(query: SearchMediaAssetsQuery): Promise<SearchMediaAssetsResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
-    const sortBy = query.sortBy ?? "createdAt";
-    const sortOrder = query.sortOrder ?? "desc";
-
+  async handle(query: SearchMediaAssetsQuery): Promise<PaginatedResult<MediaAssetDTO>> {
     const filters: MediaAssetFilters = {
       mimeType: query.mimeType,
       isImage: query.isImage,
@@ -49,10 +35,11 @@ export class SearchMediaAssetsHandler implements IQueryHandler<SearchMediaAssets
       maxBytes: query.maxBytes,
     };
 
-    const options = { page, limit, sortBy, sortOrder, hasRenditions: query.hasRenditions };
-
-    const assets = await this.mediaManagementService.searchAssets(filters, options);
-
-    return { assets, meta: { page, limit, sortBy, sortOrder, filters } };
+    return this.mediaManagementService.searchAssets(filters, {
+      page: Math.max(MIN_PAGE, query.page ?? MIN_PAGE),
+      limit: Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE)),
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    });
   }
 }

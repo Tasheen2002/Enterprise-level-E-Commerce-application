@@ -1,5 +1,5 @@
 // HTTP Routes
-export { registerPaymentLoyaltyRoutes } from "./routes";
+export { registerPaymentRoutes } from "./routes";
 
 // HTTP Controllers
 export * from "./controllers";

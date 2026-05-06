@@ -6,9 +6,7 @@ import {
   DeleteProductHandler,
   GetProductHandler,
   ListProductsHandler,
-  SearchProductsHandler,
 } from "../../../application";
-import { ProductStatus } from "../../../domain/enums/product-catalog.enums";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   ProductParams,
@@ -18,6 +16,8 @@ import {
   UpdateProductBody,
 } from "../validation/product.schema";
 
+// Search lives in SearchController (/search endpoint). This controller covers
+// product CRUD only — keep listProducts single-purpose.
 export class ProductController {
   constructor(
     private readonly createProductHandler: CreateProductHandler,
@@ -25,28 +25,16 @@ export class ProductController {
     private readonly deleteProductHandler: DeleteProductHandler,
     private readonly getProductHandler: GetProductHandler,
     private readonly listProductsHandler: ListProductsHandler,
-    private readonly searchProductsHandler: SearchProductsHandler,
   ) {}
+
+  // ── Reads ──────────────────────────────────────────────────────────────
 
   async listProducts(
     request: AuthenticatedRequest<{ Querystring: ListProductsQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const { search, ...queryRest } = request.query as ListProductsQuery & { search?: string };
-
-      if (search) {
-        const { sortBy, status, ...searchRest } = queryRest;
-        const result = await this.searchProductsHandler.handle({
-          searchTerm: search,
-          ...searchRest,
-          status: status as ProductStatus | undefined,
-          sortBy: sortBy === "updatedAt" ? undefined : sortBy as "relevance" | "price" | "title" | "createdAt" | "publishAt" | undefined,
-        });
-        return ResponseHelper.ok(reply, "Products retrieved successfully", result);
-      }
-
-      const result = await this.listProductsHandler.handle(queryRest);
+      const result = await this.listProductsHandler.handle(request.query);
       return ResponseHelper.ok(reply, "Products retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -77,16 +65,14 @@ export class ProductController {
     }
   }
 
+  // ── Writes ─────────────────────────────────────────────────────────────
+
   async createProduct(
     request: AuthenticatedRequest<{ Body: CreateProductBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { status, ...rest } = request.body;
-      const result = await this.createProductHandler.handle({
-        ...rest,
-        status: status as ProductStatus | undefined,
-      });
+      const result = await this.createProductHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, "Product created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -98,11 +84,24 @@ export class ProductController {
     reply: FastifyReply,
   ) {
     try {
-      const { status, ...rest } = request.body;
       const result = await this.updateProductHandler.handle({
         productId: request.params.productId,
-        ...rest,
-        status: status as ProductStatus | undefined,
+        title: request.body.title,
+        brand: request.body.brand,
+        shortDesc: request.body.shortDesc,
+        longDescHtml: request.body.longDescHtml,
+        status: request.body.status,
+        publishAt: request.body.publishAt,
+        countryOfOrigin: request.body.countryOfOrigin,
+        seoTitle: request.body.seoTitle,
+        seoDescription: request.body.seoDescription,
+        price: request.body.price,
+        currency: request.body.currency,
+        priceSgd: request.body.priceSgd,
+        priceUsd: request.body.priceUsd,
+        compareAtPrice: request.body.compareAtPrice,
+        categoryIds: request.body.categoryIds,
+        tags: request.body.tags,
       });
       return ResponseHelper.fromCommand(reply, result, "Product updated successfully");
     } catch (error: unknown) {

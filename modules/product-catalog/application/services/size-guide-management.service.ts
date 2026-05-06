@@ -5,42 +5,91 @@ import {
 } from "../../domain/repositories/size-guide.repository";
 import { SizeGuide, SizeGuideDTO } from "../../domain/entities/size-guide.entity";
 import { SizeGuideId } from "../../domain/value-objects/size-guide-id.vo";
-import { Region } from "../../domain/enums/product-catalog.enums";
+import { Region } from "../../domain/value-objects";
+import { IHtmlSanitizer } from "./ihtml-sanitizer.service";
 import {
   SizeGuideNotFoundError,
   DomainValidationError,
 } from "../../domain/errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
-type CreateSizeGuideData = { title: string; bodyHtml?: string; region: Region; category?: string };
+// ── Input / result types ──────────────────────────────────────────────
+
+export interface CreateSizeGuideData {
+  title: string;
+  bodyHtml?: string;
+  region: Region;
+  category?: string;
+}
+
+export interface UpdateSizeGuideInput {
+  title?: string;
+  bodyHtml?: string;
+  region?: Region;
+  category?: string;
+}
+
+export interface RegionCount {
+  region: Region;
+  count: number;
+}
+
+export interface CategoryCount {
+  category: string | null;
+  count: number;
+}
+
+export interface SizeGuideStats {
+  totalGuides: number;
+  guidesByRegion: RegionCount[];
+  guidesByCategory: CategoryCount[];
+  guidesWithContent: number;
+  guidesWithoutContent: number;
+}
+
+export interface BatchCreateSizeGuideResult {
+  created: SizeGuideDTO[];
+  skipped: Array<{ title: string; reason: string }>;
+}
+
+export interface BatchDeleteSizeGuideResult {
+  deleted: string[];
+  failed: Array<{ id: string; error: string }>;
+}
+
+export interface SizeGuideFilters {
+  region?: Region;
+  category?: string;
+  hasContent?: boolean;
+}
+
+export interface SizeGuideListOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: "title" | "region" | "category";
+  sortOrder?: "asc" | "desc";
+}
+
+// ── Service ───────────────────────────────────────────────────────────
 
 export class SizeGuideManagementService {
-  constructor(private readonly sizeGuideRepository: ISizeGuideRepository) {}
+  constructor(
+    private readonly sizeGuideRepository: ISizeGuideRepository,
+    private readonly htmlSanitizer: IHtmlSanitizer,
+  ) {}
 
-  // Core CRUD operations
+  // ── Core CRUD ────────────────────────────────────────────────────────
+
   async createSizeGuide(data: CreateSizeGuideData): Promise<SizeGuideDTO> {
-    // Validate region-category combination for uniqueness
     if (data.category) {
-      const existingGuide =
-        await this.sizeGuideRepository.findByRegionAndCategory(
-          data.region,
-          data.category,
-        );
-      if (existingGuide) {
-        throw new DomainValidationError(
-          `Size guide already exists for region "${data.region}" and category "${data.category}"`,
-        );
-      }
+      await this.assertRegionCategoryAvailable(data.region, data.category);
     }
 
-    // Validate title format
-    this.validateTitle(data.title);
-
-    // Validate HTML content if provided
-    if (data.bodyHtml) {
-      this.validateHtmlContent(data.bodyHtml);
-    }
-
-    const sizeGuide = SizeGuide.create(data);
+    const sizeGuide = SizeGuide.create({
+      ...data,
+      title: this.htmlSanitizer.sanitizeTitle(data.title),
+      bodyHtml: data.bodyHtml ? this.htmlSanitizer.sanitize(data.bodyHtml) : undefined,
+    });
     await this.sizeGuideRepository.save(sizeGuide);
 
     return SizeGuide.toDTO(sizeGuide);
@@ -55,6 +104,61 @@ export class SizeGuideManagementService {
   ): Promise<SizeGuideDTO[]> {
     const guides = await this.sizeGuideRepository.findAll(options);
     return guides.map((g) => SizeGuide.toDTO(g));
+  }
+
+  // Consolidates the routing previously done in handlers (region/category/hasContent
+  // branches). Returns the canonical PaginatedResult shape for all paths.
+  async findWithFilters(
+    filters: SizeGuideFilters,
+    options: SizeGuideListOptions = {},
+  ): Promise<PaginatedResult<SizeGuideDTO>> {
+    const { page = 1, limit = 20, sortBy = "title", sortOrder = "desc" } = options;
+    const offset = (page - 1) * limit;
+
+    // Region + category resolves to a single guide (unique by composite key).
+    if (filters.region && filters.category) {
+      const guide = await this.sizeGuideRepository.findByRegionAndCategory(
+        filters.region,
+        filters.category,
+      );
+      const items = guide ? [SizeGuide.toDTO(guide)] : [];
+      return { items, total: items.length, limit, offset: 0, hasMore: false };
+    }
+
+    const queryOptions: SizeGuideQueryOptions = {
+      limit,
+      offset,
+      sortBy,
+      sortOrder,
+      hasContent: filters.hasContent,
+    };
+    const countOptions: SizeGuideCountOptions = {
+      region: filters.region,
+      category: filters.category,
+      hasContent: filters.hasContent,
+    };
+
+    let findPromise: Promise<SizeGuide[]>;
+    if (filters.region) {
+      findPromise = this.sizeGuideRepository.findByRegion(filters.region, queryOptions);
+    } else if (filters.category) {
+      findPromise = this.sizeGuideRepository.findByCategory(filters.category, queryOptions);
+    } else {
+      findPromise = this.sizeGuideRepository.findAll(queryOptions);
+    }
+
+    const [guides, total] = await Promise.all([
+      findPromise,
+      this.sizeGuideRepository.count(countOptions),
+    ]);
+
+    return {
+      items: guides.map((g) => SizeGuide.toDTO(g)),
+      total,
+      limit,
+      offset,
+      hasMore: offset + guides.length < total,
+    };
   }
 
   async getSizeGuidesByRegion(
@@ -94,67 +198,41 @@ export class SizeGuideManagementService {
 
   async updateSizeGuide(
     id: string,
-    updates: {
-      title?: string;
-      bodyHtml?: string;
-      region?: Region;
-      category?: string;
-    },
+    updates: UpdateSizeGuideInput,
   ): Promise<SizeGuideDTO> {
     const sizeGuide = await this.findSizeGuideById(id);
 
-    // Validate title if provided
     if (updates.title !== undefined) {
-      this.validateTitle(updates.title);
-      sizeGuide.updateTitle(updates.title);
+      sizeGuide.updateTitle(this.htmlSanitizer.sanitizeTitle(updates.title));
     }
 
-    // Validate and update HTML content if provided
     if (updates.bodyHtml !== undefined) {
-      if (updates.bodyHtml) {
-        this.validateHtmlContent(updates.bodyHtml);
-      }
-      sizeGuide.updateBodyHtml(updates.bodyHtml);
+      const safeBody = updates.bodyHtml
+        ? this.htmlSanitizer.sanitize(updates.bodyHtml)
+        : updates.bodyHtml;
+      sizeGuide.updateBodyHtml(safeBody);
     }
 
-    // Update region if provided
-    if (updates.region !== undefined) {
-      // Check if the new region-category combination already exists
+    // Single combined uniqueness check when region or category changes
+    if (updates.region !== undefined || updates.category !== undefined) {
+      const targetRegion = updates.region ?? sizeGuide.region;
       const targetCategory =
-        updates.category !== undefined
-          ? updates.category
-          : sizeGuide.category;
+        updates.category !== undefined ? updates.category : sizeGuide.category;
+
       if (targetCategory) {
-        const existingGuide =
-          await this.sizeGuideRepository.findByRegionAndCategory(
-            updates.region,
-            targetCategory,
-          );
-        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
-          throw new DomainValidationError(
-            `Size guide already exists for region "${updates.region}" and category "${targetCategory}"`,
-          );
-        }
+        await this.assertRegionCategoryAvailable(
+          targetRegion,
+          targetCategory,
+          sizeGuide.id,
+        );
       }
+    }
+
+    if (updates.region !== undefined) {
       sizeGuide.updateRegion(updates.region);
     }
 
-    // Update category if provided
     if (updates.category !== undefined) {
-      const targetRegion =
-        updates.region !== undefined ? updates.region : sizeGuide.region;
-      if (updates.category) {
-        const existingGuide =
-          await this.sizeGuideRepository.findByRegionAndCategory(
-            targetRegion,
-            updates.category,
-          );
-        if (existingGuide && !existingGuide.id.equals(sizeGuide.id)) {
-          throw new DomainValidationError(
-            `Size guide already exists for region "${targetRegion}" and category "${updates.category}"`,
-          );
-        }
-      }
       sizeGuide.updateCategory(updates.category);
     }
 
@@ -172,7 +250,8 @@ export class SizeGuideManagementService {
     await this.sizeGuideRepository.delete(sizeGuideId);
   }
 
-  // Region-specific operations
+  // ── Region-specific operations ───────────────────────────────────────
+
   async createRegionalSizeGuide(
     region: Region,
     data: Omit<CreateSizeGuideData, "region">,
@@ -181,9 +260,11 @@ export class SizeGuideManagementService {
   }
 
   async getAvailableRegions(): Promise<Region[]> {
-    return [Region.UK, Region.US, Region.EU];
+    return Region.getAllValues();
   }
 
+  // PERF: N queries (one per region). Acceptable while region count is bounded;
+  // replace with `findByRegions(regions[])` (WHERE region IN ...) if it grows.
   async getSizeGuidesByRegions(
     regions: Region[],
     options?: SizeGuideQueryOptions,
@@ -198,7 +279,8 @@ export class SizeGuideManagementService {
     return allGuides;
   }
 
-  // Category-specific operations
+  // ── Category-specific operations ─────────────────────────────────────
+
   async createCategorySizeGuide(
     category: string,
     region: Region,
@@ -207,6 +289,8 @@ export class SizeGuideManagementService {
     return this.createSizeGuide({ ...data, category, region });
   }
 
+  // PERF: fetches all guides then computes distinct in JS.
+  // Should be a `SELECT DISTINCT category` repo method.
   async getAvailableCategories(region?: Region): Promise<string[]> {
     const guides = region
       ? await this.sizeGuideRepository.findByRegion(region)
@@ -224,7 +308,8 @@ export class SizeGuideManagementService {
     return Array.from(categories).sort();
   }
 
-  // Content management
+  // ── Content management ─────────────────────────────────────────────
+
   async getSizeGuidesWithContent(
     options?: SizeGuideQueryOptions,
   ): Promise<SizeGuideDTO[]> {
@@ -249,7 +334,6 @@ export class SizeGuideManagementService {
     id: string,
     htmlContent: string,
   ): Promise<SizeGuideDTO> {
-    this.validateHtmlContent(htmlContent);
     return this.updateSizeGuide(id, { bodyHtml: htmlContent });
   }
 
@@ -257,47 +341,40 @@ export class SizeGuideManagementService {
     return this.updateSizeGuide(id, { bodyHtml: undefined });
   }
 
-  // Analytics and statistics
-  async getSizeGuideStats(): Promise<{
-    totalGuides: number;
-    guidesByRegion: Array<{ region: Region; count: number }>;
-    guidesByCategory: Array<{ category: string | null; count: number }>;
-    guidesWithContent: number;
-    guidesWithoutContent: number;
-  }> {
-    const totalGuides = await this.sizeGuideRepository.count();
+  // ── Analytics & statistics ─────────────────────────────────────────
 
-    // Count by region
+  // PERF: `guidesByCategory` aggregates in JS; should be a SQL `groupBy(category)`.
+  async getSizeGuideStats(): Promise<SizeGuideStats> {
     const regions = await this.getAvailableRegions();
-    const guidesByRegion = await Promise.all(
-      regions.map(async (region: Region) => ({
-        region,
-        count: await this.sizeGuideRepository.count({ region }),
-      })),
-    );
 
-    // Count by category
-    const allGuides = await this.sizeGuideRepository.findAll();
+    const [
+      totalGuides,
+      guidesByRegion,
+      guidesWithContent,
+      guidesWithoutContent,
+      allGuides,
+    ] = await Promise.all([
+      this.sizeGuideRepository.count(),
+      Promise.all(
+        regions.map(async (region) => ({
+          region,
+          count: await this.sizeGuideRepository.count({ region }),
+        })),
+      ),
+      this.sizeGuideRepository.count({ hasContent: true }),
+      this.sizeGuideRepository.count({ hasContent: false }),
+      this.sizeGuideRepository.findAll(),
+    ]);
+
     const categoryGroups = new Map<string | null, number>();
-
     for (const guide of allGuides) {
       const category = guide.category;
-      categoryGroups.set(category, (categoryGroups.get(category) || 0) + 1);
+      categoryGroups.set(category, (categoryGroups.get(category) ?? 0) + 1);
     }
 
-    const guidesByCategory = Array.from(categoryGroups.entries()).map(
-      ([category, count]) => ({
-        category,
-        count,
-      }),
-    );
-
-    const guidesWithContent = await this.sizeGuideRepository.count({
-      hasContent: true,
-    });
-    const guidesWithoutContent = await this.sizeGuideRepository.count({
-      hasContent: false,
-    });
+    const guidesByCategory: CategoryCount[] = Array.from(
+      categoryGroups.entries(),
+    ).map(([category, count]) => ({ category, count }));
 
     return {
       totalGuides,
@@ -308,18 +385,18 @@ export class SizeGuideManagementService {
     };
   }
 
-  // Bulk operations
-  async createMultipleSizeGuides(guidesData: CreateSizeGuideData[]): Promise<{
-    created: SizeGuideDTO[];
-    skipped: Array<{ title: string; reason: string }>;
-  }> {
-    const createdGuides: SizeGuideDTO[] = [];
+  // ── Bulk operations ─────────────────────────────────────────────────
+
+  async createMultipleSizeGuides(
+    guidesData: CreateSizeGuideData[],
+  ): Promise<BatchCreateSizeGuideResult> {
+    const created: SizeGuideDTO[] = [];
     const skipped: Array<{ title: string; reason: string }> = [];
 
     for (const data of guidesData) {
       try {
         const guide = await this.createSizeGuide(data);
-        createdGuides.push(guide);
+        created.push(guide);
       } catch (error) {
         skipped.push({
           title: data.title,
@@ -328,13 +405,12 @@ export class SizeGuideManagementService {
       }
     }
 
-    return { created: createdGuides, skipped };
+    return { created, skipped };
   }
 
-  async deleteMultipleSizeGuides(ids: string[]): Promise<{
-    deleted: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
+  async deleteMultipleSizeGuides(
+    ids: string[],
+  ): Promise<BatchDeleteSizeGuideResult> {
     const deleted: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
 
@@ -353,24 +429,29 @@ export class SizeGuideManagementService {
     return { deleted, failed };
   }
 
-  // Validation methods
+  // ── Validation helpers (public) ─────────────────────────────────────
+
   async validateSizeGuideUniqueness(
     region: Region,
     category: string | null,
   ): Promise<boolean> {
     if (!category) return true; // General guides can have duplicates
 
-    const existingGuide =
-      await this.sizeGuideRepository.findByRegionAndCategory(region, category);
-    return !existingGuide;
+    const existing = await this.sizeGuideRepository.findByRegionAndCategory(
+      region,
+      category,
+    );
+    return !existing;
   }
 
-  // Utility methods
+  // ── Utility ─────────────────────────────────────────────────────────
+
   async getSizeGuideCount(options?: SizeGuideCountOptions): Promise<number> {
-    return await this.sizeGuideRepository.count(options);
+    return this.sizeGuideRepository.count(options);
   }
 
-  // Private helper — returns domain entity for internal mutation
+  // ── Private helpers ─────────────────────────────────────────────────
+
   private async findSizeGuideById(id: string): Promise<SizeGuide> {
     const sizeGuideId = SizeGuideId.fromString(id);
     const sizeGuide = await this.sizeGuideRepository.findById(sizeGuideId);
@@ -380,50 +461,21 @@ export class SizeGuideManagementService {
     return sizeGuide;
   }
 
-  // Private validation methods
-  private validateTitle(title: string): void {
-    if (!title || title.trim().length === 0) {
-      throw new DomainValidationError("Size guide title cannot be empty");
-    }
-
-    if (title.trim().length > 200) {
+  // Race-prone soft check; the repo schema should also enforce this with a
+  // unique (region, category) index. The global P2002 handler maps DB violations
+  // to a 409 response.
+  private async assertRegionCategoryAvailable(
+    region: Region,
+    category: string,
+    excludeId?: SizeGuideId,
+  ): Promise<void> {
+    const existing = await this.sizeGuideRepository.findByRegionAndCategory(
+      region,
+      category,
+    );
+    if (existing && (!excludeId || !existing.id.equals(excludeId))) {
       throw new DomainValidationError(
-        "Size guide title cannot be longer than 200 characters",
-      );
-    }
-  }
-
-  private validateHtmlContent(htmlContent: string): void {
-    if (htmlContent.length > 50000) {
-      throw new DomainValidationError(
-        "Size guide content cannot exceed 50,000 characters",
-      );
-    }
-
-    // Basic HTML validation - check for balanced tags
-    const tagPattern = /<(\/?[^>]+)>/g;
-    const openTags: string[] = [];
-    let match;
-
-    while ((match = tagPattern.exec(htmlContent)) !== null) {
-      const tag = match[1];
-
-      if (tag.startsWith("/")) {
-        const closingTag = tag.substring(1);
-        const lastOpenTag = openTags.pop();
-        if (lastOpenTag !== closingTag) {
-          throw new DomainValidationError(
-            `Unmatched HTML tag: expected closing </${lastOpenTag}> but found </${closingTag}>`,
-          );
-        }
-      } else if (!tag.endsWith("/")) {
-        openTags.push(tag.split(" ")[0]); // Handle tags with attributes
-      }
-    }
-
-    if (openTags.length > 0) {
-      throw new DomainValidationError(
-        `Unclosed HTML tags: ${openTags.join(", ")}`,
+        `Size guide already exists for region "${region}" and category "${category}"`,
       );
     }
   }

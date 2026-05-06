@@ -1,7 +1,8 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { EditorialLookDTO } from "../../domain/entities/editorial-look.entity";
 import { EditorialLookManagementService } from "../services/editorial-look-management.service";
-import { EditorialLookQueryOptions } from "../../domain/repositories/editorial-look.repository";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface ListEditorialLooksQuery extends IQuery {
   readonly page?: number;
@@ -14,47 +15,23 @@ export interface ListEditorialLooksQuery extends IQuery {
   readonly sortOrder?: "asc" | "desc";
 }
 
-export interface ListEditorialLooksResult {
-  readonly looks: EditorialLookDTO[];
-  readonly meta: {
-    readonly page: number;
-    readonly limit: number;
-    readonly sortBy: string;
-    readonly sortOrder: string;
-  };
-}
-
-export class ListEditorialLooksHandler implements IQueryHandler<ListEditorialLooksQuery, ListEditorialLooksResult> {
+export class ListEditorialLooksHandler implements IQueryHandler<ListEditorialLooksQuery, PaginatedResult<EditorialLookDTO>> {
   constructor(private readonly editorialLookManagementService: EditorialLookManagementService) {}
 
-  async handle(query: ListEditorialLooksQuery): Promise<ListEditorialLooksResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
-    const sortBy = query.sortBy ?? "id";
-    const sortOrder = query.sortOrder ?? "desc";
-
-    const serviceOptions: EditorialLookQueryOptions = {
-      limit,
-      offset: (page - 1) * limit,
-      sortBy,
-      sortOrder,
-    };
-
-    let looks: EditorialLookDTO[];
-    if (query.published === true) {
-      looks = await this.editorialLookManagementService.getPublishedLooks(serviceOptions);
-    } else if (query.scheduled === true) {
-      looks = await this.editorialLookManagementService.getScheduledLooks(serviceOptions);
-    } else if (query.draft === true) {
-      looks = await this.editorialLookManagementService.getDraftLooks(serviceOptions);
-    } else if (query.hasContent === true) {
-      looks = await this.editorialLookManagementService.getLooksWithContent(serviceOptions);
-    } else if (query.hasContent === false) {
-      looks = await this.editorialLookManagementService.getLooksWithoutContent(serviceOptions);
-    } else {
-      looks = await this.editorialLookManagementService.getAllEditorialLooks(serviceOptions);
-    }
-
-    return { looks, meta: { page, limit, sortBy, sortOrder } };
+  async handle(query: ListEditorialLooksQuery): Promise<PaginatedResult<EditorialLookDTO>> {
+    return this.editorialLookManagementService.findWithFilters(
+      {
+        published: query.published,
+        scheduled: query.scheduled,
+        draft: query.draft,
+        hasContent: query.hasContent,
+      },
+      {
+        page: Math.max(MIN_PAGE, query.page ?? MIN_PAGE),
+        limit: Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE)),
+        sortBy: query.sortBy,
+        sortOrder: query.sortOrder,
+      },
+    );
   }
 }

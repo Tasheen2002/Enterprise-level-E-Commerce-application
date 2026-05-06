@@ -3,11 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { PaymentIntentController } from "../controllers/payment-intent.controller";
 import {
   RolePermissions,
+  authenticate,
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   createPaymentIntentSchema,
   processPaymentSchema,
@@ -19,9 +21,17 @@ import {
   paymentTransactionResponseSchema,
 } from "../validation/payment-intent.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createPaymentIntentBodyJson = toJsonSchema(createPaymentIntentSchema);
+const processPaymentBodyJson = toJsonSchema(processPaymentSchema);
+const refundPaymentBodyJson = toJsonSchema(refundPaymentSchema);
+const voidPaymentBodyJson = toJsonSchema(voidPaymentSchema);
+const getPaymentIntentQueryJson = toJsonSchema(getPaymentIntentQuerySchema);
+const intentIdParamsJson = toJsonSchema(intentIdParamsSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function registerPaymentIntentRoutes(
@@ -38,35 +48,15 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents",
     {
-      preValidation: [validateBody(createPaymentIntentSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createPaymentIntentSchema)],
       schema: {
         description: "Create a new payment intent for processing a payment.",
         tags: ["Payment Intents"],
         summary: "Create Payment Intent",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["orderId", "provider", "amount"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            provider: { type: "string" },
-            amount: { type: "number", minimum: 0.01 },
-            currency: { type: "string" },
-            idempotencyKey: { type: "string" },
-            clientSecret: { type: "string" },
-          },
-        },
+        body: createPaymentIntentBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentIntentResponseSchema,
-            },
-          },
+          201: successResponse(paymentIntentResponseSchema, 201),
         },
       },
     },
@@ -77,31 +67,15 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/process",
     {
-      preValidation: [validateBody(processPaymentSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(processPaymentSchema)],
       schema: {
         description: "Process a payment intent — authorize and capture funds.",
         tags: ["Payment Intents"],
         summary: "Process Payment",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["intentId"],
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-            pspReference: { type: "string" },
-          },
-        },
+        body: processPaymentBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentIntentResponseSchema,
-            },
-          },
+          200: successResponse(paymentIntentResponseSchema),
         },
       },
     },
@@ -112,32 +86,15 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/refund",
     {
-      preValidation: [validateBody(refundPaymentSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(refundPaymentSchema)],
       schema: {
         description: "Refund a captured payment (full or partial) — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Refund Payment",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["intentId"],
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-            amount: { type: "number", minimum: 0.01 },
-            reason: { type: "string" },
-          },
-        },
+        body: refundPaymentBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentIntentResponseSchema,
-            },
-          },
+          200: successResponse(paymentIntentResponseSchema),
         },
       },
     },
@@ -148,31 +105,15 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/void",
     {
-      preValidation: [validateBody(voidPaymentSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(voidPaymentSchema)],
       schema: {
         description: "Void an authorized (not yet captured) payment — Staff/Admin only.",
         tags: ["Payment Intents"],
         summary: "Void Payment",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["intentId"],
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-            pspReference: { type: "string" },
-          },
-        },
+        body: voidPaymentBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentIntentResponseSchema,
-            },
-          },
+          200: successResponse(paymentIntentResponseSchema),
         },
       },
     },
@@ -184,29 +125,15 @@ export async function registerPaymentIntentRoutes(
     "/payment-intents",
     {
       preValidation: [validateQuery(getPaymentIntentQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get payment intent by intentId or orderId.",
         tags: ["Payment Intents"],
         summary: "Get Payment Intent",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        querystring: getPaymentIntentQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentIntentResponseSchema,
-            },
-          },
+          200: successResponse(paymentIntentResponseSchema),
         },
       },
     },
@@ -218,32 +145,18 @@ export async function registerPaymentIntentRoutes(
     "/payment-intents/:intentId/transactions",
     {
       preValidation: [validateParams(intentIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "List all payment transactions for a payment intent.",
         tags: ["Payment Intents"],
         summary: "List Payment Transactions",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["intentId"],
-          properties: {
-            intentId: { type: "string", format: "uuid" },
-          },
-        },
+        params: intentIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: paymentTransactionResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: paymentTransactionResponseSchema,
+          }),
         },
       },
     },
