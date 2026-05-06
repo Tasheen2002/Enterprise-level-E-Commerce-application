@@ -138,11 +138,6 @@ export interface WishlistDTO {
 // Entity
 // ============================================================================
 
-// `WishlistItem` is a child entity owned by this aggregate. Mutations to
-// the items collection flow through `addItem`/`removeItem`/`clearItems`
-// so the root can emit events and bump `updatedAt`. Persistence is by
-// `IWishlistRepository.save(wishlist)` — there is no separate
-// write-capable item repository.
 export class Wishlist extends AggregateRoot {
   private constructor(
     private props: WishlistProps,
