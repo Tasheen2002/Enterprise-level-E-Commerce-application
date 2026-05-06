@@ -36,21 +36,24 @@ export type SetOrderAddressesBody = z.infer<typeof setOrderAddressesSchema>;
 export type UpdateBillingAddressBody = z.infer<typeof updateBillingAddressSchema>;
 export type UpdateShippingAddressBody = z.infer<typeof updateShippingAddressSchema>;
 
-// ── JSON Schema for Swagger docs ──────────────────────────────────────────────
+// ── JSON Schema for response docs (hand-rolled — no Zod runtime validation) ──
 
-const addressSchema = {
+// Response shape mirrors AddressSnapshotData. Optional fields stay required: false
+// in JSON terms (omitted from `required`), matching Zod's `.optional()` semantics
+// (field may be absent, not present-but-null).
+const addressResponseShape = {
   type: "object",
   properties: {
     firstName: { type: "string" },
     lastName: { type: "string" },
     addressLine1: { type: "string" },
-    addressLine2: { type: "string", nullable: true },
+    addressLine2: { type: "string" },
     city: { type: "string" },
     state: { type: "string" },
     postalCode: { type: "string" },
     country: { type: "string" },
-    phone: { type: "string", nullable: true },
-    email: { type: "string", nullable: true },
+    phone: { type: "string" },
+    email: { type: "string" },
   },
 } as const;
 
@@ -58,8 +61,8 @@ export const orderAddressResponseSchema = {
   type: "object",
   properties: {
     orderId: { type: "string", format: "uuid" },
-    billingAddress: addressSchema,
-    shippingAddress: addressSchema,
+    billingAddress: addressResponseShape,
+    shippingAddress: addressResponseShape,
     isSameAddress: { type: "boolean" },
   },
 } as const;
