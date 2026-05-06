@@ -4,186 +4,173 @@ import {
   OrderItemQueryOptions,
 } from "../../../domain/repositories/order-item.repository";
 import { OrderItem } from "../../../domain/entities/order-item.entity";
-import { ProductSnapshot, ProductSnapshotData } from "../../../domain/value-objects";
+import { OrderId, OrderItemId, ProductSnapshot, ProductSnapshotData } from "../../../domain/value-objects";
 
 type OrderItemRow = Prisma.OrderItemGetPayload<Record<string, never>>;
+
+// Domain sortBy → Prisma column. `id` and `qty` map to real columns; `price`
+// has no DB column (lives inside the productSnapshot JSON), so sort is
+// dropped (undefined) when the caller asks for it.
+const SORT_FIELD_MAP: Record<
+  NonNullable<OrderItemQueryOptions["sortBy"]>,
+  "id" | "qty" | undefined
+> = {
+  id: "id",
+  quantity: "qty",
+  price: undefined,
+};
 
 export class OrderItemRepositoryImpl implements IOrderItemRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  // ─── Persistence mapping ──────────────────────────────────────────────────
+
   private toEntity(row: OrderItemRow): OrderItem {
-    const fallbackDate = new Date(0);
     return OrderItem.fromPersistence({
-      orderItemId: row.id,
+      orderItemId: OrderItemId.fromString(row.id),
       orderId: row.orderId,
       variantId: row.variantId,
       quantity: row.qty,
-      productSnapshot: ProductSnapshot.create(row.productSnapshot as unknown as ProductSnapshotData),
+      productSnapshot: ProductSnapshot.create(
+        row.productSnapshot as unknown as ProductSnapshotData,
+      ),
       isGift: row.isGift,
       giftMessage: row.giftMessage ?? undefined,
-      createdAt: fallbackDate,
-      updatedAt: fallbackDate,
     });
   }
 
+  // ─── Writes ───────────────────────────────────────────────────────────────
+
   async save(orderItem: OrderItem): Promise<void> {
+    const id = orderItem.orderItemId.getValue();
     const data = {
       orderId: orderItem.orderId,
       variantId: orderItem.variantId,
       qty: orderItem.quantity,
       productSnapshot: orderItem.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
       isGift: orderItem.isGift,
-      giftMessage: orderItem.giftMessage || null,
+      giftMessage: orderItem.giftMessage ?? null,
     };
     await this.prisma.orderItem.upsert({
-      where: { id: orderItem.orderItemId },
-      create: { id: orderItem.orderItemId, ...data },
+      where: { id },
+      create: { id, ...data },
       update: data,
     });
   }
 
   async saveAll(orderItems: OrderItem[]): Promise<void> {
-    if (orderItems.length === 0) {
-      return;
-    }
+    if (orderItems.length === 0) return;
 
     await this.prisma.orderItem.createMany({
       data: orderItems.map((item) => ({
-        id: item.orderItemId,
+        id: item.orderItemId.getValue(),
         orderId: item.orderId,
         variantId: item.variantId,
         qty: item.quantity,
-        productSnapshot: item.productSnapshot.getValue() as any,
+        productSnapshot: item.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
         isGift: item.isGift,
         giftMessage: item.giftMessage ?? null,
       })),
     });
   }
 
-  async delete(orderItemId: string): Promise<void> {
+  async delete(orderItemId: OrderItemId): Promise<void> {
     await this.prisma.orderItem.delete({
-      where: { id: orderItemId },
+      where: { id: orderItemId.getValue() },
     });
   }
 
-  async deleteByOrderId(orderId: string): Promise<void> {
+  async deleteByOrderId(orderId: OrderId): Promise<void> {
     await this.prisma.orderItem.deleteMany({
-      where: { orderId },
+      where: { orderId: orderId.getValue() },
     });
   }
 
-  async findById(orderItemId: string): Promise<OrderItem | null> {
-    const item = await this.prisma.orderItem.findUnique({
-      where: { id: orderItemId },
+  // ─── Reads ────────────────────────────────────────────────────────────────
+
+  async findById(orderItemId: OrderItemId): Promise<OrderItem | null> {
+    const row = await this.prisma.orderItem.findUnique({
+      where: { id: orderItemId.getValue() },
     });
-
-    if (!item) {
-      return null;
-    }
-
-    return this.toEntity(item);
+    return row ? this.toEntity(row) : null;
   }
 
   async findByOrderId(
-    orderId: string,
+    orderId: OrderId,
     options?: OrderItemQueryOptions,
   ): Promise<OrderItem[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
-
-    const items = await this.prisma.orderItem.findMany({
-      where: { orderId },
-      take: limit,
-      skip: offset,
-      orderBy:
-        sortBy === "price"
-          ? undefined // Can't directly sort by price in snapshot JSON
-          : sortBy === "quantity"
-            ? { qty: sortOrder }
-            : { createdAt: sortOrder },
-    });
-
-    return items.map((item) => this.toEntity(item as any));
+    return this.findMany({ orderId: orderId.getValue() }, options);
   }
 
   async findByVariantId(
     variantId: string,
     options?: OrderItemQueryOptions,
   ): Promise<OrderItem[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "createdAt",
-      sortOrder = "desc",
-    } = options || {};
-
-    const items = await this.prisma.orderItem.findMany({
-      where: { variantId },
-      take: limit,
-      skip: offset,
-      orderBy: sortBy === "quantity" ? { qty: sortOrder } : { createdAt: sortOrder },
-    });
-
-    return items.map((item) => this.toEntity(item as any));
+    return this.findMany({ variantId }, options);
   }
 
-  async findGiftItems(orderId: string): Promise<OrderItem[]> {
-    const items = await this.prisma.orderItem.findMany({
-      where: {
-        orderId,
-        isGift: true,
-      },
-    });
-
-    return items.map((item) => this.toEntity(item as any));
+  async findGiftItems(orderId: OrderId): Promise<OrderItem[]> {
+    return this.findMany({ orderId: orderId.getValue(), isGift: true }, undefined);
   }
 
-  async countByOrderId(orderId: string): Promise<number> {
-    return await this.prisma.orderItem.count({
-      where: { orderId },
-    });
+  // ─── Counts / aggregates / existence ──────────────────────────────────────
+
+  async countByOrderId(orderId: OrderId): Promise<number> {
+    return this.prisma.orderItem.count({ where: { orderId: orderId.getValue() } });
   }
 
   async countByVariantId(variantId: string): Promise<number> {
-    return await this.prisma.orderItem.count({
-      where: { variantId },
-    });
+    return this.prisma.orderItem.count({ where: { variantId } });
   }
 
   async getTotalQuantityByVariantId(variantId: string): Promise<number> {
     const result = await this.prisma.orderItem.aggregate({
       where: { variantId },
-      _sum: {
-        qty: true,
-      },
+      _sum: { qty: true },
     });
-
     return result._sum.qty ?? 0;
   }
 
-  async exists(orderItemId: string): Promise<boolean> {
+  async exists(orderItemId: OrderItemId): Promise<boolean> {
     const count = await this.prisma.orderItem.count({
-      where: { id: orderItemId },
+      where: { id: orderItemId.getValue() },
     });
-
     return count > 0;
   }
 
   async existsByOrderIdAndVariantId(
-    orderId: string,
+    orderId: OrderId,
     variantId: string,
   ): Promise<boolean> {
     const count = await this.prisma.orderItem.count({
-      where: {
-        orderId,
-        variantId,
-      },
+      where: { orderId: orderId.getValue(), variantId },
+    });
+    return count > 0;
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async findMany(
+    where: Prisma.OrderItemWhereInput,
+    options: OrderItemQueryOptions | undefined,
+  ): Promise<OrderItem[]> {
+    const {
+      limit,
+      offset,
+      sortBy = "id",
+      sortOrder = "desc",
+    } = options || {};
+
+    const sortColumn = SORT_FIELD_MAP[sortBy];
+    const orderBy = sortColumn ? { [sortColumn]: sortOrder } : undefined;
+
+    const rows = await this.prisma.orderItem.findMany({
+      where,
+      take: limit,
+      skip: offset,
+      orderBy,
     });
 
-    return count > 0;
+    return rows.map((r) => this.toEntity(r));
   }
 }
