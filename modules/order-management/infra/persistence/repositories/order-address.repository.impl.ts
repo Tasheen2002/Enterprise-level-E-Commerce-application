@@ -1,16 +1,15 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { AddressSnapshotData } from "../../../domain/value-objects/address-snapshot.vo";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IOrderAddressRepository } from "../../../domain/repositories/order-address.repository";
 import { OrderAddress } from "../../../domain/entities/order-address.entity";
-import { AddressSnapshot } from "../../../domain/value-objects/address-snapshot.vo";
+import {
+  AddressSnapshot,
+  AddressSnapshotData,
+} from "../../../domain/value-objects/address-snapshot.vo";
+import { OrderId } from "../../../domain/value-objects/order-id.vo";
 
-interface OrderAddressDatabaseRow {
-  orderId: string;
-  billingSnapshot: Prisma.JsonValue;
-  shippingSnapshot: Prisma.JsonValue;
-}
+type OrderAddressRow = Prisma.OrderAddressGetPayload<Record<string, never>>;
 
 export class OrderAddressRepositoryImpl
   extends PrismaRepository<OrderAddress>
@@ -20,16 +19,21 @@ export class OrderAddressRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: OrderAddressDatabaseRow): OrderAddress {
-    const fallbackDate = new Date(0);
+  // ─── Persistence mapping ──────────────────────────────────────────────────
+
+  private toEntity(row: OrderAddressRow): OrderAddress {
     return OrderAddress.fromPersistence({
       orderId: row.orderId,
-      billingAddress: AddressSnapshot.create(row.billingSnapshot as unknown as AddressSnapshotData),
-      shippingAddress: AddressSnapshot.create(row.shippingSnapshot as unknown as AddressSnapshotData),
-      createdAt: fallbackDate,
-      updatedAt: fallbackDate,
+      billingAddress: AddressSnapshot.create(
+        row.billingSnapshot as unknown as AddressSnapshotData,
+      ),
+      shippingAddress: AddressSnapshot.create(
+        row.shippingSnapshot as unknown as AddressSnapshotData,
+      ),
     });
   }
+
+  // ─── Writes ───────────────────────────────────────────────────────────────
 
   async save(orderAddress: OrderAddress): Promise<void> {
     const data = {
@@ -45,35 +49,27 @@ export class OrderAddressRepositoryImpl
     await this.dispatchEvents(orderAddress);
   }
 
-  async delete(orderId: string): Promise<void> {
+  async delete(orderId: OrderId): Promise<void> {
     await this.prisma.orderAddress.delete({
-      where: {
-        orderId,
-      },
+      where: { orderId: orderId.getValue() },
     });
   }
 
-  async findByOrderId(orderId: string): Promise<OrderAddress | null> {
-    const record = await this.prisma.orderAddress.findUnique({
-      where: {
-        orderId,
-      },
+  // ─── Reads ────────────────────────────────────────────────────────────────
+
+  async findByOrderId(orderId: OrderId): Promise<OrderAddress | null> {
+    const row = await this.prisma.orderAddress.findUnique({
+      where: { orderId: orderId.getValue() },
     });
-
-    if (!record) {
-      return null;
-    }
-
-    return this.toEntity(record);
+    return row ? this.toEntity(row) : null;
   }
 
-  async exists(orderId: string): Promise<boolean> {
+  // ─── Existence ────────────────────────────────────────────────────────────
+
+  async exists(orderId: OrderId): Promise<boolean> {
     const count = await this.prisma.orderAddress.count({
-      where: {
-        orderId,
-      },
+      where: { orderId: orderId.getValue() },
     });
-
     return count > 0;
   }
 }
