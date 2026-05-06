@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, Prisma, type UserProfile as PrismaUserProfile } from "@prisma/client";
 import { IUserProfileRepository } from "../../../domain/repositories/iuser-profile.repository";
 import {
   UserProfile,
@@ -8,22 +8,26 @@ import {
   PreferredSizes,
 } from "../../../domain/entities/user-profile.entity";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
-import { Currency } from "../../../domain/value-objects/currency.vo";
+import { AddressId } from "../../../domain/value-objects/address-id.vo";
+import { PaymentMethodId } from "../../../domain/value-objects/payment-method-id.vo";
+import { Currency } from "../../../domain/value-objects";
 import { Locale } from "../../../domain/value-objects/locale.vo";
 
+// UserProfile is not an aggregate root — it emits no domain events.
+// No PrismaRepository base or dispatchEvents needed; plain Prisma access is correct.
 export class UserProfileRepository implements IUserProfileRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  private toDomain(data: any): UserProfile {
+  private toDomain(row: PrismaUserProfile): UserProfile {
     const props: UserProfileProps = {
-      userId: UserId.fromString(data.userId),
-      defaultAddressId: data.defaultAddressId,
-      defaultPaymentMethodId: data.defaultPaymentMethodId,
-      preferences: (data.prefs || {}) as UserPreferences,
-      locale: data.locale ? Locale.fromString(data.locale) : null,
-      currency: data.currency ? Currency.fromString(data.currency) : null,
-      stylePreferences: (data.stylePreferences || {}) as StylePreferences,
-      preferredSizes: (data.preferredSizes || {}) as PreferredSizes,
+      userId: UserId.fromString(row.userId),
+      defaultAddressId: row.defaultAddressId ? AddressId.fromString(row.defaultAddressId) : null,
+      defaultPaymentMethodId: row.defaultPaymentMethodId ? PaymentMethodId.fromString(row.defaultPaymentMethodId) : null,
+      preferences: (row.prefs ?? {}) as UserPreferences,
+      locale: row.locale ? Locale.fromString(row.locale) : null,
+      currency: row.currency ? Currency.fromString(row.currency) : null,
+      stylePreferences: (row.stylePreferences ?? {}) as StylePreferences,
+      preferredSizes: (row.preferredSizes ?? {}) as PreferredSizes,
     };
 
     return UserProfile.fromPersistence(props);
@@ -35,11 +39,11 @@ export class UserProfileRepository implements IUserProfileRepository {
   } {
     const create = {
       userId: userProfile.userId.getValue(),
-      defaultAddressId: userProfile.defaultAddressId,
-      defaultPaymentMethodId: userProfile.defaultPaymentMethodId,
+      defaultAddressId: userProfile.defaultAddressId?.getValue() ?? null,
+      defaultPaymentMethodId: userProfile.defaultPaymentMethodId?.getValue() ?? null,
       prefs: userProfile.preferences as Prisma.InputJsonValue,
-      locale: userProfile.locale?.getValue() || null,
-      currency: userProfile.currency?.getValue() || null,
+      locale: userProfile.locale?.getValue() ?? null,
+      currency: userProfile.currency?.getValue() ?? null,
       stylePreferences: userProfile.stylePreferences as Prisma.InputJsonValue,
       preferredSizes: userProfile.preferredSizes as Prisma.InputJsonValue,
     };

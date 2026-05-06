@@ -1,1 +1,6 @@
-export { validateBody, validateParams, validateQuery } from "@/api/src/shared/http/validation";
+export {
+  validateBody,
+  validateParams,
+  validateQuery,
+  toJsonSchema,
+} from "@/api/src/shared/http/validation";

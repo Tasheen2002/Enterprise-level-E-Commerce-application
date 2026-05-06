@@ -1,0 +1,24 @@
+{
+  "name": "@tasheen/config",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Shared configuration presets (tsconfig, tailwind, eslint, prettier) for Tasheen apps and packages.",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.next.json",
+    "tsconfig.lib.json",
+    "tailwind.preset.ts",
+    "eslint.preset.cjs",
+    "prettier.preset.cjs"
+  ],
+  "exports": {
+    "./tailwind.preset": "./tailwind.preset.ts",
+    "./eslint.preset": "./eslint.preset.cjs",
+    "./prettier.preset": "./prettier.preset.cjs",
+    "./*": "./*"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

@@ -10,38 +10,25 @@ import { addressRoutes } from "./addresses.routes";
 import { paymentMethodRoutes } from "./payment-methods.routes";
 import { userRoutes } from "./users.routes";
 
+export interface UserManagementControllers {
+  authController: AuthController;
+  profileController: ProfileController;
+  addressesController: AddressesController;
+  paymentMethodsController: PaymentMethodsController;
+  usersController: UsersController;
+}
+
 export async function registerUserManagementRoutes(
   fastify: FastifyInstance,
-  controllers: {
-    authController: AuthController;
-    profileController: ProfileController;
-    addressesController: AddressesController;
-    paymentMethodsController: PaymentMethodsController;
-    usersController: UsersController;
-  },
+  controllers: UserManagementControllers,
 ): Promise<void> {
   await fastify.register(
     async (instance) => {
-      // Public auth routes
       await authRoutes(instance, controllers.authController);
-
-      // Protected routes — require a valid JWT
-      await instance.register(async (protected_) => {
-        protected_.addHook("onRequest", async (request) => {
-          await fastify.authenticate(request);
-        });
-
-        await profileRoutes(protected_, controllers.profileController);
-        await addressRoutes(
-          protected_,
-          controllers.addressesController,
-        );
-        await paymentMethodRoutes(
-          protected_,
-          controllers.paymentMethodsController,
-        );
-        await userRoutes(protected_, controllers.usersController);
-      });
+      await profileRoutes(instance, controllers.profileController);
+      await addressRoutes(instance, controllers.addressesController);
+      await paymentMethodRoutes(instance, controllers.paymentMethodsController);
+      await userRoutes(instance, controllers.usersController);
     },
     { prefix: "/api/v1" },
   );

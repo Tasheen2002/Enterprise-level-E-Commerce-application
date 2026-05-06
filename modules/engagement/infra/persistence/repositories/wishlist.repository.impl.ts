@@ -73,11 +73,6 @@ export class WishlistRepositoryImpl
     );
   }
 
-  // Persists the Wishlist root and synchronises its items collection in
-  // a single transaction. Items present on the aggregate are upserted;
-  // items in the DB but absent from the aggregate are deleted (the
-  // aggregate is the source of truth for its children). Events dispatch
-  // only after the transaction commits.
   async save(wishlist: Wishlist): Promise<void> {
     const wishlistIdValue = wishlist.id.getValue();
 

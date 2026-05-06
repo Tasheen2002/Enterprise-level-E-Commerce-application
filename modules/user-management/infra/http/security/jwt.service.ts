@@ -3,7 +3,6 @@ import {
   IJwtService,
   TokenPayload,
 } from '../../../application/services/ijwt.service';
-import { DomainValidationError } from '../../../domain/errors/user-management.errors';
 
 export interface JwtServiceConfig {
   accessTokenSecret: string;
@@ -20,12 +19,12 @@ export class JwtService implements IJwtService {
 
   constructor(config: JwtServiceConfig) {
     if (!config.accessTokenSecret || !config.refreshTokenSecret) {
-      throw new DomainValidationError('JWT secrets are required');
+      throw new Error('JwtService: accessTokenSecret and refreshTokenSecret are required');
     }
     this.accessTokenSecret = config.accessTokenSecret;
     this.refreshTokenSecret = config.refreshTokenSecret;
-    this.accessTokenExpiresIn = config.accessTokenExpiresIn || '15m';
-    this.refreshTokenExpiresIn = config.refreshTokenExpiresIn || '7d';
+    this.accessTokenExpiresIn = config.accessTokenExpiresIn ?? '15m';
+    this.refreshTokenExpiresIn = config.refreshTokenExpiresIn ?? '7d';
   }
 
   signAccess(payload: Omit<TokenPayload, 'type'>): string {
@@ -36,11 +35,12 @@ export class JwtService implements IJwtService {
     );
   }
 
-  signRefresh(payload: Omit<TokenPayload, 'type'>): string {
+  signRefresh(payload: Omit<TokenPayload, 'type'>, rememberMe?: boolean): string {
+    const expiresIn = rememberMe ? '30d' : this.refreshTokenExpiresIn;
     return jwt.sign(
       { ...payload, type: 'refresh' },
       this.refreshTokenSecret,
-      { expiresIn: this.refreshTokenExpiresIn } as SignOptions
+      { expiresIn } as SignOptions
     );
   }
 
@@ -59,12 +59,18 @@ export class JwtService implements IJwtService {
   private static parseExpiresInToSeconds(expiresIn: string): number {
     const unit = expiresIn.slice(-1);
     const value = parseInt(expiresIn.slice(0, -1), 10);
+    if (Number.isNaN(value)) {
+      throw new Error(`Invalid expiresIn value: ${expiresIn}`);
+    }
     switch (unit) {
       case 's': return value;
       case 'm': return value * 60;
       case 'h': return value * 60 * 60;
       case 'd': return value * 60 * 60 * 24;
-      default:  return 900;
+      default:
+        throw new Error(
+          `Unsupported expiresIn unit: '${unit}' in '${expiresIn}'. Use s, m, h, or d.`,
+        );
     }
   }
 }
