@@ -58,6 +58,28 @@ export class AppointmentRescheduledEvent extends DomainEvent {
   }
 }
 
+export class AppointmentCancelledEvent extends DomainEvent {
+  constructor(
+    public readonly appointmentId: string,
+    public readonly userId: string,
+    public readonly cancelledAt: string,
+  ) {
+    super(appointmentId, "Appointment");
+  }
+
+  get eventType(): string {
+    return "appointment.cancelled";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return {
+      appointmentId: this.appointmentId,
+      userId: this.userId,
+      cancelledAt: this.cancelledAt,
+    };
+  }
+}
+
 // ============================================================================
 // 3. Props Interface
 // ============================================================================
@@ -192,6 +214,22 @@ export class Appointment extends AggregateRoot {
         oldEndAt,
         startAt.toISOString(),
         endAt.toISOString(),
+      ),
+    );
+  }
+
+  // Marks the appointment as cancelled by emitting the cancellation event,
+  // touching `updatedAt`, and letting the caller persist + delete (the
+  // service deletes the row after `save` so subscribers see the event).
+  // We don't track a `cancelled` status field — cancellation is terminal
+  // and represented by the absence of the row plus the emitted event.
+  cancel(): void {
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new AppointmentCancelledEvent(
+        this.props.id.getValue(),
+        this.props.userId,
+        this.props.updatedAt.toISOString(),
       ),
     );
   }
