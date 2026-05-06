@@ -1,5 +1,4 @@
 import { DomainValidationError } from "../errors/order-management.errors";
-
 export interface AddressSnapshotData {
   firstName: string;
   lastName: string;
@@ -14,13 +13,19 @@ export interface AddressSnapshotData {
 }
 
 export class AddressSnapshot {
-  private readonly props: AddressSnapshotData;
-
-  private constructor(data: AddressSnapshotData) {
-    this.props = { ...data };
+  private constructor(private readonly props: AddressSnapshotData) {
+    AddressSnapshot.validate(props);
   }
 
   static create(data: AddressSnapshotData): AddressSnapshot {
+    return new AddressSnapshot({ ...data });
+  }
+
+  static fromPersistence(data: AddressSnapshotData): AddressSnapshot {
+    return new AddressSnapshot({ ...data });
+  }
+
+  private static validate(data: AddressSnapshotData): void {
     if (!data.firstName || data.firstName.trim().length === 0) {
       throw new DomainValidationError("First name is required");
     }
@@ -42,8 +47,6 @@ export class AddressSnapshot {
     if (!data.country || data.country.trim().length === 0) {
       throw new DomainValidationError("Country is required");
     }
-
-    return new AddressSnapshot(data);
   }
 
   get firstName(): string { return this.props.firstName; }
@@ -62,10 +65,6 @@ export class AddressSnapshot {
     return { ...this.props };
   }
 
-  toString(): string {
-    return JSON.stringify(this.getValue());
-  }
-
   equals(other: AddressSnapshot): boolean {
     return (
       this.props.firstName === other.props.firstName &&
@@ -79,5 +78,9 @@ export class AddressSnapshot {
       this.props.phone === other.props.phone &&
       this.props.email === other.props.email
     );
+  }
+
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 }
