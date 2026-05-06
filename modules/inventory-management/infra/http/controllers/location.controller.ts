@@ -56,19 +56,7 @@ export class LocationController {
   ) {
     try {
       const { type, name, address } = request.body;
-      const result = await this.createLocationHandler.handle({
-        type,
-        name,
-        address: address
-          ? {
-              addressLine1: address.street,
-              city: address.city,
-              state: address.state,
-              postalCode: address.postalCode,
-              country: address.country,
-            }
-          : undefined,
-      });
+      const result = await this.createLocationHandler.handle({ type, name, address });
       return ResponseHelper.fromCommand(reply, result, "Location created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
