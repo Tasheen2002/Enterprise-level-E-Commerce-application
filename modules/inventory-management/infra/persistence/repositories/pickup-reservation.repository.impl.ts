@@ -1,13 +1,20 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { VariantId } from "../../../../product-catalog/domain/value-objects/variant-id.vo";
+import { OrderId } from "../../../../order-management/domain/value-objects/order-id.vo";
 import { PickupReservation } from "../../../domain/entities/pickup-reservation.entity";
 import { ReservationId } from "../../../domain/value-objects/reservation-id.vo";
 import {
   ReservationStatus,
   ReservationStatusVO,
 } from "../../../domain/value-objects/reservation-status.vo";
-import { IPickupReservationRepository } from "../../../domain/repositories/pickup-reservation.repository";
+import { LocationId } from "../../../domain/value-objects/location-id.vo";
+import {
+  IPickupReservationRepository,
+  PickupReservationQueryOptions,
+} from "../../../domain/repositories/pickup-reservation.repository";
 
 export class PickupReservationRepositoryImpl
   extends PrismaRepository<PickupReservation>
@@ -17,15 +24,7 @@ export class PickupReservationRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    reservationId: string;
-    orderId: string;
-    variantId: string;
-    locationId: string;
-    qty: number;
-    expiresAt: Date;
-    status?: string;
-  }): PickupReservation {
+  private toEntity(row: Prisma.PickupReservationGetPayload<object>): PickupReservation {
     return PickupReservation.fromPersistence({
       reservationId: ReservationId.fromString(row.reservationId),
       orderId: row.orderId,
@@ -73,27 +72,27 @@ export class PickupReservationRepositoryImpl
     });
   }
 
-  async findByOrder(orderId: string): Promise<PickupReservation[]> {
+  async findByOrder(orderId: OrderId): Promise<PickupReservation[]> {
     const rows = await this.prisma.pickupReservation.findMany({
-      where: { orderId },
+      where: { orderId: orderId.getValue() },
       orderBy: { expiresAt: "asc" },
     });
 
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findByVariant(variantId: string): Promise<PickupReservation[]> {
+  async findByVariant(variantId: VariantId): Promise<PickupReservation[]> {
     const rows = await this.prisma.pickupReservation.findMany({
-      where: { variantId },
+      where: { variantId: variantId.getValue() },
       orderBy: { expiresAt: "asc" },
     });
 
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findByLocation(locationId: string): Promise<PickupReservation[]> {
+  async findByLocation(locationId: LocationId): Promise<PickupReservation[]> {
     const rows = await this.prisma.pickupReservation.findMany({
-      where: { locationId },
+      where: { locationId: locationId.getValue() },
       orderBy: { expiresAt: "asc" },
     });
 
@@ -101,11 +100,11 @@ export class PickupReservationRepositoryImpl
   }
 
   async findByVariantAndLocation(
-    variantId: string,
-    locationId: string,
+    variantId: VariantId,
+    locationId: LocationId,
   ): Promise<PickupReservation[]> {
     const rows = await this.prisma.pickupReservation.findMany({
-      where: { variantId, locationId },
+      where: { variantId: variantId.getValue(), locationId: locationId.getValue() },
       orderBy: { expiresAt: "asc" },
     });
 
@@ -138,23 +137,53 @@ export class PickupReservationRepositoryImpl
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findAllReservations(): Promise<PickupReservation[]> {
-    const rows = await this.prisma.pickupReservation.findMany({
-      orderBy: { expiresAt: "asc" },
-    });
+  async findAll(
+    options?: PickupReservationQueryOptions,
+  ): Promise<PaginatedResult<PickupReservation>> {
+    const {
+      limit = 50,
+      offset = 0,
+      status,
+      orderId,
+      variantId,
+      locationId,
+      sortBy = "expiresAt",
+      sortOrder = "asc",
+    } = options || {};
 
-    return rows.map((r) => this.toEntity(r));
+    const where: Prisma.PickupReservationWhereInput = {};
+    if (status) where.status = status.getValue();
+    if (orderId) where.orderId = orderId.getValue();
+    if (variantId) where.variantId = variantId.getValue();
+    if (locationId) where.locationId = locationId.getValue();
+
+    // Domain sortBy → Prisma column. `id` here is the reservation id column.
+    const orderColumn: "expiresAt" | "reservationId" =
+      sortBy === "id" ? "reservationId" : "expiresAt";
+
+    const [rows, total] = await Promise.all([
+      this.prisma.pickupReservation.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { [orderColumn]: sortOrder },
+      }),
+      this.prisma.pickupReservation.count({ where }),
+    ]);
+
+    const items = rows.map((r) => this.toEntity(r));
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
   async findActiveByVariantAndLocation(
-    variantId: string,
-    locationId: string,
+    variantId: VariantId,
+    locationId: LocationId,
   ): Promise<PickupReservation[]> {
     const now = new Date();
     const rows = await this.prisma.pickupReservation.findMany({
       where: {
-        variantId,
-        locationId,
+        variantId: variantId.getValue(),
+        locationId: locationId.getValue(),
         status: ReservationStatus.ACTIVE,
         expiresAt: { gte: now },
       },
@@ -165,14 +194,14 @@ export class PickupReservationRepositoryImpl
   }
 
   async getTotalReservedQty(
-    variantId: string,
-    locationId: string,
+    variantId: VariantId,
+    locationId: LocationId,
   ): Promise<number> {
     const now = new Date();
     const result = await this.prisma.pickupReservation.aggregate({
       where: {
-        variantId,
-        locationId,
+        variantId: variantId.getValue(),
+        locationId: locationId.getValue(),
         status: ReservationStatus.ACTIVE,
         expiresAt: { gte: now },
       },
