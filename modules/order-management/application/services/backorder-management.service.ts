@@ -9,52 +9,47 @@ import {
 import {
   BackorderNotFoundError,
   BackorderAlreadyExistsError,
-  DomainValidationError,
 } from "../../domain/errors/order-management.errors";
+import { OrderItemId } from "../../domain/value-objects/order-item-id.vo";
 
 interface CreateBackorderParams {
   orderItemId: string;
   promisedEta?: Date;
 }
 
+interface NotifyMultipleResult {
+  notified: BackorderDTO[];
+  skipped: { orderItemId: string; reason: "not_found" | "already_notified" }[];
+}
+
 export class BackorderManagementService {
   constructor(private readonly backorderRepository: IBackorderRepository) {}
 
   async createBackorder(params: CreateBackorderParams): Promise<BackorderDTO> {
-    if (!params.orderItemId || params.orderItemId.trim().length === 0) {
-      throw new DomainValidationError("Order item ID is required");
+    // OrderItemId.fromString() validates non-empty UUID format via the VO base class.
+    const orderItemId = OrderItemId.fromString(params.orderItemId);
+
+    const existing = await this.backorderRepository.findByOrderItemId(orderItemId);
+    if (existing) {
+      throw new BackorderAlreadyExistsError(orderItemId.getValue());
     }
 
-    const existingBackorder = await this.backorderRepository.findByOrderItemId(
-      params.orderItemId,
-    );
-    if (existingBackorder) {
-      throw new BackorderAlreadyExistsError(params.orderItemId);
-    }
-
-    if (params.promisedEta && params.promisedEta < new Date()) {
-      throw new DomainValidationError("Promised ETA cannot be in the past");
-    }
-
+    // ETA validity (must be in the future) is enforced by Backorder.create().
     const backorder = Backorder.create({
-      orderItemId: params.orderItemId,
+      orderItemId,
       promisedEta: params.promisedEta,
     });
 
     await this.backorderRepository.save(backorder);
-
     return Backorder.toDTO(backorder);
   }
 
   async getBackorderByOrderItemId(
     orderItemId: string,
   ): Promise<BackorderDTO | null> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new DomainValidationError("Order item ID is required");
-    }
-
-    const backorder =
-      await this.backorderRepository.findByOrderItemId(orderItemId);
+    const backorder = await this.backorderRepository.findByOrderItemId(
+      OrderItemId.fromString(orderItemId),
+    );
     return backorder ? Backorder.toDTO(backorder) : null;
   }
 
@@ -79,12 +74,12 @@ export class BackorderManagementService {
     return backorders.map((b) => Backorder.toDTO(b));
   }
 
+
   async getBackordersOverdue(
     options?: BackorderQueryOptions,
   ): Promise<BackorderDTO[]> {
-    const now = new Date();
     const backorders = await this.backorderRepository.findByPromisedEtaBefore(
-      now,
+      new Date(),
       options,
     );
     return backorders.map((b) => Backorder.toDTO(b));
@@ -94,10 +89,6 @@ export class BackorderManagementService {
     date: Date,
     options?: BackorderQueryOptions,
   ): Promise<BackorderDTO[]> {
-    if (!date) {
-      throw new DomainValidationError("Date is required");
-    }
-
     const backorders = await this.backorderRepository.findByPromisedEtaBefore(
       date,
       options,
@@ -109,58 +100,71 @@ export class BackorderManagementService {
     orderItemId: string,
     eta: Date,
   ): Promise<BackorderDTO> {
-    if (!eta) {
-      throw new DomainValidationError("Promised ETA is required");
-    }
-
-    const backorder =
-      await this.backorderRepository.findByOrderItemId(orderItemId);
-    if (!backorder) throw new BackorderNotFoundError(orderItemId);
+    const id = OrderItemId.fromString(orderItemId);
+    const backorder = await this.backorderRepository.findByOrderItemId(id);
+    if (!backorder) throw new BackorderNotFoundError(id.getValue());
 
     backorder.updatePromisedEta(eta);
     await this.backorderRepository.save(backorder);
-
     return Backorder.toDTO(backorder);
   }
 
   async markAsNotified(orderItemId: string): Promise<BackorderDTO> {
-    const backorder =
-      await this.backorderRepository.findByOrderItemId(orderItemId);
-    if (!backorder) throw new BackorderNotFoundError(orderItemId);
+    const id = OrderItemId.fromString(orderItemId);
+    const backorder = await this.backorderRepository.findByOrderItemId(id);
+    if (!backorder) throw new BackorderNotFoundError(id.getValue());
 
     backorder.markAsNotified();
     await this.backorderRepository.save(backorder);
-
     return Backorder.toDTO(backorder);
   }
 
   async notifyMultipleBackorders(
     orderItemIds: string[],
-  ): Promise<BackorderDTO[]> {
-    if (!orderItemIds || orderItemIds.length === 0) {
-      throw new DomainValidationError("At least one order item ID is required");
+  ): Promise<NotifyMultipleResult> {
+    if (orderItemIds.length === 0) {
+      return { notified: [], skipped: [] };
     }
 
-    const backorders = await Promise.all(
-      orderItemIds.map((id) => this.backorderRepository.findByOrderItemId(id)),
+    const validIds = orderItemIds.map((id) => OrderItemId.fromString(id));
+
+    const fetched = await Promise.all(
+      validIds.map(async (id) => ({
+        id,
+        backorder: await this.backorderRepository.findByOrderItemId(id),
+      })),
     );
 
-    const toNotify = backorders.filter(
-      (b): b is Backorder => b !== null && !b.isCustomerNotified(),
-    );
+    const skipped: NotifyMultipleResult["skipped"] = [];
+    const toNotify: Backorder[] = [];
 
-    toNotify.forEach((b) => b.markAsNotified());
+    for (const { id, backorder } of fetched) {
+      if (!backorder) {
+        skipped.push({ orderItemId: id.getValue(), reason: "not_found" });
+        continue;
+      }
+      if (backorder.isCustomerNotified()) {
+        skipped.push({ orderItemId: id.getValue(), reason: "already_notified" });
+        continue;
+      }
+      backorder.markAsNotified();
+      toNotify.push(backorder);
+    }
 
     await Promise.all(toNotify.map((b) => this.backorderRepository.save(b)));
 
-    return toNotify.map((b) => Backorder.toDTO(b));
+    return {
+      notified: toNotify.map((b) => Backorder.toDTO(b)),
+      skipped,
+    };
   }
 
   async deleteBackorder(orderItemId: string): Promise<void> {
-    const exists = await this.backorderRepository.exists(orderItemId);
-    if (!exists) throw new BackorderNotFoundError(orderItemId);
+    const id = OrderItemId.fromString(orderItemId);
+    const exists = await this.backorderRepository.exists(id);
+    if (!exists) throw new BackorderNotFoundError(id.getValue());
 
-    await this.backorderRepository.delete(orderItemId);
+    await this.backorderRepository.delete(id);
   }
 
   async getBackorderCount(): Promise<number> {
@@ -180,25 +184,14 @@ export class BackorderManagementService {
   }
 
   async backorderExists(orderItemId: string): Promise<boolean> {
-    if (!orderItemId || orderItemId.trim().length === 0) {
-      throw new DomainValidationError("Order item ID is required");
-    }
-
-    return this.backorderRepository.exists(orderItemId);
+    return this.backorderRepository.exists(OrderItemId.fromString(orderItemId));
   }
 
   async isBackorderOverdue(orderItemId: string): Promise<boolean> {
-    const backorder =
-      await this.backorderRepository.findByOrderItemId(orderItemId);
-    if (!backorder) {
-      return false;
-    }
-
-    const promisedEta = backorder.promisedEta;
-    if (!promisedEta) {
-      return false;
-    }
-
-    return promisedEta < new Date();
+    const backorder = await this.backorderRepository.findByOrderItemId(
+      OrderItemId.fromString(orderItemId),
+    );
+    if (!backorder?.promisedEta) return false;
+    return backorder.promisedEta < new Date();
   }
 }
