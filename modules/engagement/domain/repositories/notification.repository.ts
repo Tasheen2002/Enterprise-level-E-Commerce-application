@@ -1,5 +1,8 @@
 import { Notification } from "../entities/notification.entity";
 import { NotificationId } from "../value-objects";
+import { NotificationTypeValue } from "../value-objects/notification-type.vo";
+import { ChannelTypeValue } from "../value-objects/channel-type.vo";
+import { NotificationStatusValue } from "../value-objects/notification-status.vo";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -9,9 +12,9 @@ import {
 // 2. Filters interface
 // ============================================================================
 export interface NotificationFilters {
-  type?: string;
-  channel?: string;
-  status?: string;
+  type?: NotificationTypeValue;
+  channel?: ChannelTypeValue;
+  status?: NotificationStatusValue;
   startDate?: Date;
   endDate?: Date;
 }
@@ -27,15 +30,15 @@ export interface INotificationRepository {
   // Finders
   findById(notificationId: NotificationId): Promise<Notification | null>;
   findByType(
-    type: string,
+    type: NotificationTypeValue,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedResult<Notification>>;
   findByChannel(
-    channel: string,
+    channel: ChannelTypeValue,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedResult<Notification>>;
   findByStatus(
-    status: string,
+    status: NotificationStatusValue,
     options?: NotificationQueryOptions,
   ): Promise<PaginatedResult<Notification>>;
   findAll(
@@ -61,9 +64,9 @@ export interface INotificationRepository {
   ): Promise<PaginatedResult<Notification>>;
 
   // Counts and statistics
-  countByType(type: string): Promise<number>;
-  countByChannel(channel: string): Promise<number>;
-  countByStatus(status: string): Promise<number>;
+  countByType(type: NotificationTypeValue): Promise<number>;
+  countByChannel(channel: ChannelTypeValue): Promise<number>;
+  countByStatus(status: NotificationStatusValue): Promise<number>;
   count(filters?: NotificationFilters): Promise<number>;
 
   // Existence checks
