@@ -1,5 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
-import { ZodSchema, ZodError } from "zod";
+import { z, ZodSchema, ZodError } from "zod";
 
 function formatZodErrors(error: ZodError) {
   return error.issues.map((issue) => ({
@@ -7,6 +7,41 @@ function formatZodErrors(error: ZodError) {
     message: issue.message,
   }));
 }
+
+/**
+ * Convert a Zod schema to a JSON Schema (draft-07) for use in Fastify
+ * route schemas — `body`, `params`, `querystring` — and Swagger docs.
+ *
+ * Lets Zod be the single source of truth; eliminates manually maintaining
+ * parallel inline JSON-Schema definitions in route files.
+ *
+ * @example
+ *   fastify.post('/x', {
+ *     preHandler: [validateBody(createXSchema)],
+ *     schema: { body: toJsonSchema(createXSchema) },
+ *   }, ...);
+ */
+export function toJsonSchema(schema: ZodSchema): object {
+
+  return z.toJSONSchema(schema, { target: "draft-7", unrepresentable: "any" });
+}
+
+/**
+ * Canonical pagination query schema. Use this directly for endpoints that
+ * accept only `limit` and `offset`, or extend it for endpoints with
+ * additional filters:
+ *
+ * @example
+ *   const listX = paginationQuerySchema.extend({ status: z.enum(...) });
+ *
+ * Coerces query-string values (always strings on the wire) into numbers.
+ */
+export const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 export function validateBody<T extends ZodSchema>(schema: T) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
