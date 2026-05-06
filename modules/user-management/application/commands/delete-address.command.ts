@@ -10,7 +10,7 @@ export class DeleteAddressHandler implements ICommandHandler<
   DeleteAddressCommand,
   CommandResult<void>
 > {
-  constructor(private readonly addressService: AddressManagementService) {}
+  constructor(private readonly addressService: AddressManagementService) { }
 
   async handle(
     command: DeleteAddressCommand

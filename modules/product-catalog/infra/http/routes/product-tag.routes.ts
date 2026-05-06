@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductTagController } from "../controllers/product-tag.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -11,10 +12,16 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   tagParamsSchema,
   tagByTagIdParamsSchema,
+  tagNameParamsSchema,
   productTagParamsSchema,
   productTagAssocParamsSchema,
   listTagsSchema,
@@ -30,6 +37,9 @@ import {
   tagStatsResponseSchema,
   mostUsedTagsResponseSchema,
   paginatedTagsResponseSchema,
+  tagsArrayResponseSchema,
+  paginatedTagProductsResponseSchema,
+  tagValidationResponseSchema,
 } from "../validation/product-tag.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -37,17 +47,33 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const tagParamsJson = toJsonSchema(tagParamsSchema);
+const tagByTagIdParamsJson = toJsonSchema(tagByTagIdParamsSchema);
+const tagNameParamsJson = toJsonSchema(tagNameParamsSchema);
+const productTagParamsJson = toJsonSchema(productTagParamsSchema);
+const productTagAssocParamsJson = toJsonSchema(productTagAssocParamsSchema);
+const listTagsQueryJson = toJsonSchema(listTagsSchema);
+const tagSuggestionsQueryJson = toJsonSchema(tagSuggestionsSchema);
+const tagProductsQueryJson = toJsonSchema(tagProductsQuerySchema);
+const mostUsedTagsQueryJson = toJsonSchema(mostUsedTagsSchema);
+const createTagBodyJson = toJsonSchema(createTagSchema);
+const updateTagBodyJson = toJsonSchema(updateTagSchema);
+const bulkCreateTagsBodyJson = toJsonSchema(bulkCreateTagsSchema);
+const bulkDeleteTagsBodyJson = toJsonSchema(bulkDeleteTagsSchema);
+const associateTagsBodyJson = toJsonSchema(associateTagsSchema);
+
 export async function productTagRoutes(
   fastify: FastifyInstance,
   controller: ProductTagController,
 ): Promise<void> {
-  const tagSchema = tagResponseSchema;
-
   fastify.addHook("onRequest", async (request, reply) => {
     if (request.method !== "GET") {
       await writeRateLimiter(request, reply);
     }
   });
+
+  // ── Reads ──────────────────────────────────────────────────────────────
 
   // GET /tags — List tags (public)
   fastify.get(
@@ -55,40 +81,12 @@ export async function productTagRoutes(
     {
       preValidation: [validateQuery(listTagsSchema)],
       schema: {
-        description:
-          "Get paginated list of product tags with filtering options",
+        description: "Get paginated list of product tags with filtering options",
         tags: ["Product Tags"],
         summary: "List Product Tags",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            kind: { type: "string" },
-            sortBy: { type: "string", enum: ["tag", "kind"], default: "tag" },
-            sortOrder: {
-              type: "string",
-              enum: ["asc", "desc"],
-              default: "asc",
-            },
-          },
-        },
+        querystring: listTagsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  tags: { type: "array", items: tagSchema },
-                  meta: { type: "object" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedTagsResponseSchema),
         },
       },
     },
@@ -96,7 +94,45 @@ export async function productTagRoutes(
       controller.getTags(request as AuthenticatedRequest, reply),
   );
 
-  // GET /tags/suggestions — Get tag suggestions (public, before /:id)
+  // GET /tags/by-name/:name — Get tag by name (public, before /:id)
+  fastify.get(
+    "/tags/by-name/:name",
+    {
+      preValidation: [validateParams(tagNameParamsSchema)],
+      schema: {
+        description: "Get a product tag by its name",
+        tags: ["Product Tags"],
+        summary: "Get Tag by Name",
+        params: tagNameParamsJson,
+        response: {
+          200: successResponse(tagResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.getTagByName(request as AuthenticatedRequest, reply),
+  );
+
+  // GET /tags/by-name/:name/validation — Validate tag name (public, before /:id)
+  fastify.get(
+    "/tags/by-name/:name/validation",
+    {
+      preValidation: [validateParams(tagNameParamsSchema)],
+      schema: {
+        description: "Check if a tag name is valid and available",
+        tags: ["Product Tags"],
+        summary: "Validate Tag Name",
+        params: tagNameParamsJson,
+        response: {
+          200: successResponse(tagValidationResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.validateTag(request as AuthenticatedRequest, reply),
+  );
+
+  // GET /tags/suggestions — Tag suggestions (public, before /:id)
   fastify.get(
     "/tags/suggestions",
     {
@@ -105,24 +141,9 @@ export async function productTagRoutes(
         description: "Get tag suggestions based on a search query",
         tags: ["Product Tags"],
         summary: "Get Tag Suggestions",
-        querystring: {
-          type: "object",
-          required: ["query"],
-          properties: {
-            query: { type: "string" },
-            limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
-          },
-        },
+        querystring: tagSuggestionsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: tagSchema },
-            },
-          },
+          200: successResponse(tagsArrayResponseSchema),
         },
       },
     },
@@ -130,26 +151,18 @@ export async function productTagRoutes(
       controller.getTagSuggestions(request as AuthenticatedRequest, reply),
   );
 
-  // GET /tags/stats — Get tag statistics (Staff+, before /:id)
+  // GET /tags/stats — Tag statistics (Staff+, before /:id)
   fastify.get(
     "/tags/stats",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get tag usage statistics",
         tags: ["Product Tags"],
         summary: "Get Tag Statistics",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: tagStatsResponseSchema,
-            },
-          },
+          200: successResponse(tagStatsResponseSchema),
         },
       },
     },
@@ -157,7 +170,7 @@ export async function productTagRoutes(
       controller.getTagStats(request as AuthenticatedRequest, reply),
   );
 
-  // GET /tags/most-used — Get most used tags (public, before /:id)
+  // GET /tags/most-used — Most used tags (public, before /:id)
   fastify.get(
     "/tags/most-used",
     {
@@ -166,22 +179,9 @@ export async function productTagRoutes(
         description: "Get the most used product tags",
         tags: ["Product Tags"],
         summary: "Get Most Used Tags",
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
-          },
-        },
+        querystring: mostUsedTagsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: mostUsedTagsResponseSchema,
-            },
-          },
+          200: successResponse(mostUsedTagsResponseSchema),
         },
       },
     },
@@ -198,21 +198,9 @@ export async function productTagRoutes(
         description: "Get product tag by ID",
         tags: ["Product Tags"],
         summary: "Get Product Tag",
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: tagParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: tagSchema,
-            },
-          },
+          200: successResponse(tagResponseSchema),
         },
       },
     },
@@ -220,7 +208,7 @@ export async function productTagRoutes(
       controller.getTag(request as AuthenticatedRequest, reply),
   );
 
-  // GET /tags/:tagId/products — Get products for a tag (public)
+  // GET /tags/:tagId/products — Products carrying this tag (public)
   fastify.get(
     "/tags/:tagId/products",
     {
@@ -232,28 +220,10 @@ export async function productTagRoutes(
         description: "Get products associated with a tag",
         tags: ["Product Tags"],
         summary: "Get Tag Products",
-        params: {
-          type: "object",
-          required: ["tagId"],
-          properties: { tagId: { type: "string", format: "uuid" } },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-          },
-        },
+        params: tagByTagIdParamsJson,
+        querystring: tagProductsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paginatedTagsResponseSchema,
-            },
-          },
+          200: successResponse(paginatedTagProductsResponseSchema),
         },
       },
     },
@@ -261,46 +231,40 @@ export async function productTagRoutes(
       controller.getTagProducts(request as AuthenticatedRequest, reply),
   );
 
-  // POST /tags/bulk — Bulk create tags (Admin only, before POST /tags)
+  // GET /products/:productId/tags — Tags on a product (public)
+  fastify.get(
+    "/products/:productId/tags",
+    {
+      preValidation: [validateParams(productTagParamsSchema)],
+      schema: {
+        description: "Get all tags associated with a product",
+        tags: ["Product Tags"],
+        summary: "Get Product Tags",
+        params: productTagParamsJson,
+        response: {
+          200: successResponse(tagsArrayResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.getProductTags(request as AuthenticatedRequest, reply),
+  );
+
+  // ── Writes ─────────────────────────────────────────────────────────────
+
+  // POST /tags/bulk — Bulk create (Admin only, before POST /tags)
   fastify.post(
     "/tags/bulk",
     {
-      preValidation: [validateBody(bulkCreateTagsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(bulkCreateTagsSchema)],
       schema: {
         description: "Bulk create product tags",
         tags: ["Product Tags"],
         summary: "Bulk Create Tags",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["tags"],
-          properties: {
-            tags: {
-              type: "array",
-              minItems: 1,
-              maxItems: 100,
-              items: {
-                type: "object",
-                required: ["tag"],
-                properties: {
-                  tag: { type: "string" },
-                  kind: { type: "string" },
-                },
-              },
-            },
-          },
-        },
+        body: bulkCreateTagsBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: tagSchema },
-            },
-          },
+          201: successResponse(tagsArrayResponseSchema, 201),
         },
       },
     },
@@ -312,31 +276,15 @@ export async function productTagRoutes(
   fastify.post(
     "/tags",
     {
-      preValidation: [validateBody(createTagSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createTagSchema)],
       schema: {
         description: "Create a new product tag",
         tags: ["Product Tags"],
         summary: "Create Product Tag",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["tag"],
-          properties: {
-            tag: { type: "string" },
-            kind: { type: "string" },
-          },
-        },
+        body: createTagBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: tagSchema,
-            },
-          },
+          201: successResponse(tagResponseSchema, 201),
         },
       },
     },
@@ -344,169 +292,21 @@ export async function productTagRoutes(
       controller.createTag(request as AuthenticatedRequest, reply),
   );
 
-  // DELETE /tags/bulk — Bulk delete tags (Admin only)
-  fastify.delete(
-    "/tags/bulk",
-    {
-      preValidation: [validateBody(bulkDeleteTagsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
-      schema: {
-        description: "Bulk delete product tags",
-        tags: ["Product Tags"],
-        summary: "Bulk Delete Tags",
-        security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["ids"],
-          properties: {
-            ids: {
-              type: "array",
-              minItems: 1,
-              maxItems: 100,
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
-        response: {
-          204: {
-            description: "Tags bulk deleted successfully",
-            type: "null",
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.deleteBulkTags(request as AuthenticatedRequest, reply),
-  );
-
-  // PATCH /tags/:id — Update tag (Admin only)
-  fastify.patch(
-    "/tags/:id",
-    {
-      preValidation: [validateParams(tagParamsSchema), validateBody(updateTagSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
-      schema: {
-        description: "Update an existing product tag",
-        tags: ["Product Tags"],
-        summary: "Update Product Tag",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: { tag: { type: "string" }, kind: { type: "string" } },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: tagSchema,
-            },
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.updateTag(request as AuthenticatedRequest, reply),
-  );
-
-  // DELETE /tags/:id — Delete tag (Admin only)
-  fastify.delete(
-    "/tags/:id",
-    {
-      preValidation: [validateParams(tagParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
-      schema: {
-        description: "Delete a product tag",
-        tags: ["Product Tags"],
-        summary: "Delete Product Tag",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        response: {
-          204: {
-            description: "Tag deleted successfully",
-            type: "null",
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.deleteTag(request as AuthenticatedRequest, reply),
-  );
-
-  // GET /products/:productId/tags — Get tags for a product (public)
-  fastify.get(
-    "/products/:productId/tags",
-    {
-      preValidation: [validateParams(productTagParamsSchema)],
-      schema: {
-        description: "Get all tags associated with a product",
-        tags: ["Product Tags"],
-        summary: "Get Product Tags",
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
-        response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: tagSchema },
-            },
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.getProductTags(request as AuthenticatedRequest, reply),
-  );
-
   // POST /products/:productId/tags — Associate tags with product (Admin only)
   fastify.post(
     "/products/:productId/tags",
     {
-      preValidation: [validateParams(productTagParamsSchema), validateBody(associateTagsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(productTagParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(associateTagsSchema)],
       schema: {
         description: "Associate one or more tags with a product",
         tags: ["Product Tags"],
         summary: "Associate Tags with Product",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["tagIds"],
-          properties: {
-            tagIds: {
-              type: "array",
-              minItems: 1,
-              items: { type: "string", format: "uuid" },
-            },
-          },
-        },
+        params: productTagParamsJson,
+        body: associateTagsBodyJson,
         response: {
-          204: {
-            description: "Tags associated with product successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -514,30 +314,83 @@ export async function productTagRoutes(
       controller.associateProductTags(request as AuthenticatedRequest, reply),
   );
 
+  // PATCH /tags/:id — Update tag (Admin only)
+  fastify.patch(
+    "/tags/:id",
+    {
+      preValidation: [validateParams(tagParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateTagSchema)],
+      schema: {
+        description: "Update an existing product tag",
+        tags: ["Product Tags"],
+        summary: "Update Product Tag",
+        security: [{ bearerAuth: [] }],
+        params: tagParamsJson,
+        body: updateTagBodyJson,
+        response: {
+          200: successResponse(tagResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.updateTag(request as AuthenticatedRequest, reply),
+  );
+
+  // DELETE /tags/bulk — Bulk delete (Admin only, before /:id)
+  fastify.delete(
+    "/tags/bulk",
+    {
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(bulkDeleteTagsSchema)],
+      schema: {
+        description: "Bulk delete product tags",
+        tags: ["Product Tags"],
+        summary: "Bulk Delete Tags",
+        security: [{ bearerAuth: [] }],
+        body: bulkDeleteTagsBodyJson,
+        response: {
+          204: noContentResponse,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.deleteBulkTags(request as AuthenticatedRequest, reply),
+  );
+
+  // DELETE /tags/:id — Delete tag (Admin only)
+  fastify.delete(
+    "/tags/:id",
+    {
+      preValidation: [validateParams(tagParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      schema: {
+        description: "Delete a product tag",
+        tags: ["Product Tags"],
+        summary: "Delete Product Tag",
+        security: [{ bearerAuth: [] }],
+        params: tagParamsJson,
+        response: {
+          204: noContentResponse,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.deleteTag(request as AuthenticatedRequest, reply),
+  );
+
   // DELETE /products/:productId/tags/:tagId — Remove tag from product (Admin only)
   fastify.delete(
     "/products/:productId/tags/:tagId",
     {
       preValidation: [validateParams(productTagAssocParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Remove a tag association from a product",
         tags: ["Product Tags"],
         summary: "Remove Tag from Product",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["productId", "tagId"],
-          properties: {
-            productId: { type: "string", format: "uuid" },
-            tagId: { type: "string", format: "uuid" },
-          },
-        },
+        params: productTagAssocParamsJson,
         response: {
-          204: {
-            description: "Tag removed from product successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },

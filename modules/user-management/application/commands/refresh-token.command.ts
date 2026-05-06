@@ -12,12 +12,11 @@ export interface RefreshTokenCommand extends ICommand {
 
 export class RefreshTokenHandler
   implements
-    ICommandHandler<RefreshTokenCommand, CommandResult<RefreshTokenResult>>
-{
+  ICommandHandler<RefreshTokenCommand, CommandResult<RefreshTokenResult>> {
   constructor(
     private readonly authService: AuthenticationService,
     private readonly tokenBlacklistService: ITokenBlacklistService,
-  ) {}
+  ) { }
 
   async handle(
     command: RefreshTokenCommand

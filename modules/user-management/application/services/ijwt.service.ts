@@ -13,7 +13,7 @@ export interface GeneratedTokens {
 
 export interface IJwtService {
   signAccess(payload: Omit<TokenPayload, "type">): string;
-  signRefresh(payload: Omit<TokenPayload, "type">): string;
+  signRefresh(payload: Omit<TokenPayload, "type">, rememberMe?: boolean): string;
   verifyAccess(token: string): TokenPayload;
   verifyRefresh(token: string): TokenPayload;
   getAccessExpiresInSeconds(): number;

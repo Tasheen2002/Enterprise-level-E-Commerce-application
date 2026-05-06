@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { CategoryController } from "../controllers/category.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -11,7 +12,12 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   listCategoriesSchema,
   createCategorySchema,
@@ -20,12 +26,22 @@ import {
   categoryParamsSchema,
   categorySlugParamsSchema,
   categoryResponseSchema,
+  categoryListResponseSchema,
+  paginatedCategoriesResponseSchema,
 } from "../validation/category.schema";
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const listCategoriesQueryJson = toJsonSchema(listCategoriesSchema);
+const createCategoryBodyJson = toJsonSchema(createCategorySchema);
+const updateCategoryBodyJson = toJsonSchema(updateCategorySchema);
+const reorderCategoriesBodyJson = toJsonSchema(reorderCategoriesSchema);
+const categoryParamsJson = toJsonSchema(categoryParamsSchema);
+const categorySlugParamsJson = toJsonSchema(categorySlugParamsSchema);
 
 export async function categoryRoutes(
   fastify: FastifyInstance,
@@ -46,36 +62,9 @@ export async function categoryRoutes(
         description: "Get paginated list of categories",
         tags: ["Categories"],
         summary: "List Categories",
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            parentId: { type: "string", format: "uuid" },
-            includeChildren: { type: "boolean", default: false },
-            sortBy: { type: "string", enum: ["name", "position"], default: "position" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
-          },
-        },
+        querystring: listCategoriesQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  categories: { type: "array", items: categoryResponseSchema },
-                  total: { type: "integer" },
-                  page: { type: "integer" },
-                  limit: { type: "integer" },
-                  totalPages: { type: "integer" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedCategoriesResponseSchema),
         },
       },
     },
@@ -83,7 +72,7 @@ export async function categoryRoutes(
       controller.getCategories(request as AuthenticatedRequest, reply),
   );
 
-  // GET /categories/hierarchy — Get category tree (registered before /:id)
+  // GET /categories/hierarchy — Category tree (registered before /:id)
   fastify.get(
     "/categories/hierarchy",
     {
@@ -92,15 +81,7 @@ export async function categoryRoutes(
         tags: ["Categories"],
         summary: "Get Category Hierarchy",
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: categoryResponseSchema },
-            },
-          },
+          200: successResponse(categoryListResponseSchema),
         },
       },
     },
@@ -117,21 +98,9 @@ export async function categoryRoutes(
         description: "Get category by slug",
         tags: ["Categories"],
         summary: "Get Category by Slug",
-        params: {
-          type: "object",
-          required: ["slug"],
-          properties: { slug: { type: "string" } },
-        },
+        params: categorySlugParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: categoryResponseSchema,
-            },
-          },
+          200: successResponse(categoryResponseSchema),
         },
       },
     },
@@ -148,21 +117,9 @@ export async function categoryRoutes(
         description: "Get category by ID",
         tags: ["Categories"],
         summary: "Get Category",
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: categoryParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: categoryResponseSchema,
-            },
-          },
+          200: successResponse(categoryResponseSchema),
         },
       },
     },
@@ -174,35 +131,15 @@ export async function categoryRoutes(
   fastify.post(
     "/categories/reorder",
     {
-      preValidation: [validateBody(reorderCategoriesSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(reorderCategoriesSchema)],
       schema: {
         description: "Reorder categories by updating positions",
         tags: ["Categories"],
         summary: "Reorder Categories",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["categoryOrders"],
-          properties: {
-            categoryOrders: {
-              type: "array",
-              items: {
-                type: "object",
-                required: ["id", "position"],
-                properties: {
-                  id: { type: "string", format: "uuid" },
-                  position: { type: "integer", minimum: 0 },
-                },
-              },
-            },
-          },
-        },
+        body: reorderCategoriesBodyJson,
         response: {
-          204: {
-            description: "Categories reordered successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },
@@ -214,35 +151,15 @@ export async function categoryRoutes(
   fastify.post(
     "/categories",
     {
-      preValidation: [validateBody(createCategorySchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createCategorySchema)],
       schema: {
         description: "Create a new category",
         tags: ["Categories"],
         summary: "Create Category",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["name"],
-          properties: {
-            name: { type: "string" },
-            slug: { type: "string" },
-            description: { type: "string" },
-            parentId: { type: "string", format: "uuid" },
-            position: { type: "integer", minimum: 0 },
-            imageUrl: { type: "string" },
-          },
-        },
+        body: createCategoryBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: categoryResponseSchema,
-            },
-          },
+          201: successResponse(categoryResponseSchema, 201),
         },
       },
     },
@@ -254,39 +171,17 @@ export async function categoryRoutes(
   fastify.patch(
     "/categories/:id",
     {
-      preValidation: [validateParams(categoryParamsSchema), validateBody(updateCategorySchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(categoryParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateCategorySchema)],
       schema: {
         description: "Update an existing category",
         tags: ["Categories"],
         summary: "Update Category",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            slug: { type: "string" },
-            description: { type: "string" },
-            parentId: { type: "string", format: "uuid" },
-            position: { type: "integer", minimum: 0 },
-            imageUrl: { type: "string" },
-          },
-        },
+        params: categoryParamsJson,
+        body: updateCategoryBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: categoryResponseSchema,
-            },
-          },
+          200: successResponse(categoryResponseSchema),
         },
       },
     },
@@ -299,22 +194,15 @@ export async function categoryRoutes(
     "/categories/:id",
     {
       preValidation: [validateParams(categoryParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a category",
         tags: ["Categories"],
         summary: "Delete Category",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["id"],
-          properties: { id: { type: "string", format: "uuid" } },
-        },
+        params: categoryParamsJson,
         response: {
-          204: {
-            description: "Category deleted successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },

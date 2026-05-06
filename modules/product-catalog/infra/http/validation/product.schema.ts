@@ -1,4 +1,24 @@
 import { z } from "zod";
+import { ProductStatus } from "../../../domain/value-objects";
+import {
+  MIN_PAGE,
+  MIN_LIMIT,
+  MAX_PAGE_SIZE,
+} from "../../../domain/constants/pagination.constants";
+
+// Statuses allowed when authoring products (clients cannot create directly into ARCHIVED).
+const CREATABLE_PRODUCT_STATUSES = [
+  ProductStatus.DRAFT,
+  ProductStatus.PUBLISHED,
+  ProductStatus.SCHEDULED,
+] as const;
+
+const ALL_PRODUCT_STATUSES = [
+  ProductStatus.DRAFT,
+  ProductStatus.PUBLISHED,
+  ProductStatus.SCHEDULED,
+  ProductStatus.ARCHIVED,
+] as [ProductStatus, ...ProductStatus[]];
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -11,12 +31,12 @@ export const productSlugParamsSchema = z.object({
 });
 
 export const listProductsSchema = z.object({
-  page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
-  status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
+  page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
+  status: z.enum(ALL_PRODUCT_STATUSES).optional(),
   categoryId: z.uuid().optional(),
   brand: z.string().optional(),
-  includeDrafts: z.string().optional().transform((v) => v === "true"),
+  includeDrafts: z.coerce.boolean().optional(),
   sortBy: z.enum(["title", "createdAt", "updatedAt", "publishAt"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
@@ -26,8 +46,8 @@ export const createProductSchema = z.object({
   brand: z.string().optional(),
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
-  status: z.enum(["draft", "published", "scheduled"]).optional().default("draft"),
-  publishAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  status: z.enum(CREATABLE_PRODUCT_STATUSES).optional().default(ProductStatus.DRAFT),
+  publishAt: z.coerce.date().optional(),
   countryOfOrigin: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
@@ -35,6 +55,7 @@ export const createProductSchema = z.object({
   priceSgd: z.number().min(0).optional(),
   priceUsd: z.number().min(0).optional(),
   compareAtPrice: z.number().min(0).optional(),
+  currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -44,8 +65,8 @@ export const updateProductSchema = z.object({
   brand: z.string().optional(),
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
-  status: z.enum(["draft", "published", "scheduled", "archived"]).optional(),
-  publishAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  status: z.enum(ALL_PRODUCT_STATUSES).optional(),
+  publishAt: z.coerce.date().optional(),
   countryOfOrigin: z.string().optional(),
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
@@ -53,6 +74,7 @@ export const updateProductSchema = z.object({
   priceSgd: z.number().min(0).nullable().optional(),
   priceUsd: z.number().min(0).nullable().optional(),
   compareAtPrice: z.number().min(0).nullable().optional(),
+  currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
 });
@@ -76,7 +98,7 @@ export const productResponseSchema = {
     brand: { type: "string", nullable: true },
     shortDesc: { type: "string", nullable: true },
     longDescHtml: { type: "string", nullable: true },
-    status: { type: "string", enum: ["draft", "published", "scheduled", "archived"] },
+    status: { type: "string", enum: ALL_PRODUCT_STATUSES as unknown as string[] },
     publishAt: { type: "string", format: "date-time", nullable: true },
     countryOfOrigin: { type: "string", nullable: true },
     seoTitle: { type: "string", nullable: true },
@@ -85,23 +107,20 @@ export const productResponseSchema = {
     priceSgd: { type: "number", nullable: true },
     priceUsd: { type: "number", nullable: true },
     compareAtPrice: { type: "number", nullable: true },
+    currency: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 
+// Matches PaginatedResult<T> from packages/core.
 export const paginatedProductsResponseSchema = {
   type: "object",
   properties: {
-    success: { type: "boolean" },
-    data: {
-      type: "object",
-      properties: {
-        products: { type: "array", items: productResponseSchema },
-        total: { type: "integer" },
-        page: { type: "integer" },
-        limit: { type: "integer" },
-      },
-    },
+    items: { type: "array", items: productResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
   },
 } as const;

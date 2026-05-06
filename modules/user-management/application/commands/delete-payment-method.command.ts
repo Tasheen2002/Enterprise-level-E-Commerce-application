@@ -10,7 +10,7 @@ export class DeletePaymentMethodHandler implements ICommandHandler<
   DeletePaymentMethodCommand,
   CommandResult<void>
 > {
-  constructor(private readonly paymentMethodService: PaymentMethodService) {}
+  constructor(private readonly paymentMethodService: PaymentMethodService) { }
 
   async handle(
     command: DeletePaymentMethodCommand

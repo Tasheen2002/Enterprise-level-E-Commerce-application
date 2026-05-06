@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, ProductStatusEnum } from "@prisma/client";
 import {
   IProductRepository,
   ProductQueryOptions,
@@ -10,9 +10,26 @@ import {
 import { Product } from "../../../domain/entities/product.entity";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { Slug } from "../../../domain/value-objects/slug.vo";
-import { Price } from "../../../domain/value-objects/price.vo";
+import { CategoryId } from "../../../domain/value-objects/category-id.vo";
+import { Money } from "../../../domain/value-objects/money.vo";
+import { ProductStatus } from "../../../domain/value-objects";
+import { DEFAULT_CURRENCY } from "../../../../../packages/core/src/domain/value-objects/currency.constants";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+
+type ProductRow = Prisma.ProductGetPayload<object>;
+
+const PUBLIC_STATUSES: ProductStatusEnum[] = [
+  ProductStatusEnum.published,
+  ProductStatusEnum.scheduled,
+];
+
+const ALL_STATUSES: ProductStatusEnum[] = [
+  ProductStatusEnum.draft,
+  ProductStatusEnum.published,
+  ProductStatusEnum.scheduled,
+  ProductStatusEnum.archived,
+];
 
 export class ProductRepositoryImpl
   extends PrismaRepository<Product>
@@ -22,11 +39,45 @@ export class ProductRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private mapRow(row: any): Product {
-    if (!row.createdAt || !row.updatedAt) {
-      throw new Error(`Product row is missing timestamps for id=${row.id}`);
+  private mapStatusFromPrisma(status: ProductStatusEnum): ProductStatus {
+    switch (status) {
+      case ProductStatusEnum.draft:
+        return ProductStatus.DRAFT;
+      case ProductStatusEnum.published:
+        return ProductStatus.PUBLISHED;
+      case ProductStatusEnum.scheduled:
+        return ProductStatus.SCHEDULED;
+      case ProductStatusEnum.archived:
+        return ProductStatus.ARCHIVED;
+      default: {
+        const _exhaustive: never = status;
+        throw new Error(`Unknown ProductStatusEnum value: ${_exhaustive}`);
+      }
     }
+  }
+
+  private mapStatusToPrisma(status: ProductStatus): ProductStatusEnum {
+    switch (status) {
+      case ProductStatus.DRAFT:
+        return ProductStatusEnum.draft;
+      case ProductStatus.PUBLISHED:
+        return ProductStatusEnum.published;
+      case ProductStatus.SCHEDULED:
+        return ProductStatusEnum.scheduled;
+      case ProductStatus.ARCHIVED:
+        return ProductStatusEnum.archived;
+      default: {
+        const _exhaustive: never = status;
+        throw new Error(`Unknown ProductStatus value: ${_exhaustive}`);
+      }
+    }
+  }
+
+  private toDomain(row: ProductRow): Product {
     const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
+    // Base price currency: read row.currency if the schema has it, otherwise fall back
+    // to DEFAULT_CURRENCY. priceSgd/priceUsd carry their currency by column convention.
+    const baseCurrency = row.currency ?? DEFAULT_CURRENCY;
     return Product.fromPersistence({
       id: ProductId.fromString(row.id),
       title: row.title,
@@ -34,20 +85,20 @@ export class ProductRepositoryImpl
       brand: row.brand,
       shortDesc: row.shortDesc,
       longDescHtml: row.longDescHtml,
-      status: row.status as any,
+      status: this.mapStatusFromPrisma(row.status),
       publishAt: row.publishAt,
       countryOfOrigin: row.countryOfOrigin,
       seoTitle: row.seoTitle,
       seoDescription: row.seoDescription,
-      price: Price.create(parseFloat(row.price?.toString() ?? "0")),
+      price: Money.fromPersistence(parseFloat(row.price.toString()), baseCurrency),
       priceSgd: row.priceSgd
-        ? Price.create(parseFloat(row.priceSgd.toString()))
+        ? Money.fromPersistence(parseFloat(row.priceSgd.toString()), "SGD")
         : null,
       priceUsd: row.priceUsd
-        ? Price.create(parseFloat(row.priceUsd.toString()))
+        ? Money.fromPersistence(parseFloat(row.priceUsd.toString()), "USD")
         : null,
       compareAtPrice: row.compareAtPrice
-        ? Price.create(parseFloat(row.compareAtPrice.toString()))
+        ? Money.fromPersistence(parseFloat(row.compareAtPrice.toString()), baseCurrency)
         : null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -61,15 +112,15 @@ export class ProductRepositoryImpl
       brand: product.brand,
       shortDesc: product.shortDesc,
       longDescHtml: product.longDescHtml,
-      status: product.status as any,
+      status: this.mapStatusToPrisma(product.status),
       publishAt: product.publishAt,
       countryOfOrigin: product.countryOfOrigin,
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
-      price: product.price.getValue(),
-      priceSgd: product.priceSgd?.getValue() ?? null,
-      priceUsd: product.priceUsd?.getValue() ?? null,
-      compareAtPrice: product.compareAtPrice?.getValue() ?? null,
+      price: product.price.getAmount(),
+      priceSgd: product.priceSgd?.getAmount() ?? null,
+      priceUsd: product.priceUsd?.getAmount() ?? null,
+      compareAtPrice: product.compareAtPrice?.getAmount() ?? null,
       updatedAt: product.updatedAt,
     };
     await this.prisma.product.upsert({
@@ -84,49 +135,6 @@ export class ProductRepositoryImpl
     await this.dispatchEvents(product);
   }
 
-  async saveWithCategories(
-    product: Product,
-    categoryIds: string[],
-  ): Promise<void> {
-    const productId = product.id.getValue();
-
-    // Use transaction to ensure atomicity
-    await this.prisma.$transaction(async (tx) => {
-      // Create product
-      await tx.product.create({
-        data: {
-          id: productId,
-          title: product.title,
-          slug: product.slug.getValue(),
-          brand: product.brand,
-          shortDesc: product.shortDesc,
-          longDescHtml: product.longDescHtml,
-          status: product.status as any,
-          publishAt: product.publishAt,
-          countryOfOrigin: product.countryOfOrigin,
-          seoTitle: product.seoTitle,
-          seoDescription: product.seoDescription,
-          price: product.price.getValue(),
-          priceSgd: product.priceSgd?.getValue() ?? null,
-          priceUsd: product.priceUsd?.getValue() ?? null,
-          compareAtPrice: product.compareAtPrice?.getValue() ?? null,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-        },
-      });
-
-      // Create category associations
-      if (categoryIds.length > 0) {
-        await tx.productCategory.createMany({
-          data: categoryIds.map((categoryId) => ({
-            productId,
-            categoryId,
-          })),
-        });
-      }
-    });
-  }
-
   async findById(id: ProductId): Promise<Product | null> {
     const productData = await this.prisma.product.findUnique({
       where: { id: id.getValue() },
@@ -136,7 +144,15 @@ export class ProductRepositoryImpl
       return null;
     }
 
-    return this.mapRow(productData);
+    return this.toDomain(productData);
+  }
+
+  async findByIds(ids: ProductId[]): Promise<Product[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.product.findMany({
+      where: { id: { in: ids.map((id) => id.getValue()) } },
+    });
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findBySlug(slug: Slug): Promise<Product | null> {
@@ -148,7 +164,7 @@ export class ProductRepositoryImpl
       return null;
     }
 
-    return this.mapRow(productData);
+    return this.toDomain(productData);
   }
 
   async findAll(options?: ProductQueryOptions): Promise<Product[]> {
@@ -168,16 +184,14 @@ export class ProductRepositoryImpl
       whereClause.brand = brand;
     }
     if (categoryId) {
-      whereClause.categories = { some: { categoryId } };
+      whereClause.categories = { some: { categoryId: categoryId.getValue() } };
     }
     if (status) {
       whereClause.status = status;
     } else if (!includeDrafts) {
-      whereClause.status = { in: ["published", "scheduled"] };
+      whereClause.status = { in: PUBLIC_STATUSES };
     } else {
-      whereClause.status = {
-        in: ["draft", "published", "scheduled", "archived"],
-      };
+      whereClause.status = { in: ALL_STATUSES };
     }
 
     const products = await this.prisma.product.findMany({
@@ -187,11 +201,11 @@ export class ProductRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => this.mapRow(p));
+    return products.map((p) => this.toDomain(p));
   }
 
   async findByStatus(
-    status: string,
+    status: ProductStatus,
     options?: ProductQueryOptions,
   ): Promise<Product[]> {
     const {
@@ -202,13 +216,13 @@ export class ProductRepositoryImpl
     } = options || {};
 
     const products = await this.prisma.product.findMany({
-      where: { status: status as any },
+      where: { status: this.mapStatusToPrisma(status) },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => this.mapRow(p));
+    return products.map((p) => this.toDomain(p));
   }
 
   async findByBrand(
@@ -225,7 +239,7 @@ export class ProductRepositoryImpl
 
     const whereClause: Record<string, unknown> = { brand };
     if (!includeDrafts) {
-      whereClause.status = { in: ["published", "scheduled"] };
+      whereClause.status = { in: PUBLIC_STATUSES };
     }
 
     const products = await this.prisma.product.findMany({
@@ -235,11 +249,11 @@ export class ProductRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => this.mapRow(p));
+    return products.map((p) => this.toDomain(p));
   }
 
   async findByCategory(
-    categoryId: string,
+    categoryId: CategoryId,
     options?: ProductQueryOptions,
   ): Promise<Product[]> {
     const {
@@ -251,11 +265,11 @@ export class ProductRepositoryImpl
     } = options || {};
 
     const whereClause: Record<string, unknown> = {
-      categories: { some: { categoryId: categoryId } },
+      categories: { some: { categoryId: categoryId.getValue() } },
     };
 
     if (!includeDrafts) {
-      whereClause.status = { in: ["published", "scheduled"] };
+      whereClause.status = { in: PUBLIC_STATUSES };
     }
 
     const products = await this.prisma.product.findMany({
@@ -265,7 +279,7 @@ export class ProductRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => this.mapRow(p));
+    return products.map((p) => this.toDomain(p));
   }
 
   async search(
@@ -308,7 +322,7 @@ export class ProductRepositoryImpl
     };
 
     if (!includeDrafts) {
-      whereClause.status = { in: ["published", "scheduled"] };
+      whereClause.status = { in: PUBLIC_STATUSES };
     }
 
     if (brands && brands.length > 0) {
@@ -318,7 +332,7 @@ export class ProductRepositoryImpl
     if (categories && categories.length > 0) {
       whereClause.categories = {
         some: {
-          categoryId: { in: categories },
+          categoryId: { in: categories.map((c) => c.getValue()) },
         },
       };
     }
@@ -347,14 +361,16 @@ export class ProductRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return products.map((p) => this.mapRow(p));
+    return products.map((p) => this.toDomain(p));
   }
 
+  // Soft delete via the aggregate's `archive()` method so ProductArchivedEvent fires.
+  // Idempotent — silently no-ops when the product does not exist.
   async delete(id: ProductId): Promise<void> {
-    await this.prisma.product.update({
-      where: { id: id.getValue() },
-      data: { status: "archived" as any },
-    });
+    const product = await this.findById(id);
+    if (!product) return;
+    product.archive();
+    await this.save(product);
   }
 
   async exists(id: ProductId): Promise<boolean> {
@@ -375,7 +391,7 @@ export class ProductRepositoryImpl
     const whereClause: Record<string, unknown> = {};
 
     if (options?.status) {
-      whereClause.status = options.status;
+      whereClause.status = this.mapStatusToPrisma(options.status);
     }
 
     if (options?.brand) {
@@ -385,7 +401,7 @@ export class ProductRepositoryImpl
     if (options?.categoryId) {
       whereClause.categories = {
         some: {
-          categoryId: options.categoryId,
+          categoryId: options.categoryId.getValue(),
         },
       };
     }
@@ -395,38 +411,34 @@ export class ProductRepositoryImpl
     });
   }
 
-  async addToCategory(productId: string, categoryId: string): Promise<void> {
-    await this.prisma.productCategory.create({
-      data: {
-        productId,
-        categoryId,
-      },
-    });
-  }
-
   async replaceCategories(
-    productId: string,
-    categoryIds: string[],
+    productId: ProductId,
+    categoryIds: CategoryId[],
   ): Promise<void> {
+    const pid = productId.getValue();
     await this.prisma.$transaction(async (tx) => {
-      await tx.productCategory.deleteMany({ where: { productId } });
+      await tx.productCategory.deleteMany({ where: { productId: pid } });
       if (categoryIds.length > 0) {
         await tx.productCategory.createMany({
-          data: categoryIds.map((categoryId) => ({ productId, categoryId })),
+          data: categoryIds.map((cid) => ({
+            productId: pid,
+            categoryId: cid.getValue(),
+          })),
         });
       }
     });
   }
 
   async findWithEnrichment(
-    ids: string[],
+    ids: ProductId[],
   ): Promise<Map<string, ProductEnrichment>> {
+    const idValues = ids.map((id) => id.getValue());
     const enrichedProducts = await this.prisma.product.findMany({
-      where: { id: { in: ids } },
+      where: { id: { in: idValues } },
       include: {
         variants: {
           orderBy: { createdAt: "asc" },
-          take: 10,
+          take: 10, // preview cap — products with >10 variants are silently truncated here
           include: { inventoryStocks: true },
         },
         media: {
@@ -479,9 +491,9 @@ export class ProductRepositoryImpl
     return enrichmentMap;
   }
 
-  async findOneWithEnrichment(id: string): Promise<ProductEnrichment> {
+  async findOneWithEnrichment(id: ProductId): Promise<ProductEnrichment | null> {
     const enrichedProduct = await this.prisma.product.findUnique({
-      where: { id },
+      where: { id: id.getValue() },
       include: {
         variants: {
           orderBy: { createdAt: "asc" },
@@ -498,7 +510,7 @@ export class ProductRepositoryImpl
     });
 
     if (!enrichedProduct) {
-      return { variants: [], images: [], categories: [] };
+      return null;
     }
 
     return {
@@ -535,9 +547,9 @@ export class ProductRepositoryImpl
     };
   }
 
-  async findMediaEnrichment(id: string): Promise<ProductMediaEnrichment> {
+  async findMediaEnrichment(id: ProductId): Promise<ProductMediaEnrichment> {
     const enrichedProduct = await this.prisma.product.findUnique({
-      where: { id },
+      where: { id: id.getValue() },
       include: {
         media: {
           include: { asset: true },
@@ -566,7 +578,7 @@ export class ProductRepositoryImpl
             altText: m.asset.altText,
             width: m.asset.width,
             height: m.asset.height,
-            bytes: m.asset.bytes ? m.asset.bytes.toString() : null,
+            bytes: m.asset.bytes != null ? Number(m.asset.bytes) : null,
             mime: m.asset.mime,
           },
         })) || [],

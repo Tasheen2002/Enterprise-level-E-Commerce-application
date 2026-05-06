@@ -16,8 +16,8 @@ import {
   UpdateUserRoleBody,
   ToggleEmailVerifiedBody,
 } from '../validation/user.schema';
-import { UserRole } from '../../../domain/enums/user-role.enum';
-import { UserStatus } from '../../../domain/enums/user-status.enum';
+import { UserRole } from '../../../domain/value-objects/user-role.vo';
+import { UserStatus } from '../../../domain/value-objects/user-status.vo';
 
 export class UsersController {
   constructor(
@@ -27,26 +27,29 @@ export class UsersController {
     private readonly updateUserRoleHandler: UpdateUserRoleHandler,
     private readonly deleteUserHandler: DeleteUserHandler,
     private readonly toggleUserEmailVerifiedHandler: ToggleUserEmailVerifiedHandler,
-  ) {}
+  ) { }
 
-  async getUser(
-    request: AuthenticatedRequest<{ Params: UserIdParams }>,
-    reply: FastifyReply,
-  ) {
+  // --- Queries ---
+
+  async getCurrentUser(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getUserDetailsHandler.handle({ userId: request.params.userId });
+      const result = await this.getUserDetailsHandler.handle({
+        userId: request.user.userId,
+      });
       return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
 
-  async getCurrentUser(
-    request: AuthenticatedRequest,
+  async getUser(
+    request: AuthenticatedRequest<{ Params: UserIdParams }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.getUserDetailsHandler.handle({ userId: request.user.userId });
+      const result = await this.getUserDetailsHandler.handle({
+        userId: request.params.userId,
+      });
       return ResponseHelper.ok(reply, 'User retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -59,15 +62,22 @@ export class UsersController {
   ) {
     try {
       const result = await this.listUsersHandler.handle({
-        ...request.query,
+        search: request.query.search,
         role: request.query.role as UserRole | undefined,
         status: request.query.status as UserStatus | undefined,
+        emailVerified: request.query.emailVerified,
+        page: request.query.page,
+        limit: request.query.limit,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
       });
       return ResponseHelper.ok(reply, 'Users retrieved', result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
+
+  // --- Commands ---
 
   async updateStatus(
     request: AuthenticatedRequest<{ Params: UserIdParams; Body: UpdateUserStatusBody }>,
@@ -77,7 +87,6 @@ export class UsersController {
       const result = await this.updateUserStatusHandler.handle({
         userId: request.params.userId,
         status: request.body.status as UserStatus,
-        notes: request.body.notes,
       });
       return ResponseHelper.fromCommand(reply, result, 'User status updated');
     } catch (error: unknown) {
@@ -93,7 +102,6 @@ export class UsersController {
       const result = await this.updateUserRoleHandler.handle({
         userId: request.params.userId,
         role: request.body.role as UserRole,
-        reason: request.body.reason,
       });
       return ResponseHelper.fromCommand(reply, result, 'User role updated');
     } catch (error: unknown) {
@@ -109,7 +117,6 @@ export class UsersController {
       const result = await this.toggleUserEmailVerifiedHandler.handle({
         userId: request.params.userId,
         isVerified: request.body.isVerified,
-        reason: request.body.reason,
       });
       return ResponseHelper.fromCommand(reply, result, 'Email verification status updated');
     } catch (error: unknown) {
@@ -122,7 +129,9 @@ export class UsersController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.deleteUserHandler.handle({ userId: request.params.userId });
+      const result = await this.deleteUserHandler.handle({
+        userId: request.params.userId,
+      });
       return ResponseHelper.fromCommand(reply, result, 'User deleted', undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

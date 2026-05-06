@@ -1,6 +1,5 @@
-import { UserProfileService } from '../services/user-profile.service';
+import { UserProfileService, UserProfileViewDTO } from '../services/user-profile.service';
 import {
-  UserProfileDTO,
   UserPreferences,
   StylePreferences,
   PreferredSizes,
@@ -27,15 +26,14 @@ export interface UpdateProfileCommand extends ICommand {
 
 export class UpdateProfileHandler
   implements
-    ICommandHandler<UpdateProfileCommand, CommandResult<UserProfileDTO>>
-{
+  ICommandHandler<UpdateProfileCommand, CommandResult<UserProfileViewDTO>> {
   constructor(
     private readonly userProfileService: UserProfileService
-  ) {}
+  ) { }
 
   async handle(
     command: UpdateProfileCommand
-  ): Promise<CommandResult<UserProfileDTO>> {
+  ): Promise<CommandResult<UserProfileViewDTO>> {
     const updatedProfile = await this.userProfileService.updateUserProfile(
       command.userId,
       {

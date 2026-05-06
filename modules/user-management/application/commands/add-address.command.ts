@@ -1,6 +1,6 @@
 import { AddressManagementService } from '../services/address-management.service';
 import { AddressDTO } from '../../domain/entities/address.entity';
-import { AddressType, AddressData } from '../../domain/value-objects/address.vo';
+import { AddressType } from '../../domain/value-objects/address-type.vo';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface AddAddressCommand extends ICommand {
@@ -23,30 +23,26 @@ export class AddAddressHandler implements ICommandHandler<
   AddAddressCommand,
   CommandResult<AddressDTO>
 > {
-  constructor(private readonly addressService: AddressManagementService) {}
+  constructor(private readonly addressService: AddressManagementService) { }
 
   async handle(
     command: AddAddressCommand
   ): Promise<CommandResult<AddressDTO>> {
-    const addressData: AddressData = {
-      firstName: command.firstName,
-      lastName: command.lastName,
-      company: command.company,
-      addressLine1: command.addressLine1,
-      addressLine2: command.addressLine2,
-      city: command.city,
-      state: command.state,
-      postalCode: command.postalCode,
-      country: command.country,
-      phone: command.phone,
-    };
-
-    const type = AddressType.fromString(command.type);
-
     const result = await this.addressService.addAddress({
       userId: command.userId,
-      addressData,
-      type,
+      addressData: {
+        firstName: command.firstName,
+        lastName: command.lastName,
+        company: command.company,
+        addressLine1: command.addressLine1,
+        addressLine2: command.addressLine2,
+        city: command.city,
+        state: command.state,
+        postalCode: command.postalCode,
+        country: command.country,
+        phone: command.phone,
+      },
+      type: AddressType.fromString(command.type),
       isDefault: command.isDefault,
     });
 

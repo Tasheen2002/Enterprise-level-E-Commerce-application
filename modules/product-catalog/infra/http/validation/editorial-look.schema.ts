@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  MIN_PAGE,
+  MIN_LIMIT,
+  MAX_PAGE_SIZE,
+  MAX_SUGGESTIONS_LIMIT,
+} from "../../../domain/constants/pagination.constants";
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -15,28 +21,32 @@ export const productLooksParamsSchema = z.object({
   productId: z.uuid(),
 });
 
+export const heroAssetParamsSchema = z.object({
+  assetId: z.uuid(),
+});
+
 export const listEditorialLooksSchema = z.object({
-  page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
-  published: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  scheduled: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  draft: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  hasContent: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  hasHeroImage: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  includeUnpublished: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
+  page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
+  published: z.coerce.boolean().optional(),
+  scheduled: z.coerce.boolean().optional(),
+  draft: z.coerce.boolean().optional(),
+  hasContent: z.coerce.boolean().optional(),
+  hasHeroImage: z.coerce.boolean().optional(),
+  includeUnpublished: z.coerce.boolean().optional(),
   sortBy: z.enum(["title", "publishedAt", "id"]).optional().default("publishedAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
 export const popularProductsQuerySchema = z.object({
-  limit: z.string().regex(/^\d+$/).optional().default("10").transform(Number),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_SUGGESTIONS_LIMIT).optional().default(10),
 });
 
 export const createEditorialLookSchema = z.object({
   title: z.string().min(1),
   storyHtml: z.string().optional(),
   heroAssetId: z.uuid().optional(),
-  publishedAt: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  publishedAt: z.coerce.date().optional(),
   productIds: z.array(z.uuid()).optional().default([]),
 });
 
@@ -44,11 +54,11 @@ export const updateEditorialLookSchema = z.object({
   title: z.string().min(1).optional(),
   storyHtml: z.string().optional(),
   heroAssetId: z.uuid().nullable().optional(),
-  publishedAt: z.iso.datetime().nullable().optional().transform((v) => v === null ? null : v ? new Date(v) : undefined),
+  publishedAt: z.coerce.date().nullable().optional(),
 });
 
 export const schedulePublicationSchema = z.object({
-  publishDate: z.iso.datetime().transform((v) => new Date(v)),
+  publishDate: z.coerce.date(),
 });
 
 export const setHeroImageSchema = z.object({
@@ -73,7 +83,7 @@ export const bulkCreateEditorialLooksSchema = z.object({
       title: z.string().min(1),
       storyHtml: z.string().optional(),
       heroAssetId: z.uuid().optional(),
-      publishedAt: z.iso.datetime().transform((v) => new Date(v)).optional(),
+      publishedAt: z.coerce.date().optional(),
       productIds: z.array(z.uuid()).optional(),
     }),
   ).min(1),
@@ -90,10 +100,18 @@ export const bulkDeleteEditorialLooksSchema = z.object({
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type EditorialLookParams = z.infer<typeof editorialLookParamsSchema>;
+export type EditorialLookProductParams = z.infer<typeof editorialLookProductParamsSchema>;
+export type ProductLooksParams = z.infer<typeof productLooksParamsSchema>;
+export type HeroAssetParams = z.infer<typeof heroAssetParamsSchema>;
 export type ListEditorialLooksQuery = z.infer<typeof listEditorialLooksSchema>;
+export type PopularProductsQuery = z.infer<typeof popularProductsQuerySchema>;
 export type CreateEditorialLookBody = z.infer<typeof createEditorialLookSchema>;
 export type UpdateEditorialLookBody = z.infer<typeof updateEditorialLookSchema>;
 export type SchedulePublicationBody = z.infer<typeof schedulePublicationSchema>;
+export type SetHeroImageBody = z.infer<typeof setHeroImageSchema>;
+export type UpdateStoryContentBody = z.infer<typeof updateStoryContentSchema>;
+export type SetLookProductsBody = z.infer<typeof setLookProductsSchema>;
+export type DuplicateEditorialLookBody = z.infer<typeof duplicateEditorialLookSchema>;
 export type BulkCreateEditorialLooksBody = z.infer<typeof bulkCreateEditorialLooksSchema>;
 export type BulkPublishEditorialLooksBody = z.infer<typeof bulkPublishEditorialLooksSchema>;
 export type BulkDeleteEditorialLooksBody = z.infer<typeof bulkDeleteEditorialLooksSchema>;
@@ -109,6 +127,8 @@ export const editorialLookResponseSchema = {
     heroAssetId: { type: "string", format: "uuid", nullable: true },
     publishedAt: { type: "string", format: "date-time", nullable: true },
     productIds: { type: "array", items: { type: "string", format: "uuid" } },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
 } as const;
 
@@ -149,4 +169,57 @@ export const lookProductsResponseSchema = {
 export const productLooksResponseSchema = {
   type: "array",
   items: { type: "string", format: "uuid" },
+} as const;
+
+// Matches PaginatedResult<EditorialLookDTO> from packages/core.
+export const paginatedEditorialLooksResponseSchema = {
+  type: "object",
+  properties: {
+    items: { type: "array", items: editorialLookResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
+  },
+} as const;
+
+export const editorialLooksArrayResponseSchema = {
+  type: "array",
+  items: editorialLookResponseSchema,
+} as const;
+
+// Mirrors BatchPublishResult from editorial-look-management.service.
+export const bulkPublishLooksResponseSchema = {
+  type: "object",
+  properties: {
+    published: { type: "array", items: { type: "string", format: "uuid" } },
+    failed: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          error: { type: "string" },
+        },
+      },
+    },
+  },
+} as const;
+
+// Mirrors ScheduledPublicationResult from editorial-look-management.service.
+export const scheduledPublicationsResponseSchema = {
+  type: "object",
+  properties: {
+    published: { type: "array", items: editorialLookResponseSchema },
+    errors: { type: "array", items: { type: "string" } },
+  },
+} as const;
+
+// Mirrors PublicationValidationResult from editorial-look-management.service.
+export const publicationValidationResponseSchema = {
+  type: "object",
+  properties: {
+    isValid: { type: "boolean" },
+    errors: { type: "array", items: { type: "string" } },
+  },
 } as const;

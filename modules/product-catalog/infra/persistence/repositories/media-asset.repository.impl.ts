@@ -25,7 +25,7 @@ export class MediaAssetRepositoryImpl
     return Number(value);
   }
 
-  private mapRow(row: MediaAssetRow): MediaAsset {
+  private toDomain(row: MediaAssetRow): MediaAsset {
     return MediaAsset.fromPersistence({
       id: MediaAssetId.fromString(row.id),
       storageKey: row.storageKey,
@@ -39,7 +39,7 @@ export class MediaAssetRepositoryImpl
       renditions: (row.renditions ?? {}) as Record<string, unknown>,
       version: row.version,
       createdAt: row.createdAt,
-      updatedAt: (row as any).updatedAt ?? row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
@@ -69,14 +69,22 @@ export class MediaAssetRepositoryImpl
     const row = await this.prisma.mediaAsset.findUnique({
       where: { id: id.getValue() },
     });
-    return row ? this.mapRow(row) : null;
+    return row ? this.toDomain(row) : null;
+  }
+
+  async findByIds(ids: MediaAssetId[]): Promise<MediaAsset[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.mediaAsset.findMany({
+      where: { id: { in: ids.map((id) => id.getValue()) } },
+    });
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findByStorageKey(storageKey: string): Promise<MediaAsset | null> {
     const row = await this.prisma.mediaAsset.findFirst({
       where: { storageKey },
     });
-    return row ? this.mapRow(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findAll(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -103,7 +111,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByMimeType(
@@ -119,7 +127,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findImages(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -132,7 +140,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findVideos(options?: MediaAssetQueryOptions): Promise<MediaAsset[]> {
@@ -145,7 +153,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByDimensions(
@@ -162,7 +170,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findBySizeRange(
@@ -179,7 +187,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findOrphaned(): Promise<MediaAsset[]> {
@@ -194,7 +202,7 @@ export class MediaAssetRepositoryImpl
       orderBy: { createdAt: "desc" },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: MediaAssetId): Promise<void> {
@@ -282,6 +290,6 @@ export class MediaAssetRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.mapRow(row));
+    return rows.map((row) => this.toDomain(row));
   }
 }

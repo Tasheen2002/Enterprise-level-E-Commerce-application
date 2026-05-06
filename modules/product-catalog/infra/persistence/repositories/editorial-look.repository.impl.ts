@@ -23,21 +23,21 @@ export class EditorialLookRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private hydrate(row: EditorialLookRow): EditorialLook {
-    const r = row as any;
-    if (!r.createdAt || !r.updatedAt) {
-      throw new Error(`EditorialLook row is missing timestamps for id=${row.id}`);
+  private toDomain(row: EditorialLookRow): EditorialLook {
+    const productMap = new Map<string, ProductId>();
+    for (const ep of row.products) {
+      const pid = ProductId.fromString(ep.productId);
+      productMap.set(pid.getValue(), pid);
     }
-    const productIds = row.products.map((ep) => ep.productId);
     return EditorialLook.fromPersistence({
       id: EditorialLookId.fromString(row.id),
       title: row.title,
       storyHtml: row.storyHtml,
       heroAssetId: row.heroAssetId ? MediaAssetId.fromString(row.heroAssetId) : null,
       publishedAt: row.publishedAt,
-      productIds: new Set(productIds.map((id) => ProductId.fromString(id))),
-      createdAt: r.createdAt,
-      updatedAt: r.updatedAt,
+      productIds: productMap,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
@@ -79,7 +79,7 @@ export class EditorialLookRepositoryImpl
       where: { id: id.getValue() },
       include: this.includeProducts,
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findAll(options: EditorialLookQueryOptions = {}): Promise<EditorialLook[]> {
@@ -110,7 +110,7 @@ export class EditorialLookRepositoryImpl
       skip: offset,
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findPublished(options?: EditorialLookQueryOptions): Promise<EditorialLook[]> {
@@ -143,7 +143,7 @@ export class EditorialLookRepositoryImpl
       include: this.includeProducts,
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findScheduled(options?: EditorialLookQueryOptions): Promise<EditorialLook[]> {
@@ -176,7 +176,7 @@ export class EditorialLookRepositoryImpl
       include: this.includeProducts,
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findDrafts(options?: EditorialLookQueryOptions): Promise<EditorialLook[]> {
@@ -207,11 +207,11 @@ export class EditorialLookRepositoryImpl
       include: this.includeProducts,
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByProductId(
-    productId: string,
+    productId: ProductId,
     options?: EditorialLookQueryOptions,
   ): Promise<EditorialLook[]> {
     const {
@@ -223,7 +223,7 @@ export class EditorialLookRepositoryImpl
     } = options || {};
 
     const where: Prisma.EditorialLookWhereInput = {
-      products: { some: { productId } },
+      products: { some: { productId: productId.getValue() } },
     };
 
     if (!includeUnpublished) {
@@ -238,7 +238,7 @@ export class EditorialLookRepositoryImpl
       include: this.includeProducts,
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByHeroAsset(assetId: MediaAssetId): Promise<EditorialLook[]> {
@@ -248,7 +248,7 @@ export class EditorialLookRepositoryImpl
       orderBy: { title: "asc" },
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findReadyToPublish(): Promise<EditorialLook[]> {
@@ -258,7 +258,7 @@ export class EditorialLookRepositoryImpl
       orderBy: { publishedAt: "asc" },
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: EditorialLookId): Promise<void> {
@@ -295,58 +295,5 @@ export class EditorialLookRepositoryImpl
     }
 
     return this.prisma.editorialLook.count({ where });
-  }
-
-  // ── Association methods ───────────────────────────────────────────
-
-  async addProductToLook(lookId: EditorialLookId, productId: string): Promise<void> {
-    await this.prisma.editorialLookProduct.upsert({
-      where: { lookId_productId: { lookId: lookId.getValue(), productId } },
-      create: { lookId: lookId.getValue(), productId },
-      update: {},
-    });
-  }
-
-  async removeProductFromLook(lookId: EditorialLookId, productId: string): Promise<void> {
-    await this.prisma.editorialLookProduct.delete({
-      where: {
-        lookId_productId: { lookId: lookId.getValue(), productId },
-      },
-    });
-  }
-
-  async getLookProducts(lookId: EditorialLookId): Promise<string[]> {
-    const associations = await this.prisma.editorialLookProduct.findMany({
-      where: { lookId: lookId.getValue() },
-      select: { productId: true },
-    });
-    return associations.map((a) => a.productId);
-  }
-
-  async getProductLooks(productId: string): Promise<EditorialLookId[]> {
-    const associations = await this.prisma.editorialLookProduct.findMany({
-      where: { productId },
-      select: { lookId: true },
-    });
-    return associations.map((a) => EditorialLookId.fromString(a.lookId));
-  }
-
-  async setLookProducts(lookId: EditorialLookId, productIds: string[]): Promise<void> {
-    const lid = lookId.getValue();
-    await this.prisma.$transaction(async (tx) => {
-      await tx.editorialLookProduct.deleteMany({ where: { lookId: lid } });
-      if (productIds.length > 0) {
-        await tx.editorialLookProduct.createMany({
-          data: productIds.map((productId) => ({ lookId: lid, productId })),
-        });
-      }
-    });
-  }
-
-  async existsProductInLook(lookId: EditorialLookId, productId: string): Promise<boolean> {
-    const count = await this.prisma.editorialLookProduct.count({
-      where: { lookId: lookId.getValue(), productId },
-    });
-    return count > 0;
   }
 }

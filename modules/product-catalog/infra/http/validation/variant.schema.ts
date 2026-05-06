@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  MIN_PAGE,
+  MIN_LIMIT,
+  MAX_PAGE_SIZE,
+} from "../../../domain/constants/pagination.constants";
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -11,8 +16,8 @@ export const variantByProductParamsSchema = z.object({
 });
 
 export const listVariantsSchema = z.object({
-  page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
+  page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   size: z.string().optional(),
   color: z.string().optional(),
   sortBy: z.enum(["sku", "createdAt", "size", "color"]).optional().default("createdAt"),
@@ -35,7 +40,7 @@ export const createVariantSchema = z.object({
   taxClass: z.string().optional(),
   allowBackorder: z.boolean().optional().default(false),
   allowPreorder: z.boolean().optional().default(false),
-  restockEta: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  restockEta: z.coerce.date().optional(),
 });
 
 export const updateVariantSchema = z.object({
@@ -48,7 +53,7 @@ export const updateVariantSchema = z.object({
   taxClass: z.string().optional(),
   allowBackorder: z.boolean().optional(),
   allowPreorder: z.boolean().optional(),
-  restockEta: z.iso.datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  restockEta: z.coerce.date().optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────
@@ -61,6 +66,17 @@ export type UpdateVariantBody = z.infer<typeof updateVariantSchema>;
 
 // ── JSON Schema for Swagger docs ──────────────────────────────────────────────
 
+// Mirrors VariantDimensions interface from the domain entity.
+const dimsResponseSchema = {
+  type: "object",
+  nullable: true,
+  properties: {
+    length: { type: "number" },
+    width: { type: "number" },
+    height: { type: "number" },
+  },
+} as const;
+
 export const variantResponseSchema = {
   type: "object",
   properties: {
@@ -71,12 +87,24 @@ export const variantResponseSchema = {
     color: { type: "string", nullable: true },
     barcode: { type: "string", nullable: true },
     weightG: { type: "integer", nullable: true },
-    dims: { type: "object", nullable: true },
+    dims: dimsResponseSchema,
     taxClass: { type: "string", nullable: true },
     allowBackorder: { type: "boolean" },
     allowPreorder: { type: "boolean" },
     restockEta: { type: "string", format: "date-time", nullable: true },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
+// Matches PaginatedResult<ProductVariantDTO> from packages/core.
+export const paginatedVariantsResponseSchema = {
+  type: "object",
+  properties: {
+    items: { type: "array", items: variantResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
   },
 } as const;

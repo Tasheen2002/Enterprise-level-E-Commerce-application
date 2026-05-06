@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  MIN_PAGE,
+  MIN_LIMIT,
+  MAX_PAGE_SIZE,
+} from "../../../domain/constants/pagination.constants";
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -11,10 +16,12 @@ export const categorySlugParamsSchema = z.object({
 });
 
 export const listCategoriesSchema = z.object({
-  page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
+  // Use coercion and direct constraints instead of complex .pipe() chains to avoid
+  // JSON-schema generation crashes in some environments.
+  page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   parentId: z.uuid().optional(),
-  includeChildren: z.string().optional().transform((v) => v === "true"),
+  includeChildren: z.coerce.boolean().optional(),
   sortBy: z.enum(["name", "position"]).optional().default("position"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });
@@ -62,5 +69,23 @@ export const categoryResponseSchema = {
     parentId: { type: "string", format: "uuid", nullable: true },
     position: { type: "integer", nullable: true },
     createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
   },
+} as const;
+
+// Matches PaginatedResult<CategoryDTO> from packages/core.
+export const paginatedCategoriesResponseSchema = {
+  type: "object",
+  properties: {
+    items: { type: "array", items: categoryResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
+  },
+} as const;
+
+export const categoryListResponseSchema = {
+  type: "array",
+  items: categoryResponseSchema,
 } as const;

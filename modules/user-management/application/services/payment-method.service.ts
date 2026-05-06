@@ -1,13 +1,14 @@
 import { IPaymentMethodRepository } from "../../domain/repositories/ipayment-method.repository";
+import { IUserProfileRepository } from "../../domain/repositories/iuser-profile.repository";
 import { IUserRepository } from "../../domain/repositories/iuser.repository";
 import { IAddressRepository } from "../../domain/repositories/iaddress.repository";
 import {
   PaymentMethod,
   PaymentMethodDTO,
 } from "../../domain/entities/payment-method.entity";
-import { PaymentMethodType } from "../../domain/enums/payment-method-type.enum";
-import { PaymentMethodId } from "../../domain/value-objects/payment-method-id";
-import { AddressId } from "../../domain/value-objects/address-id";
+import { PaymentMethodType } from "../../domain/value-objects/payment-method-type.vo";
+import { PaymentMethodId } from "../../domain/value-objects/payment-method-id.vo";
+import { AddressId } from "../../domain/value-objects/address-id.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import {
   UserNotFoundError,
@@ -15,6 +16,12 @@ import {
   PaymentMethodNotFoundError,
   InvalidOperationError,
 } from "../../domain/errors/user-management.errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+
+export interface ListUserPaymentMethodsOptions {
+  page?: number;
+  limit?: number;
+}
 
 interface AddPaymentMethodDto {
   userId: string;
@@ -41,36 +48,32 @@ interface UpdatePaymentMethodDto {
   isDefault?: boolean;
 }
 
-
 export class PaymentMethodService {
   constructor(
     private readonly paymentMethodRepository: IPaymentMethodRepository,
     private readonly userRepository: IUserRepository,
     private readonly addressRepository: IAddressRepository,
-  ) {}
+    private readonly userProfileRepository: IUserProfileRepository,
+  ) { }
 
-  async addPaymentMethod(
-    dto: AddPaymentMethodDto,
-  ): Promise<PaymentMethodDTO> {
+  async addPaymentMethod(dto: AddPaymentMethodDto): Promise<PaymentMethodDTO> {
     const userId = UserId.fromString(dto.userId);
 
-    // Verify user exists
     const user = await this.userRepository.findById(userId);
-    if (!user) {
-      throw new UserNotFoundError();
-    }
+    if (!user) throw new UserNotFoundError();
 
-    // Validate billing address if provided
     if (dto.billingAddressId) {
       await this.validateBillingAddress(dto.billingAddressId, userId);
     }
 
-    // Check if user already has payment methods
-    const existingMethods =
-      await this.paymentMethodRepository.findByUserId(userId);
-
-    // If this is their first payment method or explicitly set as default, make it default
+    const existingMethods = await this.paymentMethodRepository.findByUserId(userId);
     const shouldBeDefault = dto.isDefault || existingMethods.length === 0;
+
+    // De-default others FIRST so the new payment method is created already-default,
+    // emitting only PaymentMethodAddedEvent (no extra PaymentMethodSetAsDefaultEvent).
+    if (shouldBeDefault) {
+      await this.clearOtherDefaults(userId);
+    }
 
     const paymentMethod = PaymentMethod.create({
       userId: dto.userId,
@@ -81,254 +84,135 @@ export class PaymentMethodService {
       expYear: dto.expYear,
       billingAddressId: dto.billingAddressId,
       providerRef: dto.providerRef,
-      isDefault: false,
+      isDefault: shouldBeDefault,
     });
 
-    // De-default all existing methods in-memory, then persist each
-    if (shouldBeDefault) {
-      for (const existing of existingMethods) {
-        if (existing.isDefault) {
-          existing.removeAsDefault();
-          await this.paymentMethodRepository.save(existing);
-        }
-      }
-      paymentMethod.setAsDefault();
-    }
-
     await this.paymentMethodRepository.save(paymentMethod);
+    if (dto.isDefault === true || (typeof shouldBeDefault !== 'undefined' && shouldBeDefault)) {
+      await this.syncUserProfileDefault(userId, paymentMethod.id);
+    }
 
     return PaymentMethod.toDTO(paymentMethod);
   }
 
-  async updatePaymentMethod(
-    dto: UpdatePaymentMethodDto,
-  ): Promise<PaymentMethodDTO> {
+  async updatePaymentMethod(dto: UpdatePaymentMethodDto): Promise<PaymentMethodDTO> {
     const userId = UserId.fromString(dto.userId);
     const paymentMethodIdVo = PaymentMethodId.fromString(dto.paymentMethodId);
-    const paymentMethod = await this.paymentMethodRepository.findById(
-      paymentMethodIdVo,
-    );
+    const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
-    if (!paymentMethod) {
-      throw new PaymentMethodNotFoundError();
-    }
-
+    if (!paymentMethod) throw new PaymentMethodNotFoundError();
     if (!paymentMethod.belongsToUser(userId)) {
       throw new InvalidOperationError("Payment method does not belong to user");
     }
 
-    // Validate billing address if provided
     if (dto.billingAddressId) {
       await this.validateBillingAddress(dto.billingAddressId, userId);
     }
 
-    // Note: Payment method type, brand, and last4 are typically immutable after creation
-    // Only update fields that can be changed: billing address, provider ref, and expiry
-
+    // Note: payment method type, brand, and last4 are immutable after creation.
+    // Only billing address, provider ref, and expiry can change.
     if (dto.expMonth !== undefined && dto.expYear !== undefined) {
       paymentMethod.updateExpiry(dto.expMonth, dto.expYear);
     }
-
     if (dto.billingAddressId !== undefined) {
       paymentMethod.updateBillingAddress(dto.billingAddressId);
     }
-
     if (dto.providerRef !== undefined) {
       paymentMethod.updateProviderRef(dto.providerRef);
     }
 
-    // Handle default status
-    if (dto.isDefault !== undefined) {
-      if (dto.isDefault) {
-        // De-default all other methods in-memory, then persist each
-        const allMethods = await this.paymentMethodRepository.findByUserId(userId);
-        for (const existing of allMethods) {
-          if (existing.isDefault && !existing.equals(paymentMethod)) {
-            existing.removeAsDefault();
-            await this.paymentMethodRepository.save(existing);
-          }
-        }
-        paymentMethod.setAsDefault();
-      } else {
-        paymentMethod.removeAsDefault();
-      }
+    if (dto.isDefault === true) {
+      await this.clearOtherDefaults(userId, paymentMethod.id);
+      paymentMethod.setAsDefault();
+    } else if (dto.isDefault === false) {
+      paymentMethod.removeAsDefault();
     }
 
     await this.paymentMethodRepository.save(paymentMethod);
-
+    if (dto.isDefault === true) {
+      await this.syncUserProfileDefault(userId, paymentMethod.id);
+    }
     return PaymentMethod.toDTO(paymentMethod);
   }
 
-  async deletePaymentMethod(
-    paymentMethodId: string,
-    userId: string,
-  ): Promise<void> {
+  async deletePaymentMethod(paymentMethodId: string, userId: string): Promise<void> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
-    const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodIdVo);
+    const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
-    if (!paymentMethod) {
-      throw new PaymentMethodNotFoundError();
-    }
-
+    if (!paymentMethod) throw new PaymentMethodNotFoundError();
     if (!paymentMethod.belongsToUser(userIdVo)) {
       throw new InvalidOperationError("Payment method does not belong to user");
     }
 
-    if (!paymentMethod.canBeDeleted()) {
-      throw new InvalidOperationError("Payment method cannot be deleted");
-    }
-
+    const wasDefault = paymentMethod.isDefault;
     await this.paymentMethodRepository.delete(paymentMethodIdVo);
 
-    // If this was the default payment method, auto-assign a new default
-    if (paymentMethod.isDefault) {
+    // If this was the default, auto-assign a new default
+    if (wasDefault) {
       const remaining = await this.paymentMethodRepository.findByUserId(userIdVo);
       if (remaining.length > 0) {
         remaining[0].setAsDefault();
         await this.paymentMethodRepository.save(remaining[0]);
+        await this.syncUserProfileDefault(userIdVo, remaining[0].id);
+      } else {
+        await this.clearUserProfileDefault(userIdVo);
       }
     }
   }
 
+  // PERF: a user's saved payment methods are bounded (typically <10). Repo
+  // returns all rows; we slice in memory. Switch to repo-side pagination if
+  // counts ever grow large.
   async getUserPaymentMethods(
     userId: string,
-  ): Promise<PaymentMethodDTO[]> {
-    const userIdVo = UserId.fromString(userId);
-    const paymentMethods =
-      await this.paymentMethodRepository.findByUserId(userIdVo);
+    options: ListUserPaymentMethodsOptions = {},
+  ): Promise<PaginatedResult<PaymentMethodDTO>> {
+    const { page = 1, limit = 20 } = options;
+    const offset = (page - 1) * limit;
 
-    return paymentMethods.map((method) => PaymentMethod.toDTO(method));
+    const userIdVo = UserId.fromString(userId);
+    const allMethods = await this.paymentMethodRepository.findByUserId(userIdVo);
+    const total = allMethods.length;
+    const items = allMethods.slice(offset, offset + limit).map((pm) => PaymentMethod.toDTO(pm));
+
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
-  async getDefaultPaymentMethod(
-    userId: string,
-  ): Promise<PaymentMethodDTO> {
-    const userIdVo = UserId.fromString(userId);
-    const paymentMethod =
-      await this.paymentMethodRepository.findDefaultByUserId(userIdVo);
-
-    if (!paymentMethod) {
-      throw new PaymentMethodNotFoundError();
-    }
-
-    return PaymentMethod.toDTO(paymentMethod);
-  }
-
-  async setDefaultPaymentMethod(
-    paymentMethodId: string,
-    userId: string,
-  ): Promise<void> {
+  async setDefaultPaymentMethod(paymentMethodId: string, userId: string): Promise<PaymentMethodDTO> {
     const userIdVo = UserId.fromString(userId);
     const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
-    const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodIdVo);
+    const paymentMethod = await this.paymentMethodRepository.findById(paymentMethodIdVo);
 
-    if (!paymentMethod) {
-      throw new PaymentMethodNotFoundError();
-    }
-
+    if (!paymentMethod) throw new PaymentMethodNotFoundError();
     if (!paymentMethod.belongsToUser(userIdVo)) {
       throw new InvalidOperationError("Payment method does not belong to user");
     }
 
-    // De-default all other methods in-memory, then persist each
-    const allMethods = await this.paymentMethodRepository.findByUserId(userIdVo);
-    for (const existing of allMethods) {
-      if (existing.isDefault && !existing.equals(paymentMethod)) {
-        existing.removeAsDefault();
-        await this.paymentMethodRepository.save(existing);
-      }
-    }
-
+    await this.clearOtherDefaults(userIdVo, paymentMethod.id);
     paymentMethod.setAsDefault();
     await this.paymentMethodRepository.save(paymentMethod);
+    await this.syncUserProfileDefault(userIdVo, paymentMethod.id);
+    return PaymentMethod.toDTO(paymentMethod);
   }
 
-  async getPaymentMethodsByType(
-    userId: string,
-    type: PaymentMethodType,
-  ): Promise<PaymentMethodDTO[]> {
-    const userIdVo = UserId.fromString(userId);
-    const paymentMethods =
-      await this.paymentMethodRepository.findByUserIdAndType(userIdVo, type);
+  // --- Private helpers ---
 
-    return paymentMethods.map((method) => PaymentMethod.toDTO(method));
-  }
-
-  async getExpiringPaymentMethods(
-    userId: string,
-    monthsAhead: number = 3,
-  ): Promise<PaymentMethodDTO[]> {
-    const userIdVo = UserId.fromString(userId);
-    const allPaymentMethods =
-      await this.paymentMethodRepository.findByUserId(userIdVo);
-
-    // Filter for expiring methods using domain logic
-    const expiringMethods = allPaymentMethods.filter((method) =>
-      method.isExpiringSoon(monthsAhead),
-    );
-
-    return expiringMethods.map((method) => PaymentMethod.toDTO(method));
-  }
-
-  async validatePaymentMethod(
-    paymentMethodId: string,
-  ): Promise<{ isValid: boolean; errors: string[]; warnings: string[] }> {
-    const paymentMethodIdVo = PaymentMethodId.fromString(paymentMethodId);
-    const paymentMethod =
-      await this.paymentMethodRepository.findById(paymentMethodIdVo);
-
-    if (!paymentMethod) {
-      return {
-        isValid: false,
-        errors: ["Payment method not found"],
-        warnings: [],
-      };
+  /**
+   * Removes the `default` flag from any other payment method the user has,
+   * except the one being promoted (if provided). Persists each de-defaulted method.
+   */
+  private async clearOtherDefaults(
+    userId: UserId,
+    exceptPaymentMethodId?: PaymentMethodId,
+  ): Promise<void> {
+    const allMethods = await this.paymentMethodRepository.findByUserId(userId);
+    for (const existing of allMethods) {
+      if (!existing.isDefault) continue;
+      if (exceptPaymentMethodId && existing.id.equals(exceptPaymentMethodId)) continue;
+      existing.removeAsDefault();
+      await this.paymentMethodRepository.save(existing);
     }
-
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Check if card is expired
-    if (
-      paymentMethod.type === PaymentMethodType.CARD &&
-      paymentMethod.isExpired()
-    ) {
-      errors.push("Payment method has expired");
-    }
-
-    // Check if card expires soon
-    if (
-      paymentMethod.type === PaymentMethodType.CARD &&
-      paymentMethod.isExpiringSoon()
-    ) {
-      warnings.push("Payment method expires soon");
-    }
-
-    // Validate billing address if present
-    if (paymentMethod.billingAddressId) {
-      const address = await this.addressRepository.findById(
-        AddressId.fromString(paymentMethod.billingAddressId),
-      );
-      if (!address) {
-        errors.push("Billing address not found");
-      } else if (!address.isValidForBilling()) {
-        errors.push("Billing address is incomplete");
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      warnings,
-    };
-  }
-
-  async bulkDeleteUserPaymentMethods(userId: string): Promise<number> {
-    const userIdVo = UserId.fromString(userId);
-    return await this.paymentMethodRepository.deleteByUserId(userIdVo);
   }
 
   private async validateBillingAddress(
@@ -337,19 +221,28 @@ export class PaymentMethodService {
   ): Promise<void> {
     const address = await this.addressRepository.findById(AddressId.fromString(addressId));
 
-    if (!address) {
-      throw new AddressNotFoundError();
-    }
-
+    if (!address) throw new AddressNotFoundError();
     if (!address.belongsToUser(userId)) {
-      throw new InvalidOperationError(
-        "Billing address does not belong to user",
-      );
+      throw new InvalidOperationError("Billing address does not belong to user");
     }
-
     if (!address.isValidForBilling()) {
       throw new InvalidOperationError("Address is not valid for billing");
     }
   }
 
+  private async syncUserProfileDefault(userId: UserId, paymentMethodId: PaymentMethodId): Promise<void> {
+    const profile = await this.userProfileRepository.findByUserId(userId);
+    if (profile) {
+      profile.setDefaultPaymentMethod(paymentMethodId.getValue());
+      await this.userProfileRepository.save(profile);
+    }
+  }
+
+  private async clearUserProfileDefault(userId: UserId): Promise<void> {
+    const profile = await this.userProfileRepository.findByUserId(userId);
+    if (profile) {
+      profile.removeDefaultPaymentMethod();
+      await this.userProfileRepository.save(profile);
+    }
+  }
 }

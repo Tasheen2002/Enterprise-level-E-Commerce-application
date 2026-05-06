@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { VariantController } from "../controllers/variant.controller";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -11,7 +12,12 @@ import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   listVariantsSchema,
   createVariantSchema,
@@ -19,12 +25,20 @@ import {
   variantParamsSchema,
   variantByProductParamsSchema,
   variantResponseSchema,
+  paginatedVariantsResponseSchema,
 } from "../validation/variant.schema";
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const variantParamsJson = toJsonSchema(variantParamsSchema);
+const variantByProductParamsJson = toJsonSchema(variantByProductParamsSchema);
+const listVariantsQueryJson = toJsonSchema(listVariantsSchema);
+const createVariantBodyJson = toJsonSchema(createVariantSchema);
+const updateVariantBodyJson = toJsonSchema(updateVariantSchema);
 
 export async function variantRoutes(
   fastify: FastifyInstance,
@@ -36,50 +50,24 @@ export async function variantRoutes(
     }
   });
 
+  // ── Reads ──────────────────────────────────────────────────────────────
+
   // GET /products/:productId/variants — List variants for a product (public)
   fastify.get(
     "/products/:productId/variants",
     {
-      preValidation: [validateParams(variantByProductParamsSchema), validateQuery(listVariantsSchema)],
+      preValidation: [
+        validateParams(variantByProductParamsSchema),
+        validateQuery(listVariantsSchema),
+      ],
       schema: {
         description: "Get variants for a product",
         tags: ["Variants"],
         summary: "List Product Variants",
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            page: { type: "integer", minimum: 1, default: 1 },
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            size: { type: "string" },
-            color: { type: "string" },
-            sortBy: { type: "string", enum: ["sku", "createdAt", "size", "color"], default: "createdAt" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
-          },
-        },
+        params: variantByProductParamsJson,
+        querystring: listVariantsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  variants: { type: "array", items: variantResponseSchema },
-                  total: { type: "integer" },
-                  page: { type: "integer" },
-                  limit: { type: "integer" },
-                  totalPages: { type: "integer" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedVariantsResponseSchema),
         },
       },
     },
@@ -96,21 +84,9 @@ export async function variantRoutes(
         description: "Get variant by ID",
         tags: ["Variants"],
         summary: "Get Variant",
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: variantParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: variantResponseSchema,
-            },
-          },
+          200: successResponse(variantResponseSchema),
         },
       },
     },
@@ -118,48 +94,23 @@ export async function variantRoutes(
       controller.getVariant(request as AuthenticatedRequest, reply),
   );
 
+  // ── Writes ─────────────────────────────────────────────────────────────
+
   // POST /products/:productId/variants — Create variant (Admin only)
   fastify.post(
     "/products/:productId/variants",
     {
-      preValidation: [validateParams(variantByProductParamsSchema), validateBody(createVariantSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(variantByProductParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createVariantSchema)],
       schema: {
         description: "Create a new variant for a product",
         tags: ["Variants"],
         summary: "Create Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["productId"],
-          properties: { productId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["sku"],
-          properties: {
-            sku: { type: "string" },
-            size: { type: "string" },
-            color: { type: "string" },
-            barcode: { type: "string" },
-            weightG: { type: "integer", minimum: 0 },
-            dims: { type: "object" },
-            taxClass: { type: "string" },
-            allowBackorder: { type: "boolean" },
-            allowPreorder: { type: "boolean" },
-            restockEta: { type: "string", format: "date-time" },
-          },
-        },
+        params: variantByProductParamsJson,
+        body: createVariantBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: variantResponseSchema,
-            },
-          },
+          201: successResponse(variantResponseSchema, 201),
         },
       },
     },
@@ -171,43 +122,17 @@ export async function variantRoutes(
   fastify.patch(
     "/variants/:variantId",
     {
-      preValidation: [validateParams(variantParamsSchema), validateBody(updateVariantSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(variantParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateVariantSchema)],
       schema: {
         description: "Update an existing variant",
         tags: ["Variants"],
         summary: "Update Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: {
-            sku: { type: "string" },
-            size: { type: "string" },
-            color: { type: "string" },
-            barcode: { type: "string" },
-            weightG: { type: "integer", minimum: 0 },
-            dims: { type: "object" },
-            taxClass: { type: "string" },
-            allowBackorder: { type: "boolean" },
-            allowPreorder: { type: "boolean" },
-            restockEta: { type: "string", format: "date-time" },
-          },
-        },
+        params: variantParamsJson,
+        body: updateVariantBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: variantResponseSchema,
-            },
-          },
+          200: successResponse(variantResponseSchema),
         },
       },
     },
@@ -220,22 +145,15 @@ export async function variantRoutes(
     "/variants/:variantId",
     {
       preValidation: [validateParams(variantParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete a variant",
         tags: ["Variants"],
         summary: "Delete Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: { variantId: { type: "string", format: "uuid" } },
-        },
+        params: variantParamsJson,
         response: {
-          204: {
-            description: "Variant deleted successfully",
-            type: "null",
-          },
+          204: noContentResponse,
         },
       },
     },

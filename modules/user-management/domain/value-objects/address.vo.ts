@@ -13,22 +13,38 @@ interface AddressProps {
   phone?: string;
 }
 
+interface FormattedAddress {
+  recipient: string;
+  street: string[];
+  cityStateZip: string;
+  country: string;
+}
+
 export class Address {
-  private readonly props: AddressProps;
-
-  private constructor(props: AddressProps) {
-    this.props = props;
+  private constructor(private readonly props: AddressProps) {
+    Address.validate(props);
   }
 
-  static create(data: AddressData): Address {
-    return new Address(Address.validate(data));
+  static create(data: AddressProps): Address {
+    return new Address({
+      firstName: data.firstName?.trim(),
+      lastName: data.lastName?.trim(),
+      company: data.company?.trim(),
+      addressLine1: data.addressLine1.trim(),
+      addressLine2: data.addressLine2?.trim(),
+      city: data.city.trim(),
+      state: data.state?.trim(),
+      postalCode: data.postalCode?.trim().toUpperCase(),
+      country: data.country.trim().toUpperCase(),
+      phone: data.phone?.trim(),
+    });
   }
 
-  static fromData(data: AddressData): Address {
-    return new Address(Address.validate(data));
+  static fromPersistence(data: AddressProps): Address {
+    return new Address(data);
   }
 
-  private static validate(data: AddressData): AddressProps {
+  private static validate(data: AddressProps): void {
     if (!data.addressLine1?.trim()) {
       throw new DomainValidationError("Address line 1 is required");
     }
@@ -51,23 +67,9 @@ export class Address {
       throw new DomainValidationError("Address line 2 is too long (maximum 100 characters)");
     }
 
-    const country = data.country.trim().toUpperCase();
-    if (data.postalCode && !Address.isValidPostalCode(data.postalCode, country)) {
-      throw new DomainValidationError(`Invalid postal code format for ${country}`);
+    if (data.postalCode && !Address.isValidPostalCode(data.postalCode, data.country.toUpperCase())) {
+      throw new DomainValidationError(`Invalid postal code format for ${data.country}`);
     }
-
-    return {
-      firstName: data.firstName?.trim(),
-      lastName: data.lastName?.trim(),
-      company: data.company?.trim(),
-      addressLine1: data.addressLine1.trim(),
-      addressLine2: data.addressLine2?.trim(),
-      city: data.city.trim(),
-      state: data.state?.trim(),
-      postalCode: data.postalCode?.trim().toUpperCase(),
-      country,
-      phone: data.phone?.trim(),
-    };
   }
 
   private static isValidPostalCode(postalCode: string, country: string): boolean {
@@ -81,7 +83,7 @@ export class Address {
       JP: /^\d{3}-?\d{4}$/,
       IN: /^\d{6}$/,
     };
-    const pattern = patterns[country.toUpperCase()];
+    const pattern = patterns[country];
     return pattern ? pattern.test(postalCode) : true;
   }
 
@@ -95,6 +97,10 @@ export class Address {
   get postalCode(): string | undefined { return this.props.postalCode; }
   get country(): string { return this.props.country; }
   get phone(): string | undefined { return this.props.phone; }
+
+  getValue(): AddressProps {
+    return { ...this.props };
+  }
 
   getFullName(): string {
     const parts = [this.props.firstName, this.props.lastName].filter(Boolean);
@@ -164,101 +170,5 @@ export class Address {
 
   toString(): string {
     return this.getFullAddress();
-  }
-
-  getValue(): AddressData {
-    return {
-      firstName: this.props.firstName,
-      lastName: this.props.lastName,
-      company: this.props.company,
-      addressLine1: this.props.addressLine1,
-      addressLine2: this.props.addressLine2,
-      city: this.props.city,
-      state: this.props.state,
-      postalCode: this.props.postalCode,
-      country: this.props.country,
-      phone: this.props.phone,
-    };
-  }
-}
-
-export interface AddressData {
-  firstName?: string;
-  lastName?: string;
-  company?: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state?: string;
-  postalCode?: string;
-  country: string;
-  phone?: string;
-}
-
-export interface FormattedAddress {
-  recipient: string;
-  street: string[];
-  cityStateZip: string;
-  country: string;
-}
-
-export class AddressType {
-  static readonly BILLING = new AddressType('billing');
-  static readonly SHIPPING = new AddressType('shipping');
-
-  private constructor(private readonly value: string) {}
-
-  static create(type: string): AddressType {
-    const normalized = type.toLowerCase().trim();
-    switch (normalized) {
-      case 'billing':
-        return AddressType.BILLING;
-      case 'shipping':
-        return AddressType.SHIPPING;
-      default:
-        throw new DomainValidationError(
-          `Invalid address type: '${type}'. Must be 'billing' or 'shipping'`,
-        );
-    }
-  }
-
-  static fromString(type: string): AddressType {
-    return AddressType.create(type);
-  }
-
-  static isValid(type: string): boolean {
-    try {
-      AddressType.create(type);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  static getAllValues(): AddressType[] {
-    return [AddressType.BILLING, AddressType.SHIPPING];
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  getDisplayName(): string {
-    switch (this.value) {
-      case 'billing':
-        return 'Billing Address';
-      case 'shipping':
-        return 'Shipping Address';
-      default:
-        return this.value;
-    }
-  }
-
-  equals(other: AddressType): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
   }
 }
