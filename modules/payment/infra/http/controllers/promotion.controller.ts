@@ -24,6 +24,30 @@ export class PromotionController {
     private readonly listUsageHandler: GetPromotionUsageHandler,
   ) {}
 
+  async listActive(_request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const result = await this.listActiveHandler.handle({ timestamp: new Date() });
+      return ResponseHelper.ok(reply, "Active promotions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async listUsage(
+    request: AuthenticatedRequest<{ Params: PromoIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listUsageHandler.handle({
+        promoId: request.params.promoId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Promotion usage retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async create(
     request: AuthenticatedRequest<{ Body: CreatePromotionBody }>,
     reply: FastifyReply,
@@ -59,15 +83,6 @@ export class PromotionController {
     }
   }
 
-  async listActive(_request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const result = await this.listActiveHandler.handle();
-      return ResponseHelper.ok(reply, "Active promotions retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async recordUsage(
     request: AuthenticatedRequest<{ Params: PromoIdParams; Body: RecordPromotionUsageBody }>,
     reply: FastifyReply,
@@ -81,21 +96,6 @@ export class PromotionController {
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Promotion usage recorded", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listUsage(
-    request: AuthenticatedRequest<{ Params: PromoIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.listUsageHandler.handle({
-        promoId: request.params.promoId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Promotion usage retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
