@@ -1,4 +1,5 @@
 import { OrderEvent } from "../entities/order-event.entity";
+import { OrderId } from "../value-objects/order-id.vo";
 
 export interface OrderEventQueryOptions {
   limit?: number;
@@ -11,12 +12,12 @@ export interface IOrderEventRepository {
   // Basic CRUD
   save(orderEvent: OrderEvent): Promise<void>;
   delete(eventId: number | null): Promise<void>;
-  deleteByOrderId(orderId: string): Promise<void>;
+  deleteByOrderId(orderId: OrderId): Promise<void>;
 
   // Finders
   findById(eventId: number | null): Promise<OrderEvent | null>;
   findByOrderId(
-    orderId: string,
+    orderId: OrderId,
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]>;
   findByEventType(
@@ -24,16 +25,16 @@ export interface IOrderEventRepository {
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]>;
   findByOrderIdAndEventType(
-    orderId: string,
+    orderId: OrderId,
     eventType: string,
     options?: OrderEventQueryOptions,
   ): Promise<OrderEvent[]>;
   findAll(options?: OrderEventQueryOptions): Promise<OrderEvent[]>;
 
   // Queries
-  countByOrderId(orderId: string): Promise<number>;
+  countByOrderId(orderId: OrderId): Promise<number>;
   countByEventType(eventType: string): Promise<number>;
-  getLatestByOrderId(orderId: string): Promise<OrderEvent | null>;
+  getLatestByOrderId(orderId: OrderId): Promise<OrderEvent | null>;
 
   // Existence checks
   exists(eventId: number | null): Promise<boolean>;
