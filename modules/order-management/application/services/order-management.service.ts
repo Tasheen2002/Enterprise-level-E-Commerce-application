@@ -11,12 +11,13 @@ import {
   IExternalVariantService,
   IExternalProductService,
   IExternalStockService,
-} from "../../domain/external-services";
+} from "../../domain/ports/external-services";
 import { Order, OrderDTO } from "../../domain/entities/order.entity";
 import { OrderId } from "../../domain/value-objects/order-id.vo";
+import { ShipmentId } from "../../domain/value-objects/shipment-id.vo";
 import { OrderNumber } from "../../domain/value-objects/order-number.vo";
 import { OrderStatus } from "../../domain/value-objects/order-status.vo";
-import { Currency } from "../../domain/value-objects/currency.vo";
+import { Currency } from "../../../../packages/core/src/domain/value-objects/currency.vo";
 import { OrderSource } from "../../domain/value-objects/order-source.vo";
 import {
   OrderAddress,
@@ -50,6 +51,7 @@ import {
   DomainValidationError,
   InvalidOperationError,
   ContactMismatchError,
+  OrderAccessDeniedError,
 } from "../../domain/errors/order-management.errors";
 
 interface AddressParams {
@@ -65,15 +67,17 @@ interface AddressParams {
   email?: string;
 }
 
+interface CreateOrderItemInput {
+  variantId: string;
+  quantity: number;
+  isGift?: boolean;
+  giftMessage?: string;
+}
+
 interface CreateOrderParams {
   userId?: string;
   guestToken?: string;
-  items: Array<{
-    variantId: string;
-    quantity: number;
-    isGift?: boolean;
-    giftMessage?: string;
-  }>;
+  items: CreateOrderItemInput[];
   shippingAddress: AddressParams;
   billingAddress?: AddressParams;
   source?: string;
@@ -107,82 +111,61 @@ export class OrderManagementService {
     private readonly variantManagementService: IExternalVariantService,
     private readonly productManagementService: IExternalProductService,
     private readonly stockManagementService: IExternalStockService,
+    // Default warehouse for stock reservations. Injected (rather than read
+    // from `process.env` at call time) so this service is testable without
+    // env stubbing and so config is bound once at container boot.
+    private readonly defaultWarehouseId: string,
   ) {}
+
+  // ─── Order Lifecycle ───────────────────────────────────────────────────────
 
   async createOrder(params: CreateOrderParams): Promise<OrderDTO> {
     const defaultLocationId = this.getDefaultWarehouseId();
 
-    // Bug 6 fix: parallelize all per-item external calls across all items at once
+    // Parallel fetch: stocks + variants for every item
     const [stocks, variants] = await Promise.all([
       Promise.all(
-        params.items.map((item) =>
-          this.stockManagementService.getStock(
-            item.variantId,
-            defaultLocationId,
-          ),
+        params.items.map((i) =>
+          this.stockManagementService.getStock(i.variantId, defaultLocationId),
         ),
       ),
       Promise.all(
-        params.items.map((item) =>
-          this.variantManagementService.getVariantById(item.variantId),
+        params.items.map((i) =>
+          this.variantManagementService.getVariantById(i.variantId),
         ),
       ),
     ]);
 
-    // Validate stock and variants, then fetch products in parallel
-    for (let i = 0; i < params.items.length; i++) {
-      const itemData = params.items[i];
+    // Validate stock availability and variant existence
+    params.items.forEach((itemData, i) => {
       const stock = stocks[i];
-      const variant = variants[i];
       if (!stock || stock.getStockLevel().getAvailable() < itemData.quantity) {
         throw new DomainValidationError(
           `Insufficient stock for variant ${itemData.variantId}`,
         );
       }
-      if (!variant) throw new OrderItemNotFoundError(itemData.variantId);
-    }
+      if (!variants[i]) throw new OrderItemNotFoundError(itemData.variantId);
+    });
 
     const products = await Promise.all(
-      variants.map((variant) =>
-        this.productManagementService.getProductById(
-          variant!.getProductId().getValue(),
-        ),
+      variants.map((v) =>
+        this.productManagementService.getProductById(v!.getProductId().getValue()),
       ),
     );
 
-    // Build items using a placeholder orderId — the real orderId is assigned
-    // after Order.create() generates it, then items are re-stamped below.
+    // Build OrderItems with a placeholder orderId. Order.create() generates
+    // the real id; we re-stamp items via setOrderId() once it's known.
     const placeholderOrderId = OrderId.create().getValue();
-    const items: OrderItem[] = [];
-    let subtotal = 0;
-
-    for (let i = 0; i < params.items.length; i++) {
-      const itemData = params.items[i];
-      const variant = variants[i]!;
-      const product = products[i];
-      if (!product) throw new DomainValidationError("Product not found");
-
-      const productSnapshot = ProductSnapshot.create({
-        productId: variant.getProductId().getValue(),
-        variantId: variant.getId().getValue(),
-        sku: variant.getSku().getValue(),
-        name: product.getTitle(),
-        price: product.getPrice().getValue(),
-      });
-
-      const orderItem = OrderItem.create({
+    const items = params.items.map((itemData, i) =>
+      this.buildOrderItem({
         orderId: placeholderOrderId,
-        variantId: itemData.variantId,
-        quantity: itemData.quantity,
-        productSnapshot,
-        isGift: itemData.isGift ?? false,
-        giftMessage: itemData.giftMessage,
-      });
+        variantData: variants[i]!,
+        productData: products[i],
+        itemData,
+      }),
+    );
 
-      subtotal += orderItem.calculateSubtotal();
-      items.push(orderItem);
-    }
-
+    const subtotal = items.reduce((sum, item) => sum + item.calculateSubtotal(), 0);
     const totals = OrderTotals.create({
       subtotal,
       tax: 0,
@@ -201,7 +184,7 @@ export class OrderManagementService {
       currency: Currency.fromString(params.currency ?? "USD"),
     });
 
-    // Stamp the real orderId onto all items now that Order.create() has assigned it
+    // Re-stamp items with the real OrderId now that the aggregate has assigned one
     const realOrderId = order.id.getValue();
     for (const item of items) {
       item.setOrderId(realOrderId);
@@ -217,6 +200,7 @@ export class OrderManagementService {
       billingAddress: billingSnap,
       shippingAddress: shippingSnap,
     });
+    order.setAddress(address);
 
     const statusHistory = OrderStatusHistory.create({
       orderId: realOrderId,
@@ -224,12 +208,7 @@ export class OrderManagementService {
       toStatus: OrderStatus.created(),
       changedBy: "system",
     });
-
-    // Bug 1 fix: save order, address, and status history together before touching stock.
-    // These are all DB writes — keep them atomic so a stock failure doesn't leave ghost orders.
-    await this.orderRepository.save(order);
-    await this.orderAddressRepository.save(address);
-    await this.orderStatusHistoryRepository.save(statusHistory);
+    await this.orderRepository.saveWithStatusHistory(order, statusHistory);
 
     try {
       await Promise.all(
@@ -242,7 +221,6 @@ export class OrderManagementService {
         ),
       );
     } catch (err) {
-      // Compensate: cancel the order so it doesn't sit as a ghost CREATED order
       order.cancel();
       await this.orderRepository.save(order);
       throw err;
@@ -251,62 +229,103 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async getOrderById(id: string): Promise<OrderDTO | null> {
+  async getOrderById(
+    id: string,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderDTO | null> {
     const order = await this.orderRepository.findById(OrderId.fromString(id));
-    return order ? Order.toDTO(order) : null;
+    if (!order) return null;
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    return Order.toDTO(order);
   }
 
-  async getOrderByNumber(orderNumber: string): Promise<OrderDTO | null> {
+  async getOrderByNumber(
+    orderNumber: string,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderDTO | null> {
     const order = await this.orderRepository.findByOrderNumber(
       OrderNumber.fromString(orderNumber),
     );
-    return order ? Order.toDTO(order) : null;
+    if (!order) return null;
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    return Order.toDTO(order);
   }
 
   async getAllOrders(options?: OrderQueryOptions): Promise<ListOrdersResult> {
-    const items = await this.orderRepository.findAll(options);
-    const total = await this.orderRepository.count();
+    const [items, total] = await Promise.all([
+      this.orderRepository.findAll(options),
+      this.orderRepository.count(),
+    ]);
     return { items: items.map(Order.toDTO), total };
   }
 
   async findOrders(
     filters: OrderFilterOptions,
-    options?: OrderQueryOptions,
+    options: OrderQueryOptions | undefined,
+    requestingUserId: string,
+    isStaff: boolean,
   ): Promise<ListOrdersResult> {
-    const items = await this.orderRepository.findWithFilters(filters, options);
-    const total = await this.orderRepository.count(filters);
+    // Non-staff requesters can only see their own orders — force the userId
+    // filter regardless of what was passed (defense against client tampering).
+    const effectiveFilters: OrderFilterOptions = isStaff
+      ? filters
+      : { ...filters, userId: requestingUserId };
+
+    const [items, total] = await Promise.all([
+      this.orderRepository.findWithFilters(effectiveFilters, options),
+      this.orderRepository.count(effectiveFilters),
+    ]);
     return { items: items.map(Order.toDTO), total };
   }
 
-  async cancelOrder(id: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(id));
-    if (!order) throw new OrderNotFoundError(id);
+  async cancelOrder(
+    id: string,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderDTO> {
+    const order = await this.requireOrder(id);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
     order.cancel();
     await this.orderRepository.save(order);
+
+    
+    const defaultLocationId = this.getDefaultWarehouseId();
+    await Promise.all(
+      order.items.map(async (item) => {
+        try {
+          await this.stockManagementService.releaseStock(
+            item.variantId,
+            defaultLocationId,
+            item.quantity,
+          );
+        } catch {
+          /* best-effort release — stock may have already been fulfilled */
+        }
+      }),
+    );
+
     return Order.toDTO(order);
   }
 
   async markOrderAsPaid(id: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(id));
-    if (!order) throw new OrderNotFoundError(id);
+    const order = await this.requireOrder(id);
     order.markAsPaid();
     await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
   async markOrderAsFulfilled(id: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(OrderId.fromString(id));
-    if (!order) throw new OrderNotFoundError(id);
+    const order = await this.requireOrder(id);
     order.markAsFulfilled();
     await this.orderRepository.save(order);
     return Order.toDTO(order);
   }
 
+
   async updateOrderStatus(orderId: string, status: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(orderId),
-    );
-    if (!order) throw new OrderNotFoundError(orderId);
+    const order = await this.requireOrder(orderId);
     order.updateStatus(OrderStatus.fromString(status));
     await this.orderRepository.save(order);
     return Order.toDTO(order);
@@ -316,10 +335,7 @@ export class OrderManagementService {
     orderId: string,
     totals: { tax: number; shipping: number; discount: number },
   ): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(orderId),
-    );
-    if (!order) throw new OrderNotFoundError(orderId);
+    const order = await this.requireOrder(orderId);
     order.updateTotals(totals.tax, totals.shipping, totals.discount);
     await this.orderRepository.save(order);
     return Order.toDTO(order);
@@ -331,29 +347,193 @@ export class OrderManagementService {
     quantity?: number;
     isGift?: boolean;
     giftMessage?: string;
+    requestingUserId: string;
+    isStaff: boolean;
   }): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(params.orderId),
-    );
-    if (!order) throw new OrderNotFoundError(params.orderId);
+    const order = await this.requireOrder(params.orderId);
+    this.assertCanAccessOrder(order, params.requestingUserId, params.isStaff);
 
     if (params.quantity !== undefined) {
       order.updateItemQuantity(params.itemId, params.quantity);
     }
 
-    // Bug 3 fix: apply isGift/giftMessage changes that were previously silently dropped
-    if (params.isGift === true) {
-      const item = order.items.find((i) => i.orderItemId === params.itemId);
+    if (params.isGift !== undefined) {
+      const item = order.items.find(
+        (i) => i.orderItemId.getValue() === params.itemId,
+      );
       if (!item) throw new OrderItemNotFoundError(params.itemId);
-      item.setAsGift(params.giftMessage);
-    } else if (params.isGift === false) {
-      const item = order.items.find((i) => i.orderItemId === params.itemId);
-      if (!item) throw new OrderItemNotFoundError(params.itemId);
-      item.removeGift();
+      if (params.isGift) item.setAsGift(params.giftMessage);
+      else item.removeGift();
     }
 
     await this.orderRepository.save(order);
     return Order.toDTO(order);
+  }
+
+  async deleteOrder(id: string): Promise<void> {
+    const orderId = OrderId.fromString(id);
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) throw new OrderNotFoundError(id);
+    await this.orderRepository.delete(orderId);
+  }
+
+  // ─── Address Management ────────────────────────────────────────────────────
+
+  async getOrderAddress(
+    orderId: string,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderAddressDTO | null> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    const address = await this.orderAddressRepository.findByOrderId(
+      OrderId.fromString(orderId),
+    );
+    return address ? OrderAddress.toDTO(address) : null;
+  }
+
+  async updateShippingAddress(
+    orderId: string,
+    params: AddressParams,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderAddressDTO> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    const address = await this.requireOrderAddress(orderId);
+    address.updateShippingAddress(AddressSnapshot.create(params));
+    await this.orderAddressRepository.save(address);
+    return OrderAddress.toDTO(address);
+  }
+
+  async updateBillingAddress(
+    orderId: string,
+    params: AddressParams,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderAddressDTO> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    const address = await this.requireOrderAddress(orderId);
+    address.updateBillingAddress(AddressSnapshot.create(params));
+    await this.orderAddressRepository.save(address);
+    return OrderAddress.toDTO(address);
+  }
+
+  async setOrderAddress(
+    orderId: string,
+    billingAddress: AddressSnapshotData,
+    shippingAddress: AddressSnapshotData,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderAddressDTO> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+
+    const id = OrderId.fromString(orderId);
+    const existing = await this.orderAddressRepository.findByOrderId(id);
+
+    if (existing) {
+      existing.updateBillingAddress(AddressSnapshot.create(billingAddress));
+      existing.updateShippingAddress(AddressSnapshot.create(shippingAddress));
+      await this.orderAddressRepository.save(existing);
+      return OrderAddress.toDTO(existing);
+    }
+
+    const address = OrderAddress.create({
+      orderId: id.getValue(),
+      billingAddress: AddressSnapshot.create(billingAddress),
+      shippingAddress: AddressSnapshot.create(shippingAddress),
+    });
+    await this.orderAddressRepository.save(address);
+    return OrderAddress.toDTO(address);
+  }
+
+  // ─── Order Item Management ────────────────────────────────────────────────
+
+  async addOrderItem(
+    orderId: string,
+    data: CreateOrderItemInput,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderDTO> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    const defaultLocationId = this.getDefaultWarehouseId();
+
+    const [stock, variant] = await Promise.all([
+      this.stockManagementService.getStock(data.variantId, defaultLocationId),
+      this.variantManagementService.getVariantById(data.variantId),
+    ]);
+
+    if (!stock || stock.getStockLevel().getAvailable() < data.quantity) {
+      throw new DomainValidationError(
+        `Insufficient stock for variant ${data.variantId}`,
+      );
+    }
+    if (!variant) throw new OrderItemNotFoundError(data.variantId);
+
+    const product = await this.productManagementService.getProductById(
+      variant.getProductId().getValue(),
+    );
+
+    const orderItem = this.buildOrderItem({
+      orderId: order.id.getValue(),
+      variantData: variant,
+      productData: product,
+      itemData: data,
+    });
+
+    order.addItem(orderItem);
+    await this.orderRepository.save(order);
+
+    await this.stockManagementService.reserveStock(
+      data.variantId,
+      defaultLocationId,
+      data.quantity,
+    );
+
+    return Order.toDTO(order);
+  }
+
+  async removeOrderItem(
+    orderId: string,
+    itemId: string,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): Promise<OrderDTO> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    order.removeItem(itemId);
+    await this.orderRepository.save(order);
+    return Order.toDTO(order);
+  }
+
+  // ─── Order Shipment Management ────────────────────────────────────────────
+
+  async createShipment(data: {
+    orderId: string;
+    carrier?: string;
+    service?: string;
+    trackingNumber?: string;
+    giftReceipt?: boolean;
+    pickupLocationId?: string;
+  }): Promise<OrderShipmentDTO> {
+    const order = await this.requireOrder(data.orderId);
+
+    const shipment = OrderShipment.create({
+      orderId: order.id.getValue(),
+      carrier: data.carrier,
+      service: data.service,
+      trackingNumber: data.trackingNumber,
+      giftReceipt: data.giftReceipt ?? false,
+      pickupLocationId: data.pickupLocationId,
+    });
+
+    // Goes through the aggregate to enforce the paid/fulfilled guard
+    order.createShipment(shipment);
+    await this.orderRepository.save(order);
+    return OrderShipment.toDTO(shipment);
   }
 
   async markShipmentShipped(data: {
@@ -363,12 +543,10 @@ export class OrderManagementService {
     service: string;
     trackingNumber: string;
   }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(
+    const shipment = await this.requireShipmentForOrder(
+      data.orderId,
       data.shipmentId,
     );
-    if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
-    if (shipment.orderId !== data.orderId)
-      throw new InvalidOperationError("Shipment does not belong to this order");
     shipment.markAsShipped(data.carrier, data.service, data.trackingNumber);
     await this.orderShipmentRepository.save(shipment);
     return OrderShipment.toDTO(shipment);
@@ -379,191 +557,12 @@ export class OrderManagementService {
     shipmentId: string;
     deliveredAt?: Date;
   }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(
+    const shipment = await this.requireShipmentForOrder(
+      data.orderId,
       data.shipmentId,
     );
-    if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
-    if (shipment.orderId !== data.orderId)
-      throw new InvalidOperationError("Shipment does not belong to this order");
-    shipment.markAsDelivered();
+    shipment.markAsDelivered(data.deliveredAt);
     await this.orderShipmentRepository.save(shipment);
-    return OrderShipment.toDTO(shipment);
-  }
-
-  async deleteOrder(id: string): Promise<void> {
-    const orderId = OrderId.fromString(id);
-    const order = await this.orderRepository.findById(orderId);
-    if (!order) throw new OrderNotFoundError(id);
-    await this.orderRepository.delete(orderId);
-  }
-
-  // ============================================================================
-  // ADDRESS MANAGEMENT
-  // ============================================================================
-
-  async getOrderAddress(orderId: string): Promise<OrderAddressDTO | null> {
-    const address = await this.orderAddressRepository.findByOrderId(orderId);
-    return address ? OrderAddress.toDTO(address) : null;
-  }
-
-  async updateShippingAddress(
-    orderId: string,
-    params: AddressParams,
-  ): Promise<OrderAddressDTO> {
-    const existing = await this.orderAddressRepository.findByOrderId(orderId);
-    if (!existing) throw new OrderNotFoundError(orderId);
-    existing.updateShippingAddress(AddressSnapshot.create(params));
-    await this.orderAddressRepository.save(existing);
-    return OrderAddress.toDTO(existing);
-  }
-
-  async updateBillingAddress(
-    orderId: string,
-    params: AddressParams,
-  ): Promise<OrderAddressDTO> {
-    const existing = await this.orderAddressRepository.findByOrderId(orderId);
-    if (!existing) throw new OrderNotFoundError(orderId);
-    existing.updateBillingAddress(AddressSnapshot.create(params));
-    await this.orderAddressRepository.save(existing);
-    return OrderAddress.toDTO(existing);
-  }
-
-  async setOrderAddress(
-    orderId: string,
-    billingAddress: AddressSnapshotData,
-    shippingAddress: AddressSnapshotData,
-  ): Promise<OrderAddressDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(orderId),
-    );
-    if (!order) throw new OrderNotFoundError(orderId);
-
-    const existing = await this.orderAddressRepository.findByOrderId(orderId);
-
-    if (existing) {
-      existing.updateBillingAddress(AddressSnapshot.create(billingAddress));
-      existing.updateShippingAddress(AddressSnapshot.create(shippingAddress));
-      await this.orderAddressRepository.save(existing);
-      return OrderAddress.toDTO(existing);
-    }
-
-    const address = OrderAddress.create({
-      orderId,
-      billingAddress: AddressSnapshot.create(billingAddress),
-      shippingAddress: AddressSnapshot.create(shippingAddress),
-    });
-    await this.orderAddressRepository.save(address);
-    return OrderAddress.toDTO(address);
-  }
-
-  // ============================================================================
-  // ORDER ITEM MANAGEMENT
-  // ============================================================================
-
-  async addOrderItem(
-    orderId: string,
-    data: {
-      variantId: string;
-      quantity: number;
-      isGift?: boolean;
-      giftMessage?: string;
-    },
-  ): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(orderId),
-    );
-    if (!order) throw new OrderNotFoundError(orderId);
-
-    const defaultLocationId = this.getDefaultWarehouseId();
-    const stock = await this.stockManagementService.getStock(
-      data.variantId,
-      defaultLocationId,
-    );
-    if (!stock || stock.getStockLevel().getAvailable() < data.quantity) {
-      throw new DomainValidationError(
-        `Insufficient stock for variant ${data.variantId}`,
-      );
-    }
-
-    const variant = await this.variantManagementService.getVariantById(
-      data.variantId,
-    );
-    if (!variant) throw new OrderItemNotFoundError(data.variantId);
-
-    const product = await this.productManagementService.getProductById(
-      variant.getProductId().getValue(),
-    );
-    if (!product) throw new DomainValidationError("Product not found");
-
-    const productSnapshot = ProductSnapshot.create({
-      productId: variant.getProductId().getValue(),
-      variantId: variant.getId().getValue(),
-      sku: variant.getSku().getValue(),
-      name: product.getTitle(),
-      price: product.getPrice().getValue(),
-    });
-
-    const orderItem = OrderItem.create({
-      orderId,
-      variantId: data.variantId,
-      quantity: data.quantity,
-      productSnapshot,
-      isGift: data.isGift ?? false,
-      giftMessage: data.giftMessage,
-    });
-
-    order.addItem(orderItem);
-    await this.orderRepository.save(order);
-
-    // Bug 7 fix: use reserveStock (soft hold) to match the createOrder pattern
-    await this.stockManagementService.reserveStock(
-      data.variantId,
-      defaultLocationId,
-      data.quantity,
-    );
-
-    return Order.toDTO(order);
-  }
-
-  async removeOrderItem(orderId: string, itemId: string): Promise<OrderDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(orderId),
-    );
-    if (!order) throw new OrderNotFoundError(orderId);
-    order.removeItem(itemId);
-    await this.orderRepository.save(order);
-    return Order.toDTO(order);
-  }
-
-  // ============================================================================
-  // ORDER SHIPMENT MANAGEMENT
-  // ============================================================================
-
-  async createShipment(data: {
-    orderId: string;
-    carrier?: string;
-    service?: string;
-    trackingNumber?: string;
-    giftReceipt?: boolean;
-    pickupLocationId?: string;
-  }): Promise<OrderShipmentDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(data.orderId),
-    );
-    if (!order) throw new OrderNotFoundError(data.orderId);
-
-    // Bug 2 fix: go through order.createShipment() to enforce the paid/fulfilled guard
-    const shipment = OrderShipment.create({
-      orderId: data.orderId,
-      carrier: data.carrier,
-      service: data.service,
-      trackingNumber: data.trackingNumber,
-      giftReceipt: data.giftReceipt ?? false,
-      pickupLocationId: data.pickupLocationId,
-    });
-
-    order.createShipment(shipment);
-    await this.orderRepository.save(order);
     return OrderShipment.toDTO(shipment);
   }
 
@@ -574,45 +573,49 @@ export class OrderManagementService {
     carrier?: string;
     service?: string;
   }): Promise<OrderShipmentDTO> {
-    const shipment = await this.orderShipmentRepository.findById(
+    const shipment = await this.requireShipmentForOrder(
+      data.orderId,
       data.shipmentId,
     );
-    if (!shipment) throw new OrderShipmentNotFoundError(data.shipmentId);
-
-    if (shipment.orderId !== data.orderId) {
-      throw new InvalidOperationError("Shipment does not belong to this order");
-    }
-
     shipment.updateTrackingNumber(data.trackingNumber);
     if (data.carrier) shipment.updateCarrier(data.carrier);
     if (data.service) shipment.updateService(data.service);
-
     await this.orderShipmentRepository.save(shipment);
     return OrderShipment.toDTO(shipment);
   }
 
   async getOrderShipments(orderId: string): Promise<OrderShipmentDTO[]> {
-    const shipments = await this.orderShipmentRepository.findByOrderId(orderId);
+    const shipments = await this.orderShipmentRepository.findByOrderId(
+      OrderId.fromString(orderId),
+    );
     return shipments.map(OrderShipment.toDTO);
   }
 
-  // ============================================================================
-  // STATUS HISTORY
-  // ============================================================================
+  async getShipmentByTrackingNumber(
+    trackingNumber: string,
+  ): Promise<OrderShipmentDTO | null> {
+    const trimmed = trackingNumber.trim();
+    if (trimmed.length === 0) {
+      throw new DomainValidationError("Tracking number is required");
+    }
+    const shipment =
+      await this.orderShipmentRepository.findByTrackingNumber(trimmed);
+    return shipment ? OrderShipment.toDTO(shipment) : null;
+  }
 
+  
+  // `fromStatus` is always derived from the order's current state — never
+  // accepted from the API caller — to keep the audit trail honest.
+  // `changedBy` is required for API callers (always set from session); internal
+  // callers (sagas, system events) can pass "system" or a service identifier.
   async logOrderStatusChange(data: {
     orderId: string;
-    fromStatus?: string;
     toStatus: string;
-    changedBy?: string;
+    changedBy: string;
   }): Promise<OrderStatusHistoryDTO> {
-    const order = await this.orderRepository.findById(
-      OrderId.fromString(data.orderId),
-    );
-    if (!order) throw new OrderNotFoundError(data.orderId);
-
+    const order = await this.requireOrder(data.orderId);
+    const id = order.id.getValue();
     const currentStatus = order.status.getValue();
-    const fromStatus = data.fromStatus ?? currentStatus;
 
     if (currentStatus !== data.toStatus) {
       order.updateStatus(OrderStatus.fromString(data.toStatus));
@@ -620,8 +623,8 @@ export class OrderManagementService {
     }
 
     const history = OrderStatusHistory.create({
-      orderId: data.orderId,
-      fromStatus: OrderStatus.fromString(fromStatus),
+      orderId: id,
+      fromStatus: OrderStatus.fromString(currentStatus),
       toStatus: OrderStatus.fromString(data.toStatus),
       changedBy: data.changedBy,
     });
@@ -632,22 +635,20 @@ export class OrderManagementService {
 
   async getOrderStatusHistory(
     orderId: string,
-    options?: StatusHistoryQueryOptions,
+    options: StatusHistoryQueryOptions | undefined,
+    requestingUserId: string,
+    isStaff: boolean,
   ): Promise<OrderStatusHistoryDTO[]> {
+    const order = await this.requireOrder(orderId);
+    this.assertCanAccessOrder(order, requestingUserId, isStaff);
     const history = await this.orderStatusHistoryRepository.findByOrderId(
-      orderId,
+      OrderId.fromString(orderId),
       options,
     );
     return history.map(OrderStatusHistory.toDTO);
   }
 
-  async getShipmentByTrackingNumber(
-    trackingNumber: string,
-  ): Promise<OrderShipmentDTO | null> {
-    const shipment =
-      await this.orderShipmentRepository.findByTrackingNumber(trackingNumber);
-    return shipment ? OrderShipment.toDTO(shipment) : null;
-  }
+  // ─── Customer Order Tracking ──────────────────────────────────────────────
 
   async trackOrder(query: {
     orderNumber?: string;
@@ -655,80 +656,176 @@ export class OrderManagementService {
     trackingNumber?: string;
   }): Promise<TrackOrderResult> {
     if (query.orderNumber && query.contact) {
-      const order = await this.getOrderByNumber(query.orderNumber);
-      if (!order) throw new OrderNotFoundError(query.orderNumber);
-
-      const orderAddress = await this.getOrderAddress(order.id);
-      const billing = orderAddress?.billingAddress;
-      const shipping = orderAddress?.shippingAddress;
-
-      const contactLower = query.contact.toLowerCase().trim();
-      const contactMatches =
-        contactLower === billing?.email?.toLowerCase().trim() ||
-        contactLower === shipping?.email?.toLowerCase().trim() ||
-        query.contact === billing?.phone?.trim() ||
-        query.contact === shipping?.phone?.trim();
-
-      if (!contactMatches) {
-        throw new ContactMismatchError();
-      }
-
-      const shipments = await this.getOrderShipments(order.id);
-      const emptyAddress: Record<string, never> = {};
-
-      return {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        items: order.items,
-        totals: order.totals,
-        shipments,
-        billingAddress: billing ?? emptyAddress,
-        shippingAddress: shipping ?? emptyAddress,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-      };
+      return this.trackByOrderNumber(query.orderNumber, query.contact);
     }
-
     if (query.trackingNumber) {
-      const shipmentDTO = await this.getShipmentByTrackingNumber(
-        query.trackingNumber,
-      );
-      if (!shipmentDTO)
-        throw new OrderShipmentNotFoundError(query.trackingNumber);
-
-      // Bug 4 fix: fetch the actual order instead of returning an empty shell
-      const order = await this.getOrderById(shipmentDTO.orderId);
-      if (!order) throw new OrderNotFoundError(shipmentDTO.orderId);
-
-      const emptyAddress: Record<string, never> = {};
-
-      return {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        status: order.status,
-        items: order.items,
-        totals: order.totals,
-        shipments: [shipmentDTO],
-        billingAddress: emptyAddress,
-        shippingAddress: emptyAddress,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-      };
+      return this.trackByTrackingNumber(query.trackingNumber);
     }
-
     throw new DomainValidationError(
       "Provide either orderNumber + contact, or a trackingNumber",
     );
   }
 
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async requireOrder(id: string): Promise<Order> {
+    const orderId = OrderId.fromString(id);
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) throw new OrderNotFoundError(orderId.getValue());
+    return order;
+  }
+
+  private async requireOrderAddress(orderId: string): Promise<OrderAddress> {
+    const id = OrderId.fromString(orderId);
+    const address = await this.orderAddressRepository.findByOrderId(id);
+    if (!address) throw new OrderNotFoundError(id.getValue());
+    return address;
+  }
+
+  // Staff bypass for routes where staff need to read/act on any order
+  // (admin overrides, customer service, analytics). Non-staff must own the order.
+  private assertCanAccessOrder(
+    order: Order,
+    requestingUserId: string,
+    isStaff: boolean,
+  ): void {
+    if (isStaff) return;
+    if (!order.belongsToUser(requestingUserId)) {
+      throw new OrderAccessDeniedError();
+    }
+  }
+
+  private async requireShipmentForOrder(
+    orderId: string,
+    shipmentId: string,
+  ): Promise<OrderShipment> {
+    const shipment = await this.orderShipmentRepository.findById(
+      ShipmentId.fromString(shipmentId),
+    );
+    if (!shipment) throw new OrderShipmentNotFoundError(shipmentId);
+    if (shipment.orderId !== orderId) {
+      throw new InvalidOperationError("Shipment does not belong to this order");
+    }
+    return shipment;
+  }
+
+  private buildOrderItem(args: {
+    orderId: string;
+    variantData: NonNullable<
+      Awaited<ReturnType<IExternalVariantService["getVariantById"]>>
+    >;
+    productData: Awaited<
+      ReturnType<IExternalProductService["getProductById"]>
+    >;
+    itemData: CreateOrderItemInput;
+  }): OrderItem {
+    const { orderId, variantData, productData, itemData } = args;
+    if (!productData) throw new DomainValidationError("Product not found");
+
+    const productSnapshot = ProductSnapshot.create({
+      productId: variantData.getProductId().getValue(),
+      variantId: variantData.getId().getValue(),
+      sku: variantData.getSku().getValue(),
+      name: productData.getTitle(),
+      price: productData.getPrice().getValue(),
+    });
+
+    return OrderItem.create({
+      orderId,
+      variantId: itemData.variantId,
+      quantity: itemData.quantity,
+      productSnapshot,
+      isGift: itemData.isGift ?? false,
+      giftMessage: itemData.giftMessage,
+    });
+  }
+
+  private async trackByOrderNumber(
+    orderNumber: string,
+    contact: string,
+  ): Promise<TrackOrderResult> {
+    // Guest-tracking auth is the contact match below — bypass userId ownership
+    // by going repo-direct rather than through the gated getOrderByNumber.
+    const orderEntity = await this.orderRepository.findByOrderNumber(
+      OrderNumber.fromString(orderNumber),
+    );
+    if (!orderEntity) throw new OrderNotFoundError(orderNumber);
+    const order = Order.toDTO(orderEntity);
+
+    const orderAddressEntity = await this.orderAddressRepository.findByOrderId(
+      OrderId.fromString(order.id),
+    );
+    const orderAddress = orderAddressEntity
+      ? OrderAddress.toDTO(orderAddressEntity)
+      : null;
+    const billing = orderAddress?.billingAddress;
+    const shipping = orderAddress?.shippingAddress;
+
+    const contactLower = contact.toLowerCase().trim();
+    const contactMatches =
+      contactLower === billing?.email?.toLowerCase().trim() ||
+      contactLower === shipping?.email?.toLowerCase().trim() ||
+      contact === billing?.phone?.trim() ||
+      contact === shipping?.phone?.trim();
+
+    if (!contactMatches) throw new ContactMismatchError();
+
+    const shipments = await this.getOrderShipments(order.id);
+    const emptyAddress: Record<string, never> = {};
+
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      items: order.items,
+      totals: order.totals,
+      shipments,
+      billingAddress: billing ?? emptyAddress,
+      shippingAddress: shipping ?? emptyAddress,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  }
+
+  private async trackByTrackingNumber(
+    trackingNumber: string,
+  ): Promise<TrackOrderResult> {
+    const shipmentDTO = await this.getShipmentByTrackingNumber(trackingNumber);
+    if (!shipmentDTO) throw new OrderShipmentNotFoundError(trackingNumber);
+
+    // Tracking-number auth is the (assumed-private) tracking number itself —
+    // bypass userId ownership by going repo-direct.
+    const orderEntity = await this.orderRepository.findById(
+      OrderId.fromString(shipmentDTO.orderId),
+    );
+    if (!orderEntity) throw new OrderNotFoundError(shipmentDTO.orderId);
+    const order = Order.toDTO(orderEntity);
+
+    const emptyAddress: Record<string, never> = {};
+
+    return {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      items: order.items,
+      totals: order.totals,
+      shipments: [shipmentDTO],
+      billingAddress: emptyAddress,
+      shippingAddress: emptyAddress,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
+  }
+
+  // Returns the constructor-injected default warehouse id and validates
+  // it's set. Container resolves this from `process.env.DEFAULT_STOCK_LOCATION`
+  // at boot — keeping the env read out of the service itself.
   private getDefaultWarehouseId(): string {
-    const locationId = process.env.DEFAULT_STOCK_LOCATION;
-    if (!locationId) {
+    if (!this.defaultWarehouseId) {
       throw new DomainValidationError(
         "No warehouse location configured. Please set DEFAULT_STOCK_LOCATION in .env.",
       );
     }
-    return locationId;
+    return this.defaultWarehouseId;
   }
 }
