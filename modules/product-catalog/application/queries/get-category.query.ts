@@ -1,7 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { CategoryDTO } from "../../domain/entities/category.entity";
 import { CategoryManagementService } from "../services/category-management.service";
-import { DomainValidationError } from "../../domain/errors/product-catalog.errors";
+import { MissingCategoryIdentifierError } from "../../domain/errors/product-catalog.errors";
 
 export interface GetCategoryQuery extends IQuery {
   readonly categoryId?: string;
@@ -11,13 +11,13 @@ export interface GetCategoryQuery extends IQuery {
 export class GetCategoryHandler implements IQueryHandler<GetCategoryQuery, CategoryDTO> {
   constructor(private readonly categoryManagementService: CategoryManagementService) {}
 
-  async handle(input: GetCategoryQuery): Promise<CategoryDTO> {
-    if (!input.categoryId && !input.slug) {
-      throw new DomainValidationError("Either categoryId or slug is required");
+  async handle(query: GetCategoryQuery): Promise<CategoryDTO> {
+    if (query.categoryId) {
+      return this.categoryManagementService.getCategoryById(query.categoryId);
     }
-    if (input.categoryId) {
-      return this.categoryManagementService.getCategoryById(input.categoryId);
+    if (query.slug) {
+      return this.categoryManagementService.getCategoryBySlug(query.slug);
     }
-    return this.categoryManagementService.getCategoryBySlug(input.slug!);
+    throw new MissingCategoryIdentifierError();
   }
 }

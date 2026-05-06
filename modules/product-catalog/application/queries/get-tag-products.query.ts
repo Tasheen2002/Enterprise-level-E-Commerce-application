@@ -1,5 +1,7 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
 import { ProductTagManagementService } from "../services/product-tag-management.service";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, MIN_LIMIT, MIN_PAGE } from "../../domain/constants/pagination.constants";
 
 export interface GetTagProductsQuery extends IQuery {
   readonly tagId: string;
@@ -7,28 +9,16 @@ export interface GetTagProductsQuery extends IQuery {
   readonly limit?: number;
 }
 
-export interface GetTagProductsResult {
-  readonly products: string[];
-  readonly pagination: {
-    readonly page: number;
-    readonly limit: number;
-    readonly total: number;
-    readonly total_pages: number;
-  };
-}
-
-export class GetTagProductsHandler implements IQueryHandler<GetTagProductsQuery, GetTagProductsResult> {
+export class GetTagProductsHandler implements IQueryHandler<GetTagProductsQuery, PaginatedResult<string>> {
   constructor(private readonly productTagManagementService: ProductTagManagementService) {}
 
-  async handle(query: GetTagProductsQuery): Promise<GetTagProductsResult> {
-    const page = Math.max(1, query.page ?? 1);
-    const limit = Math.min(100, Math.max(1, query.limit ?? 20));
+  async handle(query: GetTagProductsQuery): Promise<PaginatedResult<string>> {
+    const page = Math.max(MIN_PAGE, query.page ?? MIN_PAGE);
+    const limit = Math.min(MAX_PAGE_SIZE, Math.max(MIN_LIMIT, query.limit ?? DEFAULT_PAGE_SIZE));
 
-    const products = await this.productTagManagementService.getTagProducts(query.tagId, {
+    return this.productTagManagementService.getTagProducts(query.tagId, {
       limit,
       offset: (page - 1) * limit,
     });
-
-    return { products, pagination: { page, limit, total: products.length, total_pages: Math.ceil(products.length / limit) } };
   }
 }
