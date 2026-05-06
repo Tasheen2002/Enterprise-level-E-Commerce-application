@@ -1,13 +1,24 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { AppointmentController } from "../controllers/appointment.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+  toJsonSchema,
+} from "../validation/validator";
 import {
   appointmentIdParamsSchema,
   userIdParamsSchema,
@@ -18,9 +29,17 @@ import {
   appointmentResponseSchema,
 } from "../validation/appointment.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const appointmentIdParamsJson = toJsonSchema(appointmentIdParamsSchema);
+const userIdParamsJson = toJsonSchema(userIdParamsSchema);
+const locationIdParamsJson = toJsonSchema(locationIdParamsSchema);
+const paginationQueryJson = toJsonSchema(paginationQuerySchema);
+const createAppointmentBodyJson = toJsonSchema(createAppointmentSchema);
+const updateAppointmentBodyJson = toJsonSchema(updateAppointmentSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function appointmentRoutes(
@@ -38,27 +57,15 @@ export async function appointmentRoutes(
     "/engagement/appointments/:appointmentId",
     {
       preValidation: [validateParams(appointmentIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get a specific appointment by ID",
         summary: "Get Appointment",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["appointmentId"],
-          properties: {
-            appointmentId: { type: "string", format: "uuid" },
-          },
-        },
+        params: appointmentIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: appointmentResponseSchema,
-            },
-          },
+          200: successResponse(appointmentResponseSchema),
         },
       },
     },
@@ -70,35 +77,16 @@ export async function appointmentRoutes(
     "/engagement/users/:userId/appointments",
     {
       preValidation: [validateParams(userIdParamsSchema), validateQuery(paginationQuerySchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get all appointments for a specific user",
         summary: "Get User Appointments",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: userIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: appointmentResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(appointmentResponseSchema)),
         },
       },
     },
@@ -110,35 +98,16 @@ export async function appointmentRoutes(
     "/engagement/locations/:locationId/appointments",
     {
       preValidation: [validateParams(locationIdParamsSchema), validateQuery(paginationQuerySchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get all appointments for a specific location",
         summary: "Get Location Appointments",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["locationId"],
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: locationIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: appointmentResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(appointmentResponseSchema)),
         },
       },
     },
@@ -150,36 +119,15 @@ export async function appointmentRoutes(
     "/engagement/appointments",
     {
       preValidation: [validateBody(createAppointmentSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create a new appointment",
         summary: "Create Appointment",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["userId", "type", "startAt", "endAt"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            type: {
-              type: "string",
-              enum: ["consultation", "fitting", "styling", "product_demo", "personal_shopping"],
-            },
-            locationId: { type: "string", format: "uuid" },
-            startAt: { type: "string", format: "date-time" },
-            endAt: { type: "string", format: "date-time" },
-            notes: { type: "string", maxLength: 2000 },
-          },
-        },
+        body: createAppointmentBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: appointmentResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(appointmentResponseSchema, 201),
         },
       },
     },
@@ -191,27 +139,15 @@ export async function appointmentRoutes(
     "/engagement/appointments/:appointmentId/cancel",
     {
       preValidation: [validateParams(appointmentIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Cancel an appointment",
         summary: "Cancel Appointment",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["appointmentId"],
-          properties: {
-            appointmentId: { type: "string", format: "uuid" },
-          },
-        },
+        params: appointmentIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -223,36 +159,16 @@ export async function appointmentRoutes(
     "/engagement/appointments/:appointmentId",
     {
       preValidation: [validateParams(appointmentIdParamsSchema), validateBody(updateAppointmentSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Update appointment details",
         summary: "Update Appointment",
         tags: ["Engagement - Appointments"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["appointmentId"],
-          properties: {
-            appointmentId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            startAt: { type: "string", format: "date-time" },
-            endAt: { type: "string", format: "date-time" },
-            notes: { type: "string", maxLength: 2000 },
-            locationId: { type: "string", format: "uuid" },
-          },
-        },
+        params: appointmentIdParamsJson,
+        body: updateAppointmentBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
