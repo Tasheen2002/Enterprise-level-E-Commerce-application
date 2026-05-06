@@ -75,8 +75,8 @@ export class SearchController {
     reply: FastifyReply,
   ) {
     try {
-      const { q } = request.query;
-      const result = await this.getSearchFiltersHandler.handle({ query: q });
+      const { q, category } = request.query;
+      const result = await this.getSearchFiltersHandler.handle({ query: q, category });
       return ResponseHelper.ok(reply, "Search filters retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
