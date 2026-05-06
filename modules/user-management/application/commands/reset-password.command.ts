@@ -9,12 +9,11 @@ export interface ResetPasswordCommand extends ICommand {
 }
 
 export class ResetPasswordHandler
-  implements ICommandHandler<ResetPasswordCommand, CommandResult<void>>
-{
+  implements ICommandHandler<ResetPasswordCommand, CommandResult<void>> {
   constructor(
     private readonly authService: AuthenticationService,
     private readonly tokenBlacklistService: ITokenBlacklistService,
-  ) {}
+  ) { }
 
   async handle(
     command: ResetPasswordCommand

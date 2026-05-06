@@ -12,7 +12,7 @@ export class DeleteAccountHandler implements ICommandHandler<DeleteAccountComman
   constructor(
     private readonly authService: AuthenticationService,
     private readonly tokenBlacklistService: ITokenBlacklistService,
-  ) {}
+  ) { }
 
   async handle(command: DeleteAccountCommand): Promise<CommandResult<void>> {
     await this.authService.deleteAccount(command.userId, command.password);

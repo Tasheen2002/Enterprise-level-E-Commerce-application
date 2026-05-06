@@ -1,6 +1,6 @@
 import { AddressManagementService } from '../services/address-management.service';
 import { AddressDTO } from '../../domain/entities/address.entity';
-import { AddressType, AddressData } from '../../domain/value-objects/address.vo';
+import { AddressType } from '../../domain/value-objects/address-type.vo';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
 
 export interface UpdateAddressCommand extends ICommand {
@@ -24,7 +24,7 @@ export class UpdateAddressHandler implements ICommandHandler<
   UpdateAddressCommand,
   CommandResult<AddressDTO>
 > {
-  constructor(private readonly addressService: AddressManagementService) {}
+  constructor(private readonly addressService: AddressManagementService) { }
 
   async handle(
     command: UpdateAddressCommand
@@ -41,28 +41,24 @@ export class UpdateAddressHandler implements ICommandHandler<
       command.country !== undefined ||
       command.phone !== undefined;
 
-    const addressData: AddressData | undefined = hasAddressFields
-      ? {
-          firstName: command.firstName,
-          lastName: command.lastName,
-          company: command.company,
-          addressLine1: command.addressLine1!,
-          addressLine2: command.addressLine2,
-          city: command.city!,
-          state: command.state,
-          postalCode: command.postalCode,
-          country: command.country!,
-          phone: command.phone,
-        }
-      : undefined;
-
-    const type = command.type ? AddressType.fromString(command.type) : undefined;
-
     const result = await this.addressService.updateAddress({
       addressId: command.addressId,
       userId: command.userId,
-      addressData,
-      type,
+      addressData: hasAddressFields
+        ? {
+          firstName: command.firstName,
+          lastName: command.lastName,
+          company: command.company,
+          addressLine1: command.addressLine1,
+          addressLine2: command.addressLine2,
+          city: command.city,
+          state: command.state,
+          postalCode: command.postalCode,
+          country: command.country,
+          phone: command.phone,
+        }
+        : undefined,
+      type: command.type ? AddressType.fromString(command.type) : undefined,
       isDefault: command.isDefault,
     });
 

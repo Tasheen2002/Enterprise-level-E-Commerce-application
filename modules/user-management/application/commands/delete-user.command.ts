@@ -6,7 +6,7 @@ export interface DeleteUserCommand extends ICommand {
 }
 
 export class DeleteUserHandler implements ICommandHandler<DeleteUserCommand, CommandResult<void>> {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   async handle(command: DeleteUserCommand): Promise<CommandResult<void>> {
     await this.userService.deleteUser(command.userId);
