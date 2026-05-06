@@ -18,24 +18,15 @@ export class CategoryRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private hydrate(row: {
-    id: string;
-    name: string;
-    slug: string;
-    parentId: string | null;
-    position: number | null;
-    createdAt?: Date;
-    updatedAt?: Date;
-  }): Category {
-    const now = new Date();
+  private toDomain(row: Prisma.CategoryGetPayload<object>): Category {
     return Category.fromPersistence({
       id: CategoryId.fromString(row.id),
       name: row.name,
       slug: Slug.fromString(row.slug),
       parentId: row.parentId ? CategoryId.fromString(row.parentId) : null,
       position: row.position,
-      createdAt: row.createdAt ?? now,
-      updatedAt: row.updatedAt ?? now,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     });
   }
 
@@ -59,14 +50,14 @@ export class CategoryRepositoryImpl
     const row = await this.prisma.category.findUnique({
       where: { id: id.getValue() },
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findBySlug(slug: Slug): Promise<Category | null> {
     const row = await this.prisma.category.findUnique({
       where: { slug: slug.getValue() },
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findAll(options?: CategoryQueryOptions): Promise<Category[]> {
@@ -81,7 +72,7 @@ export class CategoryRepositoryImpl
       ],
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findRootCategories(options?: CategoryQueryOptions): Promise<Category[]> {
@@ -97,7 +88,7 @@ export class CategoryRepositoryImpl
       ],
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByParentId(
@@ -116,7 +107,7 @@ export class CategoryRepositoryImpl
       ],
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findChildren(categoryId: CategoryId): Promise<Category[]> {
@@ -140,7 +131,7 @@ export class CategoryRepositoryImpl
       if (!row || !row.parentId) break;
       const parentRow = byId.get(row.parentId);
       if (!parentRow) break;
-      ancestors.unshift(this.hydrate(parentRow));
+      ancestors.unshift(this.toDomain(parentRow));
       currentId = parentRow.id;
     }
 
@@ -170,7 +161,7 @@ export class CategoryRepositoryImpl
       const currentId = queue.shift()!;
       const children = byParent.get(currentId) ?? [];
       for (const child of children) {
-        descendants.push(this.hydrate(child));
+        descendants.push(this.toDomain(child));
         queue.push(child.id);
       }
     }
@@ -220,7 +211,7 @@ export class CategoryRepositoryImpl
     if (options?.rootOnly) {
       whereClause.parentId = null;
     } else if (options?.parentId) {
-      whereClause.parentId = options.parentId;
+      whereClause.parentId = options.parentId.getValue();
     }
 
     return this.prisma.category.count({ where: whereClause });

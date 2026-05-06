@@ -1,16 +1,18 @@
 import { DomainValidationError } from '../errors/user-management.errors';
 
 export class Phone {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: string) {
+    if (!value) throw new DomainValidationError('Phone number is required');
+    if (!Phone.isValidPhone(value)) throw new DomainValidationError('Invalid phone number format');
+  }
 
   static create(phone: string): Phone {
-    if (!phone) throw new DomainValidationError('Phone number is required');
-
     const cleaned = phone.replace(/[^\d+]/g, '');
-
-    if (!Phone.isValidPhone(cleaned)) throw new DomainValidationError('Invalid phone number format');
-
     return new Phone(cleaned);
+  }
+
+  static fromString(value: string): Phone {
+    return new Phone(value);
   }
 
   private static isValidPhone(phone: string): boolean {

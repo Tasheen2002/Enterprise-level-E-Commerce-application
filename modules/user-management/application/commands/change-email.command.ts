@@ -8,9 +8,8 @@ export interface ChangeEmailCommand extends ICommand {
 }
 
 export class ChangeEmailHandler
-  implements ICommandHandler<ChangeEmailCommand, CommandResult<void>>
-{
-  constructor(private readonly authService: AuthenticationService) {}
+  implements ICommandHandler<ChangeEmailCommand, CommandResult<void>> {
+  constructor(private readonly authService: AuthenticationService) { }
 
   async handle(
     command: ChangeEmailCommand

@@ -8,9 +8,8 @@ export interface ChangePasswordCommand extends ICommand {
 }
 
 export class ChangePasswordHandler
-  implements ICommandHandler<ChangePasswordCommand, CommandResult<void>>
-{
-  constructor(private readonly authService: AuthenticationService) {}
+  implements ICommandHandler<ChangePasswordCommand, CommandResult<void>> {
+  constructor(private readonly authService: AuthenticationService) { }
 
   async handle(
     command: ChangePasswordCommand

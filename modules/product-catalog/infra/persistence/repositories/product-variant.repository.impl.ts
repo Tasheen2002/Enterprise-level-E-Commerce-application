@@ -1,15 +1,20 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import {
   IProductVariantRepository,
   VariantQueryOptions,
   VariantCountOptions,
 } from "../../../domain/repositories/product-variant.repository";
-import { ProductVariant } from "../../../domain/entities/product-variant.entity";
+import {
+  ProductVariant,
+  VariantDimensions,
+} from "../../../domain/entities/product-variant.entity";
 import { VariantId } from "../../../domain/value-objects/variant-id.vo";
 import { ProductId } from "../../../domain/value-objects/product-id.vo";
 import { SKU } from "../../../domain/value-objects/sku.vo";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
+
+type ProductVariantRow = Prisma.ProductVariantGetPayload<object>;
 
 export class ProductVariantRepositoryImpl
   extends PrismaRepository<ProductVariant>
@@ -19,10 +24,7 @@ export class ProductVariantRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private mapRow(row: any): ProductVariant {
-    if (!row.createdAt || !row.updatedAt) {
-      throw new Error(`ProductVariant row is missing timestamps for id=${row.id}`);
-    }
+  private toDomain(row: ProductVariantRow): ProductVariant {
     return ProductVariant.fromPersistence({
       id: VariantId.fromString(row.id),
       productId: ProductId.fromString(row.productId),
@@ -31,7 +33,7 @@ export class ProductVariantRepositoryImpl
       color: row.color,
       barcode: row.barcode,
       weightG: row.weightG,
-      dims: row.dims as any,
+      dims: row.dims as VariantDimensions | null,
       taxClass: row.taxClass,
       allowBackorder: row.allowBackorder,
       allowPreorder: row.allowPreorder,
@@ -48,7 +50,7 @@ export class ProductVariantRepositoryImpl
       color: variant.color,
       barcode: variant.barcode,
       weightG: variant.weightG,
-      dims: variant.dims as any,
+      dims: variant.dims as Prisma.InputJsonValue,
       taxClass: variant.taxClass,
       allowBackorder: variant.allowBackorder,
       allowPreorder: variant.allowPreorder,
@@ -60,6 +62,8 @@ export class ProductVariantRepositoryImpl
       create: {
         id: variant.id.getValue(),
         productId: variant.productId.getValue(),
+        // Variant pricing lives at the product level in this domain — placeholder
+        // satisfies the NOT NULL column until per-variant pricing is introduced.
         price: 0,
         createdAt: variant.createdAt,
         ...updateData,
@@ -78,7 +82,15 @@ export class ProductVariantRepositoryImpl
       return null;
     }
 
-    return this.mapRow(variantData);
+    return this.toDomain(variantData);
+  }
+
+  async findByIds(ids: VariantId[]): Promise<ProductVariant[]> {
+    if (ids.length === 0) return [];
+    const rows = await this.prisma.productVariant.findMany({
+      where: { id: { in: ids.map((id) => id.getValue()) } },
+    });
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findBySku(sku: SKU): Promise<ProductVariant | null> {
@@ -90,7 +102,7 @@ export class ProductVariantRepositoryImpl
       return null;
     }
 
-    return this.mapRow(variantData);
+    return this.toDomain(variantData);
   }
 
   async findByProductId(productId: ProductId): Promise<ProductVariant[]> {
@@ -99,7 +111,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
   async findAll(options?: VariantQueryOptions): Promise<ProductVariant[]> {
@@ -116,7 +128,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
   async findBySize(
@@ -137,7 +149,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
   async findByColor(
@@ -158,7 +170,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
   async findAvailableForBackorder(): Promise<ProductVariant[]> {
@@ -167,7 +179,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
   async findAvailableForPreorder(): Promise<ProductVariant[]> {
@@ -176,7 +188,7 @@ export class ProductVariantRepositoryImpl
       orderBy: { createdAt: "desc" },
     });
 
-    return variants.map((v) => this.mapRow(v));
+    return variants.map((v) => this.toDomain(v));
   }
 
 
@@ -210,7 +222,7 @@ export class ProductVariantRepositoryImpl
     const whereClause: Record<string, unknown> = {};
 
     if (options?.productId) {
-      whereClause.productId = options.productId;
+      whereClause.productId = options.productId.getValue();
     }
 
     if (options?.size) {

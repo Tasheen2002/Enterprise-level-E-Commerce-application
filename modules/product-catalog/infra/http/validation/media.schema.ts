@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  MIN_PAGE,
+  MIN_LIMIT,
+  MAX_PAGE_SIZE,
+} from "../../../domain/constants/pagination.constants";
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -7,18 +12,18 @@ export const mediaParamsSchema = z.object({
 });
 
 export const listMediaSchema = z.object({
-  page: z.string().regex(/^\d+$/).optional().default("1").transform(Number),
-  limit: z.string().regex(/^\d+$/).optional().default("20").transform(Number),
+  page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
+  limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   mimeType: z.string().optional(),
-  isImage: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  isVideo: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  hasRenditions: z.string().optional().transform((v) => v === undefined ? undefined : v === "true"),
-  minBytes: z.string().regex(/^\d+$/).optional().transform(Number),
-  maxBytes: z.string().regex(/^\d+$/).optional().transform(Number),
-  minWidth: z.string().regex(/^\d+$/).optional().transform(Number),
-  maxWidth: z.string().regex(/^\d+$/).optional().transform(Number),
-  minHeight: z.string().regex(/^\d+$/).optional().transform(Number),
-  maxHeight: z.string().regex(/^\d+$/).optional().transform(Number),
+  isImage: z.coerce.boolean().optional(),
+  isVideo: z.coerce.boolean().optional(),
+  hasRenditions: z.coerce.boolean().optional(),
+  minBytes: z.coerce.number().int().min(0).optional(),
+  maxBytes: z.coerce.number().int().min(0).optional(),
+  minWidth: z.coerce.number().int().min(0).optional(),
+  maxWidth: z.coerce.number().int().min(0).optional(),
+  minHeight: z.coerce.number().int().min(0).optional(),
+  maxHeight: z.coerce.number().int().min(0).optional(),
   sortBy: z.enum(["createdAt", "bytes", "width", "height", "version"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
@@ -70,5 +75,17 @@ export const mediaResponseSchema = {
     renditions: { type: "object", nullable: true },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
+// Matches PaginatedResult<MediaAssetDTO> from packages/core.
+export const paginatedMediaResponseSchema = {
+  type: "object",
+  properties: {
+    items: { type: "array", items: mediaResponseSchema },
+    total: { type: "integer" },
+    limit: { type: "integer" },
+    offset: { type: "integer" },
+    hasMore: { type: "boolean" },
   },
 } as const;

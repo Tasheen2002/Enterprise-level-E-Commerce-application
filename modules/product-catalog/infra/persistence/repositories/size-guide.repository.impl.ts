@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma, RegionEnum } from "@prisma/client";
 import {
   ISizeGuideRepository,
   SizeGuideQueryOptions,
@@ -6,7 +6,7 @@ import {
 } from "../../../domain/repositories/size-guide.repository";
 import { SizeGuide } from "../../../domain/entities/size-guide.entity";
 import { SizeGuideId } from "../../../domain/value-objects/size-guide-id.vo";
-import { Region } from "../../../domain/enums/product-catalog.enums";
+import { Region } from "../../../domain/value-objects";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
@@ -18,23 +18,42 @@ export class SizeGuideRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private hydrate(row: {
-    id: string;
-    title: string;
-    bodyHtml: string | null;
-    region: string;
-    category: string | null;
-    createdAt?: Date;
-    updatedAt?: Date;
-  }): SizeGuide {
-    if (!row.createdAt || !row.updatedAt) {
-      throw new Error(`SizeGuide row is missing timestamps for id=${row.id}`);
+  private mapRegionFromPrisma(region: RegionEnum): Region {
+    switch (region) {
+      case RegionEnum.UK:
+        return Region.UK;
+      case RegionEnum.US:
+        return Region.US;
+      case RegionEnum.EU:
+        return Region.EU;
+      default: {
+        const _exhaustive: never = region;
+        throw new Error(`Unknown RegionEnum value: ${_exhaustive}`);
+      }
     }
+  }
+
+  private mapRegionToPrisma(region: Region): RegionEnum {
+    switch (region) {
+      case Region.UK:
+        return RegionEnum.UK;
+      case Region.US:
+        return RegionEnum.US;
+      case Region.EU:
+        return RegionEnum.EU;
+      default: {
+        const _exhaustive: never = region;
+        throw new Error(`Unknown Region value: ${_exhaustive}`);
+      }
+    }
+  }
+
+  private toDomain(row: Prisma.SizeGuideGetPayload<object>): SizeGuide {
     return SizeGuide.fromPersistence({
       id: SizeGuideId.fromString(row.id),
       title: row.title,
       bodyHtml: row.bodyHtml,
-      region: row.region as Region,
+      region: this.mapRegionFromPrisma(row.region),
       category: row.category,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -45,7 +64,7 @@ export class SizeGuideRepositoryImpl
     const updateData = {
       title: sizeGuide.title,
       bodyHtml: sizeGuide.bodyHtml,
-      region: sizeGuide.region,
+      region: this.mapRegionToPrisma(sizeGuide.region),
       category: sizeGuide.category,
       updatedAt: sizeGuide.updatedAt,
     };
@@ -61,7 +80,7 @@ export class SizeGuideRepositoryImpl
     const row = await this.prisma.sizeGuide.findUnique({
       where: { id: id.getValue() },
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findAll(options?: SizeGuideQueryOptions): Promise<SizeGuide[]> {
@@ -86,7 +105,7 @@ export class SizeGuideRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByRegion(
@@ -101,7 +120,9 @@ export class SizeGuideRepositoryImpl
       hasContent,
     } = options || {};
 
-    const where: Record<string, unknown> = { region };
+    const where: Record<string, unknown> = {
+      region: this.mapRegionToPrisma(region),
+    };
 
     if (hasContent !== undefined) {
       where.bodyHtml = hasContent ? { not: null } : null;
@@ -114,7 +135,7 @@ export class SizeGuideRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByCategory(
@@ -142,7 +163,7 @@ export class SizeGuideRepositoryImpl
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findByRegionAndCategory(
@@ -150,17 +171,17 @@ export class SizeGuideRepositoryImpl
     category: string,
   ): Promise<SizeGuide | null> {
     const row = await this.prisma.sizeGuide.findFirst({
-      where: { region, category },
+      where: { region: this.mapRegionToPrisma(region), category },
     });
-    return row ? this.hydrate(row) : null;
+    return row ? this.toDomain(row) : null;
   }
 
   async findGeneral(region: Region): Promise<SizeGuide[]> {
     const rows = await this.prisma.sizeGuide.findMany({
-      where: { region, category: null },
+      where: { region: this.mapRegionToPrisma(region), category: null },
       orderBy: { title: "asc" },
     });
-    return rows.map((row) => this.hydrate(row));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: SizeGuideId): Promise<void> {
@@ -180,7 +201,7 @@ export class SizeGuideRepositoryImpl
     const where: Record<string, unknown> = {};
 
     if (options?.region) {
-      where.region = options.region;
+      where.region = this.mapRegionToPrisma(options.region);
     }
 
     if (options?.category) {

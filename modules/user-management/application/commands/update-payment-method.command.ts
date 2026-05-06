@@ -16,7 +16,7 @@ export class UpdatePaymentMethodHandler implements ICommandHandler<
   UpdatePaymentMethodCommand,
   CommandResult<PaymentMethodDTO>
 > {
-  constructor(private readonly paymentMethodService: PaymentMethodService) {}
+  constructor(private readonly paymentMethodService: PaymentMethodService) { }
 
   async handle(
     command: UpdatePaymentMethodCommand

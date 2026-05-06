@@ -1,4 +1,8 @@
 export const USER_MANAGEMENT_CONSTANTS = {
+  // Name fields (firstName, lastName, title) — entity caps at 50.
+  // Source of truth for both the entity validator and the route Zod schema.
+  USER_NAME_MAX_LENGTH: 50,
+
   // Password rules
   PASSWORD_MIN_LENGTH: 8,
   PASSWORD_MAX_LENGTH: 128,
@@ -8,6 +12,7 @@ export const USER_MANAGEMENT_CONSTANTS = {
   EMAIL_VERIFICATION_EXPIRY_MS: 24 * 60 * 60 * 1000,    // 24 hours
   PHONE_VERIFICATION_EXPIRY_MS: 10 * 60 * 1000,          // 10 minutes
   PASSWORD_RESET_EXPIRY_MS: 60 * 60 * 1000,              // 1 hour
+  BLACKLIST_TOKEN_TTL_MS: 7 * 24 * 60 * 60 * 1000,       // 7 days (covers refresh token lifetime)
 
   // Rate limiting
   MAX_VERIFICATION_ATTEMPTS: 5,
