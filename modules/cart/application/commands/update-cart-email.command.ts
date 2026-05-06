@@ -7,6 +7,7 @@ import {
   CartManagementService,
   CartDto,
 } from "../services/cart-management.service";
+import { CartNotFoundError } from "../../domain/errors/cart.errors";
 
 export interface UpdateCartEmailCommand extends ICommand {
   readonly cartId: string;
@@ -35,6 +36,9 @@ export class UpdateCartEmailHandler implements ICommandHandler<
       command.userId,
       command.guestToken,
     );
-    return CommandResult.success<CartDto>(cart!);
+    if (!cart) {
+      throw new CartNotFoundError(command.cartId);
+    }
+    return CommandResult.success<CartDto>(cart);
   }
 }

@@ -10,16 +10,45 @@ export enum TransactionReason {
 }
 
 export class TransactionReasonVO {
-  private constructor(private readonly value: TransactionReason) {}
+  // Pattern D: shared static instances per allowed value.
+  static readonly RETURN = new TransactionReasonVO(TransactionReason.RETURN);
+  static readonly ADJUSTMENT = new TransactionReasonVO(TransactionReason.ADJUSTMENT);
+  static readonly PO = new TransactionReasonVO(TransactionReason.PO);
+  static readonly ORDER = new TransactionReasonVO(TransactionReason.ORDER);
+  static readonly DAMAGE = new TransactionReasonVO(TransactionReason.DAMAGE);
+  static readonly THEFT = new TransactionReasonVO(TransactionReason.THEFT);
 
-  static create(value: string): TransactionReasonVO {
-    const normalized = value.trim().toLowerCase();
-    if (!Object.values(TransactionReason).includes(normalized as TransactionReason)) {
+  private static readonly ALL: ReadonlyArray<TransactionReasonVO> = [
+    TransactionReasonVO.RETURN,
+    TransactionReasonVO.ADJUSTMENT,
+    TransactionReasonVO.PO,
+    TransactionReasonVO.ORDER,
+    TransactionReasonVO.DAMAGE,
+    TransactionReasonVO.THEFT,
+  ];
+
+  // Validation lives in the constructor so BOTH `create()` (which trims +
+  // lowercases) and `fromString()` (raw, for repository reconstitution)
+  // validate. Both factories route through `create()` to get shared-instance
+  // reference equality on success.
+  private constructor(private readonly value: TransactionReason) {
+    if (!Object.values(TransactionReason).includes(value)) {
       throw new DomainValidationError(
         `Invalid transaction reason: ${value}. Must be one of: ${Object.values(TransactionReason).join(", ")}`,
       );
     }
-    return new TransactionReasonVO(normalized as TransactionReason);
+  }
+
+  static create(value: string): TransactionReasonVO {
+    const normalized = value.trim().toLowerCase();
+    return (
+      TransactionReasonVO.ALL.find((t) => t.value === normalized) ??
+      new TransactionReasonVO(normalized as TransactionReason)
+    );
+  }
+
+  static fromString(value: string): TransactionReasonVO {
+    return TransactionReasonVO.create(value);
   }
 
   getValue(): TransactionReason {

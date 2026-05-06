@@ -1,4 +1,6 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { IReservationRepository } from "../../../domain/repositories/reservation.repository";
 import {
   Reservation,
@@ -6,17 +8,23 @@ import {
 } from "../../../domain/entities/reservation.entity";
 import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { ReservationId } from "../../../domain/value-objects/reservation-id.vo";
-import { VariantId } from "../../../domain/value-objects/variant-id.vo";
-import { Quantity } from "../../../domain/value-objects/quantity.vo";
+import { VariantId } from "../../../../product-catalog/domain/value-objects/variant-id.vo";
 import { IExternalStockService } from "../../../domain/ports/external-services";
 
-export class ReservationRepositoryImpl implements IReservationRepository {
+export class ReservationRepositoryImpl
+  extends PrismaRepository<Reservation>
+  implements IReservationRepository
+{
   constructor(
-    private readonly prisma: PrismaClient,
+    prisma: PrismaClient,
     private readonly stockService?: IExternalStockService,
-  ) {}
+    eventBus?: IEventBus,
+  ) {
+    super(prisma, eventBus);
+  }
 
-  // Core CRUD operations
+  // ── Aggregate persistence ──────────────────────────────────────────
+
   async save(reservation: Reservation): Promise<void> {
     const data = reservation.toSnapshot();
 
@@ -34,18 +42,15 @@ export class ReservationRepositoryImpl implements IReservationRepository {
         expiresAt: data.expiresAt,
       },
     });
+
+    await this.dispatchEvents(reservation);
   }
 
   async findById(reservationId: ReservationId): Promise<Reservation | null> {
-    const reservationData = await this.prisma.reservation.findUnique({
+    const row = await this.prisma.reservation.findUnique({
       where: { id: reservationId.getValue() },
     });
-
-    if (!reservationData) {
-      return null;
-    }
-
-    return this.mapPrismaToEntity(reservationData);
+    return row ? this.toDomain(row) : null;
   }
 
   async delete(reservationId: ReservationId): Promise<void> {
@@ -54,102 +59,33 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     });
   }
 
-  // Cart-based operations
+  // ── Lookups by alternate key ───────────────────────────────────────
+
   async findByCartId(cartId: CartId): Promise<Reservation[]> {
-    const reservations = await this.prisma.reservation.findMany({
+    const rows = await this.prisma.reservation.findMany({
       where: { cartId: cartId.getValue() },
       orderBy: { expiresAt: "asc" },
     });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findActiveByCartId(cartId: CartId): Promise<Reservation[]> {
     const now = new Date();
-    const reservations = await this.prisma.reservation.findMany({
+    const rows = await this.prisma.reservation.findMany({
       where: {
         cartId: cartId.getValue(),
         expiresAt: { gt: now },
       },
       orderBy: { expiresAt: "asc" },
     });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+    return rows.map((row) => this.toDomain(row));
   }
 
-  async deleteByCartId(cartId: CartId): Promise<number> {
-    const result = await this.prisma.reservation.deleteMany({
-      where: { cartId: cartId.getValue() },
-    });
-
-    return result.count;
-  }
-
-  async countByCartId(cartId: CartId): Promise<number> {
-    return await this.prisma.reservation.count({
-      where: { cartId: cartId.getValue() },
-    });
-  }
-
-  // Variant-based operations
-  async findByVariantId(variantId: VariantId): Promise<Reservation[]> {
-    const reservations = await this.prisma.reservation.findMany({
-      where: { variantId: variantId.getValue() },
-      orderBy: { expiresAt: "asc" },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async findActiveByVariantId(variantId: VariantId): Promise<Reservation[]> {
-    const now = new Date();
-    const reservations = await this.prisma.reservation.findMany({
-      where: {
-        variantId: variantId.getValue(),
-        expiresAt: { gt: now },
-      },
-      orderBy: { expiresAt: "asc" },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async getTotalReservedQuantity(variantId: VariantId): Promise<number> {
-    const result = await this.prisma.reservation.aggregate({
-      where: { variantId: variantId.getValue() },
-      _sum: { qty: true },
-    });
-
-    return result._sum?.qty || 0;
-  }
-
-  async getActiveReservedQuantity(variantId: VariantId): Promise<number> {
-    const now = new Date();
-    const result = await this.prisma.reservation.aggregate({
-      where: {
-        variantId: variantId.getValue(),
-        expiresAt: { gt: now },
-      },
-      _sum: { qty: true },
-    });
-
-    return result._sum?.qty || 0;
-  }
-
-  // Cart-Variant specific operations
   async findByCartAndVariant(
     cartId: CartId,
     variantId: VariantId,
   ): Promise<Reservation | null> {
-    const reservationData = await this.prisma.reservation.findUnique({
+    const row = await this.prisma.reservation.findUnique({
       where: {
         cartId_variantId: {
           cartId: cartId.getValue(),
@@ -157,26 +93,56 @@ export class ReservationRepositoryImpl implements IReservationRepository {
         },
       },
     });
-
-    if (!reservationData) {
-      return null;
-    }
-
-    return this.mapPrismaToEntity(reservationData);
+    return row ? this.toDomain(row) : null;
   }
 
-  async existsForCartAndVariant(
-    cartId: CartId,
-    variantId: VariantId,
-  ): Promise<boolean> {
-    const count = await this.prisma.reservation.count({
-      where: {
-        cartId: cartId.getValue(),
-        variantId: variantId.getValue(),
-      },
+  async findByVariantId(variantId: VariantId): Promise<Reservation[]> {
+    const rows = await this.prisma.reservation.findMany({
+      where: { variantId: variantId.getValue() },
+      orderBy: { expiresAt: "asc" },
     });
+    return rows.map((row) => this.toDomain(row));
+  }
 
-    return count > 0;
+  async findByStatus(
+    status: "active" | "expiring_soon" | "expired" | "recently_expired",
+  ): Promise<Reservation[]> {
+    const now = new Date();
+    let where: Prisma.ReservationWhereInput = {};
+
+    switch (status) {
+      case "active":
+        where = { expiresAt: { gt: now } };
+        break;
+      case "expiring_soon": {
+        const soon = new Date(now.getTime() + 10 * 60 * 1000);
+        where = { expiresAt: { gt: now, lte: soon } };
+        break;
+      }
+      case "expired":
+        where = { expiresAt: { lte: now } };
+        break;
+      case "recently_expired": {
+        const recent = new Date(now.getTime() - 60 * 60 * 1000);
+        where = { expiresAt: { gte: recent, lte: now } };
+        break;
+      }
+    }
+
+    const rows = await this.prisma.reservation.findMany({
+      where,
+      orderBy: { expiresAt: "asc" },
+    });
+    return rows.map((row) => this.toDomain(row));
+  }
+
+  // ── Bulk delete (cart cleanup) ─────────────────────────────────────
+
+  async deleteByCartId(cartId: CartId): Promise<number> {
+    const result = await this.prisma.reservation.deleteMany({
+      where: { cartId: cartId.getValue() },
+    });
+    return result.count;
   }
 
   async deleteByCartAndVariant(
@@ -193,172 +159,35 @@ export class ReservationRepositoryImpl implements IReservationRepository {
         },
       });
       return true;
-    } catch (error) {
-      return false; // Record not found
+    } catch {
+      return false;
     }
   }
 
-  // Expiration management
-  async findExpiredReservations(): Promise<Reservation[]> {
-    const now = new Date();
-    const reservations = await this.prisma.reservation.findMany({
-      where: { expiresAt: { lte: now } },
-      orderBy: { expiresAt: "asc" },
-    });
+  // ── Quantity aggregates ────────────────────────────────────────────
 
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+  async getTotalReservedQuantity(variantId: VariantId): Promise<number> {
+    const result = await this.prisma.reservation.aggregate({
+      where: { variantId: variantId.getValue() },
+      _sum: { qty: true },
+    });
+    return result._sum?.qty || 0;
   }
 
-  async findExpiringSoon(
-    thresholdMinutes: number = 10,
-  ): Promise<Reservation[]> {
+  async getActiveReservedQuantity(variantId: VariantId): Promise<number> {
     const now = new Date();
-    const threshold = new Date(now.getTime() + thresholdMinutes * 60 * 1000);
-
-    const reservations = await this.prisma.reservation.findMany({
+    const result = await this.prisma.reservation.aggregate({
       where: {
-        expiresAt: {
-          gt: now,
-          lte: threshold,
-        },
+        variantId: variantId.getValue(),
+        expiresAt: { gt: now },
       },
-      orderBy: { expiresAt: "asc" },
+      _sum: { qty: true },
     });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+    return result._sum?.qty || 0;
   }
 
-  async findReservationsExpiringBetween(
-    startTime: Date,
-    endTime: Date,
-  ): Promise<Reservation[]> {
-    const reservations = await this.prisma.reservation.findMany({
-      where: {
-        expiresAt: {
-          gte: startTime,
-          lte: endTime,
-        },
-      },
-      orderBy: { expiresAt: "asc" },
-    });
+  // ── Availability / conflict checks ─────────────────────────────────
 
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  // Bulk operations
-  async saveBulk(reservations: Reservation[]): Promise<void> {
-    const data = reservations.map((reservation) => {
-      const snapshot = reservation.toSnapshot();
-      return {
-        id: snapshot.reservationId,
-        cartId: snapshot.cartId,
-        variantId: snapshot.variantId,
-        qty: snapshot.quantity,
-        expiresAt: snapshot.expiresAt,
-      };
-    });
-
-    await this.prisma.reservation.createMany({
-      data,
-      skipDuplicates: true,
-    });
-  }
-
-  async findByIds(reservationIds: ReservationId[]): Promise<Reservation[]> {
-    const reservations = await this.prisma.reservation.findMany({
-      where: { id: { in: reservationIds.map((id) => id.getValue()) } },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async deleteExpiredBefore(date: Date): Promise<number> {
-    const result = await this.prisma.reservation.deleteMany({
-      where: { expiresAt: { lte: date } },
-    });
-
-    return result.count;
-  }
-
-  // Business operations
-  async createReservation(
-    cartId: CartId,
-    variantId: VariantId,
-    quantity: Quantity,
-    durationMinutes: number = 30,
-  ): Promise<Reservation> {
-    const reservation = Reservation.create({
-      cartId: cartId.getValue(),
-      variantId: variantId.getValue(),
-      quantity: quantity.getValue(),
-      durationMinutes,
-    });
-
-    await this.save(reservation);
-    return reservation;
-  }
-
-  async extendReservation(
-    reservationId: ReservationId,
-    additionalMinutes: number,
-  ): Promise<boolean> {
-    const reservation = await this.findById(reservationId);
-    if (!reservation) {
-      return false;
-    }
-
-    const currentExpiry = reservation.expiresAt;
-    const newExpiry = new Date(
-      currentExpiry.getTime() + additionalMinutes * 60 * 1000,
-    );
-
-    await this.prisma.reservation.update({
-      where: { id: reservationId.getValue() },
-      data: { expiresAt: newExpiry },
-    });
-
-    return true;
-  }
-
-  async renewReservation(
-    reservationId: ReservationId,
-    durationMinutes?: number,
-  ): Promise<boolean> {
-    const reservation = await this.findById(reservationId);
-    if (!reservation) {
-      return false;
-    }
-
-    const now = new Date();
-    const actualDuration = durationMinutes ?? 30;
-    const newExpiry = new Date(now.getTime() + actualDuration * 60 * 1000);
-
-    await this.prisma.reservation.update({
-      where: { id: reservationId.getValue() },
-      data: { expiresAt: newExpiry },
-    });
-
-    return true;
-  }
-
-  async releaseReservation(reservationId: ReservationId): Promise<boolean> {
-    try {
-      await this.delete(reservationId);
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  // Inventory management
   async checkAvailability(
     variantId: VariantId,
     requestedQuantity: number,
@@ -370,17 +199,9 @@ export class ReservationRepositoryImpl implements IReservationRepository {
   }> {
     const totalReserved = await this.getTotalReservedQuantity(variantId);
     const activeReserved = await this.getActiveReservedQuantity(variantId);
+    const actualInventory = await this.getVariantInventory(variantId.getValue());
 
-    // TODO: Integrate with actual inventory service
-    // This should call your inventory management service to get real stock levels
-    const actualInventory = await this.getVariantInventory(
-      variantId.getValue(),
-    );
-
-    const availableForReservation = Math.max(
-      0,
-      actualInventory - activeReserved,
-    );
+    const availableForReservation = Math.max(0, actualInventory - activeReserved);
     const available = availableForReservation >= requestedQuantity;
 
     return {
@@ -391,218 +212,42 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     };
   }
 
-  private async getVariantInventory(variantId: string): Promise<number> {
-    if (!this.stockService) {
-      throw new Error(
-        `Cannot check inventory for variant ${variantId}: StockService not injected`,
-      );
-    }
-
-    const availableStock =
-      await this.stockService.getTotalAvailableStock(variantId);
-    return availableStock;
-  }
-
-  async reserveInventory(
-    cartId: CartId,
+  async findConflictingReservations(
     variantId: VariantId,
     quantity: number,
-    durationMinutes: number = 30,
-  ): Promise<Reservation> {
-    const availability = await this.checkAvailability(variantId, quantity);
-    if (!availability.available) {
-      throw new Error("Insufficient inventory available for reservation");
-    }
-
-    const quantityVo = Quantity.fromNumber(quantity);
-    return this.createReservation(
-      cartId,
-      variantId,
-      quantityVo,
-      durationMinutes,
-    );
-  }
-
-  async adjustReservation(
-    cartId: CartId,
-    variantId: VariantId,
-    newQuantity: number,
-  ): Promise<Reservation | null> {
-    const existingReservation = await this.findByCartAndVariant(
-      cartId,
-      variantId,
-    );
-    if (!existingReservation) {
-      return null;
-    }
-
-    if (newQuantity <= 0) {
-      await this.deleteByCartAndVariant(cartId, variantId);
-      return null;
-    }
-
-    const reservationId = existingReservation.reservationId;
-
-    await this.prisma.reservation.update({
-      where: { id: reservationId.getValue() },
-      data: { qty: newQuantity },
-    });
-
-    return this.findById(reservationId);
-  }
-
-  // Query operations
-  async findByStatus(
-    status: "active" | "expiring_soon" | "expired" | "recently_expired",
+    excludeCartId?: CartId,
   ): Promise<Reservation[]> {
-    const now = new Date();
-    let whereClause: Prisma.ReservationWhereInput = {};
-
-    switch (status) {
-      case "active":
-        whereClause = { expiresAt: { gt: now } };
-        break;
-      case "expiring_soon": {
-        const soonThreshold = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
-        whereClause = {
-          expiresAt: {
-            gt: now,
-            lte: soonThreshold,
-          },
-        };
-        break;
-      }
-      case "expired":
-        whereClause = { expiresAt: { lte: now } };
-        break;
-      case "recently_expired": {
-        const recentThreshold = new Date(now.getTime() - 60 * 60 * 1000); // 1 hour ago
-        whereClause = {
-          expiresAt: {
-            gte: recentThreshold,
-            lte: now,
-          },
-        };
-        break;
-      }
-    }
-
-    const reservations = await this.prisma.reservation.findMany({
-      where: whereClause,
-      orderBy: { expiresAt: "asc" },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async findRecentReservations(
-    hours: number,
-    limit?: number,
-  ): Promise<Reservation[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setHours(cutoffDate.getHours() - hours);
-
-    const reservations = await this.prisma.reservation.findMany({
-      where: {
-        // Assuming we add createdAt field to the schema
-        expiresAt: { gte: cutoffDate },
-      },
-      orderBy: { expiresAt: "desc" },
-      take: limit,
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async findReservationsByDateRange(
-    startDate: Date,
-    endDate: Date,
-  ): Promise<Reservation[]> {
-    const reservations = await this.prisma.reservation.findMany({
-      where: {
-        expiresAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      orderBy: { expiresAt: "asc" },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  // Advanced filtering
-  async searchReservations(criteria: {
-    cartId?: string;
-    variantId?: string;
-    status?: "active" | "expiring_soon" | "expired" | "recently_expired";
-    minQuantity?: number;
-    maxQuantity?: number;
-    createdAfter?: Date;
-    createdBefore?: Date;
-    expiresAfter?: Date;
-    expiresBefore?: Date;
-    limit?: number;
-    offset?: number;
-  }): Promise<Reservation[]> {
-    const qtyFilter: { gte?: number; lte?: number } = {};
-    if (criteria.minQuantity !== undefined) qtyFilter.gte = criteria.minQuantity;
-    if (criteria.maxQuantity !== undefined) qtyFilter.lte = criteria.maxQuantity;
-
-    const expiresAtFilter: { gte?: Date; lte?: Date; gt?: Date } = {};
-    if (criteria.expiresAfter) expiresAtFilter.gte = criteria.expiresAfter;
-    if (criteria.expiresBefore) expiresAtFilter.lte = criteria.expiresBefore;
-
-    if (criteria.status) {
-      const now = new Date();
-      switch (criteria.status) {
-        case "active":
-          expiresAtFilter.gt = now;
-          break;
-        case "expiring_soon": {
-          const soonThreshold = new Date(now.getTime() + 10 * 60 * 1000);
-          expiresAtFilter.gt = now;
-          expiresAtFilter.lte = soonThreshold;
-          break;
-        }
-        case "expired":
-          expiresAtFilter.lte = now;
-          break;
-        case "recently_expired": {
-          const recentThreshold = new Date(now.getTime() - 60 * 60 * 1000);
-          expiresAtFilter.gte = recentThreshold;
-          expiresAtFilter.lte = now;
-          break;
-        }
-      }
-    }
-
-    const whereConditions: Prisma.ReservationWhereInput = {
-      ...(criteria.cartId ? { cartId: criteria.cartId } : {}),
-      ...(criteria.variantId ? { variantId: criteria.variantId } : {}),
-      ...(Object.keys(qtyFilter).length > 0 ? { qty: qtyFilter } : {}),
-      ...(Object.keys(expiresAtFilter).length > 0 ? { expiresAt: expiresAtFilter } : {}),
+    const where: Prisma.ReservationWhereInput = {
+      variantId: variantId.getValue(),
+      expiresAt: { gt: new Date() },
+      ...(excludeCartId ? { cartId: { not: excludeCartId.getValue() } } : {}),
     };
 
-    const reservations = await this.prisma.reservation.findMany({
-      where: whereConditions,
+    const rows = await this.prisma.reservation.findMany({
+      where,
       orderBy: { expiresAt: "asc" },
-      take: criteria.limit,
-      skip: criteria.offset,
     });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+    return rows.map((row) => this.toDomain(row));
   }
 
-  // Analytics operations
+  async resolveReservationConflicts(_variantId: VariantId): Promise<{
+    resolved: number;
+    conflicts: number;
+    actions: Array<{
+      action: "extended" | "reduced" | "cancelled";
+      reservationId: string;
+      details: string;
+    }>;
+  }> {
+    // Placeholder for conflict-resolution logic that would scan competing
+    // reservations on the variant and decide whether to extend / reduce /
+    // cancel. Live business rules belong in a domain service rather than
+    // the repository — this stays a no-op until that service exists.
+    return { resolved: 0, conflicts: 0, actions: [] };
+  }
+
+  // ── Analytics / reporting ──────────────────────────────────────────
+
   async getReservationStatistics(): Promise<{
     totalReservations: number;
     activeReservations: number;
@@ -617,7 +262,7 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     }>;
   }> {
     const now = new Date();
-    const soonThreshold = new Date(now.getTime() + 10 * 60 * 1000);
+    const soon = new Date(now.getTime() + 10 * 60 * 1000);
 
     const [
       totalReservations,
@@ -631,11 +276,9 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       this.prisma.reservation.count({ where: { expiresAt: { gt: now } } }),
       this.prisma.reservation.count({ where: { expiresAt: { lte: now } } }),
       this.prisma.reservation.count({
-        where: { expiresAt: { gt: now, lte: soonThreshold } },
+        where: { expiresAt: { gt: now, lte: soon } },
       }),
-      this.prisma.reservation.aggregate({
-        _sum: { qty: true },
-      }),
+      this.prisma.reservation.aggregate({ _sum: { qty: true } }),
       this.prisma.reservation.groupBy({
         by: ["variantId"],
         _sum: { qty: true },
@@ -645,28 +288,23 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       }),
     ]);
 
-    const totalQuantityReserved = quantityStats._sum?.qty || 0;
-    const averageDurationMinutes = 30; // Would need to calculate from actual data
-
-    const mostReservedVariants = variantStats.map((stat) => ({
-      variantId: stat.variantId,
-      totalQuantity: stat._sum?.qty || 0,
-      reservationCount: stat._count._all,
-    }));
-
     return {
       totalReservations,
       activeReservations,
       expiredReservations,
       expiringSoonReservations,
-      averageDurationMinutes,
-      totalQuantityReserved,
-      mostReservedVariants,
+      averageDurationMinutes: 30,
+      totalQuantityReserved: quantityStats._sum?.qty || 0,
+      mostReservedVariants: variantStats.map((stat) => ({
+        variantId: stat.variantId,
+        totalQuantity: stat._sum?.qty || 0,
+        reservationCount: stat._count._all,
+      })),
     };
   }
 
   async getReservationsByTimeframe(
-    timeframe: "hour" | "day" | "week" | "month",
+    _timeframe: "hour" | "day" | "week" | "month",
     count: number = 24,
   ): Promise<
     Array<{
@@ -677,9 +315,17 @@ export class ReservationRepositoryImpl implements IReservationRepository {
       uniqueCarts: number;
     }>
   > {
-    // This would require more complex date aggregation
-    // For now, return a simplified implementation
-    const results = [];
+    // Placeholder bucketing — real implementation requires Prisma `$queryRaw`
+    // with date_trunc / generate_series. Returns empty buckets for now so
+    // callers don't break; replace with real aggregation when dashboards
+    // start consuming this.
+    const results: Array<{
+      period: string;
+      reservationCount: number;
+      totalQuantity: number;
+      uniqueVariants: number;
+      uniqueCarts: number;
+    }> = [];
     for (let i = 0; i < count; i++) {
       results.push({
         period: `period-${i}`,
@@ -692,254 +338,45 @@ export class ReservationRepositoryImpl implements IReservationRepository {
     return results;
   }
 
-  // Maintenance operations
-  async optimizeReservations(): Promise<number> {
-    // No cleanup functionality - return 0
-    return 0;
-  }
-
-  async consolidateExpiredReservations(): Promise<number> {
-    // No cleanup functionality - return 0
-    return 0;
-  }
+  // ── Background-job batch hooks ─────────────────────────────────────
 
   async archiveOldReservations(olderThanDays: number): Promise<number> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-    // In a real implementation, you'd move these to an archive table
-    const count = await this.prisma.reservation.count({
-      where: { expiresAt: { lt: cutoffDate } },
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - olderThanDays);
+    return this.prisma.reservation.count({
+      where: { expiresAt: { lt: cutoff } },
     });
-
-    return count;
   }
 
-  // Validation operations
-  async validateReservationCapacity(
-    variantId: VariantId,
-    requestedQuantity: number,
-  ): Promise<boolean> {
-    const availability = await this.checkAvailability(
-      variantId,
-      requestedQuantity,
-    );
-    return availability.available;
-  }
-
-  async isReservationExtendable(reservationId: ReservationId): Promise<boolean> {
-    const reservation = await this.findById(reservationId);
-    if (!reservation) return false;
-
-    return reservation.expiresAt > new Date();
-  }
-
-  async canCreateReservation(
-    cartId: CartId,
-    variantId: VariantId,
-    quantity: number,
-  ): Promise<boolean> {
-    const availability = await this.checkAvailability(variantId, quantity);
-    return availability.available;
-  }
-
-  // Conflict resolution
-  async findConflictingReservations(
-    variantId: VariantId,
-    quantity: number,
-    excludeCartId?: CartId,
-  ): Promise<Reservation[]> {
-    const whereClause: Prisma.ReservationWhereInput = {
-      variantId: variantId.getValue(),
-      expiresAt: { gt: new Date() },
-      ...(excludeCartId ? { cartId: { not: excludeCartId.getValue() } } : {}),
-    };
-
-    const reservations = await this.prisma.reservation.findMany({
-      where: whereClause,
-      orderBy: { expiresAt: "asc" },
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
-  }
-
-  async resolveReservationConflicts(variantId: VariantId): Promise<{
-    resolved: number;
-    conflicts: number;
-    actions: Array<{
-      action: "extended" | "reduced" | "cancelled";
-      reservationId: string;
-      details: string;
-    }>;
-  }> {
-    // This would involve complex business logic to resolve conflicts
-    // For now, return a placeholder response
-    return {
-      resolved: 0,
-      conflicts: 0,
-      actions: [],
-    };
-  }
-
-  // Performance operations
-  async getReservationSummary(reservationId: ReservationId): Promise<{
-    reservationId: string;
-    cartId: string;
-    variantId: string;
-    quantity: number;
-    status: string;
-    expiresAt: Date;
-    timeUntilExpiryMinutes: number;
-    canBeExtended: boolean;
-  } | null> {
-    const reservation = await this.findById(reservationId);
-    if (!reservation) return null;
-
+  async getReservationsForCleanup(batchSize: number = 100): Promise<Reservation[]> {
     const now = new Date();
-    const expiresAt = reservation.expiresAt;
-    const timeUntilExpiryMinutes = Math.max(
-      0,
-      Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60)),
-    );
-    const status = expiresAt > now ? "active" : "expired";
-    const canBeExtended = expiresAt > now;
-
-    return {
-      reservationId: reservation.reservationId.getValue(),
-      cartId: reservation.cartId.getValue(),
-      variantId: reservation.variantId.getValue(),
-      quantity: reservation.quantity.getValue(),
-      status,
-      expiresAt,
-      timeUntilExpiryMinutes,
-      canBeExtended,
-    };
-  }
-
-  // Transaction support
-  async saveWithTransaction(
-    reservation: Reservation,
-    transactionContext?: Prisma.TransactionClient,
-  ): Promise<void> {
-    if (transactionContext) {
-      await this.saveWithPrismaClient(reservation, transactionContext);
-    } else {
-      await this.save(reservation);
-    }
-  }
-
-  async deleteWithTransaction(
-    reservationId: string,
-    transactionContext?: Prisma.TransactionClient,
-  ): Promise<void> {
-    if (transactionContext) {
-      await transactionContext.reservation.delete({
-        where: { id: reservationId },
-      });
-    } else {
-      await this.delete(ReservationId.fromString(reservationId));
-    }
-  }
-
-  async saveBulkWithTransaction(
-    reservations: Reservation[],
-    transactionContext?: Prisma.TransactionClient,
-  ): Promise<void> {
-    if (transactionContext) {
-      const data = reservations.map((reservation) => {
-        const snapshot = reservation.toSnapshot();
-        return {
-          id: snapshot.reservationId,
-          cartId: snapshot.cartId,
-          variantId: snapshot.variantId,
-          qty: snapshot.quantity,
-          expiresAt: snapshot.expiresAt,
-        };
-      });
-
-      await transactionContext.reservation.createMany({
-        data,
-        skipDuplicates: true,
-      });
-    } else {
-      await this.saveBulk(reservations);
-    }
-  }
-
-  // Batch processing for background jobs
-  async getReservationsForCleanup(
-    batchSize: number = 100,
-  ): Promise<Reservation[]> {
-    const now = new Date();
-    const reservations = await this.prisma.reservation.findMany({
+    const rows = await this.prisma.reservation.findMany({
       where: { expiresAt: { lte: now } },
       orderBy: { expiresAt: "asc" },
       take: batchSize,
     });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+    return rows.map((row) => this.toDomain(row));
   }
 
-  async getReservationsForExtension(
-    thresholdMinutes: number,
-    batchSize: number = 100,
-  ): Promise<Reservation[]> {
-    const now = new Date();
-    const threshold = new Date(now.getTime() + thresholdMinutes * 60 * 1000);
+  // ── Private helpers ────────────────────────────────────────────────
 
-    const reservations = await this.prisma.reservation.findMany({
-      where: {
-        expiresAt: {
-          gt: now,
-          lte: threshold,
-        },
-      },
-      orderBy: { expiresAt: "asc" },
-      take: batchSize,
-    });
-
-    return reservations.map((reservation) =>
-      this.mapPrismaToEntity(reservation),
-    );
+  private async getVariantInventory(variantId: string): Promise<number> {
+    if (!this.stockService) {
+      throw new Error(
+        `Cannot check inventory for variant ${variantId}: StockService not injected`,
+      );
+    }
+    return this.stockService.getTotalAvailableStock(variantId);
   }
 
-  async getReservationsForNotification(
-    thresholdMinutes: number,
-    batchSize: number = 100,
-  ): Promise<Reservation[]> {
-    return this.getReservationsForExtension(thresholdMinutes, batchSize);
-  }
-
-  // Private helper methods
-  private async saveWithPrismaClient(
-    reservation: Reservation,
-    prismaClient: Prisma.TransactionClient,
-  ): Promise<void> {
-    const data = reservation.toSnapshot();
-
-    await prismaClient.reservation.create({
-      data: {
-        id: data.reservationId,
-        cartId: data.cartId,
-        variantId: data.variantId,
-        qty: data.quantity,
-        expiresAt: data.expiresAt,
-      },
-    });
-  }
-
-  private mapPrismaToEntity(reservationData: Prisma.ReservationGetPayload<Record<string, never>>): Reservation {
+  private toDomain(row: Prisma.ReservationGetPayload<Record<string, never>>): Reservation {
     const fallbackDate = new Date(0);
     const entityData: ReservationEntityData = {
-      reservationId: reservationData.id,
-      cartId: reservationData.cartId,
-      variantId: reservationData.variantId,
-      quantity: reservationData.qty,
-      expiresAt: reservationData.expiresAt,
+      reservationId: row.id,
+      cartId: row.cartId,
+      variantId: row.variantId,
+      quantity: row.qty,
+      expiresAt: row.expiresAt,
       createdAt: fallbackDate,
       updatedAt: fallbackDate,
     };

@@ -5,12 +5,12 @@ import {
 } from '../../../../packages/core/src/application/cqrs';
 import { LoyaltyService } from '../services/loyalty.service';
 import { LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
-import { LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
+import { LoyaltyTransactionReasonValue } from '../../domain/value-objects/loyalty-reason.vo';
 
 export interface AwardLoyaltyPointsCommand extends ICommand {
   readonly userId: string;
   readonly points: number;
-  readonly reason: LoyaltyTransactionReason;
+  readonly reason: LoyaltyTransactionReasonValue;
   readonly orderId?: string;
   readonly description?: string;
 }

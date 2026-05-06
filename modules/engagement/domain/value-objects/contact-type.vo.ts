@@ -1,48 +1,55 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { ContactTypeEnum } from "../enums/engagement.enums";
 
+export enum ContactTypeValue {
+  EMAIL = "email",
+  PHONE = "phone",
+}
+
+/** @deprecated Use `ContactTypeValue`. */
+export const ContactTypeEnum = ContactTypeValue;
+/** @deprecated Use `ContactTypeValue`. */
+export type ContactTypeEnum = ContactTypeValue;
+
+// Pattern D (Enum-Like VO).
 export class ContactType {
-  private constructor(private readonly value: ContactTypeEnum) {}
+  static readonly EMAIL = new ContactType(ContactTypeValue.EMAIL);
+  static readonly PHONE = new ContactType(ContactTypeValue.PHONE);
+
+  private static readonly ALL: ReadonlyArray<ContactType> = [
+    ContactType.EMAIL,
+    ContactType.PHONE,
+  ];
+
+  private constructor(private readonly value: ContactTypeValue) {
+    if (!Object.values(ContactTypeValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid contact type: ${value}. Must be one of: ${Object.values(ContactTypeValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): ContactType {
-    return ContactType.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      ContactType.ALL.find((t) => t.value === normalized) ??
+      new ContactType(normalized as ContactTypeValue)
+    );
   }
 
   static fromString(value: string): ContactType {
-    const normalized = value.toLowerCase().trim();
-
-    if (!Object.values(ContactTypeEnum).includes(normalized as ContactTypeEnum)) {
-      throw new DomainValidationError(`Invalid contact type: ${value}`);
-    }
-
-    return new ContactType(normalized as ContactTypeEnum);
+    return ContactType.create(value);
   }
 
-  static email(): ContactType {
-    return new ContactType(ContactTypeEnum.EMAIL);
-  }
+  /** @deprecated Use `ContactType.EMAIL`. */
+  static email(): ContactType { return ContactType.EMAIL; }
+  /** @deprecated Use `ContactType.PHONE`. */
+  static phone(): ContactType { return ContactType.PHONE; }
 
-  static phone(): ContactType {
-    return new ContactType(ContactTypeEnum.PHONE);
-  }
+  getValue(): ContactTypeValue { return this.value; }
 
-  getValue(): string {
-    return this.value;
-  }
+  isEmail(): boolean { return this.value === ContactTypeValue.EMAIL; }
+  isPhone(): boolean { return this.value === ContactTypeValue.PHONE; }
 
-  isEmail(): boolean {
-    return this.value === ContactTypeEnum.EMAIL;
-  }
-
-  isPhone(): boolean {
-    return this.value === ContactTypeEnum.PHONE;
-  }
-
-  equals(other: ContactType): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: ContactType): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

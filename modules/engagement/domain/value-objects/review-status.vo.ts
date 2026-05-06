@@ -1,64 +1,67 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { ReviewStatusEnum } from "../enums/engagement.enums";
 
+export enum ReviewStatusValue {
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+  FLAGGED = "flagged",
+}
+
+/** @deprecated Use `ReviewStatusValue`. */
+export const ReviewStatusEnum = ReviewStatusValue;
+/** @deprecated Use `ReviewStatusValue`. */
+export type ReviewStatusEnum = ReviewStatusValue;
+
+// Pattern D (Enum-Like VO).
 export class ReviewStatus {
-  private constructor(private readonly value: ReviewStatusEnum) {}
+  static readonly PENDING = new ReviewStatus(ReviewStatusValue.PENDING);
+  static readonly APPROVED = new ReviewStatus(ReviewStatusValue.APPROVED);
+  static readonly REJECTED = new ReviewStatus(ReviewStatusValue.REJECTED);
+  static readonly FLAGGED = new ReviewStatus(ReviewStatusValue.FLAGGED);
+
+  private static readonly ALL: ReadonlyArray<ReviewStatus> = [
+    ReviewStatus.PENDING,
+    ReviewStatus.APPROVED,
+    ReviewStatus.REJECTED,
+    ReviewStatus.FLAGGED,
+  ];
+
+  private constructor(private readonly value: ReviewStatusValue) {
+    if (!Object.values(ReviewStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid review status: ${value}. Must be one of: ${Object.values(ReviewStatusValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): ReviewStatus {
-    return ReviewStatus.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      ReviewStatus.ALL.find((t) => t.value === normalized) ??
+      new ReviewStatus(normalized as ReviewStatusValue)
+    );
   }
 
   static fromString(value: string): ReviewStatus {
-    const normalized = value.toLowerCase().trim();
-
-    if (!Object.values(ReviewStatusEnum).includes(normalized as ReviewStatusEnum)) {
-      throw new DomainValidationError(`Invalid review status: ${value}`);
-    }
-
-    return new ReviewStatus(normalized as ReviewStatusEnum);
+    return ReviewStatus.create(value);
   }
 
-  static pending(): ReviewStatus {
-    return new ReviewStatus(ReviewStatusEnum.PENDING);
-  }
+  /** @deprecated Use `ReviewStatus.PENDING`. */
+  static pending(): ReviewStatus { return ReviewStatus.PENDING; }
+  /** @deprecated Use `ReviewStatus.APPROVED`. */
+  static approved(): ReviewStatus { return ReviewStatus.APPROVED; }
+  /** @deprecated Use `ReviewStatus.REJECTED`. */
+  static rejected(): ReviewStatus { return ReviewStatus.REJECTED; }
+  /** @deprecated Use `ReviewStatus.FLAGGED`. */
+  static flagged(): ReviewStatus { return ReviewStatus.FLAGGED; }
 
-  static approved(): ReviewStatus {
-    return new ReviewStatus(ReviewStatusEnum.APPROVED);
-  }
+  getValue(): ReviewStatusValue { return this.value; }
 
-  static rejected(): ReviewStatus {
-    return new ReviewStatus(ReviewStatusEnum.REJECTED);
-  }
+  isPending(): boolean { return this.value === ReviewStatusValue.PENDING; }
+  isApproved(): boolean { return this.value === ReviewStatusValue.APPROVED; }
+  isRejected(): boolean { return this.value === ReviewStatusValue.REJECTED; }
+  isFlagged(): boolean { return this.value === ReviewStatusValue.FLAGGED; }
 
-  static flagged(): ReviewStatus {
-    return new ReviewStatus(ReviewStatusEnum.FLAGGED);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  isPending(): boolean {
-    return this.value === ReviewStatusEnum.PENDING;
-  }
-
-  isApproved(): boolean {
-    return this.value === ReviewStatusEnum.APPROVED;
-  }
-
-  isRejected(): boolean {
-    return this.value === ReviewStatusEnum.REJECTED;
-  }
-
-  isFlagged(): boolean {
-    return this.value === ReviewStatusEnum.FLAGGED;
-  }
-
-  equals(other: ReviewStatus): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: ReviewStatus): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

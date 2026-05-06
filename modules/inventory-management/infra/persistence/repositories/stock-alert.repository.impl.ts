@@ -1,13 +1,11 @@
-import { PrismaClient, StockAlertTypeEnum } from "@prisma/client";
+import { Prisma, PrismaClient, StockAlertTypeEnum } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { VariantId } from "../../../../product-catalog/domain/value-objects/variant-id.vo";
 import { StockAlert } from "../../../domain/entities/stock-alert.entity";
 import { AlertId } from "../../../domain/value-objects/alert-id.vo";
-import {
-  AlertType,
-  AlertTypeVO,
-} from "../../../domain/value-objects/alert-type.vo";
+import { AlertTypeVO } from "../../../domain/value-objects/alert-type.vo";
 import { IStockAlertRepository } from "../../../domain/repositories/stock-alert.repository";
 
 export class StockAlertRepositoryImpl
@@ -18,13 +16,7 @@ export class StockAlertRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    alertId: string;
-    variantId: string;
-    type: string;
-    triggeredAt: Date;
-    resolvedAt: Date | null;
-  }): StockAlert {
+  private toEntity(row: Prisma.StockAlertGetPayload<object>): StockAlert {
     return StockAlert.fromPersistence({
       alertId: AlertId.fromString(row.alertId),
       variantId: row.variantId,
@@ -70,9 +62,9 @@ export class StockAlertRepositoryImpl
     });
   }
 
-  async findByVariant(variantId: string): Promise<StockAlert[]> {
+  async findByVariant(variantId: VariantId): Promise<StockAlert[]> {
     const rows = await this.prisma.stockAlert.findMany({
-      where: { variantId },
+      where: { variantId: variantId.getValue() },
       orderBy: { triggeredAt: "desc" },
     });
 
@@ -97,9 +89,9 @@ export class StockAlertRepositoryImpl
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findByType(type: AlertType): Promise<StockAlert[]> {
+  async findByType(type: AlertTypeVO): Promise<StockAlert[]> {
     const rows = await this.prisma.stockAlert.findMany({
-      where: { type: type as StockAlertTypeEnum },
+      where: { type: type.getValue() as StockAlertTypeEnum },
       orderBy: { triggeredAt: "desc" },
     });
 
@@ -129,18 +121,22 @@ export class StockAlertRepositoryImpl
     return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
-  async findActiveAlertsByVariant(variantId: string): Promise<StockAlert[]> {
+  async findActiveAlertsByVariant(variantId: VariantId): Promise<StockAlert[]> {
     const rows = await this.prisma.stockAlert.findMany({
-      where: { variantId, resolvedAt: null },
+      where: { variantId: variantId.getValue(), resolvedAt: null },
       orderBy: { triggeredAt: "desc" },
     });
 
     return rows.map((r) => this.toEntity(r));
   }
 
-  async hasActiveAlert(variantId: string, type: AlertType): Promise<boolean> {
+  async hasActiveAlert(variantId: VariantId, type: AlertTypeVO): Promise<boolean> {
     const count = await this.prisma.stockAlert.count({
-      where: { variantId, type: type as StockAlertTypeEnum, resolvedAt: null },
+      where: {
+        variantId: variantId.getValue(),
+        type: type.getValue() as StockAlertTypeEnum,
+        resolvedAt: null,
+      },
     });
 
     return count > 0;

@@ -16,9 +16,16 @@ export type { ReviewProps, ReviewDTO, CreateProductReviewData } from "./product-
 export type { AppointmentProps, AppointmentDTO, CreateAppointmentData } from "./appointment.entity";
 export type { SubscriptionProps, SubscriptionDTO, CreateNewsletterSubscriptionData } from "./newsletter-subscription.entity";
 
-// Domain Events
-export { WishlistCreatedEvent, WishlistOwnershipTransferredEvent } from "./wishlist.entity";
-export { WishlistItemAddedEvent } from "./wishlist-item.entity";
+// Domain Events — `WishlistItemAddedEvent`/`Removed`/`Cleared` now live
+// on `wishlist.entity.ts` (the aggregate root emits them on the items
+// collection's behalf).
+export {
+  WishlistCreatedEvent,
+  WishlistOwnershipTransferredEvent,
+  WishlistItemAddedEvent,
+  WishlistItemRemovedEvent,
+  WishlistClearedEvent,
+} from "./wishlist.entity";
 export { ReminderCreatedEvent, ReminderStatusChangedEvent } from "./reminder.entity";
 export { NotificationCreatedEvent, NotificationStatusChangedEvent } from "./notification.entity";
 export { ReviewSubmittedEvent, ReviewStatusChangedEvent } from "./product-review.entity";

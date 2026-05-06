@@ -3,7 +3,7 @@ import {
   ICommandHandler,
   CommandResult,
 } from "../../../../packages/core/src/application/cqrs";
-import { PromoData } from "../../domain/value-objects/applied-promos.vo";
+import { AppliedPromoData } from "../../domain/value-objects/applied-promos.vo";
 import {
   CartManagementService,
   CartDto,
@@ -15,7 +15,7 @@ export interface AddToCartCommand extends ICommand {
   readonly guestToken?: string;
   readonly variantId: string;
   readonly quantity: number;
-  readonly appliedPromos?: PromoData[];
+  readonly appliedPromos?: AppliedPromoData[];
   readonly isGift?: boolean;
   readonly giftMessage?: string;
 }

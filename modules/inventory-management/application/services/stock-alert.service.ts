@@ -1,6 +1,7 @@
 import { StockAlert, StockAlertDTO } from "../../domain/entities/stock-alert.entity";
 import { AlertId } from "../../domain/value-objects/alert-id.vo";
-import { AlertType } from "../../domain/value-objects/alert-type.vo";
+import { AlertTypeVO } from "../../domain/value-objects/alert-type.vo";
+import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import { IStockAlertRepository } from "../../domain/repositories/stock-alert.repository";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import {
@@ -16,10 +17,13 @@ export class StockAlertService {
   ) {}
 
   async createStockAlert(variantId: string, type: string): Promise<StockAlertDTO> {
-    const alertType = type.toLowerCase() as AlertType;
+    // Wrap raw strings in VOs at the service boundary; the repo no longer
+    // accepts primitive types.
+    const alertType = AlertTypeVO.create(type);
+    const variantVo = VariantId.fromString(variantId);
 
     const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
-      variantId,
+      variantVo,
       alertType,
     );
 
@@ -64,8 +68,9 @@ export class StockAlertService {
 
   async checkAndCreateAlerts(variantId: string): Promise<StockAlertDTO[]> {
     const createdAlerts: StockAlertDTO[] = [];
+    const variantVo = VariantId.fromString(variantId);
 
-    const stocks = await this.stockRepository.findByVariant(variantId);
+    const stocks = await this.stockRepository.findByVariant(variantVo);
 
     if (stocks.length === 0) {
       return createdAlerts;
@@ -78,8 +83,8 @@ export class StockAlertService {
 
     if (totalAvailable === 0) {
       const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
-        variantId,
-        AlertType.OOS,
+        variantVo,
+        AlertTypeVO.OOS,
       );
 
       if (!hasActiveAlert) {
@@ -92,8 +97,8 @@ export class StockAlertService {
 
     if (hasLowStock && totalAvailable > 0) {
       const hasActiveAlert = await this.stockAlertRepository.hasActiveAlert(
-        variantId,
-        AlertType.LOW_STOCK,
+        variantVo,
+        AlertTypeVO.LOW_STOCK,
       );
 
       if (!hasActiveAlert) {
@@ -107,25 +112,28 @@ export class StockAlertService {
 
   async autoResolveAlerts(variantId: string): Promise<StockAlertDTO[]> {
     const resolvedAlerts: StockAlertDTO[] = [];
+    const variantVo = VariantId.fromString(variantId);
 
-    const activeAlerts = await this.stockAlertRepository.findActiveAlertsByVariant(variantId);
+    const activeAlerts = await this.stockAlertRepository.findActiveAlertsByVariant(variantVo);
 
     if (activeAlerts.length === 0) {
       return resolvedAlerts;
     }
 
-    const totalAvailable = await this.stockRepository.getTotalAvailableStock(variantId);
-    const stocks = await this.stockRepository.findByVariant(variantId);
+    const totalAvailable = await this.stockRepository.getTotalAvailableStock(variantVo);
+    const stocks = await this.stockRepository.findByVariant(variantVo);
     const hasLowStock = stocks.some((stock) => stock.stockLevel.isLowStock());
 
     for (const alert of activeAlerts) {
       let shouldResolve = false;
 
-      if (alert.type.getValue() === AlertType.OOS && totalAvailable > 0) {
+      // VO reference equality holds because Pattern D shares static instances —
+      // no need to re-import the underlying TS enum just to compare.
+      if (alert.type.equals(AlertTypeVO.OOS) && totalAvailable > 0) {
         shouldResolve = true;
       }
 
-      if (alert.type.getValue() === AlertType.LOW_STOCK && !hasLowStock) {
+      if (alert.type.equals(AlertTypeVO.LOW_STOCK) && !hasLowStock) {
         shouldResolve = true;
       }
 
@@ -155,7 +163,9 @@ export class StockAlertService {
   }
 
   async getAlertsByVariant(variantId: string): Promise<StockAlertDTO[]> {
-    const alerts = await this.stockAlertRepository.findByVariant(variantId);
+    const alerts = await this.stockAlertRepository.findByVariant(
+      VariantId.fromString(variantId),
+    );
     return alerts.map(StockAlert.toDTO);
   }
 

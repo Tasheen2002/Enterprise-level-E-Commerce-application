@@ -1,16 +1,24 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+  noContentResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { ReminderController } from "../controllers/reminder.controller";
 import {
   validateBody,
   validateParams,
   validateQuery,
+  toJsonSchema,
 } from "../validation/validator";
 import {
   reminderIdParamsSchema,
@@ -21,9 +29,16 @@ import {
   reminderResponseSchema,
 } from "../validation/reminder.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const reminderIdParamsJson = toJsonSchema(reminderIdParamsSchema);
+const userIdParamsJson = toJsonSchema(userIdParamsSchema);
+const variantIdParamsJson = toJsonSchema(variantIdParamsSchema);
+const paginationQueryJson = toJsonSchema(paginationQuerySchema);
+const createReminderBodyJson = toJsonSchema(createReminderSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function reminderRoutes(
@@ -41,27 +56,15 @@ export async function reminderRoutes(
     "/engagement/reminders/:reminderId",
     {
       preValidation: [validateParams(reminderIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get a specific reminder by ID",
         summary: "Get Reminder",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reminderId"],
-          properties: {
-            reminderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reminderIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: reminderResponseSchema,
-            },
-          },
+          200: successResponse(reminderResponseSchema),
         },
       },
     },
@@ -77,35 +80,16 @@ export async function reminderRoutes(
         validateParams(userIdParamsSchema),
         validateQuery(paginationQuerySchema),
       ],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Get all reminders for a specific user",
         summary: "Get User Reminders",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: userIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: reminderResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(reminderResponseSchema)),
         },
       },
     },
@@ -121,35 +105,16 @@ export async function reminderRoutes(
         validateParams(variantIdParamsSchema),
         validateQuery(paginationQuerySchema),
       ],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get all reminders for a specific product variant",
         summary: "Get Variant Reminders",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-          },
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: variantIdParamsJson,
+        querystring: paginationQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: { type: "array", items: reminderResponseSchema },
-              total: { type: "number" },
-            },
-          },
+          200: successResponse(paginatedResponse(reminderResponseSchema)),
         },
       },
     },
@@ -162,38 +127,15 @@ export async function reminderRoutes(
     "/engagement/reminders",
     {
       preValidation: [validateBody(createReminderSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Create a new product reminder",
         summary: "Create Reminder",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "type", "contact", "channel"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            type: {
-              type: "string",
-              enum: ["back_in_stock", "price_drop", "low_stock"],
-            },
-            contact: { type: "string", enum: ["email", "phone"] },
-            channel: {
-              type: "string",
-              enum: ["email", "sms", "push", "whatsapp"],
-            },
-            optInAt: { type: "string", format: "date-time" },
-          },
-        },
+        body: createReminderBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: reminderResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(reminderResponseSchema, 201),
         },
       },
     },
@@ -206,27 +148,15 @@ export async function reminderRoutes(
     "/engagement/reminders/:reminderId/unsubscribe",
     {
       preValidation: [validateParams(reminderIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Unsubscribe from a reminder",
         summary: "Unsubscribe Reminder",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reminderId"],
-          properties: {
-            reminderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reminderIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -239,27 +169,15 @@ export async function reminderRoutes(
     "/engagement/reminders/:reminderId/sent",
     {
       preValidation: [validateParams(reminderIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Mark reminder as sent",
         summary: "Mark Reminder As Sent",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reminderId"],
-          properties: {
-            reminderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reminderIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -272,21 +190,15 @@ export async function reminderRoutes(
     "/engagement/reminders/:reminderId",
     {
       preValidation: [validateParams(reminderIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         description: "Delete a reminder",
         summary: "Delete Reminder",
         tags: ["Engagement - Reminders"],
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["reminderId"],
-          properties: {
-            reminderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: reminderIdParamsJson,
         response: {
-          204: { description: "Reminder deleted successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },

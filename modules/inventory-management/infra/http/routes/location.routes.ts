@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   createRateLimiter,
@@ -7,7 +8,12 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { LocationController } from "../controllers/location.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   locationParamsSchema,
   listLocationsSchema,
@@ -15,6 +21,12 @@ import {
   updateLocationSchema,
   locationResponseSchema,
 } from "../validation/location.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const locationParamsJson = toJsonSchema(locationParamsSchema);
+const listLocationsQueryJson = toJsonSchema(listLocationsSchema);
+const createLocationBodyJson = toJsonSchema(createLocationSchema);
+const updateLocationBodyJson = toJsonSchema(updateLocationSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -36,39 +48,15 @@ export async function locationRoutes(
     "/locations",
     {
       preValidation: [validateQuery(listLocationsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all locations (Staff/Admin only)",
         tags: ["Locations"],
         summary: "List Locations",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            offset: { type: "integer", minimum: 0, default: 0 },
-            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
-          },
-        },
+        querystring: listLocationsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: locationResponseSchema },
-                  total: { type: "integer" },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                  hasMore: { type: "boolean" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(locationResponseSchema)),
         },
       },
     },
@@ -80,27 +68,15 @@ export async function locationRoutes(
     "/locations/:locationId",
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get location by ID (Staff/Admin only)",
         tags: ["Locations"],
         summary: "Get Location",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: { locationId: { type: "string", format: "uuid" } },
-          required: ["locationId"],
-        },
+        params: locationParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: locationResponseSchema,
-            },
-          },
+          200: successResponse(locationResponseSchema),
         },
       },
     },
@@ -111,41 +87,15 @@ export async function locationRoutes(
   fastify.post(
     "/locations",
     {
-      preValidation: [validateBody(createLocationSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createLocationSchema)],
       schema: {
         description: "Create a new location",
         tags: ["Locations"],
         summary: "Create Location",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["type", "name"],
-          properties: {
-            type: { type: "string", enum: ["warehouse", "store", "vendor"] },
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            address: {
-              type: "object",
-              properties: {
-                street: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                postalCode: { type: "string" },
-                country: { type: "string" },
-              },
-            },
-          },
-        },
+        body: createLocationBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: locationResponseSchema,
-            },
-          },
+          201: successResponse(locationResponseSchema, 201),
         },
       },
     },
@@ -156,44 +106,17 @@ export async function locationRoutes(
   fastify.patch(
     "/locations/:locationId",
     {
-      preValidation: [validateParams(locationParamsSchema), validateBody(updateLocationSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(locationParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(updateLocationSchema)],
       schema: {
         description: "Update location",
         tags: ["Locations"],
         summary: "Update Location",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["locationId"],
-          properties: { locationId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          properties: {
-            name: { type: "string", minLength: 1, maxLength: 255 },
-            address: {
-              type: "object",
-              properties: {
-                street: { type: "string" },
-                city: { type: "string" },
-                state: { type: "string" },
-                postalCode: { type: "string" },
-                country: { type: "string" },
-              },
-            },
-          },
-        },
+        params: locationParamsJson,
+        body: updateLocationBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: locationResponseSchema,
-            },
-          },
+          200: successResponse(locationResponseSchema),
         },
       },
     },
@@ -205,19 +128,15 @@ export async function locationRoutes(
     "/locations/:locationId",
     {
       preValidation: [validateParams(locationParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Delete location",
         tags: ["Locations"],
         summary: "Delete Location",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: { locationId: { type: "string", format: "uuid" } },
-          required: ["locationId"],
-        },
+        params: locationParamsJson,
         response: {
-          204: { description: "Location deleted successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },

@@ -1,4 +1,6 @@
 import { PrismaClient, CheckoutStatusEnum, Prisma } from "@prisma/client";
+import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
+import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { ICheckoutRepository } from "../../../domain/repositories/checkout.repository";
 import {
   Checkout,
@@ -9,8 +11,13 @@ import { CartId } from "../../../domain/value-objects/cart-id.vo";
 import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 
-export class CheckoutRepositoryImpl implements ICheckoutRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+export class CheckoutRepositoryImpl
+  extends PrismaRepository<Checkout>
+  implements ICheckoutRepository
+{
+  constructor(prisma: PrismaClient, eventBus?: IEventBus) {
+    super(prisma, eventBus);
+  }
 
   async save(checkout: Checkout): Promise<void> {
     const data = checkout.toSnapshot();
@@ -37,6 +44,8 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
         updatedAt: data.updatedAt,
       },
     });
+
+    await this.dispatchEvents(checkout);
   }
 
   async findById(checkoutId: CheckoutId): Promise<Checkout | null> {
@@ -113,40 +122,6 @@ export class CheckoutRepositoryImpl implements ICheckoutRepository {
     });
 
     return checkouts.map((c) => this.mapPrismaToEntity(c));
-  }
-
-  async markAsCompleted(
-    checkoutId: CheckoutId,
-    completedAt: Date,
-  ): Promise<void> {
-    await this.prisma.checkout.update({
-      where: { id: checkoutId.getValue() },
-      data: {
-        status: CheckoutStatusEnum.completed,
-        completedAt,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  async markAsExpired(checkoutId: CheckoutId): Promise<void> {
-    await this.prisma.checkout.update({
-      where: { id: checkoutId.getValue() },
-      data: {
-        status: CheckoutStatusEnum.expired,
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  async markAsCancelled(checkoutId: CheckoutId): Promise<void> {
-    await this.prisma.checkout.update({
-      where: { id: checkoutId.getValue() },
-      data: {
-        status: CheckoutStatusEnum.cancelled,
-        updatedAt: new Date(),
-      },
-    });
   }
 
   async cleanupExpiredCheckouts(): Promise<number> {

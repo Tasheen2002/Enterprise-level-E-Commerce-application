@@ -3,10 +3,14 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
+import {
+  successResponse,
+  actionSuccessResponse,
+} from "@/api/src/shared/http/response-schemas";
 import { NewsletterController } from "../controllers/newsletter.controller";
-import { validateBody, validateQuery } from "../validation/validator";
+import { validateBody, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   subscribeNewsletterSchema,
   unsubscribeNewsletterSchema,
@@ -15,9 +19,15 @@ import {
   newsletterSubscriptionResponseSchema,
 } from "../validation/newsletter.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const subscribeNewsletterBodyJson = toJsonSchema(subscribeNewsletterSchema);
+const unsubscribeNewsletterBodyJson = toJsonSchema(unsubscribeNewsletterSchema);
+const unsubscribeViaLinkQueryJson = toJsonSchema(unsubscribeViaLinkSchema);
+const getSubscriptionQueryJson = toJsonSchema(getSubscriptionQuerySchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function newsletterRoutes(
@@ -31,6 +41,8 @@ export async function newsletterRoutes(
   });
 
   // GET /engagement/newsletter/unsubscribe — Unsubscribe via link (public)
+  // Returns an HTML confirmation page directly — intentionally NOT using
+  // the JSON envelope helpers.
   fastify.get(
     "/engagement/newsletter/unsubscribe",
     {
@@ -39,13 +51,7 @@ export async function newsletterRoutes(
         description: "Unsubscribe from newsletter via link",
         summary: "Unsubscribe Via Link",
         tags: ["Engagement - Newsletter"],
-        querystring: {
-          type: "object",
-          required: ["email"],
-          properties: {
-            email: { type: "string", format: "email" },
-          },
-        },
+        querystring: unsubscribeViaLinkQueryJson,
         response: {
           200: {
             description: "HTML confirmation page",
@@ -66,21 +72,9 @@ export async function newsletterRoutes(
         description: "Get newsletter subscription by ID or email",
         summary: "Get Newsletter Subscription",
         tags: ["Engagement - Newsletter"],
-        querystring: {
-          type: "object",
-          properties: {
-            subscriptionId: { type: "string", format: "uuid" },
-            email: { type: "string", format: "email" },
-          },
-        },
+        querystring: getSubscriptionQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: newsletterSubscriptionResponseSchema,
-            },
-          },
+          200: successResponse(newsletterSubscriptionResponseSchema),
         },
       },
     },
@@ -96,23 +90,9 @@ export async function newsletterRoutes(
         description: "Subscribe to newsletter",
         summary: "Subscribe To Newsletter",
         tags: ["Engagement - Newsletter"],
-        body: {
-          type: "object",
-          required: ["email"],
-          properties: {
-            email: { type: "string", format: "email" },
-            source: { type: "string" },
-          },
-        },
+        body: subscribeNewsletterBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              data: newsletterSubscriptionResponseSchema,
-              message: { type: "string" },
-            },
-          },
+          201: successResponse(newsletterSubscriptionResponseSchema, 201),
         },
       },
     },
@@ -128,21 +108,9 @@ export async function newsletterRoutes(
         description: "Unsubscribe from newsletter",
         summary: "Unsubscribe From Newsletter",
         tags: ["Engagement - Newsletter"],
-        body: {
-          type: "object",
-          properties: {
-            subscriptionId: { type: "string", format: "uuid" },
-            email: { type: "string", format: "email" },
-          },
-        },
+        body: unsubscribeNewsletterBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              message: { type: "string" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },

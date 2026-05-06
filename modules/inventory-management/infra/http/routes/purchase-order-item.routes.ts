@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   createRateLimiter,
@@ -7,7 +8,11 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { PurchaseOrderItemController } from "../controllers/purchase-order-item.controller";
-import { validateBody, validateParams } from "../validation/validator";
+import { validateBody, validateParams, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   poParamsSchema,
   poItemParamsSchema,
@@ -15,6 +20,12 @@ import {
   updatePOItemSchema,
   purchaseOrderItemResponseSchema,
 } from "../validation/purchase-order.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const poParamsJson = toJsonSchema(poParamsSchema);
+const poItemParamsJson = toJsonSchema(poItemParamsSchema);
+const addPOItemBodyJson = toJsonSchema(addPOItemSchema);
+const updatePOItemBodyJson = toJsonSchema(updatePOItemSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -36,29 +47,15 @@ export async function purchaseOrderItemRoutes(
     "/purchase-orders/:poId/items",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all items for a purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Get PO Items",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            poId: { type: "string", format: "uuid" },
-          },
-          required: ["poId"],
-        },
+        params: poParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: purchaseOrderItemResponseSchema },
-            },
-          },
+          200: successResponse({ type: "array", items: purchaseOrderItemResponseSchema }),
         },
       },
     },
@@ -69,38 +66,17 @@ export async function purchaseOrderItemRoutes(
   fastify.post(
     "/purchase-orders/:poId/items",
     {
-      preValidation: [validateParams(poParamsSchema), validateBody(addPOItemSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(addPOItemSchema)],
       schema: {
         description: "Add item to purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Add PO Item",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            poId: { type: "string", format: "uuid" },
-          },
-          required: ["poId"],
-        },
-        body: {
-          type: "object",
-          required: ["variantId", "orderedQty"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            orderedQty: { type: "integer", minimum: 1 },
-          },
-        },
+        params: poParamsJson,
+        body: addPOItemBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: purchaseOrderItemResponseSchema,
-            },
-          },
+          201: successResponse(purchaseOrderItemResponseSchema, 201),
         },
       },
     },
@@ -111,38 +87,17 @@ export async function purchaseOrderItemRoutes(
   fastify.patch(
     "/purchase-orders/:poId/items/:variantId",
     {
-      preValidation: [validateParams(poItemParamsSchema), validateBody(updatePOItemSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preValidation: [validateParams(poItemParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOItemSchema)],
       schema: {
         description: "Update purchase order item (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Update PO Item",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            poId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-          },
-          required: ["poId", "variantId"],
-        },
-        body: {
-          type: "object",
-          required: ["orderedQty"],
-          properties: {
-            orderedQty: { type: "integer", minimum: 1 },
-          },
-        },
+        params: poItemParamsJson,
+        body: updatePOItemBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: purchaseOrderItemResponseSchema,
-            },
-          },
+          200: successResponse(purchaseOrderItemResponseSchema),
         },
       },
     },
@@ -154,22 +109,15 @@ export async function purchaseOrderItemRoutes(
     "/purchase-orders/:poId/items/:variantId",
     {
       preValidation: [validateParams(poItemParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Remove item from purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
         summary: "Remove PO Item",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            poId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-          },
-          required: ["poId", "variantId"],
-        },
+        params: poItemParamsJson,
         response: {
-          204: { description: "Item removed successfully", type: "null" },
+          204: noContentResponse,
         },
       },
     },

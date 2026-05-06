@@ -8,36 +8,59 @@ export enum ReservationStatus {
 }
 
 export class ReservationStatusVO {
-  private constructor(private readonly value: ReservationStatus) {}
+  // Pattern D: shared static instances per allowed value. Convenience
+  // factory methods below (`active()`/`cancelled()`/etc.) now return these
+  // shared instances rather than fresh objects — equality holds by reference.
+  static readonly ACTIVE = new ReservationStatusVO(ReservationStatus.ACTIVE);
+  static readonly CANCELLED = new ReservationStatusVO(ReservationStatus.CANCELLED);
+  static readonly EXPIRED = new ReservationStatusVO(ReservationStatus.EXPIRED);
+  static readonly FULFILLED = new ReservationStatusVO(ReservationStatus.FULFILLED);
 
-  static create(value: string): ReservationStatusVO {
-    const normalized = value.toLowerCase();
-    if (
-      !Object.values(ReservationStatus).includes(
-        normalized as ReservationStatus,
-      )
-    ) {
+  private static readonly ALL: ReadonlyArray<ReservationStatusVO> = [
+    ReservationStatusVO.ACTIVE,
+    ReservationStatusVO.CANCELLED,
+    ReservationStatusVO.EXPIRED,
+    ReservationStatusVO.FULFILLED,
+  ];
+
+  // Validation lives in the constructor so BOTH `create()` and `fromString()`
+  // validate. All factories route through `create()` to get shared-instance
+  // reference equality on success.
+  private constructor(private readonly value: ReservationStatus) {
+    if (!Object.values(ReservationStatus).includes(value)) {
       throw new DomainValidationError(
         `Invalid reservation status: ${value}. Must be one of: ${Object.values(ReservationStatus).join(", ")}`,
       );
     }
-    return new ReservationStatusVO(normalized as ReservationStatus);
   }
 
+  static create(value: string): ReservationStatusVO {
+    const normalized = value.toLowerCase();
+    return (
+      ReservationStatusVO.ALL.find((s) => s.value === normalized) ??
+      new ReservationStatusVO(normalized as ReservationStatus)
+    );
+  }
+
+  static fromString(value: string): ReservationStatusVO {
+    return ReservationStatusVO.create(value);
+  }
+
+  // Convenience factories — return the shared static instance.
   static active(): ReservationStatusVO {
-    return new ReservationStatusVO(ReservationStatus.ACTIVE);
+    return ReservationStatusVO.ACTIVE;
   }
 
   static cancelled(): ReservationStatusVO {
-    return new ReservationStatusVO(ReservationStatus.CANCELLED);
+    return ReservationStatusVO.CANCELLED;
   }
 
   static expired(): ReservationStatusVO {
-    return new ReservationStatusVO(ReservationStatus.EXPIRED);
+    return ReservationStatusVO.EXPIRED;
   }
 
   static fulfilled(): ReservationStatusVO {
-    return new ReservationStatusVO(ReservationStatus.FULFILLED);
+    return ReservationStatusVO.FULFILLED;
   }
 
   getValue(): ReservationStatus {

@@ -10,7 +10,7 @@ export class GetOverduePurchaseOrdersHandler implements IQueryHandler<
 > {
   constructor(private readonly poService: PurchaseOrderManagementService) {}
 
-  async handle(): Promise<PurchaseOrderResult[]> {
+  async handle(_query: GetOverduePurchaseOrdersQuery): Promise<PurchaseOrderResult[]> {
     return this.poService.getOverduePurchaseOrders();
   }
 }

@@ -3,12 +3,17 @@ export const DEFAULT_PAGE_SIZE = 20;
 export const MAX_PAGE_SIZE = 100;
 
 // ─── Stock ────────────────────────────────────────────────────────────────────
+// Bounds enforced in `StockLevel` constructor.
 export const STOCK_MIN_QUANTITY = 0;
 export const STOCK_MAX_QUANTITY = 1_000_000;
+
+
 export const STOCK_DEFAULT_LOW_STOCK_THRESHOLD = 10;
 export const STOCK_DEFAULT_SAFETY_STOCK = 5;
 
 // ─── Location ─────────────────────────────────────────────────────────────────
+// MIN is implicit in `Location.validateName` (rejects empty/whitespace-only
+// names via `trim().length === 0`). MAX enforced explicitly.
 export const LOCATION_NAME_MIN_LENGTH = 1;
 export const LOCATION_NAME_MAX_LENGTH = 255;
 
@@ -19,12 +24,12 @@ export const SUPPLIER_LEAD_TIME_MIN_DAYS = 0;
 export const SUPPLIER_LEAD_TIME_MAX_DAYS = 365;
 export const SUPPLIER_MAX_CONTACTS = 20;
 
-// ─── Purchase Order ───────────────────────────────────────────────────────────
+
 export const PO_ITEM_MIN_QTY = 1;
 export const PO_ITEM_MAX_QTY = 10_000;
 export const PO_MAX_ITEMS = 100;
 
-// ─── Pickup Reservation ───────────────────────────────────────────────────────
+
 export const RESERVATION_DEFAULT_EXPIRY_MINUTES = 30;
 export const RESERVATION_MIN_EXPIRY_MINUTES = 1;
 export const RESERVATION_MAX_EXPIRY_MINUTES = 1440; // 24 hours

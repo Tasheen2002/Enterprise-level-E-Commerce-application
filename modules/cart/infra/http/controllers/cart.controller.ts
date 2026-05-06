@@ -1,6 +1,5 @@
 import { FastifyReply } from "fastify";
-import { randomBytes } from "crypto";
-import { GUEST_TOKEN_BYTE_LENGTH } from "../../../domain/constants";
+import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 import {
   AddToCartHandler,
   UpdateCartItemHandler,
@@ -60,6 +59,22 @@ export class CartController {
     private readonly getCartStatisticsHandler: GetCartStatisticsHandler,
   ) {}
 
+  // ── Reads (queries) ────────────────────────────────────────────────────────
+
+  async generateGuestToken(
+    _request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
+    try {
+      const guestToken = GuestToken.create().getValue();
+      return ResponseHelper.ok(reply, "Guest token generated successfully", {
+        guestToken,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async getCart(
     request: AuthenticatedRequest<{ Params: CartIdParams }>,
     reply: FastifyReply,
@@ -74,7 +89,6 @@ export class CartController {
         userId,
         guestToken,
       });
-      if (result === null) return ResponseHelper.notFound(reply, "Cart not found");
       return ResponseHelper.ok(reply, "Cart retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -88,7 +102,6 @@ export class CartController {
     try {
       const { userId } = request.params;
       const result = await this.getActiveCartByUserHandler.handle({ userId });
-      if (result === null) return ResponseHelper.notFound(reply, "No active cart found for this user");
       return ResponseHelper.ok(reply, "Active cart retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -111,12 +124,42 @@ export class CartController {
       const result = await this.getActiveCartByGuestTokenHandler.handle({
         guestToken,
       });
-      if (result === null) return ResponseHelper.notFound(reply, "No active cart found for this guest");
       return ResponseHelper.ok(reply, "Active cart retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
+
+  async getCartSummary(
+    request: AuthenticatedRequest<{ Params: CartIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId } = request.params;
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+
+      const result = await this.getCartSummaryHandler.handle({
+        cartId,
+        userId,
+        guestToken,
+      });
+      return ResponseHelper.ok(reply, "Cart summary retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getCartStatistics(_request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const result = await this.getCartStatisticsHandler.handle({});
+      return ResponseHelper.ok(reply, "Cart statistics retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // ── Writes (commands) ──────────────────────────────────────────────────────
 
   async createUserCart(
     request: AuthenticatedRequest<{ Params: UserIdParams; Body: CreateUserCartBody }>,
@@ -227,194 +270,6 @@ export class CartController {
     }
   }
 
-  async removeFromCart(
-    request: AuthenticatedRequest<{ Params: CartItemParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId, variantId } = request.params;
-      const userId = request.user?.userId;
-      const guestToken = request.guestToken;
-
-      const result = await this.removeFromCartHandler.handle({
-        cartId,
-        variantId,
-        userId,
-        guestToken,
-      });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Item removed from cart successfully",
-        undefined,
-        204,
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async clearCart(
-    request: AuthenticatedRequest<{ Params: CartIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId } = request.params;
-      const userId = request.user?.userId;
-      const guestToken = request.guestToken;
-
-      const result = await this.clearCartHandler.handle({
-        cartId,
-        userId,
-        guestToken,
-      });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Cart cleared successfully",
-        undefined,
-        204,
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async transferGuestCartToUser(
-    request: AuthenticatedRequest<{ Params: GuestTokenParams; Body: TransferCartBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { guestToken } = request.params;
-      const { userId, mergeWithExisting } = request.body;
-
-      if (request.user?.userId && request.user.userId !== userId) {
-        return ResponseHelper.forbidden(
-          reply,
-          "You can only transfer carts to your own account",
-        );
-      }
-
-      const result = await this.transferCartHandler.handle({
-        guestToken,
-        userId,
-        mergeWithExisting,
-      });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Cart transferred successfully",
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCartSummary(
-    request: AuthenticatedRequest<{ Params: CartIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { cartId } = request.params;
-      const userId = request.user?.userId;
-      const guestToken = request.guestToken;
-
-      const result = await this.getCartSummaryHandler.handle({
-        cartId,
-        userId,
-        guestToken,
-      });
-      if (result === null) return ResponseHelper.notFound(reply, "Cart not found");
-      return ResponseHelper.ok(reply, "Cart summary retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getCartStatistics(_request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const result = await this.getCartStatisticsHandler.handle({});
-      return ResponseHelper.ok(reply, "Cart statistics retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async cleanupExpiredCarts(
-    _request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.cleanupExpiredCartsHandler.handle({});
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Successfully cleaned up expired cart(s)",
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async generateGuestToken(
-    _request: AuthenticatedRequest,
-    reply: FastifyReply,
-  ) {
-    try {
-      const guestToken = randomBytes(GUEST_TOKEN_BYTE_LENGTH).toString("hex");
-      return ResponseHelper.ok(reply, "Guest token generated successfully", {
-        guestToken,
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async clearUserCart(
-    request: AuthenticatedRequest<{ Params: UserIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { userId } = request.params;
-      const result = await this.clearUserCartHandler.handle({ userId });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Cart cleared successfully",
-        undefined,
-        204,
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async clearGuestCart(
-    request: AuthenticatedRequest<{ Params: GuestTokenParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      if (request.user?.userId) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Authenticated users cannot clear guest carts. Use the user cart endpoint instead.",
-        );
-      }
-
-      const { guestToken } = request.params;
-      const result = await this.clearGuestCartHandler.handle({ guestToken });
-      return ResponseHelper.fromCommand(
-        reply,
-        result,
-        "Cart cleared successfully",
-        undefined,
-        204,
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async updateCartEmail(
     request: AuthenticatedRequest<{ Params: CartIdParams; Body: UpdateCartEmailBody }>,
     reply: FastifyReply,
@@ -507,6 +362,150 @@ export class CartController {
         reply,
         result,
         "Cart addresses updated successfully",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async transferGuestCartToUser(
+    request: AuthenticatedRequest<{ Params: GuestTokenParams; Body: TransferCartBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { guestToken } = request.params;
+      const { userId, mergeWithExisting } = request.body;
+
+      if (request.user?.userId && request.user.userId !== userId) {
+        return ResponseHelper.forbidden(
+          reply,
+          "You can only transfer carts to your own account",
+        );
+      }
+
+      const result = await this.transferCartHandler.handle({
+        guestToken,
+        userId,
+        mergeWithExisting,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart transferred successfully",
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async removeFromCart(
+    request: AuthenticatedRequest<{ Params: CartItemParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId, variantId } = request.params;
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+
+      const result = await this.removeFromCartHandler.handle({
+        cartId,
+        variantId,
+        userId,
+        guestToken,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Item removed from cart successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async clearCart(
+    request: AuthenticatedRequest<{ Params: CartIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { cartId } = request.params;
+      const userId = request.user?.userId;
+      const guestToken = request.guestToken;
+
+      const result = await this.clearCartHandler.handle({
+        cartId,
+        userId,
+        guestToken,
+      });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart cleared successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async clearUserCart(
+    request: AuthenticatedRequest<{ Params: UserIdParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { userId } = request.params;
+      const result = await this.clearUserCartHandler.handle({ userId });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart cleared successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async clearGuestCart(
+    request: AuthenticatedRequest<{ Params: GuestTokenParams }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      if (request.user?.userId) {
+        return ResponseHelper.badRequest(
+          reply,
+          "Authenticated users cannot clear guest carts. Use the user cart endpoint instead.",
+        );
+      }
+
+      const { guestToken } = request.params;
+      const result = await this.clearGuestCartHandler.handle({ guestToken });
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Cart cleared successfully",
+        undefined,
+        204,
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async cleanupExpiredCarts(
+    _request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.cleanupExpiredCartsHandler.handle({});
+      return ResponseHelper.fromCommand(
+        reply,
+        result,
+        "Successfully cleaned up expired cart(s)",
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

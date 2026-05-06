@@ -7,30 +7,12 @@ export const CART_ITEM_MIN_QUANTITY = 1;
 export const CART_ITEM_MAX_QUANTITY = 999;
 
 // ─── Currency ─────────────────────────────────────────────────────────────────
-export const SUPPORTED_CURRENCIES = [
-  "USD",
-  "EUR",
-  "GBP",
-  "JPY",
-  "CAD",
-  "AUD",
-  "CHF",
-  "CNY",
-  "SEK",
-  "NZD",
-  "MXN",
-  "SGD",
-  "HKD",
-  "NOK",
-  "KRW",
-  "TRY",
-  "RUB",
-  "INR",
-  "BRL",
-  "ZAR",
-] as const;
-
-export const MAJOR_CURRENCIES = ["USD", "EUR", "GBP", "JPY", "CHF"] as const;
+// Re-export the canonical default so cart-internal callers stay stable
+// without importing through `packages/core` directly. The full
+// `SUPPORTED_CURRENCIES` / `CURRENCY_NAMES` / `CURRENCY_SYMBOLS` /
+// `CURRENCY_REGIONS` lists live in the shared kernel (consumed via the
+// shared `Currency` VO); cart no longer maintains its own copies.
+export { DEFAULT_CURRENCY } from "../../../../packages/core/src/domain/value-objects/currency.constants";
 
 // ─── Guest Token ──────────────────────────────────────────────────────────────
 export const GUEST_TOKEN_BYTE_LENGTH = 32;
@@ -44,18 +26,9 @@ export const RESERVATION_EXPIRING_SOON_THRESHOLD_MINUTES = 5;
 
 // ─── Checkout ─────────────────────────────────────────────────────────────────
 export const CHECKOUT_DEFAULT_EXPIRY_MINUTES = 15;
-export const CHECKOUT_VALID_STATUSES = [
-  "pending",
-  "completed",
-  "expired",
-  "cancelled",
-] as const;
 
 // ─── Cart Reservation (ShoppingCart) ──────────────────────────────────────────
 export const CART_RESERVATION_DEFAULT_EXTENSION_HOURS = 2;
-
-// ─── Default Currency ─────────────────────────────────────────────────────────
-export const DEFAULT_CURRENCY = "USD";
 
 // ─── Background Job Batching ──────────────────────────────────────────────────
 export const RESERVATION_CLEANUP_BATCH_SIZE = 100;

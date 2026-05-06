@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { ReminderTypeValue } from "../../../domain/value-objects/reminder-type.vo";
+import { ContactTypeValue } from "../../../domain/value-objects/contact-type.vo";
+import { ChannelTypeValue } from "../../../domain/value-objects/channel-type.vo";
+// Shared canonical pagination schema — single source of truth.
+export { paginationQuerySchema } from "./validator";
+export type { PaginationQuery } from "./validator";
 
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
@@ -14,21 +20,17 @@ export const variantIdParamsSchema = z.object({
   variantId: z.uuid(),
 });
 
-// ── Query Schemas ─────────────────────────────────────────────────────────────
-
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
-export const createReminderSchema = z.object({
-  type: z.string().min(1),
+// Enums derive from the domain VOs so the wire schema stays in sync with
+// the Pattern D value objects — adding a new reminder type only requires
+// editing the VO, not chasing string literals across schemas.
+export const createReminderSchema = z.object({ 
+  type: z.enum(ReminderTypeValue),
   variantId: z.uuid(),
-  contact: z.string().min(1),
-  channel: z.string().min(1),
-  optInAt: z.coerce.date().optional(),
+  contact: z.enum(ContactTypeValue),
+  channel: z.enum(ChannelTypeValue),
+   optInAt: z.coerce.date().optional(),
 });
 
 // ── JSON Schema for Swagger docs ─────────────────────────────────────────────
@@ -54,5 +56,4 @@ export const reminderResponseSchema = {
 export type ReminderIdParams = z.infer<typeof reminderIdParamsSchema>;
 export type UserIdParams = z.infer<typeof userIdParamsSchema>;
 export type VariantIdParams = z.infer<typeof variantIdParamsSchema>;
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type CreateReminderBody = z.infer<typeof createReminderSchema>;

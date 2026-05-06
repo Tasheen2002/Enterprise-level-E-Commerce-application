@@ -1,4 +1,8 @@
 import { DomainValidationError } from "../errors/inventory-management.errors";
+import {
+  STOCK_MIN_QUANTITY,
+  STOCK_MAX_QUANTITY,
+} from "../constants/inventory-management.constants";
 
 interface StockLevelProps {
   onHand: number;
@@ -10,9 +14,20 @@ interface StockLevelProps {
 export class StockLevel {
   private readonly props: StockLevelProps;
 
+  // Validation lives in the constructor so all factory paths validate.
+  // STOCK_MIN_QUANTITY / STOCK_MAX_QUANTITY were declared but never enforced
+  // before this change — a corrupt row could hydrate with negative or
+  // absurdly large quantities.
   private constructor(props: StockLevelProps) {
-    if (props.onHand < 0) {
-      throw new DomainValidationError("On-hand quantity cannot be negative");
+    if (props.onHand < STOCK_MIN_QUANTITY) {
+      throw new DomainValidationError(
+        `On-hand quantity cannot be less than ${STOCK_MIN_QUANTITY}`,
+      );
+    }
+    if (props.onHand > STOCK_MAX_QUANTITY) {
+      throw new DomainValidationError(
+        `On-hand quantity cannot exceed ${STOCK_MAX_QUANTITY}`,
+      );
     }
     if (props.reserved < 0) {
       throw new DomainValidationError("Reserved quantity cannot be negative");
@@ -43,6 +58,22 @@ export class StockLevel {
       lowStockThreshold: lowStockThreshold ?? null,
       safetyStock: safetyStock ?? null,
     });
+  }
+
+  // Raw factory for repository reconstitution. Persisted values are already
+  // canonical; the constructor still validates.
+  static fromPersistence(props: StockLevelProps): StockLevel {
+    return new StockLevel({ ...props });
+  }
+
+  // Pattern C: returns plain props. Useful for snapshot logging or
+  // serialisation; consumers must not mutate the returned object.
+  getValue(): StockLevelProps {
+    return { ...this.props };
+  }
+
+  toString(): string {
+    return `${this.props.onHand}/${this.props.reserved} (avail ${this.available})`;
   }
 
   get onHand(): number {

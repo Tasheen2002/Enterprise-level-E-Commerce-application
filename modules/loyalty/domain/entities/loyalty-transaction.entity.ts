@@ -2,7 +2,14 @@ import { AggregateRoot } from '../../../../packages/core/src/domain/aggregate-ro
 import { DomainEvent } from '../../../../packages/core/src/domain/events/domain-event';
 import { LoyaltyTransactionId } from '../value-objects/loyalty-transaction-id.vo';
 import { Points } from '../value-objects/points.vo';
-import { LoyaltyTransactionType, LoyaltyTransactionReason } from '../enums/loyalty.enums';
+import { LoyaltyTransactionReasonValue } from '../value-objects/loyalty-reason.vo';
+
+export enum LoyaltyTransactionType {
+  EARN = 'EARN',
+  REDEEM = 'REDEEM',
+  EXPIRE = 'EXPIRE',
+  ADJUST = 'ADJUST',
+}
 
 // ============================================================================
 // 1. Domain Events
@@ -39,7 +46,7 @@ export interface LoyaltyTransactionProps {
   accountId: string;
   type: LoyaltyTransactionType;
   points: Points;
-  reason: LoyaltyTransactionReason;
+  reason: LoyaltyTransactionReasonValue;
   description: string | null;
   referenceId: string | null;
   orderId: string | null;
@@ -102,7 +109,7 @@ export class LoyaltyTransaction extends AggregateRoot {
   get accountId(): string { return this.props.accountId; }
   get type(): LoyaltyTransactionType { return this.props.type; }
   get points(): Points { return this.props.points; }
-  get reason(): LoyaltyTransactionReason { return this.props.reason; }
+  get reason(): LoyaltyTransactionReasonValue { return this.props.reason; }
   get description(): string | null { return this.props.description; }
   get referenceId(): string | null { return this.props.referenceId; }
   get orderId(): string | null { return this.props.orderId; }

@@ -16,12 +16,7 @@ export class SupplierRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    supplierId: string;
-    name: string;
-    leadTimeDays: number | null;
-    contacts: unknown;
-  }): Supplier {
+  private toEntity(row: Prisma.SupplierGetPayload<object>): Supplier {
     const contacts: SupplierContact[] = Array.isArray(row.contacts)
       ? (row.contacts as Record<string, unknown>[]).map((c) => SupplierContact.create(c))
       : [];
@@ -44,12 +39,12 @@ export class SupplierRepositoryImpl
         supplierId: supplier.supplierId.getValue(),
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.getValue()) as Prisma.InputJsonValue,
+        contacts: supplier.contacts.map((c) => c.getValue()) as unknown as Prisma.InputJsonValue,
       },
       update: {
         name: supplier.name.getValue(),
         leadTimeDays: supplier.leadTimeDays,
-        contacts: supplier.contacts.map((c) => c.getValue()) as Prisma.InputJsonValue,
+        contacts: supplier.contacts.map((c) => c.getValue()) as unknown as Prisma.InputJsonValue,
       },
     });
 

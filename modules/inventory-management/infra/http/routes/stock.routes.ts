@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   createRateLimiter,
@@ -7,7 +8,11 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { StockController } from "../controllers/stock.controller";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   listStocksSchema,
   addStockSchema,
@@ -21,6 +26,17 @@ import {
   stockResponseSchema,
   stockStatsResponseSchema,
 } from "../validation/stock.schema";
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const stockParamsJson = toJsonSchema(stockParamsSchema);
+const variantParamsJson = toJsonSchema(variantParamsSchema);
+const listStocksQueryJson = toJsonSchema(listStocksSchema);
+const addStockBodyJson = toJsonSchema(addStockSchema);
+const adjustStockBodyJson = toJsonSchema(adjustStockSchema);
+const transferStockBodyJson = toJsonSchema(transferStockSchema);
+const reserveStockBodyJson = toJsonSchema(reserveStockSchema);
+const fulfillReservationBodyJson = toJsonSchema(fulfillReservationSchema);
+const setStockThresholdsBodyJson = toJsonSchema(setStockThresholdsSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -42,43 +58,15 @@ export async function stockRoutes(
     "/stocks",
     {
       preValidation: [validateQuery(listStocksSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List all stocks with pagination (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "List Stocks",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            limit: { type: "integer", minimum: 1, maximum: 100, default: 20 },
-            offset: { type: "integer", minimum: 0, default: 0 },
-            search: { type: "string" },
-            status: { type: "string", enum: ["low_stock", "out_of_stock", "in_stock"] },
-            locationId: { type: "string", format: "uuid" },
-            sortBy: { type: "string", enum: ["available", "onHand", "location", "product"], default: "product" },
-            sortOrder: { type: "string", enum: ["asc", "desc"], default: "asc" },
-          },
-        },
+        querystring: listStocksQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: stockResponseSchema },
-                  total: { type: "integer" },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                  hasMore: { type: "boolean" },
-                },
-              },
-            },
-          },
+          200: successResponse(paginatedResponse(stockResponseSchema)),
         },
       },
     },
@@ -89,22 +77,14 @@ export async function stockRoutes(
   fastify.get(
     "/stocks/stats",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get inventory statistics (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Stock Stats",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockStatsResponseSchema,
-            },
-          },
+          200: successResponse(stockStatsResponseSchema),
         },
       },
     },
@@ -115,22 +95,14 @@ export async function stockRoutes(
   fastify.get(
     "/stocks/low-stock",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all items with low stock levels (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Low Stock Items",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: stockResponseSchema },
-            },
-          },
+          200: successResponse({ type: "array", items: stockResponseSchema }),
         },
       },
     },
@@ -141,22 +113,14 @@ export async function stockRoutes(
   fastify.get(
     "/stocks/out-of-stock",
     {
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get all items that are out of stock (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Out Of Stock Items",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: stockResponseSchema },
-            },
-          },
+          200: successResponse({ type: "array", items: stockResponseSchema }),
         },
       },
     },
@@ -168,30 +132,18 @@ export async function stockRoutes(
     "/stocks/:variantId/total",
     {
       preValidation: [validateParams(variantParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get total available stock for a variant (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Total Available Stock",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: { variantId: { type: "string", format: "uuid" } },
-          required: ["variantId"],
-        },
+        params: variantParamsJson,
         response: {
-          200: {
+          200: successResponse({
             type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: { total: { type: "integer" } },
-              },
-            },
-          },
+            properties: { total: { type: "integer" } },
+          }),
         },
       },
     },
@@ -203,27 +155,15 @@ export async function stockRoutes(
     "/stocks/:variantId",
     {
       preValidation: [validateParams(variantParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get stock for a variant across all locations (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Stock By Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: { variantId: { type: "string", format: "uuid" } },
-          required: ["variantId"],
-        },
+        params: variantParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: stockResponseSchema },
-            },
-          },
+          200: successResponse({ type: "array", items: stockResponseSchema }),
         },
       },
     },
@@ -235,30 +175,15 @@ export async function stockRoutes(
     "/stocks/:variantId/:locationId",
     {
       preValidation: [validateParams(stockParamsSchema)],
-      preHandler: [RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get stock for a specific variant at a location (Staff/Admin only)",
         tags: ["Stock Management"],
         summary: "Get Stock",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-          },
-          required: ["variantId", "locationId"],
-        },
+        params: stockParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          200: successResponse(stockResponseSchema),
         },
       },
     },
@@ -269,33 +194,15 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/add",
     {
-      preValidation: [validateBody(addStockSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(addStockSchema)],
       schema: {
         description: "Add stock to inventory",
         tags: ["Stock Management"],
         summary: "Add Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity", "reason"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-            reason: { type: "string", enum: ["return", "adjustment", "po", "order", "damage", "theft"] },
-          },
-        },
+        body: addStockBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          201: successResponse(stockResponseSchema, 201),
         },
       },
     },
@@ -306,33 +213,15 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/adjust",
     {
-      preValidation: [validateBody(adjustStockSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(adjustStockSchema)],
       schema: {
         description: "Adjust stock quantity (positive or negative)",
         tags: ["Stock Management"],
         summary: "Adjust Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantityDelta", "reason"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantityDelta: { type: "integer" },
-            reason: { type: "string", enum: ["return", "adjustment", "po", "order", "damage", "theft"] },
-          },
-        },
+        body: adjustStockBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          200: successResponse(stockResponseSchema),
         },
       },
     },
@@ -343,39 +232,21 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/transfer",
     {
-      preValidation: [validateBody(transferStockSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(transferStockSchema)],
       schema: {
         description: "Transfer stock between locations",
         tags: ["Stock Management"],
         summary: "Transfer Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "fromLocationId", "toLocationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            fromLocationId: { type: "string", format: "uuid" },
-            toLocationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
+        body: transferStockBodyJson,
         response: {
-          200: {
+          200: successResponse({
             type: "object",
             properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  fromStock: stockResponseSchema,
-                  toStock: stockResponseSchema,
-                },
-              },
+              fromStock: stockResponseSchema,
+              toStock: stockResponseSchema,
             },
-          },
+          }),
         },
       },
     },
@@ -386,32 +257,15 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/reserve",
     {
-      preValidation: [validateBody(reserveStockSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(reserveStockSchema)],
       schema: {
         description: "Reserve stock for an order",
         tags: ["Stock Management"],
         summary: "Reserve Stock",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
+        body: reserveStockBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          200: successResponse(stockResponseSchema),
         },
       },
     },
@@ -422,32 +276,15 @@ export async function stockRoutes(
   fastify.post(
     "/stocks/fulfill",
     {
-      preValidation: [validateBody(fulfillReservationSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(fulfillReservationSchema)],
       schema: {
         description: "Fulfill stock reservation (removes from inventory)",
         tags: ["Stock Management"],
         summary: "Fulfill Reservation",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "locationId", "quantity"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-          },
-        },
+        body: fulfillReservationBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          200: successResponse(stockResponseSchema),
         },
       },
     },
@@ -458,38 +295,17 @@ export async function stockRoutes(
   fastify.patch(
     "/stocks/:variantId/:locationId/thresholds",
     {
-      preValidation: [validateParams(stockParamsSchema), validateBody(setStockThresholdsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preValidation: [validateParams(stockParamsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(setStockThresholdsSchema)],
       schema: {
         description: "Set low stock and safety stock thresholds",
         tags: ["Stock Management"],
         summary: "Set Stock Thresholds",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["variantId", "locationId"],
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            lowStockThreshold: { type: "integer", minimum: 0 },
-            safetyStock: { type: "integer", minimum: 0 },
-          },
-        },
+        params: stockParamsJson,
+        body: setStockThresholdsBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: stockResponseSchema,
-            },
-          },
+          200: successResponse(stockResponseSchema),
         },
       },
     },

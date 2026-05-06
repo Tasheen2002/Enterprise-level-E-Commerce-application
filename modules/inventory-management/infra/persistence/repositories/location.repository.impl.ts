@@ -4,10 +4,8 @@ import { IEventBus } from "../../../../../packages/core/src/domain/events/domain
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { Location } from "../../../domain/entities/location.entity";
 import { LocationId } from "../../../domain/value-objects/location-id.vo";
-import {
-  LocationType,
-  LocationTypeVO,
-} from "../../../domain/value-objects/location-type.vo";
+import { LocationName } from "../../../domain/value-objects/location-name.vo";
+import { LocationTypeVO } from "../../../domain/value-objects/location-type.vo";
 import { LocationAddress } from "../../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../../domain/repositories/location.repository";
 
@@ -19,17 +17,12 @@ export class LocationRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    id: string;
-    type: string;
-    name: string;
-    address: unknown;
-  }): Location {
+  private toEntity(row: Prisma.LocationGetPayload<object>): Location {
     const fallbackDate = new Date(0);
     return Location.fromPersistence({
       locationId: LocationId.fromString(row.id),
       type: LocationTypeVO.create(row.type),
-      name: row.name,
+      name: LocationName.fromString(row.name),
       address: row.address
         ? LocationAddress.create(row.address as Record<string, unknown>)
         : undefined,
@@ -44,13 +37,13 @@ export class LocationRepositoryImpl
       create: {
         id: location.locationId.getValue(),
         type: location.type.getValue() as LocationTypeEnum,
-        name: location.name,
+        name: location.name.getValue(),
         address: (location.address?.getValue() ??
           null) as Prisma.InputJsonValue,
       },
       update: {
         type: location.type.getValue() as LocationTypeEnum,
-        name: location.name,
+        name: location.name.getValue(),
         address: (location.address?.getValue() ??
           null) as Prisma.InputJsonValue,
       },
@@ -83,17 +76,17 @@ export class LocationRepositoryImpl
     });
   }
 
-  async findByType(type: LocationType): Promise<Location[]> {
+  async findByType(type: LocationTypeVO): Promise<Location[]> {
     const rows = await this.prisma.location.findMany({
-      where: { type: type as LocationTypeEnum },
+      where: { type: type.getValue() as LocationTypeEnum },
     });
 
     return rows.map((r) => this.toEntity(r));
   }
 
-  async findByName(name: string): Promise<Location | null> {
+  async findByName(name: LocationName): Promise<Location | null> {
     const row = await this.prisma.location.findFirst({
-      where: { name },
+      where: { name: name.getValue() },
     });
 
     return row ? this.toEntity(row) : null;
@@ -132,9 +125,9 @@ export class LocationRepositoryImpl
     return count > 0;
   }
 
-  async existsByName(name: string): Promise<boolean> {
+  async existsByName(name: LocationName): Promise<boolean> {
     const count = await this.prisma.location.count({
-      where: { name },
+      where: { name: name.getValue() },
     });
 
     return count > 0;

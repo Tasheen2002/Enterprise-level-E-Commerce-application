@@ -5,17 +5,22 @@ import {
   requireRole,
   RolePermissions,
 } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
   extractGuestToken,
   requireCartAuth,
 } from "../middleware/cart-auth.middleware";
-import { validateBody, validateParams } from "../validation/validator";
+import { validateBody, validateParams, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   cartIdParamsSchema,
   userIdParamsSchema,
@@ -30,14 +35,33 @@ import {
   updateCartShippingInfoSchema,
   updateCartAddressesSchema,
   cartResponseSchema,
+  cartSummaryEndpointResponseSchema,
   cartStatisticsResponseSchema,
   guestTokenResponseSchema,
   cleanupCartsResponseSchema,
 } from "../validation/cart.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const cartIdParamsJson = toJsonSchema(cartIdParamsSchema);
+const userIdParamsJson = toJsonSchema(userIdParamsSchema);
+const guestTokenParamsJson = toJsonSchema(guestTokenParamsSchema);
+const cartItemParamsJson = toJsonSchema(cartItemParamsSchema);
+const createUserCartBodyJson = toJsonSchema(createUserCartSchema);
+const createGuestCartBodyJson = toJsonSchema(createGuestCartSchema);
+const addToCartBodyJson = toJsonSchema(addToCartSchema);
+const updateCartItemBodyJson = toJsonSchema(updateCartItemSchema);
+const transferCartBodyJson = toJsonSchema(transferCartSchema);
+const updateCartEmailBodyJson = toJsonSchema(updateCartEmailSchema);
+const updateCartShippingInfoBodyJson = toJsonSchema(updateCartShippingInfoSchema);
+const updateCartAddressesBodyJson = toJsonSchema(updateCartAddressesSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  // Cart routes mix authenticated and `optionalAuth` traffic (guest carts).
+  // `userOrIpKeyGenerator` keys per-user when authenticated and per-IP when
+  // not — prevents the global `"anonymous"` bucket from being saturated by
+  // the entire guest population.
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function cartRoutes(
@@ -59,15 +83,7 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Generate Guest Token",
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: guestTokenResponseSchema,
-            },
-          },
+          200: successResponse(guestTokenResponseSchema),
         },
       },
     },
@@ -86,23 +102,9 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Get Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-          },
-        },
+        params: cartIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -121,23 +123,9 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Get Cart Summary",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-          },
-        },
+        params: cartIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartSummaryEndpointResponseSchema),
         },
       },
     },
@@ -150,29 +138,15 @@ export async function cartRoutes(
     "/users/:userId/cart",
     {
       preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Get active cart for a user",
         tags: ["Cart"],
         summary: "Get User Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
+        params: userIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -193,23 +167,9 @@ export async function cartRoutes(
         description: "Get active cart for a guest.",
         tags: ["Cart"],
         summary: "Get Guest Cart",
-        params: {
-          type: "object",
-          required: ["guestToken"],
-          properties: {
-            guestToken: { type: "string" },
-          },
-        },
+        params: guestTokenParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -225,36 +185,16 @@ export async function cartRoutes(
     "/users/:userId/cart",
     {
       preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [validateBody(createUserCartSchema), requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(createUserCartSchema)],
       schema: {
         description: "Create a new cart for a user",
         tags: ["Cart"],
         summary: "Create User Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            currency: { type: "string", default: "USD" },
-            reservationDurationMinutes: { type: "integer" },
-          },
-        },
+        params: userIdParamsJson,
+        body: createUserCartBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          201: successResponse(cartResponseSchema, 201),
         },
       },
     },
@@ -272,30 +212,10 @@ export async function cartRoutes(
         description: "Create a new cart for a guest.",
         tags: ["Cart"],
         summary: "Create Guest Cart",
-        params: {
-          type: "object",
-          required: ["guestToken"],
-          properties: {
-            guestToken: { type: "string" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            currency: { type: "string", default: "USD" },
-            reservationDurationMinutes: { type: "integer" },
-          },
-        },
+        params: guestTokenParamsJson,
+        body: createGuestCartBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          201: successResponse(cartResponseSchema, 201),
         },
       },
     },
@@ -313,27 +233,9 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Add to Cart",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["variantId", "quantity"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-            quantity: { type: "integer", minimum: 1 },
-            isGift: { type: "boolean", default: false },
-            giftMessage: { type: "string" },
-          },
-        },
+        body: addToCartBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -352,31 +254,10 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Update Cart Item",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId", "variantId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["quantity"],
-          properties: {
-            quantity: { type: "integer", minimum: 0 },
-          },
-        },
+        params: cartItemParamsJson,
+        body: updateCartItemBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -395,16 +276,9 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Remove from Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId", "variantId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-            variantId: { type: "string", format: "uuid" },
-          },
-        },
+        params: cartItemParamsJson,
         response: {
-          204: { type: "null", description: "No Content" },
+          204: noContentResponse,
         },
       },
     },
@@ -417,21 +291,15 @@ export async function cartRoutes(
     "/users/:userId/cart",
     {
       preValidation: [validateParams(userIdParamsSchema)],
-      preHandler: [requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
       schema: {
         description: "Clear all items from user cart",
         tags: ["Cart"],
         summary: "Clear User Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-          },
-        },
+        params: userIdParamsJson,
         response: {
-          204: { type: "null", description: "No Content" },
+          204: noContentResponse,
         },
       },
     },
@@ -449,15 +317,9 @@ export async function cartRoutes(
         description: "Clear all items from guest cart.",
         tags: ["Cart"],
         summary: "Clear Guest Cart",
-        params: {
-          type: "object",
-          required: ["guestToken"],
-          properties: {
-            guestToken: { type: "string" },
-          },
-        },
+        params: guestTokenParamsJson,
         response: {
-          204: { type: "null", description: "No Content" },
+          204: noContentResponse,
         },
       },
     },
@@ -476,31 +338,10 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Transfer Cart",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["guestToken"],
-          properties: {
-            guestToken: { type: "string" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["userId"],
-          properties: {
-            userId: { type: "string", format: "uuid" },
-            mergeWithExisting: { type: "boolean", default: false },
-          },
-        },
+        params: guestTokenParamsJson,
+        body: transferCartBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -515,22 +356,14 @@ export async function cartRoutes(
   fastify.get(
     "/admin/carts/statistics",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get cart statistics (admin only)",
         tags: ["Cart Admin"],
         summary: "Cart Statistics",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartStatisticsResponseSchema,
-            },
-          },
+          200: successResponse(cartStatisticsResponseSchema),
         },
       },
     },
@@ -542,22 +375,14 @@ export async function cartRoutes(
   fastify.post(
     "/admin/carts/cleanup",
     {
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Cleanup expired carts (admin only)",
         tags: ["Cart Admin"],
         summary: "Cleanup Expired Carts",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cleanupCartsResponseSchema,
-            },
-          },
+          200: successResponse(cleanupCartsResponseSchema),
         },
       },
     },
@@ -579,30 +404,10 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Update Cart Email",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["email"],
-          properties: {
-            email: { type: "string", format: "email" },
-          },
-        },
+        params: cartIdParamsJson,
+        body: updateCartEmailBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -621,31 +426,10 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Update Cart Shipping Info",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            shippingMethod: { type: "string" },
-            shippingOption: { type: "string" },
-            isGift: { type: "boolean" },
-          },
-        },
+        params: cartIdParamsJson,
+        body: updateCartShippingInfoBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },
@@ -667,47 +451,10 @@ export async function cartRoutes(
         tags: ["Cart"],
         summary: "Update Cart Addresses",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["cartId"],
-          properties: {
-            cartId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            shippingFirstName: { type: "string" },
-            shippingLastName: { type: "string" },
-            shippingAddress1: { type: "string" },
-            shippingAddress2: { type: "string" },
-            shippingCity: { type: "string" },
-            shippingProvince: { type: "string" },
-            shippingPostalCode: { type: "string" },
-            shippingCountryCode: { type: "string" },
-            shippingPhone: { type: "string" },
-            billingFirstName: { type: "string" },
-            billingLastName: { type: "string" },
-            billingAddress1: { type: "string" },
-            billingAddress2: { type: "string" },
-            billingCity: { type: "string" },
-            billingProvince: { type: "string" },
-            billingPostalCode: { type: "string" },
-            billingCountryCode: { type: "string" },
-            billingPhone: { type: "string" },
-            sameAddressForBilling: { type: "boolean" },
-          },
-        },
+        params: cartIdParamsJson,
+        body: updateCartAddressesBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: cartResponseSchema,
-            },
-          },
+          200: successResponse(cartResponseSchema),
         },
       },
     },

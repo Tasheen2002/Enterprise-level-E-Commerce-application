@@ -10,7 +10,7 @@ export class GetOutOfStockItemsHandler implements IQueryHandler<
 > {
   constructor(private readonly stockService: StockManagementService) {}
 
-  async handle(): Promise<StockResult[]> {
+  async handle(_query: GetOutOfStockItemsQuery): Promise<StockResult[]> {
     return this.stockService.getOutOfStockItems();
   }
 }

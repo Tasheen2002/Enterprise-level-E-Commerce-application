@@ -1,51 +1,59 @@
 import { DomainValidationError } from "../errors/engagement.errors";
-import { ReminderTypeEnum } from "../enums/engagement.enums";
 
+export enum ReminderTypeValue {
+  RESTOCK = "restock",
+  PRICE_DROP = "price_drop",
+}
+
+/** @deprecated Use `ReminderTypeValue`. */
+export const ReminderTypeEnum = ReminderTypeValue;
+/** @deprecated Use `ReminderTypeValue`. */
+export type ReminderTypeEnum = ReminderTypeValue;
+
+// Pattern D (Enum-Like VO).
 export class ReminderType {
-  private constructor(private readonly value: ReminderTypeEnum) {}
+  static readonly RESTOCK = new ReminderType(ReminderTypeValue.RESTOCK);
+  static readonly PRICE_DROP = new ReminderType(ReminderTypeValue.PRICE_DROP);
+
+  private static readonly ALL: ReadonlyArray<ReminderType> = [
+    ReminderType.RESTOCK,
+    ReminderType.PRICE_DROP,
+  ];
+
+  private constructor(private readonly value: ReminderTypeValue) {
+    if (!Object.values(ReminderTypeValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid reminder type: ${value}. Must be one of: ${Object.values(ReminderTypeValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): ReminderType {
-    return ReminderType.fromString(value);
+    let normalized = value.trim().toLowerCase();
+    // Support legacy alias "back_in_stock" → "restock".
+    if (normalized === "back_in_stock") {
+      normalized = ReminderTypeValue.RESTOCK;
+    }
+    return (
+      ReminderType.ALL.find((t) => t.value === normalized) ??
+      new ReminderType(normalized as ReminderTypeValue)
+    );
   }
 
   static fromString(value: string): ReminderType {
-    const normalized = value.toLowerCase().trim();
-
-    // Support legacy alias "back_in_stock" → restock
-    const mapped = normalized === "back_in_stock" ? ReminderTypeEnum.RESTOCK : normalized;
-
-    if (!Object.values(ReminderTypeEnum).includes(mapped as ReminderTypeEnum)) {
-      throw new DomainValidationError(`Invalid reminder type: ${value}`);
-    }
-
-    return new ReminderType(mapped as ReminderTypeEnum);
+    return ReminderType.create(value);
   }
 
-  static restock(): ReminderType {
-    return new ReminderType(ReminderTypeEnum.RESTOCK);
-  }
+  /** @deprecated Use `ReminderType.RESTOCK`. */
+  static restock(): ReminderType { return ReminderType.RESTOCK; }
+  /** @deprecated Use `ReminderType.PRICE_DROP`. */
+  static priceDrop(): ReminderType { return ReminderType.PRICE_DROP; }
 
-  static priceDrop(): ReminderType {
-    return new ReminderType(ReminderTypeEnum.PRICE_DROP);
-  }
+  getValue(): ReminderTypeValue { return this.value; }
 
-  getValue(): string {
-    return this.value;
-  }
+  isRestock(): boolean { return this.value === ReminderTypeValue.RESTOCK; }
+  isPriceDrop(): boolean { return this.value === ReminderTypeValue.PRICE_DROP; }
 
-  isRestock(): boolean {
-    return this.value === ReminderTypeEnum.RESTOCK;
-  }
-
-  isPriceDrop(): boolean {
-    return this.value === ReminderTypeEnum.PRICE_DROP;
-  }
-
-  equals(other: ReminderType): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
+  equals(other: ReminderType): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

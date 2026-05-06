@@ -1,6 +1,8 @@
 import { Stock, StockDTO } from "../../domain/entities/stock.entity";
 import { InventoryTransaction, InventoryTransactionDTO } from "../../domain/entities/inventory-transaction.entity";
 import { TransactionId } from "../../domain/value-objects/transaction-id.vo";
+import { LocationId } from "../../domain/value-objects/location-id.vo";
+import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import { IStockRepository } from "../../domain/repositories/stock.repository";
 import { IInventoryTransactionRepository } from "../../domain/repositories/inventory-transaction.repository";
 import {
@@ -21,8 +23,8 @@ export class StockManagementService {
     reason: string,
   ): Promise<StockDTO> {
     let stock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      locationId,
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
     );
 
     if (!stock) {
@@ -53,8 +55,8 @@ export class StockManagementService {
     referenceId?: string,
   ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      locationId,
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
     );
 
     if (!stock) {
@@ -88,9 +90,10 @@ export class StockManagementService {
     toLocationId: string,
     quantity: number,
   ): Promise<{ fromStock: StockDTO; toStock: StockDTO }> {
+    const variantVo = VariantId.fromString(variantId);
     const fromStock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      fromLocationId,
+      variantVo,
+      LocationId.fromString(fromLocationId),
     );
 
     if (!fromStock) {
@@ -110,8 +113,8 @@ export class StockManagementService {
     await this.transactionRepository.save(outboundTxn);
 
     let toStock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      toLocationId,
+      variantVo,
+      LocationId.fromString(toLocationId),
     );
 
     if (!toStock) {
@@ -140,8 +143,8 @@ export class StockManagementService {
     quantity: number,
   ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      locationId,
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
     );
 
     if (!stock) {
@@ -154,14 +157,38 @@ export class StockManagementService {
     return Stock.toDTO(stock);
   }
 
+  // Release a previously-reserved quantity back to available stock. The
+  // counterpart to `reserveStock` for cancellation flows. `unreserveStock`
+  // on the entity throws if the quantity exceeds the current `reserved`,
+  // so this is safe against double-release.
+  async releaseStock(
+    variantId: string,
+    locationId: string,
+    quantity: number,
+  ): Promise<StockDTO> {
+    const stock = await this.stockRepository.findByVariantAndLocation(
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
+    );
+
+    if (!stock) {
+      throw new StockNotFoundError(`${variantId} at ${locationId}`);
+    }
+
+    stock.unreserveStock(quantity);
+    await this.stockRepository.save(stock);
+
+    return Stock.toDTO(stock);
+  }
+
   async fulfillReservation(
     variantId: string,
     locationId: string,
     quantity: number,
   ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      locationId,
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
     );
 
     if (!stock) {
@@ -189,8 +216,8 @@ export class StockManagementService {
     safetyStock?: number,
   ): Promise<StockDTO> {
     const stock = await this.stockRepository.findByVariantAndLocation(
-      variantId,
-      locationId,
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
     );
 
     if (!stock) {
@@ -204,17 +231,20 @@ export class StockManagementService {
   }
 
   async getStock(variantId: string, locationId: string): Promise<StockDTO | null> {
-    const stock = await this.stockRepository.findByVariantAndLocation(variantId, locationId);
+    const stock = await this.stockRepository.findByVariantAndLocation(
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
+    );
     return stock ? Stock.toDTO(stock) : null;
   }
 
   async getStockByVariant(variantId: string): Promise<StockDTO[]> {
-    const stocks = await this.stockRepository.findByVariant(variantId);
+    const stocks = await this.stockRepository.findByVariant(VariantId.fromString(variantId));
     return stocks.map(Stock.toDTO);
   }
 
   async getTotalAvailableStock(variantId: string): Promise<number> {
-    return this.stockRepository.getTotalAvailableStock(variantId);
+    return this.stockRepository.getTotalAvailableStock(VariantId.fromString(variantId));
   }
 
   async getLowStockItems(): Promise<StockDTO[]> {
@@ -236,7 +266,15 @@ export class StockManagementService {
     sortBy?: "available" | "onHand" | "location" | "product";
     sortOrder?: "asc" | "desc";
   }): Promise<{ stocks: StockDTO[]; total: number }> {
-    const result = await this.stockRepository.findAll(options);
+    const result = await this.stockRepository.findAll({
+      limit: options?.limit,
+      offset: options?.offset,
+      search: options?.search,
+      status: options?.status,
+      sortBy: options?.sortBy,
+      sortOrder: options?.sortOrder,
+      locationId: options?.locationId ? LocationId.fromString(options.locationId) : undefined,
+    });
     return { stocks: result.items.map(Stock.toDTO), total: result.total };
   }
 
@@ -245,9 +283,14 @@ export class StockManagementService {
     locationId?: string,
     options?: { limit?: number; offset?: number },
   ): Promise<{ transactions: InventoryTransactionDTO[]; total: number }> {
+    const variantVo = VariantId.fromString(variantId);
     const result = locationId
-      ? await this.transactionRepository.findByVariantAndLocation(variantId, locationId, options)
-      : await this.transactionRepository.findByVariant(variantId, options);
+      ? await this.transactionRepository.findByVariantAndLocation(
+          variantVo,
+          LocationId.fromString(locationId),
+          options,
+        )
+      : await this.transactionRepository.findByVariant(variantVo, options);
     return {
       transactions: result.items.map(InventoryTransaction.toDTO),
       total: result.total,

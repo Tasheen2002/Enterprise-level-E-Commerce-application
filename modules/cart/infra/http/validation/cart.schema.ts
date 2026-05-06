@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { VALID_PROMO_TYPES } from "../../../domain/constants";
 
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
@@ -40,12 +41,7 @@ export const addToCartSchema = z.object({
       z.object({
         id: z.uuid(),
         code: z.string(),
-        type: z.enum([
-          "percentage",
-          "fixed_amount",
-          "free_shipping",
-          "buy_x_get_y",
-        ]),
+        type: z.enum(VALID_PROMO_TYPES),
         value: z.number(),
         description: z.string().optional(),
         appliedAt: z.iso.datetime().transform((v) => new Date(v)),
@@ -116,10 +112,158 @@ export type UpdateCartAddressesBody = z.infer<typeof updateCartAddressesSchema>;
 
 // ── JSON Schema for Swagger docs ──────────────────────────────────────────────
 
+// Mirrors `CartDto` / `CartItemDto` / `CartSummaryDto` from
+// `cart-management.service.ts`. Hand-written rather than Zod-derived because
+// the runtime DTO mixes domain + cross-module enrichment (product/variant/media)
+// and is not the same shape as any single Zod input schema.
+const appliedPromoResponseSchema = {
+  type: "object",
+  required: ["id", "code", "type", "value", "appliedAt"],
+  properties: {
+    id: { type: "string", format: "uuid" },
+    code: { type: "string" },
+    type: { type: "string", enum: VALID_PROMO_TYPES as unknown as string[] },
+    value: { type: "number" },
+    description: { type: "string" },
+    appliedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
+const cartItemResponseSchema = {
+  type: "object",
+  required: [
+    "id",
+    "variantId",
+    "quantity",
+    "unitPrice",
+    "subtotal",
+    "discountAmount",
+    "totalPrice",
+    "appliedPromos",
+    "isGift",
+    "hasPromosApplied",
+    "hasFreeShipping",
+  ],
+  properties: {
+    id: { type: "string", format: "uuid" },
+    variantId: { type: "string", format: "uuid" },
+    quantity: { type: "integer", minimum: 0 },
+    unitPrice: { type: "number" },
+    subtotal: { type: "number" },
+    discountAmount: { type: "number" },
+    totalPrice: { type: "number" },
+    appliedPromos: { type: "array", items: appliedPromoResponseSchema },
+    isGift: { type: "boolean" },
+    giftMessage: { type: "string" },
+    hasPromosApplied: { type: "boolean" },
+    hasFreeShipping: { type: "boolean" },
+    product: {
+      type: "object",
+      properties: {
+        productId: { type: "string", format: "uuid" },
+        title: { type: "string" },
+        slug: { type: "string" },
+        images: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              url: { type: "string" },
+              alt: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    variant: {
+      type: "object",
+      properties: {
+        size: { type: "string", nullable: true },
+        color: { type: "string", nullable: true },
+        sku: { type: "string" },
+      },
+    },
+  },
+} as const;
+
+const cartSummaryResponseSchema = {
+  type: "object",
+  required: [
+    "cartId",
+    "isUserCart",
+    "isGuestCart",
+    "currency",
+    "itemCount",
+    "uniqueItemCount",
+    "subtotal",
+    "totalDiscount",
+    "total",
+    "hasGiftItems",
+    "hasFreeShipping",
+    "isEmpty",
+    "isReservationExpired",
+    "updatedAt",
+  ],
+  properties: {
+    cartId: { type: "string", format: "uuid" },
+    isUserCart: { type: "boolean" },
+    isGuestCart: { type: "boolean" },
+    currency: { type: "string" },
+    itemCount: { type: "integer", minimum: 0 },
+    uniqueItemCount: { type: "integer", minimum: 0 },
+    subtotal: { type: "number" },
+    totalDiscount: { type: "number" },
+    total: { type: "number" },
+    shippingAmount: { type: "number" },
+    hasGiftItems: { type: "boolean" },
+    hasFreeShipping: { type: "boolean" },
+    isEmpty: { type: "boolean" },
+    isReservationExpired: { type: "boolean" },
+    reservationExpiresAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
 export const cartResponseSchema = {
   type: "object",
-  additionalProperties: true,
+  required: ["cartId", "currency", "items", "summary", "createdAt", "updatedAt"],
+  properties: {
+    cartId: { type: "string", format: "uuid" },
+    userId: { type: "string", format: "uuid" },
+    guestToken: { type: "string" },
+    currency: { type: "string" },
+    items: { type: "array", items: cartItemResponseSchema },
+    summary: cartSummaryResponseSchema,
+    reservationExpiresAt: { type: "string", format: "date-time" },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    email: { type: "string", format: "email" },
+    shippingMethod: { type: "string" },
+    shippingOption: { type: "string" },
+    isGift: { type: "boolean" },
+    shippingFirstName: { type: "string" },
+    shippingLastName: { type: "string" },
+    shippingAddress1: { type: "string" },
+    shippingAddress2: { type: "string" },
+    shippingCity: { type: "string" },
+    shippingProvince: { type: "string" },
+    shippingPostalCode: { type: "string" },
+    shippingCountryCode: { type: "string" },
+    shippingPhone: { type: "string" },
+    billingFirstName: { type: "string" },
+    billingLastName: { type: "string" },
+    billingAddress1: { type: "string" },
+    billingAddress2: { type: "string" },
+    billingCity: { type: "string" },
+    billingProvince: { type: "string" },
+    billingPostalCode: { type: "string" },
+    billingCountryCode: { type: "string" },
+    billingPhone: { type: "string" },
+    sameAddressForBilling: { type: "boolean" },
+  },
 } as const;
+
+export const cartSummaryEndpointResponseSchema = cartSummaryResponseSchema;
 
 export const guestTokenResponseSchema = {
   type: "object",

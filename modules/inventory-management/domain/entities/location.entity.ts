@@ -1,13 +1,15 @@
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { LocationId } from "../value-objects/location-id.vo";
+import { LocationName } from "../value-objects/location-name.vo";
 import { LocationTypeVO } from "../value-objects/location-type.vo";
-import { LocationAddress, LocationAddressProps } from "../value-objects/location-address.vo";
-import { EmptyFieldError } from "../errors";
+import { LocationAddress, LocationAddressData } from "../value-objects/location-address.vo";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
 export class LocationCreatedEvent extends DomainEvent {
+  // Domain events carry primitive fields only — the caller passes the VO's
+  // primitive value via `.getValue()`, never the VO instance itself.
   constructor(
     public readonly locationId: string,
     public readonly name: string,
@@ -45,7 +47,7 @@ export class LocationDeletedEvent extends DomainEvent {
 export interface LocationProps {
   locationId: LocationId;
   type: LocationTypeVO;
-  name: string;
+  name: LocationName;
   address?: LocationAddress;
   createdAt: Date;
   updatedAt: Date;
@@ -55,7 +57,7 @@ export interface LocationDTO {
   locationId: string;
   type: string;
   name: string;
-  address?: LocationAddressProps;
+  address?: LocationAddressData;
   createdAt: string;
   updatedAt: string;
 }
@@ -63,27 +65,25 @@ export interface LocationDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Location extends AggregateRoot {
+  // Name validation lives in `LocationName` VO — both `create()` and
+  // `fromPersistence()` paths route through `LocationName.create()` /
+  // `fromString()` whose private constructor validates. The entity no
+  // longer carries its own validateName helper.
   private constructor(private props: LocationProps) {
     super();
-  }
-
-  private static validateName(name: string): void {
-    if (!name || name.trim().length === 0) {
-      throw new EmptyFieldError('name');
-    }
   }
 
   static create(params: {
     type: string;
     name: string;
-    address?: LocationAddressProps;
+    address?: LocationAddressData;
   }): Location {
-    Location.validateName(params.name);
+    const name = LocationName.create(params.name);
     const now = new Date();
     const location = new Location({
       locationId: LocationId.create(),
       type: LocationTypeVO.create(params.type),
-      name: params.name,
+      name,
       address: params.address ? LocationAddress.create(params.address) : undefined,
       createdAt: now,
       updatedAt: now,
@@ -91,7 +91,7 @@ export class Location extends AggregateRoot {
     location.addDomainEvent(
       new LocationCreatedEvent(
         location.props.locationId.getValue(),
-        params.name,
+        name.getValue(),
       ),
     );
     return location;
@@ -105,15 +105,14 @@ export class Location extends AggregateRoot {
 
   get locationId(): LocationId { return this.props.locationId; }
   get type(): LocationTypeVO { return this.props.type; }
-  get name(): string { return this.props.name; }
+  get name(): LocationName { return this.props.name; }
   get address(): LocationAddress | undefined { return this.props.address; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
-  updateName(name: string): void {
-    Location.validateName(name);
+  updateName(name: LocationName): void {
     this.props.name = name;
     this.props.updatedAt = new Date();
     this.addDomainEvent(new LocationUpdatedEvent(this.props.locationId.getValue()));
@@ -126,6 +125,7 @@ export class Location extends AggregateRoot {
   }
 
   markDeleted(): void {
+    this.props.updatedAt = new Date();
     this.addDomainEvent(
       new LocationDeletedEvent(this.props.locationId.getValue()),
     );
@@ -141,7 +141,7 @@ export class Location extends AggregateRoot {
     return {
       locationId: entity.props.locationId.getValue(),
       type: entity.props.type.getValue(),
-      name: entity.props.name,
+      name: entity.props.name.getValue(),
       address: entity.props.address?.getValue(),
       createdAt: entity.props.createdAt.toISOString(),
       updatedAt: entity.props.updatedAt.toISOString(),

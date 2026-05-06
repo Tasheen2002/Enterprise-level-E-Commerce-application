@@ -1,5 +1,6 @@
 import { Appointment } from "../entities/appointment.entity";
 import { AppointmentId } from "../value-objects";
+import { AppointmentTypeValue } from "../value-objects/appointment-type.vo";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -11,7 +12,7 @@ import {
 export interface AppointmentFilters {
   userId?: string;
   locationId?: string;
-  type?: string;
+  type?: AppointmentTypeValue;
   startDate?: Date;
   endDate?: Date;
 }
@@ -35,7 +36,7 @@ export interface IAppointmentRepository {
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedResult<Appointment>>;
   findByType(
-    type: string,
+    type: AppointmentTypeValue,
     options?: AppointmentQueryOptions,
   ): Promise<PaginatedResult<Appointment>>;
   findAll(
@@ -71,7 +72,7 @@ export interface IAppointmentRepository {
   // Counts and statistics
   countByUserId(userId: string): Promise<number>;
   countByLocationId(locationId: string): Promise<number>;
-  countByType(type: string): Promise<number>;
+  countByType(type: AppointmentTypeValue): Promise<number>;
   count(filters?: AppointmentFilters): Promise<number>;
 
   // Existence checks

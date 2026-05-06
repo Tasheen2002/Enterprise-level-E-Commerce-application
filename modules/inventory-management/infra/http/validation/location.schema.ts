@@ -12,12 +12,17 @@ export const listLocationsSchema = z.object({
   type: z.enum(["warehouse", "store", "vendor"]).optional(),
 });
 
+// Field names mirror the `LocationAddress` domain VO so request/response
+// shapes match without per-controller remapping. Country expects ISO 3166-1
+// alpha-2 (e.g. "US", "GB") — the VO validates the format.
 const addressSchema = z.object({
-  street: z.string().optional(),
+  addressLine1: z.string().optional(),
+  addressLine2: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   postalCode: z.string().optional(),
   country: z.string().optional(),
+  phone: z.string().optional(),
 });
 
 export const createLocationSchema = z.object({

@@ -17,7 +17,7 @@ export const createPickupReservationSchema = z.object({
   variantId: z.uuid(),
   locationId: z.uuid(),
   qty: z.number().int().min(1),
-  expirationMinutes: z.number().int().min(1).max(1440).optional(),
+  expirationMinutes: z.number().int().min(1).max(1440).default(30),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

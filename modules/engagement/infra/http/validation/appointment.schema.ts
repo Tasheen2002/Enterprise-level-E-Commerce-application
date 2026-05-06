@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { AppointmentTypeValue } from "../../../domain/value-objects/appointment-type.vo";
+// Shared canonical pagination schema — single source of truth.
+export { paginationQuerySchema } from "./validator";
+export type { PaginationQuery } from "./validator";
 
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
@@ -14,18 +18,12 @@ export const locationIdParamsSchema = z.object({
   locationId: z.uuid(),
 });
 
-// ── Query Schemas ─────────────────────────────────────────────────────────────
-
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
 // ── Body Schemas ──────────────────────────────────────────────────────────────
 
+// Enum derives from the domain VO so the wire schema stays in sync.
 export const createAppointmentSchema = z.object({
   userId: z.uuid(),
-  type: z.string().min(1),
+  type: z.enum(AppointmentTypeValue),
   locationId: z.uuid().optional(),
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
@@ -67,6 +65,5 @@ export const appointmentResponseSchema = {
 export type AppointmentIdParams = z.infer<typeof appointmentIdParamsSchema>;
 export type UserIdParams = z.infer<typeof userIdParamsSchema>;
 export type LocationIdParams = z.infer<typeof locationIdParamsSchema>;
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type CreateAppointmentBody = z.infer<typeof createAppointmentSchema>;
 export type UpdateAppointmentBody = z.infer<typeof updateAppointmentSchema>;

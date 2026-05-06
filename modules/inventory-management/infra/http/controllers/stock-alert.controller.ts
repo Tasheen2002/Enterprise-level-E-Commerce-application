@@ -39,7 +39,7 @@ export class StockAlertController {
 
   async getActiveAlerts(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      const result = await this.getActiveAlertsHandler.handle();
+      const result = await this.getActiveAlertsHandler.handle({});
       return ResponseHelper.ok(reply, "Active alerts retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

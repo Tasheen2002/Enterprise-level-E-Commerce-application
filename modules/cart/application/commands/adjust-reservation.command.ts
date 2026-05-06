@@ -5,7 +5,7 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import {
   ReservationService,
-  ReservationDto,
+  ReservationDTO,
 } from "../services/reservation.service";
 
 export interface AdjustReservationCommand extends ICommand {
@@ -16,18 +16,18 @@ export interface AdjustReservationCommand extends ICommand {
 
 export class AdjustReservationHandler implements ICommandHandler<
   AdjustReservationCommand,
-  CommandResult<ReservationDto | undefined>
+  CommandResult<ReservationDTO | undefined>
 > {
   constructor(private readonly reservationService: ReservationService) {}
 
   async handle(
     command: AdjustReservationCommand,
-  ): Promise<CommandResult<ReservationDto | undefined>> {
+  ): Promise<CommandResult<ReservationDTO | undefined>> {
     const reservation = await this.reservationService.adjustReservation({
       cartId: command.cartId,
       variantId: command.variantId,
       newQuantity: command.newQuantity,
     });
-    return CommandResult.success<ReservationDto | undefined>(reservation ?? undefined);
+    return CommandResult.success<ReservationDTO | undefined>(reservation ?? undefined);
   }
 }

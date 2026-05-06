@@ -113,7 +113,7 @@ export class Notification extends AggregateRoot {
       ...params,
       id: NotificationId.create(),
       payload: params.payload || {},
-      status: params.scheduledAt ? NotificationStatus.scheduled() : NotificationStatus.pending(),
+      status: params.scheduledAt ? NotificationStatus.SCHEDULED : NotificationStatus.PENDING,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -147,7 +147,9 @@ export class Notification extends AggregateRoot {
     return this.props.templateId;
   }
   get payload(): Record<string, unknown> {
-    return this.props.payload;
+    // Return a shallow copy so external callers can't mutate the aggregate's
+    // internal payload state. Mutations must go through `updatePayload()`.
+    return { ...this.props.payload };
   }
   get status(): NotificationStatus {
     return this.props.status;
@@ -199,27 +201,27 @@ export class Notification extends AggregateRoot {
       throw new DomainValidationError("Scheduled time must be in the future");
     }
     this.props.scheduledAt = scheduledAt;
-    this.updateStatus(NotificationStatus.scheduled());
+    this.updateStatus(NotificationStatus.SCHEDULED);
   }
 
   markAsSending(): void {
-    this.updateStatus(NotificationStatus.sending());
+    this.updateStatus(NotificationStatus.SENDING);
   }
 
   markAsSent(): void {
     this.props.sentAt = new Date();
-    this.updateStatus(NotificationStatus.sent());
+    this.updateStatus(NotificationStatus.SENT);
   }
 
   markAsFailed(error: string): void {
-    this.updateStatus(NotificationStatus.failed(), error);
+    this.updateStatus(NotificationStatus.FAILED, error);
   }
 
   retry(): void {
     if (!this.props.status.isFailed()) {
       throw new NotificationRetryError();
     }
-    this.updateStatus(NotificationStatus.pending());
+    this.updateStatus(NotificationStatus.PENDING);
   }
 
   // Helpers
@@ -258,7 +260,7 @@ export class Notification extends AggregateRoot {
     return {
       id: entity.props.id.getValue(),
       type: entity.props.type.getValue(),
-      payload: entity.props.payload,
+      payload: { ...entity.props.payload },
       status: entity.props.status.getValue(),
       channel: entity.props.channel?.getValue(),
       templateId: entity.props.templateId,

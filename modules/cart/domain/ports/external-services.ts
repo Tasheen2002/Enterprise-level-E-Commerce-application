@@ -135,6 +135,35 @@ export interface PersistCheckoutOrderData {
   }>;
 }
 
+// Full Prisma `OrderItem` row shape — what `findExistingOrder` and
+// `persistCheckoutOrder` return. Mirrors the Prisma `OrderItem` model in
+// `order_management.order_items` (no createdAt/updatedAt on this model).
+export interface CheckoutOrderItemRow {
+  id: string;
+  orderId: string;
+  variantId: string;
+  qty: number;
+  productSnapshot: unknown;
+  isGift: boolean;
+  giftMessage: string | null;
+}
+
+// API-flattened shape — what `findOrderByCheckoutId` returns for the
+// "view order" endpoint. Different from the row shape because the consumer
+// reads denormalised fields out of `productSnapshot` (productId, price)
+// rather than the JSON blob itself.
+export interface CheckoutOrderItemView {
+  id: string;
+  productId: string;
+  variantId: string;
+  quantity: number;
+  price: number;
+}
+
+export type CheckoutOrderItem =
+  | CheckoutOrderItemRow
+  | CheckoutOrderItemView;
+
 export interface CheckoutOrderResult {
   orderId: string;
   orderNo: string;
@@ -144,7 +173,7 @@ export interface CheckoutOrderResult {
   currency: string;
   status: string;
   createdAt: Date;
-  items: any[];
+  items: CheckoutOrderItem[];
 }
 
 export interface PaymentIntentInfo {

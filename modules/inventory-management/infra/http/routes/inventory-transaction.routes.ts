@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   createRateLimiter,
@@ -7,7 +8,11 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { InventoryTransactionController } from "../controllers/inventory-transaction.controller";
-import { validateParams, validateQuery } from "../validation/validator";
+import { validateParams, validateQuery, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  paginatedResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   transactionParamsSchema,
   transactionVariantParamsSchema,
@@ -16,21 +21,16 @@ import {
   inventoryTransactionResponseSchema,
 } from "../validation/inventory-transaction.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const transactionParamsJson = toJsonSchema(transactionParamsSchema);
+const transactionVariantParamsJson = toJsonSchema(transactionVariantParamsSchema);
+const transactionsByVariantQueryJson = toJsonSchema(transactionsByVariantSchema);
+const listTransactionsQueryJson = toJsonSchema(listTransactionsSchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
-
-const paginatedTransactionsSchema = {
-  type: "object",
-  properties: {
-    items: { type: "array", items: inventoryTransactionResponseSchema },
-    total: { type: "integer" },
-    limit: { type: "integer" },
-    offset: { type: "integer" },
-    hasMore: { type: "boolean" },
-  },
-} as const;
 
 export async function inventoryTransactionRoutes(
   fastify: FastifyInstance,
@@ -47,37 +47,16 @@ export async function inventoryTransactionRoutes(
     "/transactions/variant/:variantId",
     {
       preValidation: [validateParams(transactionVariantParamsSchema), validateQuery(transactionsByVariantSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get inventory transactions for a variant",
         tags: ["Inventory Transactions"],
         summary: "Get Transactions By Variant",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-          },
-          required: ["variantId"],
-        },
-        querystring: {
-          type: "object",
-          properties: {
-            locationId: { type: "string", format: "uuid" },
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        params: transactionVariantParamsJson,
+        querystring: transactionsByVariantQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paginatedTransactionsSchema,
-            },
-          },
+          200: successResponse(paginatedResponse(inventoryTransactionResponseSchema)),
         },
       },
     },
@@ -89,29 +68,15 @@ export async function inventoryTransactionRoutes(
     "/transactions/:transactionId",
     {
       preValidation: [validateParams(transactionParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get a single inventory transaction by ID",
         tags: ["Inventory Transactions"],
         summary: "Get Transaction",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          properties: {
-            transactionId: { type: "string", format: "uuid" },
-          },
-          required: ["transactionId"],
-        },
+        params: transactionParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: inventoryTransactionResponseSchema,
-            },
-          },
+          200: successResponse(inventoryTransactionResponseSchema),
         },
       },
     },
@@ -123,31 +88,15 @@ export async function inventoryTransactionRoutes(
     "/transactions",
     {
       preValidation: [validateQuery(listTransactionsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all inventory transactions",
         tags: ["Inventory Transactions"],
         summary: "List Transactions",
         security: [{ bearerAuth: [] }],
-        querystring: {
-          type: "object",
-          properties: {
-            variantId: { type: "string", format: "uuid" },
-            locationId: { type: "string", format: "uuid" },
-            limit: { type: "integer", minimum: 1, maximum: 100 },
-            offset: { type: "integer", minimum: 0 },
-          },
-        },
+        querystring: listTransactionsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paginatedTransactionsSchema,
-            },
-          },
+          200: successResponse(paginatedResponse(inventoryTransactionResponseSchema)),
         },
       },
     },

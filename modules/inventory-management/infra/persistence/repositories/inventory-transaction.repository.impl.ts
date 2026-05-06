@@ -1,10 +1,12 @@
-import { PrismaClient, InvTxnReasonEnum } from "@prisma/client";
+import { Prisma, PrismaClient, InvTxnReasonEnum } from "@prisma/client";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+import { VariantId } from "../../../../product-catalog/domain/value-objects/variant-id.vo";
 import { InventoryTransaction } from "../../../domain/entities/inventory-transaction.entity";
 import { TransactionId } from "../../../domain/value-objects/transaction-id.vo";
 import { TransactionReasonVO } from "../../../domain/value-objects/transaction-reason.vo";
+import { LocationId } from "../../../domain/value-objects/location-id.vo";
 import {
   IInventoryTransactionRepository,
   InventoryTransactionPageOptions,
@@ -19,15 +21,9 @@ export class InventoryTransactionRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: {
-    invTxnId: string;
-    variantId: string;
-    locationId: string;
-    qtyDelta: number;
-    reason: string;
-    referenceId: string | null;
-    createdAt: Date;
-  }): InventoryTransaction {
+  private toEntity(
+    row: Prisma.InventoryTransactionGetPayload<object>,
+  ): InventoryTransaction {
     return InventoryTransaction.fromPersistence({
       invTxnId: TransactionId.fromString(row.invTxnId),
       variantId: row.variantId,
@@ -64,19 +60,20 @@ export class InventoryTransactionRepositoryImpl
   }
 
   async findByVariant(
-    variantId: string,
+    variantId: VariantId,
     options?: InventoryTransactionPageOptions,
   ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
+    const variantIdValue = variantId.getValue();
 
     const [rows, total] = await Promise.all([
       this.prisma.inventoryTransaction.findMany({
-        where: { variantId },
+        where: { variantId: variantIdValue },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      this.prisma.inventoryTransaction.count({ where: { variantId } }),
+      this.prisma.inventoryTransaction.count({ where: { variantId: variantIdValue } }),
     ]);
 
     const items = rows.map((r) => this.toEntity(r));
@@ -84,19 +81,20 @@ export class InventoryTransactionRepositoryImpl
   }
 
   async findByLocation(
-    locationId: string,
+    locationId: LocationId,
     options?: InventoryTransactionPageOptions,
   ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
+    const locationIdValue = locationId.getValue();
 
     const [rows, total] = await Promise.all([
       this.prisma.inventoryTransaction.findMany({
-        where: { locationId },
+        where: { locationId: locationIdValue },
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      this.prisma.inventoryTransaction.count({ where: { locationId } }),
+      this.prisma.inventoryTransaction.count({ where: { locationId: locationIdValue } }),
     ]);
 
     const items = rows.map((r) => this.toEntity(r));
@@ -104,20 +102,21 @@ export class InventoryTransactionRepositoryImpl
   }
 
   async findByVariantAndLocation(
-    variantId: string,
-    locationId: string,
+    variantId: VariantId,
+    locationId: LocationId,
     options?: InventoryTransactionPageOptions,
   ): Promise<PaginatedResult<InventoryTransaction>> {
     const { limit = 50, offset = 0 } = options || {};
+    const where = { variantId: variantId.getValue(), locationId: locationId.getValue() };
 
     const [rows, total] = await Promise.all([
       this.prisma.inventoryTransaction.findMany({
-        where: { variantId, locationId },
+        where,
         take: limit,
         skip: offset,
         orderBy: { createdAt: "desc" },
       }),
-      this.prisma.inventoryTransaction.count({ where: { variantId, locationId } }),
+      this.prisma.inventoryTransaction.count({ where }),
     ]);
 
     const items = rows.map((r) => this.toEntity(r));

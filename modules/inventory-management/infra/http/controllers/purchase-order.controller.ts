@@ -3,14 +3,10 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import {
   CreatePurchaseOrderHandler,
   CreatePurchaseOrderWithItemsHandler,
-  AddPOItemHandler,
-  UpdatePOItemHandler,
-  RemovePOItemHandler,
   UpdatePOStatusHandler,
   ReceivePOItemsHandler,
   DeletePurchaseOrderHandler,
   GetPurchaseOrderHandler,
-  GetPOItemsHandler,
   ListPurchaseOrdersHandler,
   GetOverduePurchaseOrdersHandler,
   GetPendingReceivalHandler,
@@ -19,34 +15,67 @@ import {
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   POParams,
-  POItemParams,
   ListPurchaseOrdersQuery,
   CreatePurchaseOrderBody,
   CreatePurchaseOrderWithItemsBody,
   UpdatePOStatusBody,
   UpdatePOEtaBody,
   ReceivePOItemsBody,
-  AddPOItemBody,
-  UpdatePOItemBody,
 } from "../validation/purchase-order.schema";
 
 export class PurchaseOrderController {
   constructor(
     private readonly createPurchaseOrderHandler: CreatePurchaseOrderHandler,
     private readonly createPurchaseOrderWithItemsHandler: CreatePurchaseOrderWithItemsHandler,
-    private readonly addPOItemHandler: AddPOItemHandler,
-    private readonly updatePOItemHandler: UpdatePOItemHandler,
-    private readonly removePOItemHandler: RemovePOItemHandler,
     private readonly updatePOStatusHandler: UpdatePOStatusHandler,
     private readonly receivePOItemsHandler: ReceivePOItemsHandler,
     private readonly deletePurchaseOrderHandler: DeletePurchaseOrderHandler,
     private readonly getPurchaseOrderHandler: GetPurchaseOrderHandler,
-    private readonly getPOItemsHandler: GetPOItemsHandler,
     private readonly listPurchaseOrdersHandler: ListPurchaseOrdersHandler,
     private readonly getOverduePurchaseOrdersHandler: GetOverduePurchaseOrdersHandler,
     private readonly getPendingReceivalHandler: GetPendingReceivalHandler,
     private readonly updatePOEtaHandler: UpdatePOEtaHandler,
   ) {}
+
+  // ── Reads (queries) ────────────────────────────────────────────────
+
+  async listPurchaseOrders(
+    request: AuthenticatedRequest<{ Querystring: ListPurchaseOrdersQuery }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { limit, offset, status, supplierId, sortBy, sortOrder } = request.query;
+      const result = await this.listPurchaseOrdersHandler.handle({
+        limit,
+        offset,
+        status,
+        supplierId,
+        sortBy,
+        sortOrder,
+      });
+      return ResponseHelper.ok(reply, "Purchase orders retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getOverduePurchaseOrders(_request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const result = await this.getOverduePurchaseOrdersHandler.handle({});
+      return ResponseHelper.ok(reply, "Overdue purchase orders retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async getPendingReceival(_request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const result = await this.getPendingReceivalHandler.handle({});
+      return ResponseHelper.ok(reply, "Pending receival purchase orders retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
 
   async getPurchaseOrder(
     request: AuthenticatedRequest<{ Params: POParams }>,
@@ -60,6 +89,8 @@ export class PurchaseOrderController {
       return ResponseHelper.error(reply, error);
     }
   }
+
+  // ── Writes (commands) ──────────────────────────────────────────────
 
   async createPurchaseOrder(
     request: AuthenticatedRequest<{ Body: CreatePurchaseOrderBody }>,
@@ -87,94 +118,6 @@ export class PurchaseOrderController {
     }
   }
 
-  async listPurchaseOrders(
-    request: AuthenticatedRequest<{ Querystring: ListPurchaseOrdersQuery }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { limit, offset, status, supplierId, sortBy, sortOrder } = request.query;
-      const result = await this.listPurchaseOrdersHandler.handle({
-        limit,
-        offset,
-        status,
-        supplierId,
-        sortBy,
-        sortOrder,
-      });
-      return ResponseHelper.ok(reply, "Purchase orders retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getPOItems(
-    request: AuthenticatedRequest<{ Params: POParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { poId } = request.params;
-      const result = await this.getPOItemsHandler.handle({ poId });
-      return ResponseHelper.ok(reply, "Purchase order items retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async addPOItem(
-    request: AuthenticatedRequest<{ Params: POParams; Body: AddPOItemBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { poId } = request.params;
-      const { variantId, orderedQty } = request.body;
-      const result = await this.addPOItemHandler.handle({ poId, variantId, orderedQty });
-      return ResponseHelper.fromCommand(reply, result, "Item added successfully", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updatePOItem(
-    request: AuthenticatedRequest<{ Params: POItemParams; Body: UpdatePOItemBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { poId, variantId } = request.params;
-      const { orderedQty } = request.body;
-      const result = await this.updatePOItemHandler.handle({ poId, variantId, orderedQty });
-      return ResponseHelper.fromCommand(reply, result, "Item updated successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async removePOItem(
-    request: AuthenticatedRequest<{ Params: POItemParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { poId, variantId } = request.params;
-      const result = await this.removePOItemHandler.handle({ poId, variantId });
-      return ResponseHelper.fromCommand(reply, result, "Item removed successfully", undefined, 204);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updatePOStatus(
-    request: AuthenticatedRequest<{ Params: POParams; Body: UpdatePOStatusBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { poId } = request.params;
-      const { status } = request.body;
-      const result = await this.updatePOStatusHandler.handle({ poId, status });
-      return ResponseHelper.fromCommand(reply, result, "Status updated successfully");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async receivePOItems(
     request: AuthenticatedRequest<{ Params: POParams; Body: ReceivePOItemsBody }>,
     reply: FastifyReply,
@@ -189,19 +132,15 @@ export class PurchaseOrderController {
     }
   }
 
-  async getOverduePurchaseOrders(_request: AuthenticatedRequest, reply: FastifyReply) {
+  async updatePOStatus(
+    request: AuthenticatedRequest<{ Params: POParams; Body: UpdatePOStatusBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const result = await this.getOverduePurchaseOrdersHandler.handle();
-      return ResponseHelper.ok(reply, "Overdue purchase orders retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getPendingReceival(_request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      const result = await this.getPendingReceivalHandler.handle();
-      return ResponseHelper.ok(reply, "Pending receival purchase orders retrieved", result);
+      const { poId } = request.params;
+      const { status } = request.body;
+      const result = await this.updatePOStatusHandler.handle({ poId, status });
+      return ResponseHelper.fromCommand(reply, result, "Status updated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

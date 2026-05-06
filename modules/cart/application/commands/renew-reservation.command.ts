@@ -1,19 +1,19 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { ReservationService, ReservationDto } from "../services/reservation.service";
+import { ReservationService, ReservationDTO } from "../services/reservation.service";
 
 export interface RenewReservationCommand extends ICommand {
   readonly reservationId: string;
   readonly durationMinutes?: number;
 }
 
-export class RenewReservationHandler implements ICommandHandler<RenewReservationCommand, CommandResult<ReservationDto>> {
+export class RenewReservationHandler implements ICommandHandler<RenewReservationCommand, CommandResult<ReservationDTO>> {
   constructor(private readonly reservationService: ReservationService) {}
 
-  async handle(command: RenewReservationCommand): Promise<CommandResult<ReservationDto>> {
+  async handle(command: RenewReservationCommand): Promise<CommandResult<ReservationDTO>> {
     const reservation = await this.reservationService.renewReservation({
       reservationId: command.reservationId,
       durationMinutes: command.durationMinutes,
     });
-    return CommandResult.success<ReservationDto>(reservation);
+    return CommandResult.success<ReservationDTO>(reservation);
   }
-}
+}

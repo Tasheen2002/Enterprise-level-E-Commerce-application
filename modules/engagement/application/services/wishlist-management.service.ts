@@ -18,8 +18,6 @@ import {
 import { WishlistId } from "../../domain/value-objects";
 import {
   WishlistNotFoundError,
-  WishlistItemNotFoundError,
-  WishlistItemAlreadyExistsError,
 } from "../../domain/errors/engagement.errors";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
 
@@ -43,7 +41,7 @@ export class WishlistManagementService {
   constructor(
     private readonly wishlistRepository: IWishlistRepository,
     private readonly wishlistItemRepository: IWishlistItemRepository,
-  ) {}
+  ) { }
 
   // ── Wishlist CRUD ────────────────────────────────────────────────────────────
 
@@ -147,7 +145,8 @@ export class WishlistManagementService {
   async deleteWishlist(wishlistId: string): Promise<void> {
     const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
     if (!wishlist) throw new WishlistNotFoundError(wishlistId);
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
+    // Items cascade-delete via the Prisma `onDelete: Cascade` foreign key
+    // when the parent row is removed; no explicit per-item deletion needed.
     await this.wishlistRepository.delete(wishlist.id);
   }
 
@@ -205,14 +204,19 @@ export class WishlistManagementService {
   }
 
   // ── Wishlist Item operations ─────────────────────────────────────────────────
+  // Mutations flow through the `Wishlist` aggregate (`addItem`,
+  // `removeItem`, `clearItems`) followed by `save(wishlist)`. The
+  // `IWishlistItemRepository` is reduced to read-only cross-aggregate
+  // queries (`findByVariantId`, `countByVariantId`).
 
   async addToWishlist(
     wishlistId: string,
     variantId: string,
     context?: { userId?: string; guestToken?: string },
   ): Promise<WishlistItemDTO> {
-    const wishlistIdVO = WishlistId.fromString(wishlistId);
-    const wishlist = await this.wishlistRepository.findById(wishlistIdVO);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
     if (!wishlist) throw new WishlistNotFoundError(wishlistId);
 
     if (context) {
@@ -224,60 +228,78 @@ export class WishlistManagementService {
       }
     }
 
-    const alreadyExists = await this.wishlistItemRepository.isVariantInWishlist(
-      wishlistId,
-      variantId,
-    );
-    if (alreadyExists) throw new WishlistItemAlreadyExistsError(variantId);
-
-    const item = WishlistItem.create({ wishlistId: wishlistIdVO, variantId });
-    await this.wishlistItemRepository.save(item);
+    // Aggregate enforces no-duplicate-variant invariant; throws
+    // `WishlistItemAlreadyExistsError` if the variant is already there.
+    const item = wishlist.addItem(variantId);
+    await this.wishlistRepository.save(wishlist);
     return WishlistItem.toDTO(item);
   }
 
   async removeFromWishlist(wishlistId: string, variantId: string): Promise<void> {
-    const exists = await this.wishlistItemRepository.isVariantInWishlist(wishlistId, variantId);
-    if (!exists) throw new WishlistItemNotFoundError(`${wishlistId}/${variantId}`);
-    await this.wishlistItemRepository.deleteByWishlistIdAndVariantId(wishlistId, variantId);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    // Aggregate throws `WishlistItemNotFoundError` if absent.
+    wishlist.removeItem(variantId);
+    await this.wishlistRepository.save(wishlist);
   }
 
   async getWishlistItems(
     wishlistId: string,
-    options?: WishlistItemQueryOptions,
+    _options?: WishlistItemQueryOptions,
   ): Promise<PaginatedWishlistItemResult> {
-    const result = await this.wishlistItemRepository.findByWishlistId(wishlistId, options);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    const items = wishlist.items.map(WishlistItem.toDTO);
     return {
-      items: result.items.map(WishlistItem.toDTO),
-      total: result.total,
-      limit: result.limit,
-      offset: result.offset,
-      hasMore: result.hasMore,
+      items,
+      total: items.length,
+      limit: items.length,
+      offset: 0,
+      hasMore: false,
     };
   }
 
   async countWishlistItems(wishlistId: string): Promise<number> {
-    return this.wishlistItemRepository.countByWishlistId(wishlistId);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    return wishlist.itemCount();
   }
 
   async isInWishlist(wishlistId: string, variantId: string): Promise<boolean> {
-    return this.wishlistItemRepository.isVariantInWishlist(wishlistId, variantId);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
+    if (!wishlist) return false;
+    return wishlist.hasItem(variantId);
   }
 
   async clearWishlist(wishlistId: string): Promise<void> {
-    const exists = await this.wishlistRepository.exists(WishlistId.fromString(wishlistId));
-    if (!exists) throw new WishlistNotFoundError(wishlistId);
-    await this.wishlistItemRepository.deleteByWishlistId(wishlistId);
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
+    );
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    wishlist.clearItems();
+    await this.wishlistRepository.save(wishlist);
   }
 
   async addManyToWishlist(wishlistId: string, variantIds: string[]): Promise<void> {
-    const wishlistIdVO = WishlistId.fromString(wishlistId);
-    const exists = await this.wishlistRepository.exists(wishlistIdVO);
-    if (!exists) throw new WishlistNotFoundError(wishlistId);
-
-    const items = variantIds.map((variantId) =>
-      WishlistItem.create({ wishlistId: wishlistIdVO, variantId }),
+    const wishlist = await this.wishlistRepository.findById(
+      WishlistId.fromString(wishlistId),
     );
-    await this.wishlistItemRepository.saveMany(items);
+    if (!wishlist) throw new WishlistNotFoundError(wishlistId);
+    for (const variantId of variantIds) {
+      // Skip duplicates rather than throwing — bulk-add semantics.
+      if (!wishlist.hasItem(variantId)) {
+        wishlist.addItem(variantId);
+      }
+    }
+    await this.wishlistRepository.save(wishlist);
   }
 
 

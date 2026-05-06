@@ -1,5 +1,9 @@
 import { PurchaseOrderId } from "../value-objects/purchase-order-id.vo";
 import { DomainValidationError, InvalidOperationError } from "../errors";
+import {
+  PO_ITEM_MIN_QTY,
+  PO_ITEM_MAX_QTY,
+} from "../constants/inventory-management.constants";
 
 // ── Props & DTO ────────────────────────────────────────────────────────
 
@@ -23,11 +27,23 @@ export interface PurchaseOrderItemDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class PurchaseOrderItem {
-  private constructor(private props: PurchaseOrderItemProps) {}
+  // Validation lives in the constructor so BOTH `create()` and
+  // `fromPersistence()` validate. Previously `validateQtys` ran only from
+  // `create()`, meaning an out-of-bounds DB row would hydrate silently.
+  private constructor(private props: PurchaseOrderItemProps) {
+    PurchaseOrderItem.validateQtys(props.orderedQty, props.receivedQty);
+  }
 
   private static validateQtys(orderedQty: number, receivedQty: number): void {
-    if (orderedQty <= 0) {
-      throw new DomainValidationError("Ordered quantity must be greater than zero");
+    if (orderedQty < PO_ITEM_MIN_QTY) {
+      throw new DomainValidationError(
+        `Ordered quantity must be at least ${PO_ITEM_MIN_QTY}`,
+      );
+    }
+    if (orderedQty > PO_ITEM_MAX_QTY) {
+      throw new DomainValidationError(
+        `Ordered quantity cannot exceed ${PO_ITEM_MAX_QTY}`,
+      );
     }
     if (receivedQty < 0) {
       throw new DomainValidationError("Received quantity cannot be negative");
@@ -92,8 +108,15 @@ export class PurchaseOrderItem {
   }
 
   updateOrderedQty(orderedQty: number): void {
-    if (orderedQty <= 0) {
-      throw new DomainValidationError("Ordered quantity must be greater than zero");
+    if (orderedQty < PO_ITEM_MIN_QTY) {
+      throw new DomainValidationError(
+        `Ordered quantity must be at least ${PO_ITEM_MIN_QTY}`,
+      );
+    }
+    if (orderedQty > PO_ITEM_MAX_QTY) {
+      throw new DomainValidationError(
+        `Ordered quantity cannot exceed ${PO_ITEM_MAX_QTY}`,
+      );
     }
     if (orderedQty < this.props.receivedQty) {
       throw new InvalidOperationError("Cannot reduce ordered quantity below already received quantity");
