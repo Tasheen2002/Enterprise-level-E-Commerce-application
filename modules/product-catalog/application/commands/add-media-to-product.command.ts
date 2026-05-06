@@ -6,6 +6,8 @@ export interface AddMediaToProductCommand extends ICommand {
   readonly assetId: string;
   readonly position?: number;
   readonly isCover?: boolean;
+  readonly alt?: string | null;
+  readonly caption?: string | null;
 }
 
 export class AddMediaToProductHandler implements ICommandHandler<AddMediaToProductCommand, CommandResult<{ productMediaId: string }>> {
@@ -17,6 +19,8 @@ export class AddMediaToProductHandler implements ICommandHandler<AddMediaToProdu
       command.assetId,
       command.position,
       command.isCover,
+      command.alt,
+      command.caption,
     );
     return CommandResult.success({ productMediaId });
   }
