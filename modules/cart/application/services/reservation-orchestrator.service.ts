@@ -4,11 +4,7 @@ import { CartId } from "../../domain/value-objects/cart-id.vo";
 import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import { InsufficientInventoryError } from "../../domain/errors/cart.errors";
 
-// Orchestrates the inventory-reservation flow: read availability, create the
-// `Reservation` aggregate, persist it. Previously this lived on
-// `IReservationRepository.reserveInventory`, which made the repo the
-// orchestration owner — a layer violation. The repo now only persists; this
-// service composes the read/write steps that span the aggregate boundary.
+
 export class ReservationOrchestrator {
   constructor(
     private readonly reservationRepository: IReservationRepository,

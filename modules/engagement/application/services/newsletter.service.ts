@@ -9,7 +9,6 @@ import {
 } from "../../domain/entities/newsletter-subscription.entity";
 import {
   SubscriptionId,
-  SubscriptionStatus,
 } from "../../domain/value-objects";
 import { SubscriptionStatusValue } from "../../domain/value-objects/subscription-status.vo";
 import {

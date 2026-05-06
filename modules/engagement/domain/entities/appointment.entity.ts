@@ -218,11 +218,7 @@ export class Appointment extends AggregateRoot {
     );
   }
 
-  // Marks the appointment as cancelled by emitting the cancellation event,
-  // touching `updatedAt`, and letting the caller persist + delete (the
-  // service deletes the row after `save` so subscribers see the event).
-  // We don't track a `cancelled` status field — cancellation is terminal
-  // and represented by the absence of the row plus the emitted event.
+
   cancel(): void {
     this.props.updatedAt = new Date();
     this.addDomainEvent(
