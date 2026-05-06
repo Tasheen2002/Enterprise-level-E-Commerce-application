@@ -6,6 +6,9 @@ import {
   PreorderQueryOptions,
 } from "../../../domain/repositories/preorder.repository";
 import { Preorder } from "../../../domain/entities/preorder.entity";
+import { OrderItemId } from "../../../domain/value-objects/order-item-id.vo";
+
+type PreorderRow = Prisma.PreorderGetPayload<Record<string, never>>;
 
 export class PreorderRepositoryImpl
   extends PrismaRepository<Preorder>
@@ -15,193 +18,137 @@ export class PreorderRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: Prisma.PreorderGetPayload<Record<string, never>>): Preorder {
+  // ─── Persistence mapping ──────────────────────────────────────────────────
+
+  private toEntity(row: PreorderRow): Preorder {
     return Preorder.fromPersistence({
-      orderItemId: row.orderItemId,
+      orderItemId: OrderItemId.fromString(row.orderItemId),
       releaseDate: row.releaseDate ?? undefined,
       notifiedAt: row.notifiedAt ?? undefined,
-      createdAt: new Date(0),
-      updatedAt: new Date(0),
     });
   }
 
+  // ─── Writes ───────────────────────────────────────────────────────────────
+
   async save(preorder: Preorder): Promise<void> {
+    const orderItemId = preorder.orderItemId.getValue();
     const data = {
       releaseDate: preorder.releaseDate ?? null,
       notifiedAt: preorder.notifiedAt ?? null,
     };
     await this.prisma.preorder.upsert({
-      where: { orderItemId: preorder.orderItemId },
-      create: { orderItemId: preorder.orderItemId, ...data },
+      where: { orderItemId },
+      create: { orderItemId, ...data },
       update: data,
     });
 
     await this.dispatchEvents(preorder);
   }
 
-  async delete(orderItemId: string): Promise<void> {
+  async delete(orderItemId: OrderItemId): Promise<void> {
     await this.prisma.preorder.delete({
-      where: { orderItemId },
+      where: { orderItemId: orderItemId.getValue() },
     });
   }
 
-  async findByOrderItemId(orderItemId: string): Promise<Preorder | null> {
-    const preorder = await this.prisma.preorder.findUnique({
-      where: { orderItemId },
+  // ─── Reads ────────────────────────────────────────────────────────────────
+
+  async findByOrderItemId(orderItemId: OrderItemId): Promise<Preorder | null> {
+    const row = await this.prisma.preorder.findUnique({
+      where: { orderItemId: orderItemId.getValue() },
     });
-
-    if (!preorder) {
-      return null;
-    }
-
-    return this.toEntity(preorder);
+    return row ? this.toEntity(row) : null;
   }
 
   async findAll(options?: PreorderQueryOptions): Promise<Preorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "releaseDate",
-      sortOrder = "asc",
-    } = options || {};
-
-    const preorders = await this.prisma.preorder.findMany({
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return preorders.map((preorder) => this.toEntity(preorder));
+    return this.findMany({}, options);
   }
 
   async findNotified(options?: PreorderQueryOptions): Promise<Preorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "notifiedAt",
-      sortOrder = "desc",
-    } = options || {};
-
-    const preorders = await this.prisma.preorder.findMany({
-      where: {
-        notifiedAt: { not: null },
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return preorders.map((preorder) => this.toEntity(preorder));
+    return this.findMany(
+      { notifiedAt: { not: null } },
+      options,
+      "notifiedAt",
+      "desc",
+    );
   }
 
   async findUnnotified(options?: PreorderQueryOptions): Promise<Preorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "releaseDate",
-      sortOrder = "asc",
-    } = options || {};
-
-    const preorders = await this.prisma.preorder.findMany({
-      where: {
-        notifiedAt: null,
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return preorders.map((preorder) => this.toEntity(preorder));
+    return this.findMany({ notifiedAt: null }, options);
   }
 
   async findReleased(options?: PreorderQueryOptions): Promise<Preorder[]> {
-    const {
-      limit,
-      offset,
-      sortBy = "releaseDate",
-      sortOrder = "desc",
-    } = options || {};
-
-    const now = new Date();
-
-    const preorders = await this.prisma.preorder.findMany({
-      where: {
-        releaseDate: {
-          not: null,
-          lte: now,
-        },
-      },
-      take: limit,
-      skip: offset,
-      orderBy: { [sortBy]: sortOrder },
-    });
-
-    return preorders.map((preorder) => this.toEntity(preorder));
+    return this.findMany(
+      { releaseDate: { not: null, lte: new Date() } },
+      options,
+      "releaseDate",
+      "desc",
+    );
   }
 
   async findByReleaseDateBefore(
     date: Date,
     options?: PreorderQueryOptions,
   ): Promise<Preorder[]> {
+    return this.findMany(
+      { releaseDate: { not: null, lte: date } },
+      options,
+    );
+  }
+
+  // ─── Counts / existence ───────────────────────────────────────────────────
+
+  async count(): Promise<number> {
+    return this.prisma.preorder.count();
+  }
+
+  async countNotified(): Promise<number> {
+    return this.prisma.preorder.count({
+      where: { notifiedAt: { not: null } },
+    });
+  }
+
+  async countUnnotified(): Promise<number> {
+    return this.prisma.preorder.count({
+      where: { notifiedAt: null },
+    });
+  }
+
+  async countReleased(): Promise<number> {
+    return this.prisma.preorder.count({
+      where: { releaseDate: { not: null, lte: new Date() } },
+    });
+  }
+
+  async exists(orderItemId: OrderItemId): Promise<boolean> {
+    const count = await this.prisma.preorder.count({
+      where: { orderItemId: orderItemId.getValue() },
+    });
+    return count > 0;
+  }
+
+  // ─── Private helpers ──────────────────────────────────────────────────────
+
+  private async findMany(
+    where: Prisma.PreorderWhereInput,
+    options: PreorderQueryOptions | undefined,
+    defaultSortBy: NonNullable<PreorderQueryOptions["sortBy"]> = "releaseDate",
+    defaultSortOrder: "asc" | "desc" = "asc",
+  ): Promise<Preorder[]> {
     const {
       limit,
       offset,
-      sortBy = "releaseDate",
-      sortOrder = "asc",
+      sortBy = defaultSortBy,
+      sortOrder = defaultSortOrder,
     } = options || {};
 
-    const preorders = await this.prisma.preorder.findMany({
-      where: {
-        releaseDate: {
-          not: null,
-          lte: date,
-        },
-      },
+    const rows = await this.prisma.preorder.findMany({
+      where,
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
     });
 
-    return preorders.map((preorder) => this.toEntity(preorder));
-  }
-
-  async count(): Promise<number> {
-    return await this.prisma.preorder.count();
-  }
-
-  async countNotified(): Promise<number> {
-    return await this.prisma.preorder.count({
-      where: {
-        notifiedAt: { not: null },
-      },
-    });
-  }
-
-  async countUnnotified(): Promise<number> {
-    return await this.prisma.preorder.count({
-      where: {
-        notifiedAt: null,
-      },
-    });
-  }
-
-  async countReleased(): Promise<number> {
-    const now = new Date();
-    return await this.prisma.preorder.count({
-      where: {
-        releaseDate: {
-          not: null,
-          lte: now,
-        },
-      },
-    });
-  }
-
-  async exists(orderItemId: string): Promise<boolean> {
-    const count = await this.prisma.preorder.count({
-      where: { orderItemId },
-    });
-
-    return count > 0;
+    return rows.map((r) => this.toEntity(r));
   }
 }
