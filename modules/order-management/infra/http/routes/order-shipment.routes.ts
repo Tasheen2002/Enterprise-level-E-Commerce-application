@@ -1,8 +1,15 @@
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { OrderShipmentController } from "../controllers/order-shipment.controller";
-import { authenticateUser, RolePermissions } from "@/api/src/shared/middleware";
-import { validateBody, validateParams } from "../validation/validator";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+import { validateBody, validateParams, toJsonSchema } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
 import {
   orderShipmentsParamsSchema,
   orderShipmentParamsSchema,
@@ -13,91 +20,50 @@ import {
   shipmentResponseSchema,
 } from "../validation/order-shipment.schema";
 
-const authenticateStaff = [authenticateUser, RolePermissions.STAFF_LEVEL];
+// All order shipment writes are authenticated, so userKeyGenerator gives proper
+// per-user/staff buckets — no anonymous-bucket concern here.
+const writeRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userKeyGenerator,
+});
+
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const orderShipmentsParamsJson = toJsonSchema(orderShipmentsParamsSchema);
+const orderShipmentParamsJson = toJsonSchema(orderShipmentParamsSchema);
+const createShipmentBodyJson = toJsonSchema(createShipmentSchema);
+const markShippedBodyJson = toJsonSchema(markShippedSchema);
+const updateShipmentTrackingBodyJson = toJsonSchema(updateShipmentTrackingSchema);
+const markDeliveredBodyJson = toJsonSchema(markDeliveredSchema);
 
 export async function registerOrderShipmentRoutes(
   fastify: FastifyInstance,
   orderShipmentController: OrderShipmentController,
 ): Promise<void> {
-  // Create shipment for an order
-  fastify.post(
-    "/orders/:orderId/shipments",
-    {
-      preValidation: [validateParams(orderShipmentsParamsSchema), validateBody(createShipmentSchema)],
-      preHandler: [authenticateUser],
-      schema: {
-        description: "Create a new shipment for an order",
-        tags: ["Order Shipments"],
-        summary: "Create Shipment",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            carrier: { type: "string" },
-            service: { type: "string" },
-            trackingNumber: { type: "string" },
-            giftReceipt: { type: "boolean", default: false },
-            pickupLocationId: { type: "string", format: "uuid" },
-          },
-        },
-        response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: shipmentResponseSchema,
-            },
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      orderShipmentController.createShipment(
-        request as AuthenticatedRequest,
-        reply,
-      ),
-  );
+  fastify.addHook("onRequest", async (request, reply) => {
+    if (request.method !== "GET") {
+      await writeRateLimiter(request, reply);
+    }
+  });
+
+  // ── Reads ──
 
   // Get all shipments for an order
   fastify.get(
     "/orders/:orderId/shipments",
     {
       preValidation: [validateParams(orderShipmentsParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticate],
       schema: {
         description: "Get all shipments for an order",
         tags: ["Order Shipments"],
         summary: "Get Order Shipments",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: orderShipmentsParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: shipmentResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: shipmentResponseSchema,
+          }),
         },
       },
     },
@@ -113,30 +79,15 @@ export async function registerOrderShipmentRoutes(
     "/orders/:orderId/shipments/:shipmentId",
     {
       preValidation: [validateParams(orderShipmentParamsSchema)],
-      preHandler: authenticateUser,
+      preHandler: [authenticate],
       schema: {
         description: "Get a specific shipment by ID",
         tags: ["Order Shipments"],
         summary: "Get Shipment",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId", "shipmentId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            shipmentId: { type: "string", format: "uuid" },
-          },
-        },
+        params: orderShipmentParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: shipmentResponseSchema,
-            },
-          },
+          200: successResponse(shipmentResponseSchema),
         },
       },
     },
@@ -147,45 +98,49 @@ export async function registerOrderShipmentRoutes(
       ),
   );
 
+  // ── Writes ──
+
+  // Create shipment for an order
+  fastify.post(
+    "/orders/:orderId/shipments",
+    {
+      preValidation: [validateParams(orderShipmentsParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createShipmentSchema)],
+      schema: {
+        description: "Create a new shipment for an order (Staff/Admin only)",
+        tags: ["Order Shipments"],
+        summary: "Create Shipment",
+        security: [{ bearerAuth: [] }],
+        params: orderShipmentsParamsJson,
+        body: createShipmentBodyJson,
+        response: {
+          201: successResponse(shipmentResponseSchema, 201),
+        },
+      },
+    },
+    (request, reply) =>
+      orderShipmentController.createShipment(
+        request as AuthenticatedRequest,
+        reply,
+      ),
+  );
+
   // Mark shipment as shipped
   fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-shipped",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markShippedSchema)],
-      preHandler: [authenticateUser],
+      preValidation: [validateParams(orderShipmentParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(markShippedSchema)],
       schema: {
         description:
-          "Mark a shipment as shipped with carrier and tracking details",
+          "Mark a shipment as shipped with carrier and tracking details (Staff/Admin only)",
         tags: ["Order Shipments"],
         summary: "Mark Shipment as Shipped",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId", "shipmentId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            shipmentId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["carrier", "service", "trackingNumber"],
-          properties: {
-            carrier: { type: "string" },
-            service: { type: "string" },
-            trackingNumber: { type: "string" },
-          },
-        },
+        params: orderShipmentParamsJson,
+        body: markShippedBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: shipmentResponseSchema,
-            },
-          },
+          200: successResponse(shipmentResponseSchema),
         },
       },
     },
@@ -200,40 +155,17 @@ export async function registerOrderShipmentRoutes(
   fastify.patch(
     "/orders/:orderId/shipments/:shipmentId/tracking",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(updateShipmentTrackingSchema)],
-      preHandler: authenticateStaff,
+      preValidation: [validateParams(orderShipmentParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updateShipmentTrackingSchema)],
       schema: {
         description: "Update shipment tracking information (Staff/Admin only)",
         tags: ["Order Shipments"],
         summary: "Update Shipment Tracking",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId", "shipmentId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            shipmentId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          required: ["trackingNumber"],
-          properties: {
-            trackingNumber: { type: "string" },
-            carrier: { type: "string" },
-            service: { type: "string" },
-          },
-        },
+        params: orderShipmentParamsJson,
+        body: updateShipmentTrackingBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: shipmentResponseSchema,
-            },
-          },
+          200: successResponse(shipmentResponseSchema),
         },
       },
     },
@@ -248,37 +180,17 @@ export async function registerOrderShipmentRoutes(
   fastify.post(
     "/orders/:orderId/shipments/:shipmentId/mark-delivered",
     {
-      preValidation: [validateParams(orderShipmentParamsSchema), validateBody(markDeliveredSchema)],
-      preHandler: authenticateStaff,
+      preValidation: [validateParams(orderShipmentParamsSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(markDeliveredSchema)],
       schema: {
         description: "Mark a shipment as delivered (Staff/Admin only)",
         tags: ["Order Shipments"],
         summary: "Mark Shipment as Delivered",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["orderId", "shipmentId"],
-          properties: {
-            orderId: { type: "string", format: "uuid" },
-            shipmentId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            deliveredAt: { type: "string", format: "date-time" },
-          },
-        },
+        params: orderShipmentParamsJson,
+        body: markDeliveredBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: shipmentResponseSchema,
-            },
-          },
+          200: successResponse(shipmentResponseSchema),
         },
       },
     },
