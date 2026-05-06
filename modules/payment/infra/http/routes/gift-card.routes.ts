@@ -3,11 +3,13 @@ import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-
 import { GiftCardController } from "../controllers/gift-card.controller";
 import {
   RolePermissions,
+  authenticate,
   createRateLimiter,
   RateLimitPresets,
-  userKeyGenerator,
+  userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware";
-import { validateBody, validateParams, validateQuery } from "../validation/validator";
+import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   createGiftCardSchema,
   redeemGiftCardSchema,
@@ -18,9 +20,15 @@ import {
   giftCardBalanceResponseSchema,
 } from "../validation/gift-card.schema";
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const createGiftCardBodyJson = toJsonSchema(createGiftCardSchema);
+const redeemGiftCardBodyJson = toJsonSchema(redeemGiftCardSchema);
+const giftCardIdParamsJson = toJsonSchema(giftCardIdParamsSchema);
+const giftCardBalanceQueryJson = toJsonSchema(giftCardBalanceQuerySchema);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
-  keyGenerator: userKeyGenerator,
+  keyGenerator: userOrIpKeyGenerator,
 });
 
 export async function registerGiftCardRoutes(
@@ -37,36 +45,15 @@ export async function registerGiftCardRoutes(
   fastify.post(
     "/gift-cards",
     {
-      preValidation: [validateBody(createGiftCardSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createGiftCardSchema)],
       schema: {
         description: "Create a new gift card — Admin only.",
         tags: ["Gift Cards"],
         summary: "Create Gift Card",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["code", "initialBalance"],
-          properties: {
-            code: { type: "string" },
-            initialBalance: { type: "number", minimum: 0.01 },
-            currency: { type: "string" },
-            expiresAt: { type: "string", format: "date-time" },
-            recipientEmail: { type: "string", format: "email" },
-            recipientName: { type: "string" },
-            message: { type: "string" },
-          },
-        },
+        body: createGiftCardBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: giftCardResponseSchema,
-            },
-          },
+          201: successResponse(giftCardResponseSchema, 201),
         },
       },
     },
@@ -77,36 +64,17 @@ export async function registerGiftCardRoutes(
   fastify.post(
     "/gift-cards/:giftCardId/redeem",
     {
-      preValidation: [validateParams(giftCardIdParamsSchema), validateBody(redeemGiftCardSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preValidation: [validateParams(giftCardIdParamsSchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(redeemGiftCardSchema)],
       schema: {
         description: "Redeem a gift card towards an order.",
         tags: ["Gift Cards"],
         summary: "Redeem Gift Card",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["giftCardId"],
-          properties: { giftCardId: { type: "string", format: "uuid" } },
-        },
-        body: {
-          type: "object",
-          required: ["amount", "orderId"],
-          properties: {
-            amount: { type: "number", minimum: 0.01 },
-            orderId: { type: "string", format: "uuid" },
-          },
-        },
+        params: giftCardIdParamsJson,
+        body: redeemGiftCardBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: giftCardResponseSchema,
-            },
-          },
+          200: successResponse(giftCardResponseSchema),
         },
       },
     },
@@ -122,21 +90,9 @@ export async function registerGiftCardRoutes(
         description: "Get gift card balance by code or ID.",
         tags: ["Gift Cards"],
         summary: "Get Gift Card Balance",
-        querystring: {
-          type: "object",
-          required: ["codeOrId"],
-          properties: { codeOrId: { type: "string" } },
-        },
+        querystring: giftCardBalanceQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: giftCardBalanceResponseSchema,
-            },
-          },
+          200: successResponse(giftCardBalanceResponseSchema),
         },
       },
     },
@@ -148,30 +104,18 @@ export async function registerGiftCardRoutes(
     "/gift-cards/:giftCardId/transactions",
     {
       preValidation: [validateParams(giftCardIdParamsSchema)],
-      preHandler: [RolePermissions.ADMIN_ONLY],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "List all transactions for a gift card — Admin only.",
         tags: ["Gift Cards"],
         summary: "List Gift Card Transactions",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["giftCardId"],
-          properties: { giftCardId: { type: "string", format: "uuid" } },
-        },
+        params: giftCardIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "array",
-                items: giftCardTransactionResponseSchema,
-              },
-            },
-          },
+          200: successResponse({
+            type: "array",
+            items: giftCardTransactionResponseSchema,
+          }),
         },
       },
     },
