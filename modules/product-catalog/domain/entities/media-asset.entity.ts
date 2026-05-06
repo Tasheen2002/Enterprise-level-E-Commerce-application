@@ -18,29 +18,6 @@ export class MediaAssetCreatedEvent extends DomainEvent {
   }
 }
 
-export class MediaAssetUpdatedEvent extends DomainEvent {
-  constructor(public readonly assetId: string) {
-    super(assetId, 'MediaAsset');
-  }
-  get eventType(): string { return 'media-asset.updated'; }
-  getPayload(): Record<string, unknown> {
-    return { assetId: this.assetId };
-  }
-}
-
-export class MediaAssetDeletedEvent extends DomainEvent {
-  constructor(
-    public readonly assetId: string,
-    public readonly storageKey: string,
-  ) {
-    super(assetId, 'MediaAsset');
-  }
-  get eventType(): string { return 'media-asset.deleted'; }
-  getPayload(): Record<string, unknown> {
-    return { assetId: this.assetId, storageKey: this.storageKey };
-  }
-}
-
 // ── Props & DTO ────────────────────────────────────────────────────────
 
 export interface MediaAssetProps {
@@ -80,17 +57,18 @@ export interface MediaAssetDTO {
 export class MediaAsset extends AggregateRoot {
   private constructor(private props: MediaAssetProps) {
     super();
+    MediaAsset.validate(props);
   }
 
   static create(params: {
     storageKey: string;
     mime: string;
-    width?: number;
-    height?: number;
-    bytes?: number;
-    altText?: string;
-    focalX?: number;
-    focalY?: number;
+    width?: number | null;
+    height?: number | null;
+    bytes?: number | null;
+    altText?: string | null;
+    focalX?: number | null;
+    focalY?: number | null;
     renditions?: Record<string, unknown>;
   }): MediaAsset {
     const assetId = MediaAssetId.create();
@@ -98,12 +76,12 @@ export class MediaAsset extends AggregateRoot {
 
     const asset = new MediaAsset({
       id: assetId,
-      storageKey: params.storageKey,
-      mime: params.mime,
+      storageKey: params.storageKey.trim(),
+      mime: params.mime.trim(),
       width: params.width ?? null,
       height: params.height ?? null,
       bytes: params.bytes ?? null,
-      altText: params.altText ?? null,
+      altText: params.altText?.trim() ?? null,
       focalX: params.focalX ?? null,
       focalY: params.focalY ?? null,
       renditions: params.renditions ?? {},
@@ -113,7 +91,7 @@ export class MediaAsset extends AggregateRoot {
     });
 
     asset.addDomainEvent(
-      new MediaAssetCreatedEvent(assetId.getValue(), params.storageKey),
+      new MediaAssetCreatedEvent(assetId.getValue(), params.storageKey.trim()),
     );
 
     return asset;
@@ -121,6 +99,59 @@ export class MediaAsset extends AggregateRoot {
 
   static fromPersistence(props: MediaAssetProps): MediaAsset {
     return new MediaAsset(props);
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: MediaAssetProps): void {
+    MediaAsset.validateStorageKey(props.storageKey);
+    MediaAsset.validateMime(props.mime);
+    MediaAsset.validateDimensions(props.width, props.height);
+    MediaAsset.validateBytes(props.bytes);
+    MediaAsset.validateFocalPoint(props.focalX, props.focalY);
+  }
+
+  private static validateStorageKey(storageKey: string): void {
+    if (!storageKey || storageKey.trim().length === 0) {
+      throw new DomainValidationError("Storage key cannot be empty");
+    }
+  }
+
+  private static validateMime(mime: string): void {
+    if (!mime || mime.trim().length === 0) {
+      throw new DomainValidationError("MIME type cannot be empty");
+    }
+  }
+
+  private static validateDimensions(width: number | null, height: number | null): void {
+    if (width !== null && width <= 0) {
+      throw new DomainValidationError("Width must be positive");
+    }
+    if (height !== null && height <= 0) {
+      throw new DomainValidationError("Height must be positive");
+    }
+  }
+
+  private static validateBytes(bytes: number | null): void {
+    if (bytes !== null && bytes < 0) {
+      throw new DomainValidationError("Size cannot be negative");
+    }
+  }
+
+  private static validateFocalPoint(focalX: number | null, focalY: number | null): void {
+    if (focalX !== null && (focalX < 0 || focalX > 100)) {
+      throw new DomainValidationError("Focal X must be between 0 and 100");
+    }
+    if (focalY !== null && (focalY < 0 || focalY > 100)) {
+      throw new DomainValidationError("Focal Y must be between 0 and 100");
+    }
+  }
+
+  private static validateRenditionName(name: string): void {
+    if (!name || name.trim().length === 0) {
+      throw new DomainValidationError("Rendition name cannot be empty");
+    }
   }
 
   // ── Getters ────────────────────────────────────────────────────────
@@ -142,129 +173,62 @@ export class MediaAsset extends AggregateRoot {
   // ── Business Logic ─────────────────────────────────────────────────
 
   updateStorageKey(newStorageKey: string): void {
-    if (!newStorageKey || newStorageKey.trim().length === 0) {
-      throw new DomainValidationError("Storage key cannot be empty");
-    }
+    MediaAsset.validateStorageKey(newStorageKey);
     this.props.storageKey = newStorageKey.trim();
     this.incrementVersion();
   }
 
+  updateMime(newMime: string): void {
+    MediaAsset.validateMime(newMime);
+    this.props.mime = newMime.trim();
+    this.incrementVersion();
+  }
+
   updateDimensions(width: number | null, height: number | null): void {
-    if (width !== null && width <= 0) {
-      throw new DomainValidationError("Width must be positive");
-    }
-    if (height !== null && height <= 0) {
-      throw new DomainValidationError("Height must be positive");
-    }
+    MediaAsset.validateDimensions(width, height);
     this.props.width = width;
     this.props.height = height;
     this.incrementVersion();
   }
 
   updateSize(bytes: number | null): void {
-    if (bytes !== null && bytes < 0) {
-      throw new DomainValidationError("Size cannot be negative");
-    }
+    MediaAsset.validateBytes(bytes);
     this.props.bytes = bytes;
     this.incrementVersion();
   }
 
   updateAltText(newAltText: string | null): void {
-    this.props.altText = newAltText?.trim() || null;
+    this.props.altText = newAltText?.trim() ?? null;
     this.incrementVersion();
   }
 
   updateFocalPoint(focalX: number | null, focalY: number | null): void {
-    if (focalX !== null && (focalX < 0 || focalX > 100)) {
-      throw new DomainValidationError("Focal X must be between 0 and 100");
-    }
-    if (focalY !== null && (focalY < 0 || focalY > 100)) {
-      throw new DomainValidationError("Focal Y must be between 0 and 100");
-    }
+    MediaAsset.validateFocalPoint(focalX, focalY);
     this.props.focalX = focalX;
     this.props.focalY = focalY;
     this.incrementVersion();
   }
 
   addRendition(name: string, renditionData: unknown): void {
-    if (!name || name.trim().length === 0) {
-      throw new DomainValidationError("Rendition name cannot be empty");
-    }
-    this.props.renditions[name] = renditionData;
+    MediaAsset.validateRenditionName(name);
+    this.props.renditions = { ...this.props.renditions, [name]: renditionData };
     this.incrementVersion();
   }
 
   removeRendition(name: string): void {
-    if (this.props.renditions[name]) {
-      delete this.props.renditions[name];
+    if (this.props.renditions[name] !== undefined) {
+      const { [name]: _removed, ...rest } = this.props.renditions;
+      this.props.renditions = rest;
       this.incrementVersion();
     }
   }
 
   updateRenditions(renditions: Record<string, unknown>): void {
-    this.props.renditions = renditions || {};
+    this.props.renditions = renditions ?? {};
     this.incrementVersion();
   }
 
-  updateFields(fields: Partial<{
-    storageKey: string;
-    mime: string;
-    width?: number;
-    height?: number;
-    bytes?: number;
-    altText?: string;
-    focalX?: number;
-    focalY?: number;
-    renditions?: Record<string, unknown>;
-  }>): void {
-    let changed = false;
-
-    if (fields.mime !== undefined && fields.mime !== this.props.mime) {
-      this.props.mime = fields.mime;
-      changed = true;
-    }
-
-    if (fields.width !== undefined && fields.width !== this.props.width) {
-      this.props.width = fields.width ?? null;
-      changed = true;
-    }
-
-    if (fields.height !== undefined && fields.height !== this.props.height) {
-      this.props.height = fields.height ?? null;
-      changed = true;
-    }
-
-    if (fields.bytes !== undefined && fields.bytes !== this.props.bytes) {
-      this.props.bytes = fields.bytes ?? null;
-      changed = true;
-    }
-
-    if (fields.altText !== undefined && fields.altText !== this.props.altText) {
-      this.props.altText = fields.altText ?? null;
-      changed = true;
-    }
-
-    if (fields.focalX !== undefined && fields.focalX !== this.props.focalX) {
-      this.props.focalX = fields.focalX ?? null;
-      changed = true;
-    }
-
-    if (fields.focalY !== undefined && fields.focalY !== this.props.focalY) {
-      this.props.focalY = fields.focalY ?? null;
-      changed = true;
-    }
-
-    if (fields.renditions !== undefined) {
-      this.props.renditions = fields.renditions ?? {};
-      changed = true;
-    }
-
-    if (changed) {
-      this.incrementVersion();
-    }
-  }
-
-  // ── Validation / Query Methods ─────────────────────────────────────
+  // ── Query Methods ──────────────────────────────────────────────────
 
   isImage(): boolean {
     return this.props.mime.startsWith("image/");
@@ -300,21 +264,13 @@ export class MediaAsset extends AggregateRoot {
     return aspectRatio !== null && Math.abs(aspectRatio - 1) < 0.01;
   }
 
-  markDeleted(): void {
-    this.addDomainEvent(
-      new MediaAssetDeletedEvent(
-        this.props.id.getValue(),
-        this.props.storageKey,
-      ),
-    );
-  }
-
   // ── Internal ───────────────────────────────────────────────────────
 
+  // Optimistic locking — `version` must be checked at persistence
+  // to prevent lost updates under concurrent writes.
   private incrementVersion(): void {
     this.props.version += 1;
     this.props.updatedAt = new Date();
-    this.addDomainEvent(new MediaAssetUpdatedEvent(this.props.id.getValue()));
   }
 
   // ── Serialisation ──────────────────────────────────────────────────
