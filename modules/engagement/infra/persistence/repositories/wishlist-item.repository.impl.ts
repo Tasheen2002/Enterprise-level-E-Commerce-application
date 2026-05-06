@@ -15,7 +15,6 @@ interface WishlistItemDatabaseRow {
   updatedAt?: Date;
 }
 
-
 export class WishlistItemRepositoryImpl implements IWishlistItemRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
