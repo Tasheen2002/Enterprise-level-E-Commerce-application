@@ -1,62 +1,67 @@
-import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
-import { PromotionStatusEnum } from "../enums";
+import { DomainValidationError } from "../errors/payment-loyalty.errors";
 
+export enum PromotionStatusValue {
+  ACTIVE = "active",
+  INACTIVE = "inactive",
+  EXPIRED = "expired",
+  SCHEDULED = "scheduled",
+}
+
+/** @deprecated Use `PromotionStatusValue`. */
+export const PromotionStatusEnum = PromotionStatusValue;
+/** @deprecated Use `PromotionStatusValue`. */
+export type PromotionStatusEnum = PromotionStatusValue;
+
+// Pattern D (Enum-Like VO).
 export class PromotionStatus {
-  private constructor(private readonly value: PromotionStatusEnum) {}
+  static readonly ACTIVE = new PromotionStatus(PromotionStatusValue.ACTIVE);
+  static readonly INACTIVE = new PromotionStatus(PromotionStatusValue.INACTIVE);
+  static readonly EXPIRED = new PromotionStatus(PromotionStatusValue.EXPIRED);
+  static readonly SCHEDULED = new PromotionStatus(PromotionStatusValue.SCHEDULED);
+
+  private static readonly ALL: ReadonlyArray<PromotionStatus> = [
+    PromotionStatus.ACTIVE,
+    PromotionStatus.INACTIVE,
+    PromotionStatus.EXPIRED,
+    PromotionStatus.SCHEDULED,
+  ];
+
+  private constructor(private readonly value: PromotionStatusValue) {
+    if (!Object.values(PromotionStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid promotion status: ${value}. Must be one of: ${Object.values(PromotionStatusValue).join(", ")}`,
+      );
+    }
+  }
 
   static create(value: string): PromotionStatus {
-    return PromotionStatus.fromString(value);
+    const normalized = value.trim().toLowerCase();
+    return (
+      PromotionStatus.ALL.find((t) => t.value === normalized) ??
+      new PromotionStatus(normalized as PromotionStatusValue)
+    );
   }
 
   static fromString(value: string): PromotionStatus {
-    const enumValue = Object.values(PromotionStatusEnum).find((v) => v === value);
-    if (!enumValue) {
-      throw new InvalidFormatError("promotion status", Object.values(PromotionStatusEnum).join(" | "));
-    }
-    return new PromotionStatus(enumValue);
+    return PromotionStatus.create(value);
   }
 
-  static active(): PromotionStatus {
-    return new PromotionStatus(PromotionStatusEnum.ACTIVE);
-  }
+  /** @deprecated Use `PromotionStatus.ACTIVE`. */
+  static active(): PromotionStatus { return PromotionStatus.ACTIVE; }
+  /** @deprecated Use `PromotionStatus.INACTIVE`. */
+  static inactive(): PromotionStatus { return PromotionStatus.INACTIVE; }
+  /** @deprecated Use `PromotionStatus.EXPIRED`. */
+  static expired(): PromotionStatus { return PromotionStatus.EXPIRED; }
+  /** @deprecated Use `PromotionStatus.SCHEDULED`. */
+  static scheduled(): PromotionStatus { return PromotionStatus.SCHEDULED; }
 
-  static inactive(): PromotionStatus {
-    return new PromotionStatus(PromotionStatusEnum.INACTIVE);
-  }
+  getValue(): PromotionStatusValue { return this.value; }
 
-  static expired(): PromotionStatus {
-    return new PromotionStatus(PromotionStatusEnum.EXPIRED);
-  }
+  isActive(): boolean { return this.value === PromotionStatusValue.ACTIVE; }
+  isInactive(): boolean { return this.value === PromotionStatusValue.INACTIVE; }
+  isExpired(): boolean { return this.value === PromotionStatusValue.EXPIRED; }
+  isScheduled(): boolean { return this.value === PromotionStatusValue.SCHEDULED; }
 
-  static scheduled(): PromotionStatus {
-    return new PromotionStatus(PromotionStatusEnum.SCHEDULED);
-  }
-
-  getValue(): string {
-    return this.value;
-  }
-
-  equals(other: PromotionStatus): boolean {
-    return this.value === other.value;
-  }
-
-  toString(): string {
-    return this.value;
-  }
-
-  isActive(): boolean {
-    return this.value === PromotionStatusEnum.ACTIVE;
-  }
-
-  isInactive(): boolean {
-    return this.value === PromotionStatusEnum.INACTIVE;
-  }
-
-  isExpired(): boolean {
-    return this.value === PromotionStatusEnum.EXPIRED;
-  }
-
-  isScheduled(): boolean {
-    return this.value === PromotionStatusEnum.SCHEDULED;
-  }
+  equals(other: PromotionStatus): boolean { return this.value === other.value; }
+  toString(): string { return this.value; }
 }

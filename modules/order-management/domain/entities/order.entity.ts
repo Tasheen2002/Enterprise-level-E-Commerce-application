@@ -140,6 +140,7 @@ export interface OrderDTO {
 export class Order extends AggregateRoot {
   private constructor(private props: OrderProps) {
     super();
+    Order.validate(props);
   }
 
   static create(
@@ -148,8 +149,6 @@ export class Order extends AggregateRoot {
       "id" | "orderNumber" | "status" | "createdAt" | "updatedAt"
     >,
   ): Order {
-    Order.validateIdentity(params.userId, params.guestToken);
-
     if (!params.items || params.items.length === 0) {
       throw new DomainValidationError("Order must have at least one item");
     }
@@ -181,14 +180,14 @@ export class Order extends AggregateRoot {
     return new Order(props);
   }
 
-  private static validateIdentity(userId?: string, guestToken?: string): void {
-    if (!userId && !guestToken) {
+  private static validate(props: OrderProps): void {
+    if (!props.userId && !props.guestToken) {
       throw new DomainValidationError(
         "Order must have either userId or guestToken",
       );
     }
 
-    if (userId && guestToken) {
+    if (props.userId && props.guestToken) {
       throw new DomainValidationError(
         "Order cannot have both userId and guestToken",
       );
@@ -257,7 +256,7 @@ export class Order extends AggregateRoot {
     }
 
     const index = this.props.items.findIndex(
-      (item) => item.orderItemId === itemId,
+      (item) => item.orderItemId.getValue() === itemId,
     );
     if (index === -1) {
       throw new OrderItemNotFoundError(itemId);
@@ -281,7 +280,7 @@ export class Order extends AggregateRoot {
       throw new OrderNotEditableError(this.props.status.getValue());
     }
 
-    const item = this.props.items.find((item) => item.orderItemId === itemId);
+    const item = this.props.items.find((item) => item.orderItemId.getValue() === itemId);
     if (!item) {
       throw new OrderItemNotFoundError(itemId);
     }
@@ -301,10 +300,7 @@ export class Order extends AggregateRoot {
   }
 
   createShipment(shipment: OrderShipment): void {
-    if (
-      !this.props.status.isFulfilled() &&
-      this.props.status.getValue() !== "paid"
-    ) {
+    if (!this.props.status.isFulfilled() && !this.props.status.isPaid()) {
       throw new InvalidOperationError(
         "Cannot create shipment for order that is not paid or fulfilled",
       );
@@ -313,7 +309,7 @@ export class Order extends AggregateRoot {
     this.props.shipments.push(shipment);
     this.props.updatedAt = new Date();
     this.addDomainEvent(
-      new OrderShipmentCreatedEvent(this.props.id.getValue(), shipment.shipmentId),
+      new OrderShipmentCreatedEvent(this.props.id.getValue(), shipment.shipmentId.getValue()),
     );
   }
 
@@ -416,6 +412,10 @@ export class Order extends AggregateRoot {
   }
   isUserOrder(): boolean {
     return !!this.props.userId;
+  }
+
+  belongsToUser(userId: string): boolean {
+    return !!this.props.userId && this.props.userId === userId;
   }
   hasAddress(): boolean {
     return !!this.props.address;

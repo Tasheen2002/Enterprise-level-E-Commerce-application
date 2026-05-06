@@ -4,6 +4,8 @@ import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface AddOrderItemCommand extends ICommand {
   readonly orderId: string;
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
   readonly variantId: string;
   readonly quantity: number;
   readonly isGift?: boolean;
@@ -17,12 +19,17 @@ export class AddOrderItemHandler implements ICommandHandler<
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(command: AddOrderItemCommand): Promise<CommandResult<OrderDTO>> {
-    const order = await this.orderService.addOrderItem(command.orderId, {
-      variantId: command.variantId,
-      quantity: command.quantity,
-      isGift: command.isGift,
-      giftMessage: command.giftMessage,
-    });
+    const order = await this.orderService.addOrderItem(
+      command.orderId,
+      {
+        variantId: command.variantId,
+        quantity: command.quantity,
+        isGift: command.isGift,
+        giftMessage: command.giftMessage,
+      },
+      command.requestingUserId,
+      command.isStaff,
+    );
     return CommandResult.success(order);
   }
 }

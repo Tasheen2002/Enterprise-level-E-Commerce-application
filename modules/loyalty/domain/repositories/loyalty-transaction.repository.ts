@@ -1,10 +1,10 @@
-import { LoyaltyTransaction } from "../entities/loyalty-transaction.entity";
+import {
+  LoyaltyTransaction,
+  LoyaltyTransactionType,
+} from "../entities/loyalty-transaction.entity";
 import { LoyaltyTransactionId } from "../value-objects/loyalty-transaction-id.vo";
 import { LoyaltyAccountId } from "../value-objects/loyalty-account-id.vo";
-import {
-  LoyaltyTransactionType,
-  LoyaltyTransactionReason,
-} from "../enums/loyalty.enums";
+import { LoyaltyTransactionReasonValue } from "../value-objects/loyalty-reason.vo";
 import {
   PaginatedResult,
   PaginationOptions,
@@ -13,7 +13,7 @@ import {
 export interface LoyaltyTransactionFilters {
   accountId?: LoyaltyAccountId;
   type?: LoyaltyTransactionType;
-  reason?: LoyaltyTransactionReason;
+  reason?: LoyaltyTransactionReasonValue;
   orderId?: string;
   expiresBeforeOrAt?: Date;
 }

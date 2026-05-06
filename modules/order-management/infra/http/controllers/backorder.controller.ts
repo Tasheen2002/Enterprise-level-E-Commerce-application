@@ -26,16 +26,21 @@ export class BackorderController {
     private readonly listBackordersHandler: ListBackordersHandler,
   ) {}
 
-  async createBackorder(
-    request: AuthenticatedRequest<{ Body: CreateBackorderBody }>,
+  // ── Reads ──
+
+  async listBackorders(
+    request: AuthenticatedRequest<{ Querystring: ListBackordersQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createHandler.handle({
-        orderItemId: request.body.orderItemId,
-        promisedEta: request.body.promisedEta,
+      const result = await this.listBackordersHandler.handle({
+        limit: request.query.limit,
+        offset: request.query.offset,
+        sortBy: request.query.sortBy,
+        sortOrder: request.query.sortOrder,
+        filterType: request.query.filterType,
       });
-      return ResponseHelper.fromCommand(reply, result, "Backorder created successfully", 201);
+      return ResponseHelper.ok(reply, "Backorders retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -53,13 +58,18 @@ export class BackorderController {
     }
   }
 
-  async listBackorders(
-    request: AuthenticatedRequest<{ Querystring: ListBackordersQuery }>,
+  // ── Writes ──
+
+  async createBackorder(
+    request: AuthenticatedRequest<{ Body: CreateBackorderBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listBackordersHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Backorders retrieved successfully", result);
+      const result = await this.createHandler.handle({
+        orderItemId: request.body.orderItemId,
+        promisedEta: request.body.promisedEta,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Backorder created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

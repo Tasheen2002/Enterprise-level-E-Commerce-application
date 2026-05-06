@@ -21,7 +21,7 @@ export class LoyaltyAccountRepositoryImpl
   }
 
   async save(account: LoyaltyAccount): Promise<void> {
-    const data = this.dehydrate(account);
+    const data = this.toPersistence(account);
     await this.prisma.loyaltyAccount.upsert({
       where: { accountId: data.accountId },
       create: data,
@@ -48,14 +48,14 @@ export class LoyaltyAccountRepositoryImpl
     const record = await this.prisma.loyaltyAccount.findUnique({
       where: { accountId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByUserId(userId: string): Promise<LoyaltyAccount | null> {
     const record = await this.prisma.loyaltyAccount.findUnique({
       where: { userId },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findWithFilters(
@@ -81,7 +81,7 @@ export class LoyaltyAccountRepositoryImpl
       this.prisma.loyaltyAccount.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -110,7 +110,7 @@ export class LoyaltyAccountRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: {
+  private toDomain(record: {
     accountId: string;
     userId: string;
     currentBalance: bigint;
@@ -138,7 +138,7 @@ export class LoyaltyAccountRepositoryImpl
     });
   }
 
-  private dehydrate(account: LoyaltyAccount) {
+  private toPersistence(account: LoyaltyAccount) {
     return {
       accountId: account.id.getValue(),
       userId: account.userId,

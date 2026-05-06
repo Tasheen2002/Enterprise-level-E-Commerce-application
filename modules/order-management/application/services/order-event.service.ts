@@ -2,61 +2,33 @@ import {
   IOrderEventRepository,
   OrderEventQueryOptions,
 } from "../../domain/repositories/order-event.repository";
-import { OrderEvent, OrderEventDTO } from "../../domain/entities/order-event.entity";
-import {
-  OrderEventNotFoundError,
-  DomainValidationError,
-} from "../../domain/errors/order-management.errors";
-
-export enum OrderEventTypes {
-  ORDER_CREATED = "order.created",
-  ORDER_UPDATED = "order.updated",
-  ORDER_CANCELLED = "order.cancelled",
-  ORDER_REFUNDED = "order.refunded",
-  ORDER_STATUS_CHANGED = "order.status_changed",
-  ORDER_PAID = "order.paid",
-  ORDER_FULFILLED = "order.fulfilled",
-  ORDER_ITEM_ADDED = "order.item_added",
-  ORDER_ITEM_REMOVED = "order.item_removed",
-  ORDER_ITEM_UPDATED = "order.item_updated",
-  ORDER_SHIPMENT_CREATED = "order.shipment_created",
-  ORDER_SHIPMENT_SHIPPED = "order.shipment_shipped",
-  ORDER_SHIPMENT_DELIVERED = "order.shipment_delivered",
-  PAYMENT_RECEIVED = "payment.received",
-  PAYMENT_FAILED = "payment.failed",
-  PAYMENT_REFUNDED = "payment.refunded",
-  ORDER_SYSTEM_NOTE = "order.system_note",
-  ORDER_ADMIN_ACTION = "order.admin_action",
-}
+import { OrderEvent, OrderEventDTO, OrderEventTypes } from "../../domain/entities/order-event.entity";
+import { OrderEventNotFoundError } from "../../domain/errors/order-management.errors";
+import { OrderId } from "../../domain/value-objects/order-id.vo";
 
 interface LogEventParams {
   orderId: string;
   eventType: string;
-  payload: Record<string, unknown>;
+  payload?: Record<string, unknown>;
+  loggedBy?: string;
 }
 
 export class OrderEventService {
-  constructor(private readonly orderEventRepository: IOrderEventRepository) {}
+  constructor(private readonly orderEventRepository: IOrderEventRepository) { }
 
   async logEvent(params: LogEventParams): Promise<OrderEventDTO> {
-    if (!params.orderId || params.orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    if (!params.eventType || params.eventType.trim().length === 0) {
-      throw new DomainValidationError("Event type is required");
-    }
-
     const orderEvent = OrderEvent.create({
-      orderId: params.orderId,
+      orderId: OrderId.fromString(params.orderId).getValue(),
       eventType: params.eventType,
-      payload: params.payload || {},
+      payload: params.payload ?? {},
+      loggedBy: params.loggedBy,
     });
 
     await this.orderEventRepository.save(orderEvent);
-
     return OrderEvent.toDTO(orderEvent);
   }
+
+
 
   async logOrderCreated(
     orderId: string,
@@ -65,7 +37,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_CREATED,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -76,7 +48,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_UPDATED,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -89,11 +61,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_STATUS_CHANGED,
-      payload: {
-        oldStatus,
-        newStatus,
-        ...payload,
-      },
+      payload: { ...payload, oldStatus, newStatus },
     });
   }
 
@@ -104,7 +72,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_PAID,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -115,7 +83,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_FULFILLED,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -126,7 +94,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_CANCELLED,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -137,7 +105,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_REFUNDED,
-      payload: payload || {},
+      payload,
     });
   }
 
@@ -149,10 +117,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_ADDED,
-      payload: {
-        itemId,
-        ...payload,
-      },
+      payload: { ...payload, itemId },
     });
   }
 
@@ -164,10 +129,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_REMOVED,
-      payload: {
-        itemId,
-        ...payload,
-      },
+      payload: { ...payload, itemId },
     });
   }
 
@@ -179,10 +141,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_ITEM_UPDATED,
-      payload: {
-        itemId,
-        ...payload,
-      },
+      payload: { ...payload, itemId },
     });
   }
 
@@ -194,10 +153,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_CREATED,
-      payload: {
-        shipmentId,
-        ...payload,
-      },
+      payload: { ...payload, shipmentId },
     });
   }
 
@@ -209,10 +165,7 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_SHIPPED,
-      payload: {
-        shipmentId,
-        ...payload,
-      },
+      payload: { ...payload, shipmentId },
     });
   }
 
@@ -224,18 +177,13 @@ export class OrderEventService {
     return this.logEvent({
       orderId,
       eventType: OrderEventTypes.ORDER_SHIPMENT_DELIVERED,
-      payload: {
-        shipmentId,
-        ...payload,
-      },
+      payload: { ...payload, shipmentId },
     });
   }
 
-  async getEventById(eventId: number): Promise<OrderEventDTO | null> {
-    if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new DomainValidationError("Valid event ID is required");
-    }
+  // ─── Reads ─────────────────────────────────────────────────────────────────
 
+  async getEventById(eventId: number): Promise<OrderEventDTO | null> {
     const event = await this.orderEventRepository.findById(eventId);
     return event ? OrderEvent.toDTO(event) : null;
   }
@@ -244,11 +192,10 @@ export class OrderEventService {
     orderId: string,
     options?: OrderEventQueryOptions,
   ): Promise<OrderEventDTO[]> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    const events = await this.orderEventRepository.findByOrderId(orderId, options);
+    const events = await this.orderEventRepository.findByOrderId(
+      OrderId.fromString(orderId),
+      options,
+    );
     return events.map((e) => OrderEvent.toDTO(e));
   }
 
@@ -256,10 +203,6 @@ export class OrderEventService {
     eventType: string,
     options?: OrderEventQueryOptions,
   ): Promise<OrderEventDTO[]> {
-    if (!eventType || eventType.trim().length === 0) {
-      throw new DomainValidationError("Event type is required");
-    }
-
     const events = await this.orderEventRepository.findByEventType(eventType, options);
     return events.map((e) => OrderEvent.toDTO(e));
   }
@@ -269,16 +212,8 @@ export class OrderEventService {
     eventType: string,
     options?: OrderEventQueryOptions,
   ): Promise<OrderEventDTO[]> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    if (!eventType || eventType.trim().length === 0) {
-      throw new DomainValidationError("Event type is required");
-    }
-
     const events = await this.orderEventRepository.findByOrderIdAndEventType(
-      orderId,
+      OrderId.fromString(orderId),
       eventType,
       options,
     );
@@ -291,54 +226,40 @@ export class OrderEventService {
   }
 
   async getLatestEventForOrder(orderId: string): Promise<OrderEventDTO | null> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    const event = await this.orderEventRepository.getLatestByOrderId(orderId);
+    const event = await this.orderEventRepository.getLatestByOrderId(
+      OrderId.fromString(orderId),
+    );
     return event ? OrderEvent.toDTO(event) : null;
   }
 
-  async deleteEvent(eventId: number): Promise<void> {
-    if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new DomainValidationError("Valid event ID is required");
-    }
+  // ─── Deletes ───────────────────────────────────────────────────────────────
 
+  async deleteEvent(eventId: number): Promise<void> {
     const exists = await this.orderEventRepository.exists(eventId);
-    if (!exists) throw new OrderEventNotFoundError(eventId.toString());
+    if (!exists) throw new OrderEventNotFoundError(String(eventId));
 
     await this.orderEventRepository.delete(eventId);
   }
 
   async deleteAllEventsByOrderId(orderId: string): Promise<void> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
-    await this.orderEventRepository.deleteByOrderId(orderId);
+    await this.orderEventRepository.deleteByOrderId(
+      OrderId.fromString(orderId),
+    );
   }
 
-  async getEventCountByOrder(orderId: string): Promise<number> {
-    if (!orderId || orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
+  // ─── Counters / existence ─────────────────────────────────────────────────
 
-    return this.orderEventRepository.countByOrderId(orderId);
+  async getEventCountByOrder(orderId: string): Promise<number> {
+    return this.orderEventRepository.countByOrderId(
+      OrderId.fromString(orderId),
+    );
   }
 
   async getEventCountByType(eventType: string): Promise<number> {
-    if (!eventType || eventType.trim().length === 0) {
-      throw new DomainValidationError("Event type is required");
-    }
-
     return this.orderEventRepository.countByEventType(eventType);
   }
 
   async eventExists(eventId: number): Promise<boolean> {
-    if (eventId === undefined || eventId === null || eventId < 0) {
-      throw new DomainValidationError("Valid event ID is required");
-    }
-
     return this.orderEventRepository.exists(eventId);
   }
 }

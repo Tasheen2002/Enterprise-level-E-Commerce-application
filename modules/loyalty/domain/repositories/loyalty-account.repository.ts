@@ -1,6 +1,6 @@
 import { LoyaltyAccount } from '../entities/loyalty-account.entity';
 import { LoyaltyAccountId } from '../value-objects/loyalty-account-id.vo';
-import { LoyaltyTier } from '../enums';
+import { LoyaltyTierValue } from '../value-objects/tier.vo';
 import {
   PaginatedResult,
   PaginationOptions,
@@ -8,7 +8,7 @@ import {
 
 export interface LoyaltyAccountFilters {
   userId?: string;
-  tier?: LoyaltyTier;
+  tier?: LoyaltyTierValue;
   minPoints?: number;
 }
 

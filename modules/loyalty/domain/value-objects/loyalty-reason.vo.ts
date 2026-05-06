@@ -1,67 +1,74 @@
 import { InvalidFormatError } from "../../../../packages/core/src/domain/domain-error";
-import { LoyaltyTransactionReason } from "../enums/loyalty.enums";
 
+export enum LoyaltyTransactionReasonValue {
+  PURCHASE = "PURCHASE",
+  SIGNUP = "SIGNUP",
+  REVIEW = "REVIEW",
+  STYLE_QUIZ = "STYLE_QUIZ",
+  OUTFIT_PHOTO = "OUTFIT_PHOTO",
+  SOCIAL_SHARE = "SOCIAL_SHARE",
+  BIRTHDAY = "BIRTHDAY",
+  REFERRAL = "REFERRAL",
+  GOODWILL = "GOODWILL",
+  REFUND = "REFUND",
+  DISCOUNT_REDEMPTION = "DISCOUNT_REDEMPTION",
+  PRODUCT_REDEMPTION = "PRODUCT_REDEMPTION",
+  EXPIRY = "EXPIRY",
+  ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT",
+}
+
+// Pattern D (Enum-Like VO).
 export class LoyaltyReason {
-  private constructor(private readonly value: LoyaltyTransactionReason) {}
+  static readonly PURCHASE = new LoyaltyReason(LoyaltyTransactionReasonValue.PURCHASE);
+  static readonly SIGNUP = new LoyaltyReason(LoyaltyTransactionReasonValue.SIGNUP);
+  static readonly REVIEW = new LoyaltyReason(LoyaltyTransactionReasonValue.REVIEW);
+  static readonly STYLE_QUIZ = new LoyaltyReason(LoyaltyTransactionReasonValue.STYLE_QUIZ);
+  static readonly OUTFIT_PHOTO = new LoyaltyReason(LoyaltyTransactionReasonValue.OUTFIT_PHOTO);
+  static readonly SOCIAL_SHARE = new LoyaltyReason(LoyaltyTransactionReasonValue.SOCIAL_SHARE);
+  static readonly BIRTHDAY = new LoyaltyReason(LoyaltyTransactionReasonValue.BIRTHDAY);
+  static readonly REFERRAL = new LoyaltyReason(LoyaltyTransactionReasonValue.REFERRAL);
+  static readonly GOODWILL = new LoyaltyReason(LoyaltyTransactionReasonValue.GOODWILL);
+  static readonly REFUND = new LoyaltyReason(LoyaltyTransactionReasonValue.REFUND);
+  static readonly DISCOUNT_REDEMPTION = new LoyaltyReason(LoyaltyTransactionReasonValue.DISCOUNT_REDEMPTION);
+  static readonly PRODUCT_REDEMPTION = new LoyaltyReason(LoyaltyTransactionReasonValue.PRODUCT_REDEMPTION);
+  static readonly EXPIRY = new LoyaltyReason(LoyaltyTransactionReasonValue.EXPIRY);
+  static readonly ADMIN_ADJUSTMENT = new LoyaltyReason(LoyaltyTransactionReasonValue.ADMIN_ADJUSTMENT);
+
+  private static readonly ALL: ReadonlyArray<LoyaltyReason> = [
+    LoyaltyReason.PURCHASE,
+    LoyaltyReason.SIGNUP,
+    LoyaltyReason.REVIEW,
+    LoyaltyReason.STYLE_QUIZ,
+    LoyaltyReason.OUTFIT_PHOTO,
+    LoyaltyReason.SOCIAL_SHARE,
+    LoyaltyReason.BIRTHDAY,
+    LoyaltyReason.REFERRAL,
+    LoyaltyReason.GOODWILL,
+    LoyaltyReason.REFUND,
+    LoyaltyReason.DISCOUNT_REDEMPTION,
+    LoyaltyReason.PRODUCT_REDEMPTION,
+    LoyaltyReason.EXPIRY,
+    LoyaltyReason.ADMIN_ADJUSTMENT,
+  ];
+
+  private constructor(private readonly value: LoyaltyTransactionReasonValue) {
+    if (!Object.values(LoyaltyTransactionReasonValue).includes(value)) {
+      throw new InvalidFormatError(
+        "loyalty reason",
+        Object.values(LoyaltyTransactionReasonValue).join(" | "),
+      );
+    }
+  }
 
   static create(value: string): LoyaltyReason {
-    return LoyaltyReason.fromString(value);
+    return (
+      LoyaltyReason.ALL.find((r) => r.value === value) ??
+      new LoyaltyReason(value as LoyaltyTransactionReasonValue)
+    );
   }
 
   static fromString(value: string): LoyaltyReason {
-    const enumValue = Object.values(LoyaltyTransactionReason).find(
-      (v) => v === value,
-    );
-    if (!enumValue) {
-      throw new InvalidFormatError(
-        "loyalty reason",
-        Object.values(LoyaltyTransactionReason).join(" | "),
-      );
-    }
-    return new LoyaltyReason(enumValue);
-  }
-
-  static purchase(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.PURCHASE);
-  }
-  static signup(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.SIGNUP);
-  }
-  static review(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.REVIEW);
-  }
-  static styleQuiz(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.STYLE_QUIZ);
-  }
-  static outfitPhoto(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.OUTFIT_PHOTO);
-  }
-  static socialShare(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.SOCIAL_SHARE);
-  }
-  static birthday(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.BIRTHDAY);
-  }
-  static referral(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.REFERRAL);
-  }
-  static goodwill(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.GOODWILL);
-  }
-  static refund(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.REFUND);
-  }
-  static discountRedemption(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.DISCOUNT_REDEMPTION);
-  }
-  static productRedemption(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.PRODUCT_REDEMPTION);
-  }
-  static expiry(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.EXPIRY);
-  }
-  static adminAdjustment(): LoyaltyReason {
-    return new LoyaltyReason(LoyaltyTransactionReason.ADMIN_ADJUSTMENT);
+    return LoyaltyReason.create(value);
   }
 
   getValue(): string {
@@ -77,45 +84,45 @@ export class LoyaltyReason {
   }
 
   isPurchase(): boolean {
-    return this.value === LoyaltyTransactionReason.PURCHASE;
+    return this.value === LoyaltyTransactionReasonValue.PURCHASE;
   }
   isSignup(): boolean {
-    return this.value === LoyaltyTransactionReason.SIGNUP;
+    return this.value === LoyaltyTransactionReasonValue.SIGNUP;
   }
   isReview(): boolean {
-    return this.value === LoyaltyTransactionReason.REVIEW;
+    return this.value === LoyaltyTransactionReasonValue.REVIEW;
   }
   isStyleQuiz(): boolean {
-    return this.value === LoyaltyTransactionReason.STYLE_QUIZ;
+    return this.value === LoyaltyTransactionReasonValue.STYLE_QUIZ;
   }
   isOutfitPhoto(): boolean {
-    return this.value === LoyaltyTransactionReason.OUTFIT_PHOTO;
+    return this.value === LoyaltyTransactionReasonValue.OUTFIT_PHOTO;
   }
   isSocialShare(): boolean {
-    return this.value === LoyaltyTransactionReason.SOCIAL_SHARE;
+    return this.value === LoyaltyTransactionReasonValue.SOCIAL_SHARE;
   }
   isBirthday(): boolean {
-    return this.value === LoyaltyTransactionReason.BIRTHDAY;
+    return this.value === LoyaltyTransactionReasonValue.BIRTHDAY;
   }
   isReferral(): boolean {
-    return this.value === LoyaltyTransactionReason.REFERRAL;
+    return this.value === LoyaltyTransactionReasonValue.REFERRAL;
   }
   isGoodwill(): boolean {
-    return this.value === LoyaltyTransactionReason.GOODWILL;
+    return this.value === LoyaltyTransactionReasonValue.GOODWILL;
   }
   isRefund(): boolean {
-    return this.value === LoyaltyTransactionReason.REFUND;
+    return this.value === LoyaltyTransactionReasonValue.REFUND;
   }
   isDiscountRedemption(): boolean {
-    return this.value === LoyaltyTransactionReason.DISCOUNT_REDEMPTION;
+    return this.value === LoyaltyTransactionReasonValue.DISCOUNT_REDEMPTION;
   }
   isProductRedemption(): boolean {
-    return this.value === LoyaltyTransactionReason.PRODUCT_REDEMPTION;
+    return this.value === LoyaltyTransactionReasonValue.PRODUCT_REDEMPTION;
   }
   isExpiry(): boolean {
-    return this.value === LoyaltyTransactionReason.EXPIRY;
+    return this.value === LoyaltyTransactionReasonValue.EXPIRY;
   }
   isAdminAdjustment(): boolean {
-    return this.value === LoyaltyTransactionReason.ADMIN_ADJUSTMENT;
+    return this.value === LoyaltyTransactionReasonValue.ADMIN_ADJUSTMENT;
   }
 }

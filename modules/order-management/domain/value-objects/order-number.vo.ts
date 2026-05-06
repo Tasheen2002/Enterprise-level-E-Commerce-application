@@ -1,24 +1,16 @@
 import { DomainValidationError } from "../errors/order-management.errors";
 
 export class OrderNumber {
-  private readonly value: string;
-
-  private constructor(value: string) {
-    this.value = value;
+  private constructor(private readonly value: string) {
+    OrderNumber.validate(value);
   }
 
   static create(value: string): OrderNumber {
-    if (!value || value.trim().length === 0) {
-      throw new DomainValidationError("Order number cannot be empty");
-    }
-
-    if (value.length > 50) {
-      throw new DomainValidationError(
-        "Order number cannot exceed 50 characters",
-      );
-    }
-
     return new OrderNumber(value.trim());
+  }
+
+  static fromString(value: string): OrderNumber {
+    return new OrderNumber(value);
   }
 
   static generate(prefix: string = "ORD"): OrderNumber {
@@ -29,8 +21,15 @@ export class OrderNumber {
     return new OrderNumber(`${prefix}-${timestamp}-${random}`);
   }
 
-  static fromString(value: string): OrderNumber {
-    return new OrderNumber(value);
+  private static validate(value: string): void {
+    if (!value || value.trim().length === 0) {
+      throw new DomainValidationError("Order number cannot be empty");
+    }
+    if (value.length > 50) {
+      throw new DomainValidationError(
+        "Order number cannot exceed 50 characters",
+      );
+    }
   }
 
   getValue(): string {

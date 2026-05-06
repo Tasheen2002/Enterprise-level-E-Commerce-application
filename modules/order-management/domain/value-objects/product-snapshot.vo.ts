@@ -1,5 +1,8 @@
 import { DomainValidationError } from "../errors/order-management.errors";
 
+// Input shape for ProductSnapshot.create() / .fromPersistence().
+// Exposed because services need to type their own params; not the entity's
+// internal representation (which is private to the class).
 export interface ProductSnapshotData {
   productId: string;
   variantId: string;
@@ -19,13 +22,21 @@ export interface ProductSnapshotData {
 }
 
 export class ProductSnapshot {
-  private readonly props: ProductSnapshotData;
-
-  private constructor(data: ProductSnapshotData) {
-    this.props = { ...data };
+  private constructor(private readonly props: ProductSnapshotData) {
+    ProductSnapshot.validate(props);
   }
 
   static create(data: ProductSnapshotData): ProductSnapshot {
+    return new ProductSnapshot({ ...data });
+  }
+
+  // Reconstitutes from persisted state. Persisted snapshots are trusted to
+  // already satisfy validation; same checks still run as invariants.
+  static fromPersistence(data: ProductSnapshotData): ProductSnapshot {
+    return new ProductSnapshot({ ...data });
+  }
+
+  private static validate(data: ProductSnapshotData): void {
     if (!data.productId || data.productId.trim().length === 0) {
       throw new DomainValidationError("Product ID is required");
     }
@@ -44,8 +55,6 @@ export class ProductSnapshot {
     if (data.weight !== undefined && data.weight < 0) {
       throw new DomainValidationError("Weight cannot be negative");
     }
-
-    return new ProductSnapshot(data);
   }
 
   get productId(): string { return this.props.productId; }
@@ -69,12 +78,10 @@ export class ProductSnapshot {
     return { ...this.props };
   }
 
+  // JS-standard hook: called automatically by JSON.stringify and required by
+  // cross-module ports (cart's IProductSnapshotFactory) that serialize snapshots.
   toJSON(): ProductSnapshotData {
     return { ...this.props };
-  }
-
-  toString(): string {
-    return JSON.stringify(this.getValue());
   }
 
   equals(other: ProductSnapshot): boolean {
@@ -91,5 +98,9 @@ export class ProductSnapshot {
       JSON.stringify(this.props.dimensions) === JSON.stringify(other.props.dimensions) &&
       JSON.stringify(this.props.attributes) === JSON.stringify(other.props.attributes)
     );
+  }
+
+  toString(): string {
+    return JSON.stringify(this.getValue());
   }
 }

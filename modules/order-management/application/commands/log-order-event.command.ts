@@ -6,6 +6,11 @@ export interface LogOrderEventCommand extends ICommand {
   readonly orderId: string;
   readonly eventType: string;
   readonly payload?: Record<string, unknown>;
+  // Required at the API boundary — every API-logged event must record who
+  // logged it (route is staff-gated, so request.user.userId is always set).
+  // Internal/system callers go through OrderEventService.logEvent directly
+  // and may omit it.
+  readonly loggedBy: string;
 }
 
 export class LogOrderEventHandler implements ICommandHandler<
@@ -18,7 +23,8 @@ export class LogOrderEventHandler implements ICommandHandler<
     const event = await this.orderEventService.logEvent({
       orderId: command.orderId,
       eventType: command.eventType,
-      payload: command.payload || {},
+      payload: command.payload,
+      loggedBy: command.loggedBy,
     });
     return CommandResult.success(event);
   }

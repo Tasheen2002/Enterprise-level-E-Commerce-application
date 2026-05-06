@@ -26,16 +26,22 @@ export class PreorderController {
     private readonly listPreordersHandler: ListPreordersHandler,
   ) {}
 
-  async createPreorder(
-    request: AuthenticatedRequest<{ Body: CreatePreorderBody }>,
+  // ── Reads ──
+
+  async listPreorders(
+    request: AuthenticatedRequest<{ Querystring: ListPreordersQuery }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.createHandler.handle({
-        orderItemId: request.body.orderItemId,
-        releaseDate: request.body.releaseDate,
+      const { limit, offset, sortBy, sortOrder, filterType } = request.query;
+      const result = await this.listPreordersHandler.handle({
+        limit,
+        offset,
+        sortBy,
+        sortOrder,
+        filterType,
       });
-      return ResponseHelper.fromCommand(reply, result, "Preorder created successfully", 201);
+      return ResponseHelper.ok(reply, "Preorders retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -53,13 +59,18 @@ export class PreorderController {
     }
   }
 
-  async listPreorders(
-    request: AuthenticatedRequest<{ Querystring: ListPreordersQuery }>,
+  // ── Writes ──
+
+  async createPreorder(
+    request: AuthenticatedRequest<{ Body: CreatePreorderBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listPreordersHandler.handle(request.query);
-      return ResponseHelper.ok(reply, "Preorders retrieved successfully", result);
+      const result = await this.createHandler.handle({
+        orderItemId: request.body.orderItemId,
+        releaseDate: request.body.releaseDate,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Preorder created successfully", 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

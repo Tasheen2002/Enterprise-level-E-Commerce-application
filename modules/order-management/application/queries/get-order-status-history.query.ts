@@ -6,15 +6,22 @@ export interface GetOrderStatusHistoryQuery extends IQuery {
   readonly orderId: string;
   readonly limit?: number;
   readonly offset?: number;
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
 }
 
 export class GetOrderStatusHistoryHandler implements IQueryHandler<GetOrderStatusHistoryQuery, OrderStatusHistoryDTO[]> {
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(query: GetOrderStatusHistoryQuery): Promise<OrderStatusHistoryDTO[]> {
-    return this.orderService.getOrderStatusHistory(query.orderId, {
-      limit: query.limit,
-      offset: query.offset,
-    });
+    return this.orderService.getOrderStatusHistory(
+      query.orderId,
+      {
+        limit: query.limit,
+        offset: query.offset,
+      },
+      query.requestingUserId,
+      query.isStaff,
+    );
   }
 }

@@ -12,7 +12,7 @@ import {
   GetLoyaltyTransactionsHandler,
 } from "../../../application/queries";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
-import { LoyaltyTransactionReason } from "../../../domain/enums/loyalty.enums";
+import { LoyaltyTransactionReasonValue } from "../../../domain/value-objects/loyalty-reason.vo";
 import {
   CreateLoyaltyProgramBody,
   AwardPointsBody,
@@ -32,21 +32,6 @@ export class LoyaltyController {
     private readonly adjustPointsHandler: AdjustLoyaltyPointsHandler,
     private readonly listTransactionsHandler: GetLoyaltyTransactionsHandler,
   ) {}
-
-  async createProgram(
-    request: AuthenticatedRequest<{ Body: CreateLoyaltyProgramBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.createProgramHandler.handle({
-        ...request.body,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.fromCommand(reply, result, "Loyalty program created", 201);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
 
   async listPrograms(_request: AuthenticatedRequest, reply: FastifyReply) {
     try {
@@ -72,6 +57,37 @@ export class LoyaltyController {
     }
   }
 
+  async listTransactions(
+    request: AuthenticatedRequest<{ Querystring: ListTransactionsQuery }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.listTransactionsHandler.handle({
+        accountId: request.query.accountId,
+        orderId: request.query.orderId,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.ok(reply, "Loyalty transactions retrieved", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async createProgram(
+    request: AuthenticatedRequest<{ Body: CreateLoyaltyProgramBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.createProgramHandler.handle({
+        ...request.body,
+        timestamp: new Date(),
+      });
+      return ResponseHelper.fromCommand(reply, result, "Loyalty program created", 201);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
   async awardPoints(
     request: AuthenticatedRequest<{ Body: AwardPointsBody }>,
     reply: FastifyReply,
@@ -79,7 +95,7 @@ export class LoyaltyController {
     try {
       const result = await this.awardPointsHandler.handle({
         ...request.body,
-        reason: request.body.reason as LoyaltyTransactionReason,
+        reason: request.body.reason as LoyaltyTransactionReasonValue,
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Loyalty points awarded", 201);
@@ -95,7 +111,7 @@ export class LoyaltyController {
     try {
       const result = await this.redeemPointsHandler.handle({
         ...request.body,
-        reason: request.body.reason as LoyaltyTransactionReason | undefined,
+        reason: request.body.reason as LoyaltyTransactionReasonValue | undefined,
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Loyalty points redeemed", 201);
@@ -114,22 +130,6 @@ export class LoyaltyController {
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Loyalty points adjusted", 200);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async listTransactions(
-    request: AuthenticatedRequest<{ Querystring: ListTransactionsQuery }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.listTransactionsHandler.handle({
-        accountId: request.query.accountId,
-        orderId: request.query.orderId,
-        timestamp: new Date(),
-      });
-      return ResponseHelper.ok(reply, "Loyalty transactions retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

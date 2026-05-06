@@ -1,18 +1,15 @@
-import { randomUUID } from "crypto";
-import { ProductSnapshot, ProductSnapshotData } from "../value-objects";
+import { OrderItemId, ProductSnapshot, ProductSnapshotData } from "../value-objects";
 import { DomainValidationError } from "../errors/order-management.errors";
-
+import { ORDER_ITEM_GIFT_MESSAGE_MAX_LENGTH } from "../constants/order-management.constants";
 
 export interface OrderItemProps {
-  orderItemId: string;
+  orderItemId: OrderItemId;
   orderId: string;
   variantId: string;
   quantity: number;
   productSnapshot: ProductSnapshot;
   isGift: boolean;
   giftMessage?: string;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface OrderItemDTO {
@@ -23,35 +20,19 @@ export interface OrderItemDTO {
   productSnapshot: ProductSnapshotData;
   isGift: boolean;
   giftMessage?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export class OrderItem {
-  private constructor(private props: OrderItemProps) {}
+  private constructor(private props: OrderItemProps) {
+    OrderItem.validate(props);
+  }
 
   static create(
-    params: Omit<OrderItemProps, "orderItemId" | "createdAt" | "updatedAt">,
+    params: Omit<OrderItemProps, "orderItemId">,
   ): OrderItem {
-    if (params.quantity <= 0) {
-      throw new DomainValidationError("Quantity must be greater than 0");
-    }
-
-    if (
-      params.isGift &&
-      params.giftMessage &&
-      params.giftMessage.length > 500
-    ) {
-      throw new DomainValidationError(
-        "Gift message cannot exceed 500 characters",
-      );
-    }
-
     return new OrderItem({
       ...params,
-      orderItemId: randomUUID(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      orderItemId: OrderItemId.create(),
     });
   }
 
@@ -59,7 +40,23 @@ export class OrderItem {
     return new OrderItem(props);
   }
 
-  get orderItemId(): string {
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: OrderItemProps): void {
+    if (props.quantity <= 0) {
+      throw new DomainValidationError("Quantity must be greater than 0");
+    }
+    if (
+      props.isGift &&
+      props.giftMessage &&
+      props.giftMessage.length > ORDER_ITEM_GIFT_MESSAGE_MAX_LENGTH
+    ) {
+      throw new DomainValidationError(
+        `Gift message cannot exceed ${ORDER_ITEM_GIFT_MESSAGE_MAX_LENGTH} characters`,
+      );
+    }
+  }
+
+  get orderItemId(): OrderItemId {
     return this.props.orderItemId;
   }
 
@@ -87,48 +84,30 @@ export class OrderItem {
     return this.props.giftMessage;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
-  }
-
-  isGiftItem(): boolean {
-    return this.props.isGift;
-  }
-
   setOrderId(orderId: string): void {
     this.props.orderId = orderId;
-    this.props.updatedAt = new Date();
   }
 
   updateQuantity(newQuantity: number): void {
     if (newQuantity <= 0) {
       throw new DomainValidationError("Quantity must be greater than 0");
     }
-
     this.props.quantity = newQuantity;
-    this.props.updatedAt = new Date();
   }
 
   setAsGift(giftMessage?: string): void {
-    if (giftMessage && giftMessage.length > 500) {
+    if (giftMessage && giftMessage.length > ORDER_ITEM_GIFT_MESSAGE_MAX_LENGTH) {
       throw new DomainValidationError(
-        "Gift message cannot exceed 500 characters",
+        `Gift message cannot exceed ${ORDER_ITEM_GIFT_MESSAGE_MAX_LENGTH} characters`,
       );
     }
-
     this.props.isGift = true;
     this.props.giftMessage = giftMessage;
-    this.props.updatedAt = new Date();
   }
 
   removeGift(): void {
     this.props.isGift = false;
     this.props.giftMessage = undefined;
-    this.props.updatedAt = new Date();
   }
 
   calculateSubtotal(): number {
@@ -136,20 +115,18 @@ export class OrderItem {
   }
 
   equals(other: OrderItem): boolean {
-    return this.props.orderItemId === other.props.orderItemId;
+    return this.props.orderItemId.equals(other.props.orderItemId);
   }
 
   static toDTO(entity: OrderItem): OrderItemDTO {
     return {
-      orderItemId: entity.props.orderItemId,
+      orderItemId: entity.props.orderItemId.getValue(),
       orderId: entity.props.orderId,
       variantId: entity.props.variantId,
       quantity: entity.props.quantity,
       productSnapshot: entity.props.productSnapshot.getValue(),
       isGift: entity.props.isGift,
       giftMessage: entity.props.giftMessage,
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }

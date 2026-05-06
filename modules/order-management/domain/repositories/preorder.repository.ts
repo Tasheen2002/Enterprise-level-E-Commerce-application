@@ -1,4 +1,5 @@
 import { Preorder } from "../entities/preorder.entity";
+import { OrderItemId } from "../value-objects/order-item-id.vo";
 
 export interface PreorderQueryOptions {
   limit?: number;
@@ -10,10 +11,10 @@ export interface PreorderQueryOptions {
 export interface IPreorderRepository {
   // Basic CRUD
   save(preorder: Preorder): Promise<void>;
-  delete(orderItemId: string): Promise<void>;
+  delete(orderItemId: OrderItemId): Promise<void>;
 
   // Finders
-  findByOrderItemId(orderItemId: string): Promise<Preorder | null>;
+  findByOrderItemId(orderItemId: OrderItemId): Promise<Preorder | null>;
   findAll(options?: PreorderQueryOptions): Promise<Preorder[]>;
   findNotified(options?: PreorderQueryOptions): Promise<Preorder[]>;
   findUnnotified(options?: PreorderQueryOptions): Promise<Preorder[]>;
@@ -30,5 +31,5 @@ export interface IPreorderRepository {
   countReleased(): Promise<number>;
 
   // Existence checks
-  exists(orderItemId: string): Promise<boolean>;
+  exists(orderItemId: OrderItemId): Promise<boolean>;
 }

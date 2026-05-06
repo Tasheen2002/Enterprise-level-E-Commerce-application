@@ -5,6 +5,8 @@ import { OrderDTO } from "../../domain/entities/order.entity";
 export interface UpdateOrderItemCommand extends ICommand {
   readonly orderId: string;
   readonly itemId: string;
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
   readonly quantity?: number;
   readonly isGift?: boolean;
   readonly giftMessage?: string;
@@ -23,6 +25,8 @@ export class UpdateOrderItemHandler implements ICommandHandler<
       quantity: command.quantity,
       isGift: command.isGift,
       giftMessage: command.giftMessage,
+      requestingUserId: command.requestingUserId,
+      isStaff: command.isStaff,
     });
     return CommandResult.success(order);
   }

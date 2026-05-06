@@ -6,11 +6,14 @@ import {
   LoyaltyTransactionFilters,
   LoyaltyTransactionQueryOptions,
 } from "../../../domain/repositories/loyalty-transaction.repository";
-import { LoyaltyTransaction } from "../../../domain/entities/loyalty-transaction.entity";
+import {
+  LoyaltyTransaction,
+  LoyaltyTransactionType,
+} from "../../../domain/entities/loyalty-transaction.entity";
 import { LoyaltyTransactionId } from "../../../domain/value-objects/loyalty-transaction-id.vo";
 import { LoyaltyAccountId } from "../../../domain/value-objects/loyalty-account-id.vo";
 import { Points } from "../../../domain/value-objects/points.vo";
-import { LoyaltyTransactionType, LoyaltyTransactionReason } from "../../../domain/enums/loyalty.enums";
+import { LoyaltyTransactionReasonValue } from "../../../domain/value-objects/loyalty-reason.vo";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 export class LoyaltyTransactionRepositoryImpl
@@ -22,7 +25,7 @@ export class LoyaltyTransactionRepositoryImpl
   }
 
   async save(transaction: LoyaltyTransaction): Promise<void> {
-    const data = this.dehydrate(transaction);
+    const data = this.toPersistence(transaction);
     await this.prisma.loyaltyTransaction.create({ data });
     await this.dispatchEvents(transaction);
   }
@@ -31,7 +34,7 @@ export class LoyaltyTransactionRepositoryImpl
     const record = await this.prisma.loyaltyTransaction.findUnique({
       where: { transactionId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByAccountId(accountId: LoyaltyAccountId): Promise<LoyaltyTransaction[]> {
@@ -39,7 +42,7 @@ export class LoyaltyTransactionRepositoryImpl
       where: { accountId: accountId.getValue() },
       orderBy: { createdAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findExpiredByAccountId(accountId: LoyaltyAccountId): Promise<LoyaltyTransaction[]> {
@@ -52,7 +55,7 @@ export class LoyaltyTransactionRepositoryImpl
       },
       orderBy: { expiresAt: "asc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -76,7 +79,7 @@ export class LoyaltyTransactionRepositoryImpl
       this.prisma.loyaltyTransaction.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -105,7 +108,7 @@ export class LoyaltyTransactionRepositoryImpl
     return this.prisma.loyaltyTransaction.count({ where });
   }
 
-  private hydrate(record: {
+  private toDomain(record: {
     transactionId: string;
     accountId: string;
     type: string;
@@ -124,7 +127,7 @@ export class LoyaltyTransactionRepositoryImpl
       accountId: record.accountId,
       type: record.type as LoyaltyTransactionType,
       points: Points.create(Number(record.points)),
-      reason: record.reason as LoyaltyTransactionReason,
+      reason: record.reason as LoyaltyTransactionReasonValue,
       description: record.description,
       referenceId: record.referenceId,
       orderId: record.orderId,
@@ -135,7 +138,7 @@ export class LoyaltyTransactionRepositoryImpl
     });
   }
 
-  private dehydrate(transaction: LoyaltyTransaction) {
+  private toPersistence(transaction: LoyaltyTransaction) {
     return {
       transactionId: transaction.id.getValue(),
       accountId: transaction.accountId,

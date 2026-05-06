@@ -3,7 +3,7 @@ import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-
 
 export class OrderId extends UuidId {
   private constructor(value: string) {
-    super(value, "Order ID");
+    super(value, "OrderId");
   }
 
   static create(): OrderId {

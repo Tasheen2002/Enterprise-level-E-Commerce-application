@@ -5,13 +5,19 @@ import { OrderAddressNotFoundError } from "../../domain/errors/order-management.
 
 export interface GetOrderAddressQuery extends IQuery {
   readonly orderId: string;
+  readonly requestingUserId: string;
+  readonly isStaff: boolean;
 }
 
 export class GetOrderAddressHandler implements IQueryHandler<GetOrderAddressQuery, OrderAddressDTO> {
   constructor(private readonly orderManagementService: OrderManagementService) {}
 
   async handle(query: GetOrderAddressQuery): Promise<OrderAddressDTO> {
-    const orderAddress = await this.orderManagementService.getOrderAddress(query.orderId);
+    const orderAddress = await this.orderManagementService.getOrderAddress(
+      query.orderId,
+      query.requestingUserId,
+      query.isStaff,
+    );
     if (!orderAddress) throw new OrderAddressNotFoundError(query.orderId);
     return orderAddress;
   }

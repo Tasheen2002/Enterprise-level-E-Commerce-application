@@ -22,10 +22,9 @@ export {
   ContactMismatchError,
 } from "./domain/errors/order-management.errors";
 
-// ── Domain enums ──────────────────────────────────────────────────────────────
-export { OrderStatusEnum, OrderSourceEnum } from "./domain/enums/order.enums";
-
 // ── Domain value objects ──────────────────────────────────────────────────────
+export { OrderStatusEnum, OrderStatusValue } from "./domain/value-objects/order-status.vo";
+export { OrderSourceEnum, OrderSourceValue } from "./domain/value-objects/order-source.vo";
 export { OrderId } from "./domain/value-objects/order-id.vo";
 
 // ── External service interfaces ───────────────────────────────────────────────
@@ -38,7 +37,7 @@ export type {
   ExternalProductData,
   ExternalMediaAsset,
   ExternalStockData,
-} from "./domain/external-services";
+} from "./domain/ports/external-services";
 
 // ── Application layer ─────────────────────────────────────────────────────────
 export * from "./application";
