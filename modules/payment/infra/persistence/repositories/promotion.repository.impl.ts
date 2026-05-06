@@ -20,7 +20,7 @@ export class PromotionRepositoryImpl
   }
 
   async save(promotion: Promotion): Promise<void> {
-    const data = this.dehydrate(promotion);
+    const data = this.toPersistence(promotion);
     const { promoId, ...updateData } = data;
     await this.prisma.promotion.upsert({
       where: { promoId },
@@ -40,14 +40,14 @@ export class PromotionRepositoryImpl
     const record = await this.prisma.promotion.findUnique({
       where: { promoId: id.getValue() },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findByCode(code: string): Promise<Promotion | null> {
     const record = await this.prisma.promotion.findUnique({
       where: { code },
     });
-    return record ? this.hydrate(record) : null;
+    return record ? this.toDomain(record) : null;
   }
 
   async findActivePromotions(now?: Date): Promise<Promotion[]> {
@@ -60,7 +60,7 @@ export class PromotionRepositoryImpl
       },
       orderBy: { startsAt: "desc" },
     });
-    return records.map((r) => this.hydrate(r));
+    return records.map((r) => this.toDomain(r));
   }
 
   async findWithFilters(
@@ -92,7 +92,7 @@ export class PromotionRepositoryImpl
       this.prisma.promotion.count({ where }),
     ]);
 
-    const items = records.map((r) => this.hydrate(r));
+    const items = records.map((r) => this.toDomain(r));
     const limit = options?.limit ?? total;
     const offset = options?.offset ?? 0;
     return {
@@ -127,7 +127,7 @@ export class PromotionRepositoryImpl
     return count > 0;
   }
 
-  private hydrate(record: Prisma.PromotionGetPayload<Record<string, never>>): Promotion {
+  private toDomain(record: Prisma.PromotionGetPayload<Record<string, never>>): Promotion {
     return Promotion.fromPersistence({
       id: PromotionId.fromString(record.promoId),
       code: record.code ?? null,
@@ -141,7 +141,7 @@ export class PromotionRepositoryImpl
     });
   }
 
-  private dehydrate(promotion: Promotion): Prisma.PromotionUncheckedCreateInput {
+  private toPersistence(promotion: Promotion): Prisma.PromotionUncheckedCreateInput {
     return {
       promoId: promotion.id.getValue(),
       code: promotion.code,
