@@ -8,9 +8,6 @@ import { OrderId, OrderItemId, ProductSnapshot, ProductSnapshotData } from "../.
 
 type OrderItemRow = Prisma.OrderItemGetPayload<Record<string, never>>;
 
-// Domain sortBy → Prisma column. `id` and `qty` map to real columns; `price`
-// has no DB column (lives inside the productSnapshot JSON), so sort is
-// dropped (undefined) when the caller asks for it.
 const SORT_FIELD_MAP: Record<
   NonNullable<OrderItemQueryOptions["sortBy"]>,
   "id" | "qty" | undefined
@@ -21,7 +18,7 @@ const SORT_FIELD_MAP: Record<
 };
 
 export class OrderItemRepositoryImpl implements IOrderItemRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaClient) { }
 
   // ─── Persistence mapping ──────────────────────────────────────────────────
 
