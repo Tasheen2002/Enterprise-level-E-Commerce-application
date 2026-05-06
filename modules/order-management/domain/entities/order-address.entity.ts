@@ -1,6 +1,7 @@
 import { AggregateRoot } from "../../../../packages/core/src/domain/aggregate-root";
 import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-event";
 import { AddressSnapshot, AddressSnapshotData } from "../value-objects";
+import { DomainValidationError } from "../errors/order-management.errors";
 
 // ── Domain Events ──────────────────────────────────────────────────────
 
@@ -21,20 +22,19 @@ export class OrderAddressUpdatedEvent extends DomainEvent {
 
 // ── Props & DTO ────────────────────────────────────────────────────────
 
+// OrderAddress is a 1:1 satellite of Order (Prisma `OrderAddress.orderId @id`).
+// The schema stores only the two snapshots — no audit timestamps.
 export interface OrderAddressProps {
   orderId: string;
   billingAddress: AddressSnapshot;
   shippingAddress: AddressSnapshot;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface OrderAddressDTO {
   orderId: string;
   billingAddress: AddressSnapshotData;
   shippingAddress: AddressSnapshotData;
-  createdAt: string;
-  updatedAt: string;
+  isSameAddress: boolean;
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
@@ -42,20 +42,22 @@ export interface OrderAddressDTO {
 export class OrderAddress extends AggregateRoot {
   private constructor(private props: OrderAddressProps) {
     super();
+    OrderAddress.validate(props);
   }
 
-  static create(
-    params: Omit<OrderAddressProps, "createdAt" | "updatedAt">,
-  ): OrderAddress {
-    return new OrderAddress({
-      ...params,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+  static create(params: OrderAddressProps): OrderAddress {
+    return new OrderAddress({ ...params });
   }
 
   static fromPersistence(props: OrderAddressProps): OrderAddress {
     return new OrderAddress(props);
+  }
+
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: OrderAddressProps): void {
+    if (!props.orderId || props.orderId.trim().length === 0) {
+      throw new DomainValidationError("Order ID is required");
+    }
   }
 
   get orderId(): string {
@@ -70,36 +72,22 @@ export class OrderAddress extends AggregateRoot {
     return this.props.shippingAddress;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this.props.updatedAt;
+  isSameAddress(): boolean {
+    return this.props.billingAddress.equals(this.props.shippingAddress);
   }
 
   updateBillingAddress(billingAddress: AddressSnapshot): void {
     this.props.billingAddress = billingAddress;
-    this.props.updatedAt = new Date();
     this.addDomainEvent(new OrderAddressUpdatedEvent(this.props.orderId, "billing"));
   }
 
   updateShippingAddress(shippingAddress: AddressSnapshot): void {
     this.props.shippingAddress = shippingAddress;
-    this.props.updatedAt = new Date();
     this.addDomainEvent(new OrderAddressUpdatedEvent(this.props.orderId, "shipping"));
   }
 
-  isSameAddress(): boolean {
-    return this.props.billingAddress.equals(this.props.shippingAddress);
-  }
-
   equals(other: OrderAddress): boolean {
-    return (
-      this.props.orderId === other.props.orderId &&
-      this.props.billingAddress.equals(other.props.billingAddress) &&
-      this.props.shippingAddress.equals(other.props.shippingAddress)
-    );
+    return this.props.orderId === other.props.orderId;
   }
 
   static toDTO(entity: OrderAddress): OrderAddressDTO {
@@ -107,8 +95,7 @@ export class OrderAddress extends AggregateRoot {
       orderId: entity.props.orderId,
       billingAddress: entity.props.billingAddress.getValue(),
       shippingAddress: entity.props.shippingAddress.getValue(),
-      createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
+      isSameAddress: entity.isSameAddress(),
     };
   }
 }
