@@ -4,17 +4,14 @@ import {
 } from '../../../../packages/core/src/domain/domain-error';
 
 export class Email {
-  private constructor(private readonly value: string) {}
+  private constructor(private readonly value: string) {
+    if (!value || !value.trim()) throw new EmptyFieldError('Email');
+    if (!Email.isValidEmail(value)) throw new InvalidFormatError('email', 'valid email address');
+    if (value.length > 254) throw new InvalidFormatError('email', 'maximum 254 characters');
+  }
 
   static create(email: string): Email {
-    if (!email || !email.trim()) throw new EmptyFieldError('Email');
-
-    const trimmed = email.trim().toLowerCase();
-
-    if (!Email.isValidEmail(trimmed)) throw new InvalidFormatError('email', 'valid email address');
-    if (trimmed.length > 254) throw new InvalidFormatError('email', 'maximum 254 characters');
-
-    return new Email(trimmed);
+    return new Email(email.trim().toLowerCase());
   }
 
   static fromString(value: string): Email {
