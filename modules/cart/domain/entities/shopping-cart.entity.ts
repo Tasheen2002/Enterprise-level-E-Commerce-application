@@ -3,7 +3,7 @@ import { DomainEvent } from "../../../../packages/core/src/domain/events/domain-
 import { CartId } from "../value-objects/cart-id.vo";
 import { CartOwnerId } from "../value-objects/cart-owner-id.vo";
 import { GuestToken } from "../value-objects/guest-token.vo";
-import { Currency } from "../value-objects/currency.vo";
+import { Currency } from "../../../../packages/core/src/domain/value-objects/currency.vo";
 import {
   CartItem,
   CartItemDTO,
@@ -120,6 +120,51 @@ export class CartClearedEvent extends DomainEvent {
   }
 }
 
+export class CartEmailUpdatedEvent extends DomainEvent {
+  constructor(
+    public readonly cartId: string,
+    public readonly email: string,
+  ) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.email_updated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId, email: this.email };
+  }
+}
+
+export class CartShippingInfoUpdatedEvent extends DomainEvent {
+  constructor(public readonly cartId: string) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.shipping_info_updated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId };
+  }
+}
+
+export class CartAddressesUpdatedEvent extends DomainEvent {
+  constructor(public readonly cartId: string) {
+    super(cartId, "ShoppingCart");
+  }
+
+  get eventType(): string {
+    return "cart.addresses_updated";
+  }
+
+  getPayload(): Record<string, unknown> {
+    return { cartId: this.cartId };
+  }
+}
+
 export class CartTransferredToUserEvent extends DomainEvent {
   constructor(
     public readonly cartId: string,
@@ -141,7 +186,66 @@ export class CartTransferredToUserEvent extends DomainEvent {
 // Props & Data Interfaces
 // ============================================================================
 
-export interface ShoppingCartProps {
+// Pre-checkout fields collected on the cart row before checkout
+// initialisation. They have no aggregate invariants of their own (any
+// non-null string is acceptable; nullability is the contract); they live
+// here so a logged-in shopper can populate them across visits and the
+// Checkout aggregate can consume them at initialisation time.
+export interface CartCheckoutFields {
+  email: string | null;
+  shippingMethod: string | null;
+  shippingOption: string | null;
+  isGift: boolean;
+  shippingFirstName: string | null;
+  shippingLastName: string | null;
+  shippingAddress1: string | null;
+  shippingAddress2: string | null;
+  shippingCity: string | null;
+  shippingProvince: string | null;
+  shippingPostalCode: string | null;
+  shippingCountryCode: string | null;
+  shippingPhone: string | null;
+  billingFirstName: string | null;
+  billingLastName: string | null;
+  billingAddress1: string | null;
+  billingAddress2: string | null;
+  billingCity: string | null;
+  billingProvince: string | null;
+  billingPostalCode: string | null;
+  billingCountryCode: string | null;
+  billingPhone: string | null;
+  sameAddressForBilling: boolean;
+}
+
+export interface UpdateShippingInfoData {
+  shippingMethod?: string;
+  shippingOption?: string;
+  isGift?: boolean;
+}
+
+export interface UpdateCartAddressesData {
+  shippingFirstName?: string;
+  shippingLastName?: string;
+  shippingAddress1?: string;
+  shippingAddress2?: string;
+  shippingCity?: string;
+  shippingProvince?: string;
+  shippingPostalCode?: string;
+  shippingCountryCode?: string;
+  shippingPhone?: string;
+  billingFirstName?: string;
+  billingLastName?: string;
+  billingAddress1?: string;
+  billingAddress2?: string;
+  billingCity?: string;
+  billingProvince?: string;
+  billingPostalCode?: string;
+  billingCountryCode?: string;
+  billingPhone?: string;
+  sameAddressForBilling?: boolean;
+}
+
+export interface ShoppingCartProps extends CartCheckoutFields {
   cartId: CartId;
   userId: CartOwnerId | null;
   guestToken: GuestToken | null;
@@ -151,6 +255,32 @@ export interface ShoppingCartProps {
   createdAt: Date;
   updatedAt: Date;
 }
+
+const DEFAULT_CHECKOUT_FIELDS: CartCheckoutFields = {
+  email: null,
+  shippingMethod: null,
+  shippingOption: null,
+  isGift: false,
+  shippingFirstName: null,
+  shippingLastName: null,
+  shippingAddress1: null,
+  shippingAddress2: null,
+  shippingCity: null,
+  shippingProvince: null,
+  shippingPostalCode: null,
+  shippingCountryCode: null,
+  shippingPhone: null,
+  billingFirstName: null,
+  billingLastName: null,
+  billingAddress1: null,
+  billingAddress2: null,
+  billingCity: null,
+  billingProvince: null,
+  billingPostalCode: null,
+  billingCountryCode: null,
+  billingPhone: null,
+  sameAddressForBilling: true,
+};
 
 // ============================================================================
 // DTO
@@ -225,6 +355,7 @@ export class ShoppingCart extends AggregateRoot {
       currency: Currency.fromString(data.currency),
       items: [],
       reservationExpiresAt: data.reservationExpiresAt || null,
+      ...DEFAULT_CHECKOUT_FIELDS,
       createdAt: now,
       updatedAt: now,
     });
@@ -250,6 +381,7 @@ export class ShoppingCart extends AggregateRoot {
       currency: Currency.fromString(data.currency),
       items: [],
       reservationExpiresAt: data.reservationExpiresAt || null,
+      ...DEFAULT_CHECKOUT_FIELDS,
       createdAt: now,
       updatedAt: now,
     });
@@ -270,6 +402,31 @@ export class ShoppingCart extends AggregateRoot {
       currency: Currency.fromString(data.currency),
       items: data.items.map((itemData) => CartItem.fromPersistence(itemData)),
       reservationExpiresAt: data.reservationExpiresAt || null,
+      // Pre-checkout fields default to null/false on hydration so older rows
+      // without these columns still rehydrate cleanly.
+      email: data.email ?? null,
+      shippingMethod: data.shippingMethod ?? null,
+      shippingOption: data.shippingOption ?? null,
+      isGift: data.isGift ?? false,
+      shippingFirstName: data.shippingFirstName ?? null,
+      shippingLastName: data.shippingLastName ?? null,
+      shippingAddress1: data.shippingAddress1 ?? null,
+      shippingAddress2: data.shippingAddress2 ?? null,
+      shippingCity: data.shippingCity ?? null,
+      shippingProvince: data.shippingProvince ?? null,
+      shippingPostalCode: data.shippingPostalCode ?? null,
+      shippingCountryCode: data.shippingCountryCode ?? null,
+      shippingPhone: data.shippingPhone ?? null,
+      billingFirstName: data.billingFirstName ?? null,
+      billingLastName: data.billingLastName ?? null,
+      billingAddress1: data.billingAddress1 ?? null,
+      billingAddress2: data.billingAddress2 ?? null,
+      billingCity: data.billingCity ?? null,
+      billingProvince: data.billingProvince ?? null,
+      billingPostalCode: data.billingPostalCode ?? null,
+      billingCountryCode: data.billingCountryCode ?? null,
+      billingPhone: data.billingPhone ?? null,
+      sameAddressForBilling: data.sameAddressForBilling ?? true,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });
@@ -457,6 +614,101 @@ export class ShoppingCart extends AggregateRoot {
     this.touch();
   }
 
+  // ── Pre-checkout fields (read) ─────────────────────────────────────
+
+  get email(): string | null { return this.props.email; }
+  get shippingMethod(): string | null { return this.props.shippingMethod; }
+  get shippingOption(): string | null { return this.props.shippingOption; }
+  get isGiftCart(): boolean { return this.props.isGift; }
+  get sameAddressForBilling(): boolean { return this.props.sameAddressForBilling; }
+  get shippingFirstName(): string | null { return this.props.shippingFirstName; }
+  get shippingLastName(): string | null { return this.props.shippingLastName; }
+  get shippingAddress1(): string | null { return this.props.shippingAddress1; }
+  get shippingAddress2(): string | null { return this.props.shippingAddress2; }
+  get shippingCity(): string | null { return this.props.shippingCity; }
+  get shippingProvince(): string | null { return this.props.shippingProvince; }
+  get shippingPostalCode(): string | null { return this.props.shippingPostalCode; }
+  get shippingCountryCode(): string | null { return this.props.shippingCountryCode; }
+  get shippingPhone(): string | null { return this.props.shippingPhone; }
+  get billingFirstName(): string | null { return this.props.billingFirstName; }
+  get billingLastName(): string | null { return this.props.billingLastName; }
+  get billingAddress1(): string | null { return this.props.billingAddress1; }
+  get billingAddress2(): string | null { return this.props.billingAddress2; }
+  get billingCity(): string | null { return this.props.billingCity; }
+  get billingProvince(): string | null { return this.props.billingProvince; }
+  get billingPostalCode(): string | null { return this.props.billingPostalCode; }
+  get billingCountryCode(): string | null { return this.props.billingCountryCode; }
+  get billingPhone(): string | null { return this.props.billingPhone; }
+
+  // ── Pre-checkout fields (mutate) ───────────────────────────────────
+
+  // Aggregate-method API for pre-checkout fields. Mutations flow through
+  // these methods (rather than via direct repository updates) so the root
+  // can emit `Cart*UpdatedEvent` and bump `updatedAt`. Persistence is by
+  // `ICartRepository.save(cart)`.
+  updateEmail(email: string): void {
+    this.props.email = email;
+    this.addDomainEvent(
+      new CartEmailUpdatedEvent(this.props.cartId.getValue(), email),
+    );
+    this.touch();
+  }
+
+  updateShippingInfo(data: UpdateShippingInfoData): void {
+    if (data.shippingMethod !== undefined) {
+      this.props.shippingMethod = data.shippingMethod;
+    }
+    if (data.shippingOption !== undefined) {
+      this.props.shippingOption = data.shippingOption;
+    }
+    if (data.isGift !== undefined) {
+      this.props.isGift = data.isGift;
+    }
+    this.addDomainEvent(
+      new CartShippingInfoUpdatedEvent(this.props.cartId.getValue()),
+    );
+    this.touch();
+  }
+
+  // Patch-style update: only fields present on `data` are written. `null`
+  // is a valid clear value for any string field; `undefined` skips it.
+  updateAddresses(data: UpdateCartAddressesData): void {
+    const set = <K extends keyof UpdateCartAddressesData>(
+      key: K,
+      value: UpdateCartAddressesData[K],
+    ): void => {
+      if (value === undefined) return;
+      // Type assertion: UpdateCartAddressesData and CartCheckoutFields share
+      // identical field shapes for these keys.
+      (this.props as unknown as Record<string, unknown>)[key as string] = value;
+    };
+    set("shippingFirstName", data.shippingFirstName);
+    set("shippingLastName", data.shippingLastName);
+    set("shippingAddress1", data.shippingAddress1);
+    set("shippingAddress2", data.shippingAddress2);
+    set("shippingCity", data.shippingCity);
+    set("shippingProvince", data.shippingProvince);
+    set("shippingPostalCode", data.shippingPostalCode);
+    set("shippingCountryCode", data.shippingCountryCode);
+    set("shippingPhone", data.shippingPhone);
+    set("billingFirstName", data.billingFirstName);
+    set("billingLastName", data.billingLastName);
+    set("billingAddress1", data.billingAddress1);
+    set("billingAddress2", data.billingAddress2);
+    set("billingCity", data.billingCity);
+    set("billingProvince", data.billingProvince);
+    set("billingPostalCode", data.billingPostalCode);
+    set("billingCountryCode", data.billingCountryCode);
+    set("billingPhone", data.billingPhone);
+    if (data.sameAddressForBilling !== undefined) {
+      this.props.sameAddressForBilling = data.sameAddressForBilling;
+    }
+    this.addDomainEvent(
+      new CartAddressesUpdatedEvent(this.props.cartId.getValue()),
+    );
+    this.touch();
+  }
+
   // Reservation management
   updateReservationExpiry(expiresAt: Date | null): void {
     this.props.reservationExpiresAt = expiresAt;
@@ -554,6 +806,30 @@ export class ShoppingCart extends AggregateRoot {
       createdAt: this.props.createdAt,
       updatedAt: this.props.updatedAt,
       items: this.props.items.map((item) => item.toSnapshot()),
+      // Pre-checkout fields — repository persists what's on the snapshot.
+      email: this.props.email,
+      shippingMethod: this.props.shippingMethod,
+      shippingOption: this.props.shippingOption,
+      isGift: this.props.isGift,
+      shippingFirstName: this.props.shippingFirstName,
+      shippingLastName: this.props.shippingLastName,
+      shippingAddress1: this.props.shippingAddress1,
+      shippingAddress2: this.props.shippingAddress2,
+      shippingCity: this.props.shippingCity,
+      shippingProvince: this.props.shippingProvince,
+      shippingPostalCode: this.props.shippingPostalCode,
+      shippingCountryCode: this.props.shippingCountryCode,
+      shippingPhone: this.props.shippingPhone,
+      billingFirstName: this.props.billingFirstName,
+      billingLastName: this.props.billingLastName,
+      billingAddress1: this.props.billingAddress1,
+      billingAddress2: this.props.billingAddress2,
+      billingCity: this.props.billingCity,
+      billingProvince: this.props.billingProvince,
+      billingPostalCode: this.props.billingPostalCode,
+      billingCountryCode: this.props.billingCountryCode,
+      billingPhone: this.props.billingPhone,
+      sameAddressForBilling: this.props.sameAddressForBilling,
     };
   }
 
@@ -606,4 +882,27 @@ export interface ShoppingCartEntityData {
   createdAt: Date;
   updatedAt: Date;
   items: CartItemEntityData[];
+  email?: string | null;
+  shippingMethod?: string | null;
+  shippingOption?: string | null;
+  isGift?: boolean;
+  shippingFirstName?: string | null;
+  shippingLastName?: string | null;
+  shippingAddress1?: string | null;
+  shippingAddress2?: string | null;
+  shippingCity?: string | null;
+  shippingProvince?: string | null;
+  shippingPostalCode?: string | null;
+  shippingCountryCode?: string | null;
+  shippingPhone?: string | null;
+  billingFirstName?: string | null;
+  billingLastName?: string | null;
+  billingAddress1?: string | null;
+  billingAddress2?: string | null;
+  billingCity?: string | null;
+  billingProvince?: string | null;
+  billingPostalCode?: string | null;
+  billingCountryCode?: string | null;
+  billingPhone?: string | null;
+  sameAddressForBilling?: boolean;
 }
