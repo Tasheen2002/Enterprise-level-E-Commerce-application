@@ -9,7 +9,7 @@ import { PrismaRepository } from '../../../../../apps/api/src/shared/infrastruct
 import { IEventBus } from '../../../../../packages/core/src/domain/events/domain-event';
 import {
   IUserRepository,
-  FindAllWithFiltersOptions,
+  UserFilters,
   UserListItem,
 } from '../../../domain/repositories/iuser.repository';
 import { PaginatedResult } from '../../../../../packages/core/src/domain/interfaces/paginated-result.interface';
@@ -17,8 +17,8 @@ import { User } from '../../../domain/entities/user.entity';
 import { UserId } from '../../../domain/value-objects/user-id.vo';
 import { Email } from '../../../domain/value-objects/email.vo';
 import { Phone } from '../../../domain/value-objects/phone.vo';
-import { UserRole } from '../../../domain/enums/user-role.enum';
-import { UserStatus } from '../../../domain/enums/user-status.enum';
+import { UserRole } from '../../../domain/value-objects/user-role.vo';
+import { UserStatus } from '../../../domain/value-objects/user-status.vo';
 import { InvalidOperationError } from '../../../domain/errors/user-management.errors';
 
 export class UserRepository
@@ -63,8 +63,10 @@ export class UserRepository
     });
   }
 
-  async findByPhone(phone: string): Promise<User | null> {
-    const row = await this.prisma.user.findFirst({ where: { phone } });
+  async findByPhone(phone: Phone): Promise<User | null> {
+    const row = await this.prisma.user.findFirst({
+      where: { phone: phone.getValue() },
+    });
     return row ? this.toDomain(row) : null;
   }
 
@@ -75,8 +77,10 @@ export class UserRepository
     return count > 0;
   }
 
-  async existsByPhone(phone: string): Promise<boolean> {
-    const count = await this.prisma.user.count({ where: { phone } });
+  async existsByPhone(phone: Phone): Promise<boolean> {
+    const count = await this.prisma.user.count({
+      where: { phone: phone.getValue() },
+    });
     return count > 0;
   }
 
@@ -89,9 +93,9 @@ export class UserRepository
   }
 
   async findAllWithFilters(
-    options: FindAllWithFiltersOptions
+    filters: UserFilters,
   ): Promise<PaginatedResult<UserListItem>> {
-    const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = options;
+    const { search, role, status, emailVerified, page, limit, sortBy, sortOrder } = filters;
 
     const where: Prisma.UserWhereInput = {};
 
@@ -196,7 +200,7 @@ export class UserRepository
         id: user.id.getValue(),
         email: user.email.getValue(),
         passwordHash: user.passwordHash || null,
-        phone: user.phone?.getValue() || null,
+        phone: user.phone?.getValue() ?? null,
         firstName: user.firstName,
         lastName: user.lastName,
         title: user.title,
@@ -213,7 +217,7 @@ export class UserRepository
       update: {
         email: user.email.getValue(),
         passwordHash: user.passwordHash || null,
-        phone: user.phone?.getValue() || null,
+        phone: user.phone?.getValue() ?? null,
         firstName: user.firstName,
         lastName: user.lastName,
         title: user.title,

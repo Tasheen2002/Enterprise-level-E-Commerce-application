@@ -6,25 +6,30 @@ import {
   UpdateProfileHandler,
 } from "../../../application";
 import { UpdateProfileBody } from "../validation/profile.schema";
-import { UserIdParams } from "../validation/user.schema";
 
 export class ProfileController {
   constructor(
     private readonly getProfileHandler: GetUserProfileHandler,
     private readonly updateProfileHandler: UpdateProfileHandler,
-  ) {}
+  ) { }
+
+  // --- Queries ---
 
   async getCurrentUserProfile(
     request: AuthenticatedRequest,
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.getProfileHandler.handle({ userId: request.user.userId });
+      const result = await this.getProfileHandler.handle({
+        userId: request.user.userId,
+      });
       return ResponseHelper.ok(reply, "Profile retrieved", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
   }
+
+  // --- Commands ---
 
   async updateCurrentUserProfile(
     request: AuthenticatedRequest<{ Body: UpdateProfileBody }>,
@@ -33,34 +38,20 @@ export class ProfileController {
     try {
       const result = await this.updateProfileHandler.handle({
         userId: request.user.userId,
-        ...request.body,
-      });
-      return ResponseHelper.fromCommand(reply, result, "Profile updated");
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async getProfile(
-    request: AuthenticatedRequest<{ Params: UserIdParams }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.getProfileHandler.handle({ userId: request.params.userId });
-      return ResponseHelper.ok(reply, "Profile retrieved", result);
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async updateProfile(
-    request: AuthenticatedRequest<{ Params: UserIdParams; Body: UpdateProfileBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const result = await this.updateProfileHandler.handle({
-        userId: request.params.userId,
-        ...request.body,
+        defaultAddressId: request.body.defaultAddressId,
+        defaultPaymentMethodId: request.body.defaultPaymentMethodId,
+        prefs: request.body.prefs,
+        locale: request.body.locale,
+        currency: request.body.currency,
+        stylePreferences: request.body.stylePreferences,
+        preferredSizes: request.body.preferredSizes,
+        firstName: request.body.firstName,
+        lastName: request.body.lastName,
+        phone: request.body.phone,
+        title: request.body.title,
+        dateOfBirth: request.body.dateOfBirth,
+        residentOf: request.body.residentOf,
+        nationality: request.body.nationality,
       });
       return ResponseHelper.fromCommand(reply, result, "Profile updated");
     } catch (error: unknown) {

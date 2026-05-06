@@ -1,11 +1,16 @@
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import { AuthController } from "../controllers/auth.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
-import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
-import { validateBody } from "../validation/validator";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import { validateBody, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  actionSuccessResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   registerSchema,
   loginSchema,
+  logoutSchema,
   refreshTokenSchema,
   changePasswordSchema,
   forgotPasswordSchema,
@@ -15,7 +20,16 @@ import {
   changeEmailSchema,
   deleteAccountSchema,
   authResultResponseSchema,
-  successResponseSchema,
+  refreshTokenResponseSchema,
+  userIdentityResponseSchema,
+  actionResponseSchema,
+  RegisterBody,
+  LoginBody,
+  RefreshTokenBody,
+  ForgotPasswordBody,
+  ResetPasswordBody,
+  VerifyEmailBody,
+  ResendVerificationBody,
 } from "../validation/auth.schema";
 import {
   createRateLimiter,
@@ -24,6 +38,18 @@ import {
 
 const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const registerBodyJson = toJsonSchema(registerSchema);
+const loginBodyJson = toJsonSchema(loginSchema);
+const logoutBodyJson = toJsonSchema(logoutSchema);
+const refreshTokenBodyJson = toJsonSchema(refreshTokenSchema);
+const changePasswordBodyJson = toJsonSchema(changePasswordSchema);
+const forgotPasswordBodyJson = toJsonSchema(forgotPasswordSchema);
+const resetPasswordBodyJson = toJsonSchema(resetPasswordSchema);
+const verifyEmailBodyJson = toJsonSchema(verifyEmailSchema);
+const resendVerificationBodyJson = toJsonSchema(resendVerificationSchema);
+const changeEmailBodyJson = toJsonSchema(changeEmailSchema);
+const deleteAccountBodyJson = toJsonSchema(deleteAccountSchema);
 
 export async function authRoutes(
   fastify: FastifyInstance,
@@ -39,135 +65,86 @@ export async function authRoutes(
   fastify.post(
     "/auth/register",
     {
-      preValidation: [validateBody(registerSchema)],
+      preHandler: [validateBody(registerSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Register a new user",
         description:
-          "Register a new user account. Returns JWT tokens on success.",
-        body: {
-          type: "object",
-          required: ["email", "password"],
-          properties: {
-            email: { type: "string", format: "email" },
-            password: { type: "string", minLength: 8, maxLength: 128 },
-            phone: { type: "string" },
-            firstName: { type: "string", maxLength: 100 },
-            lastName: { type: "string", maxLength: 100 },
-            role: { type: "string", enum: ["CUSTOMER", "ADMIN", "VENDOR"] },
-          },
-        },
+          "Register a new user account. Returns JWT tokens on success. New accounts are always created with the CUSTOMER role; staff/admin roles are assigned via separate admin endpoints.",
+        body: registerBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: authResultResponseSchema,
-            },
-          },
+          201: successResponse(authResultResponseSchema, 201),
         },
       },
     },
-    (request, reply) => controller.register(request as any, reply),
+    (request, reply) =>
+      controller.register(
+        request as FastifyRequest<{ Body: RegisterBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/login
   fastify.post(
     "/auth/login",
     {
-      preValidation: [validateBody(loginSchema)],
+      preHandler: [validateBody(loginSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Login",
         description:
           "Authenticate with email and password. Returns JWT tokens on success.",
-        body: {
-          type: "object",
-          required: ["email", "password"],
-          properties: {
-            email: { type: "string", format: "email" },
-            password: { type: "string", minLength: 1 },
-            rememberMe: { type: "boolean" },
-          },
-        },
+        body: loginBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: authResultResponseSchema,
-            },
-          },
+          200: successResponse(authResultResponseSchema),
         },
       },
     },
-    (request, reply) => controller.login(request as any, reply),
+    (request, reply) =>
+      controller.login(
+        request as FastifyRequest<{ Body: LoginBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/refresh
   fastify.post(
     "/auth/refresh",
     {
-      preValidation: [validateBody(refreshTokenSchema)],
+      preHandler: [validateBody(refreshTokenSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Refresh access token",
         description: "Exchange a valid refresh token for a new access token.",
-        body: {
-          type: "object",
-          required: ["refreshToken"],
-          properties: {
-            refreshToken: { type: "string", minLength: 1 },
-          },
-        },
+        body: refreshTokenBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  accessToken: { type: "string" },
-                  refreshToken: { type: "string" },
-                  expiresIn: { type: "number" },
-                },
-              },
-            },
-          },
+          200: successResponse(refreshTokenResponseSchema),
         },
       },
     },
-    (request, reply) => controller.refreshToken(request as any, reply),
+    (request, reply) =>
+      controller.refreshToken(
+        request as FastifyRequest<{ Body: RefreshTokenBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/logout
   fastify.post(
     "/auth/logout",
     {
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, validateBody(logoutSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Logout",
         description:
-          "Invalidate the current session and revoke the refresh token.",
+          "Invalidate the current session and revoke the refresh token. " +
+          "Clients SHOULD send their refreshToken in the body so it can be " +
+          "blacklisted; otherwise the refresh token remains valid until expiry.",
         security: [{ bearerAuth: [] }],
+        body: logoutBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },
@@ -179,7 +156,7 @@ export async function authRoutes(
   fastify.get(
     "/auth/me",
     {
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate],
       schema: {
         tags: ["Authentication"],
         summary: "Get current user",
@@ -187,22 +164,7 @@ export async function authRoutes(
           "Returns the authenticated user's basic identity from the JWT payload.",
         security: [{ bearerAuth: [] }],
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: {
-                type: "object",
-                properties: {
-                  userId: { type: "string", format: "uuid" },
-                  email: { type: "string", format: "email" },
-                  role: { type: "string" },
-                },
-              },
-            },
-          },
+          200: successResponse(userIdentityResponseSchema),
         },
       },
     },
@@ -214,31 +176,18 @@ export async function authRoutes(
   fastify.post(
     "/auth/change-password",
     {
-      preValidation: [validateBody(changePasswordSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [
+        authenticate,
+        validateBody(changePasswordSchema),
+      ],
       schema: {
         tags: ["Authentication"],
         summary: "Change password",
         description: "Change the authenticated user's account password.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["currentPassword", "newPassword"],
-          properties: {
-            currentPassword: { type: "string", minLength: 1 },
-            newPassword: { type: "string", minLength: 8, maxLength: 128 },
-          },
-        },
+        body: changePasswordBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
@@ -250,168 +199,111 @@ export async function authRoutes(
   fastify.post(
     "/auth/forgot-password",
     {
-      preValidation: [validateBody(forgotPasswordSchema)],
+      preHandler: [validateBody(forgotPasswordSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Initiate password reset",
         description:
           "Send a password reset link to the given email. Always returns 200 to prevent email enumeration.",
-        body: {
-          type: "object",
-          required: ["email"],
-          properties: {
-            email: { type: "string", format: "email" },
-          },
-        },
+        body: forgotPasswordBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
     (request, reply) =>
-      controller.initiatePasswordReset(request as any, reply),
+      controller.forgotPassword(
+        request as FastifyRequest<{ Body: ForgotPasswordBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/reset-password
   fastify.post(
     "/auth/reset-password",
     {
-      preValidation: [validateBody(resetPasswordSchema)],
+      preHandler: [validateBody(resetPasswordSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Reset password",
         description:
           "Set a new password using the reset token received by email.",
-        body: {
-          type: "object",
-          required: ["token", "newPassword", "confirmPassword"],
-          properties: {
-            token: { type: "string", minLength: 1 },
-            newPassword: { type: "string", minLength: 8, maxLength: 128 },
-            confirmPassword: { type: "string", minLength: 8, maxLength: 128 },
-          },
-        },
+        body: resetPasswordBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
-    (request, reply) => controller.resetPassword(request as any, reply),
+    (request, reply) =>
+      controller.resetPassword(
+        request as FastifyRequest<{ Body: ResetPasswordBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/verify-email
   fastify.post(
     "/auth/verify-email",
     {
-      preValidation: [validateBody(verifyEmailSchema)],
+      preHandler: [validateBody(verifyEmailSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Verify email address",
         description:
           "Verify a user's email address using the token sent to their inbox.",
-        body: {
-          type: "object",
-          required: ["token"],
-          properties: {
-            token: { type: "string", minLength: 1 },
-          },
-        },
+        body: verifyEmailBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
-    (request, reply) => controller.verifyEmail(request as any, reply),
+    (request, reply) =>
+      controller.verifyEmail(
+        request as FastifyRequest<{ Body: VerifyEmailBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/resend-verification
   fastify.post(
     "/auth/resend-verification",
     {
-      preValidation: [validateBody(resendVerificationSchema)],
+      preHandler: [validateBody(resendVerificationSchema)],
       schema: {
         tags: ["Authentication"],
         summary: "Resend verification email",
         description:
-          "Resend the email verification link to the user's email address.",
-        body: {
-          type: "object",
-          required: ["email"],
-          properties: {
-            email: { type: "string", format: "email" },
-          },
-        },
+          "Resend the email verification link to the user's email address. Always returns 200 to prevent email enumeration.",
+        body: resendVerificationBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
     (request, reply) =>
-      controller.resendVerification(request as any, reply),
+      controller.resendVerification(
+        request as FastifyRequest<{ Body: ResendVerificationBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/change-email
   fastify.post(
     "/auth/change-email",
     {
-      preValidation: [validateBody(changeEmailSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [
+        authenticate,
+        validateBody(changeEmailSchema),
+      ],
       schema: {
         tags: ["Authentication"],
         summary: "Change email address",
         description:
           "Change the authenticated user's email. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["newEmail", "password"],
-          properties: {
-            newEmail: { type: "string", format: "email" },
-            password: { type: "string", minLength: 1 },
-          },
-        },
+        body: changeEmailBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(actionResponseSchema),
         },
       },
     },
@@ -423,31 +315,19 @@ export async function authRoutes(
   fastify.post(
     "/auth/delete-account",
     {
-      preValidation: [validateBody(deleteAccountSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [
+        authenticate,
+        validateBody(deleteAccountSchema),
+      ],
       schema: {
         tags: ["Authentication"],
         summary: "Delete account",
         description:
           "Permanently delete the authenticated user's account. Requires password confirmation.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["password"],
-          properties: {
-            password: { type: "string", minLength: 1 },
-          },
-        },
+        body: deleteAccountBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: actionSuccessResponse(),
         },
       },
     },

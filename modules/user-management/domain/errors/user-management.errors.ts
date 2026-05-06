@@ -128,3 +128,8 @@ export class InvalidOperationError extends DomainError {
   }
 }
 
+export class VerificationRateLimitError extends DomainError {
+  constructor(message = 'Too many verification attempts. Please try again later.') {
+    super(message, 'VERIFICATION_RATE_LIMIT', 429);
+  }
+}

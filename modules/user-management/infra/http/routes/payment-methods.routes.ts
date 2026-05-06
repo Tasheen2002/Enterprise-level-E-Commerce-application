@@ -2,17 +2,24 @@ import { FastifyInstance } from "fastify";
 import { PaymentMethodsController } from "../controllers/payment-methods.controller";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
-import { validateBody, validateParams } from "../validation/validator";
+import { validateBody, validateParams, validateQuery, toJsonSchema } from "../validation/validator";
+import {
+  successResponse,
+  noContentResponse,
+} from "@/api/src/shared/http/response-schemas";
 import {
   addPaymentMethodSchema,
   updatePaymentMethodSchema,
   paymentMethodIdParamsSchema,
+  listPaymentMethodsQuerySchema,
   paymentMethodResponseSchema,
+  paymentMethodListResponseSchema,
 } from "../validation/payment-method.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -20,6 +27,11 @@ const writeRateLimiter = createRateLimiter({
   keyGenerator: userKeyGenerator,
 });
 
+// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
+const addPaymentMethodBodyJson = toJsonSchema(addPaymentMethodSchema);
+const updatePaymentMethodBodyJson = toJsonSchema(updatePaymentMethodSchema);
+const paymentMethodIdParamsJson = toJsonSchema(paymentMethodIdParamsSchema);
+const listPaymentMethodsQueryJson = toJsonSchema(listPaymentMethodsQuerySchema);
 
 export async function paymentMethodRoutes(
   fastify: FastifyInstance,
@@ -35,23 +47,16 @@ export async function paymentMethodRoutes(
   fastify.get(
     "/users/me/payment-methods",
     {
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preValidation: [validateQuery(listPaymentMethodsQuerySchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "List payment methods",
-        description:
-          "Retrieve all saved payment methods for the authenticated user.",
+        description: "Retrieve a paginated list of saved payment methods for the authenticated user.",
         security: [{ bearerAuth: [] }],
+        querystring: listPaymentMethodsQueryJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "array", items: paymentMethodResponseSchema },
-            },
-          },
+          200: successResponse(paymentMethodListResponseSchema),
         },
       },
     },
@@ -63,37 +68,15 @@ export async function paymentMethodRoutes(
   fastify.post(
     "/users/me/payment-methods",
     {
-      preValidation: [validateBody(addPaymentMethodSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(addPaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Add a payment method",
         description: "Save a new payment method for the authenticated user.",
         security: [{ bearerAuth: [] }],
-        body: {
-          type: "object",
-          required: ["type"],
-          properties: {
-            type: { type: "string", enum: ["card", "wallet", "bank", "cod", "gift_card"] },
-            brand: { type: "string", maxLength: 50 },
-            last4: { type: "string", pattern: "^\\d{4}$" },
-            expMonth: { type: "integer", minimum: 1, maximum: 12 },
-            expYear: { type: "integer" },
-            billingAddressId: { type: "string", format: "uuid" },
-            providerRef: { type: "string", maxLength: 100 },
-            isDefault: { type: "boolean" },
-          },
-        },
+        body: addPaymentMethodBodyJson,
         response: {
-          201: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentMethodResponseSchema,
-            },
-          },
+          201: successResponse(paymentMethodResponseSchema, 201),
         },
       },
     },
@@ -105,41 +88,17 @@ export async function paymentMethodRoutes(
   fastify.patch(
     "/users/me/payment-methods/:paymentMethodId",
     {
-      preValidation: [validateParams(paymentMethodIdParamsSchema), validateBody(updatePaymentMethodSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preValidation: [validateParams(paymentMethodIdParamsSchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(updatePaymentMethodSchema)],
       schema: {
         tags: ["Payment Methods"],
         summary: "Update a payment method",
-        description:
-          "Partially update an existing payment method. All body fields are optional.",
+        description: "Partially update an existing payment method. All body fields are optional.",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["paymentMethodId"],
-          properties: {
-            paymentMethodId: { type: "string", format: "uuid" },
-          },
-        },
-        body: {
-          type: "object",
-          properties: {
-            billingAddressId: { type: "string", format: "uuid" },
-            expMonth: { type: "integer", minimum: 1, maximum: 12 },
-            expYear: { type: "integer" },
-            providerRef: { type: "string", maxLength: 100 },
-            isDefault: { type: "boolean" },
-          },
-        },
+        params: paymentMethodIdParamsJson,
+        body: updatePaymentMethodBodyJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: paymentMethodResponseSchema,
-            },
-          },
+          200: successResponse(paymentMethodResponseSchema),
         },
       },
     },
@@ -147,70 +106,45 @@ export async function paymentMethodRoutes(
       controller.updateCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 
-  // DELETE /users/me/payment-methods/:paymentMethodId
-  fastify.delete(
-    "/users/me/payment-methods/:paymentMethodId",
+  // PATCH /users/me/payment-methods/:paymentMethodId/default — set as default
+  fastify.patch(
+    "/users/me/payment-methods/:paymentMethodId/default",
     {
       preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
-      schema: {
-        tags: ["Payment Methods"],
-        summary: "Remove a payment method",
-        description:
-          "Permanently delete a payment method belonging to the authenticated user.",
-        security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["paymentMethodId"],
-          properties: {
-            paymentMethodId: { type: "string", format: "uuid" },
-          },
-        },
-        response: {
-          204: {
-            type: "null",
-            description: "Payment method deleted successfully",
-          },
-        },
-      },
-    },
-    (request, reply) =>
-      controller.deleteCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
-  );
-
-  // POST /users/me/payment-methods/:paymentMethodId/set-default
-  fastify.post(
-    "/users/me/payment-methods/:paymentMethodId/set-default",
-    {
-      preValidation: [validateParams(paymentMethodIdParamsSchema)],
-      preHandler: [RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
       schema: {
         tags: ["Payment Methods"],
         summary: "Set default payment method",
-        description:
-          "Mark a payment method as the user's default for checkout.",
+        description: "Mark a payment method as the user's default for checkout.",
         security: [{ bearerAuth: [] }],
-        params: {
-          type: "object",
-          required: ["paymentMethodId"],
-          properties: {
-            paymentMethodId: { type: "string", format: "uuid" },
-          },
-        },
+        params: paymentMethodIdParamsJson,
         response: {
-          200: {
-            type: "object",
-            properties: {
-              success: { type: "boolean" },
-              statusCode: { type: "number" },
-              message: { type: "string" },
-              data: { type: "object" },
-            },
-          },
+          200: successResponse(paymentMethodResponseSchema),
         },
       },
     },
     (request, reply) =>
       controller.setDefaultCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
+  );
+
+  // DELETE /users/me/payment-methods/:paymentMethodId
+  fastify.delete(
+    "/users/me/payment-methods/:paymentMethodId",
+    {
+      preValidation: [validateParams(paymentMethodIdParamsSchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      schema: {
+        tags: ["Payment Methods"],
+        summary: "Remove a payment method",
+        description: "Permanently delete a payment method belonging to the authenticated user.",
+        security: [{ bearerAuth: [] }],
+        params: paymentMethodIdParamsJson,
+        response: {
+          204: noContentResponse,
+        },
+      },
+    },
+    (request, reply) =>
+      controller.deleteCurrentUserPaymentMethod(request as AuthenticatedRequest, reply),
   );
 }

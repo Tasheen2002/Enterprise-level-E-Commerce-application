@@ -17,6 +17,7 @@ import {
 import {
   RegisterBody,
   LoginBody,
+  LogoutBody,
   RefreshTokenBody,
   ChangePasswordBody,
   ForgotPasswordBody,
@@ -26,7 +27,6 @@ import {
   ChangeEmailBody,
   DeleteAccountBody,
 } from '../validation/auth.schema';
-import { UserRole } from '../../../domain/enums/user-role.enum';
 
 export class AuthController {
   constructor(
@@ -41,24 +41,30 @@ export class AuthController {
     private readonly verifyEmailHandler: VerifyEmailHandler,
     private readonly deleteAccountHandler: DeleteAccountHandler,
     private readonly resendVerificationHandler: ResendVerificationHandler,
-  ) {}
+  ) { }
+
+  // --- Queries ---
+
+  async me(request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      return ResponseHelper.ok(reply, 'User retrieved', {
+        userId: request.user.userId,
+        email: request.user.email,
+        role: request.user.role,
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Authentication commands ---
 
   async register(
     request: FastifyRequest<{ Body: RegisterBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { email, password, phone, firstName, lastName, role } = request.body;
-
-      const result = await this.registerHandler.handle({
-        email,
-        password,
-        phone,
-        firstName,
-        lastName,
-        role: role as UserRole | undefined,
-      });
-
+      const result = await this.registerHandler.handle(request.body);
       return ResponseHelper.fromCommand(reply, result, 'Registration successful', 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -72,12 +78,19 @@ export class AuthController {
     try {
       const { email, password, rememberMe } = request.body;
 
-      const result = await this.loginHandler.handle({ email, password, rememberMe });
+      // Lockout key is composite (email + IP) — see LoginUserCommand.
+      const result = await this.loginHandler.handle({
+        email,
+        password,
+        rememberMe,
+        ipAddress: request.ip,
+      });
 
       if (result.success && result.data) {
         const auth = result.data;
         return ResponseHelper.ok(reply, 'Login successful', {
           accessToken: auth.accessToken,
+          // Refresh token only persisted when client opted into "remember me"
           refreshToken: rememberMe ? auth.refreshToken : undefined,
           user: auth.user,
           expiresIn: auth.expiresIn,
@@ -91,17 +104,21 @@ export class AuthController {
     }
   }
 
-  async logout(request: AuthenticatedRequest, reply: FastifyReply) {
+  async logout(
+    request: AuthenticatedRequest<{ Body: LogoutBody }>,
+    reply: FastifyReply,
+  ) {
     try {
-      const authHeader = request.headers.authorization;
-      const token = authHeader?.match(/^Bearer\s+(.+)$/)?.[1];
-
       const result = await this.logoutHandler.handle({
         userId: request.user.userId,
-        token,
+        token: this.extractBearerToken(request),
+        // Optional in the schema for backwards compatibility, but clients
+        // SHOULD send it — without it, the refresh token survives logout
+        // and /auth/refresh will still issue new access tokens.
+        refreshToken: request.body?.refreshToken,
       });
 
-      return ResponseHelper.ok(reply, 'Logged out successfully', result.data || {});
+      return ResponseHelper.ok(reply, 'Logged out successfully', result.data ?? {});
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -112,12 +129,9 @@ export class AuthController {
     reply: FastifyReply,
   ) {
     try {
-      const { refreshToken } = request.body;
-      const currentAccessToken = request.headers.authorization?.match(/^Bearer\s+(.+)$/)?.[1];
-
       const result = await this.refreshTokenHandler.handle({
-        refreshToken,
-        currentAccessToken,
+        refreshToken: request.body.refreshToken,
+        currentAccessToken: this.extractBearerToken(request),
       });
 
       if (result.success && result.data) {
@@ -130,14 +144,14 @@ export class AuthController {
     }
   }
 
+  // --- Password / email management commands ---
+
   async forgotPassword(
     request: FastifyRequest<{ Body: ForgotPasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { email } = request.body;
-
-      await this.initiatePasswordResetHandler.handle({ email });
+      await this.initiatePasswordResetHandler.handle({ email: request.body.email });
 
       // Always return success to prevent email enumeration
       return ResponseHelper.ok(
@@ -150,21 +164,12 @@ export class AuthController {
     }
   }
 
-  async initiatePasswordReset(
-    request: FastifyRequest<{ Body: ForgotPasswordBody }>,
-    reply: FastifyReply,
-  ) {
-    return this.forgotPassword(request, reply);
-  }
-
   async resetPassword(
     request: FastifyRequest<{ Body: ResetPasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { token, newPassword } = request.body;
-
-      const result = await this.resetPasswordHandler.handle({ token, newPassword });
+      const result = await this.resetPasswordHandler.handle(request.body);
 
       if (!result.success) {
         return ResponseHelper.fromCommand(reply, result, '');
@@ -180,62 +185,15 @@ export class AuthController {
     }
   }
 
-  async verifyEmail(
-    request: FastifyRequest<{ Body: VerifyEmailBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { token } = request.body;
-
-      const result = await this.verifyEmailHandler.handle({ token });
-
-      if (result.success) {
-        return ResponseHelper.ok(reply, 'Email has been verified successfully.', {
-          action: 'email_verified',
-        });
-      }
-
-      return ResponseHelper.fromCommand(reply, result, 'Email verification failed');
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
-  async resendVerification(
-    request: FastifyRequest<{ Body: ResendVerificationBody }>,
-    reply: FastifyReply,
-  ) {
-    try {
-      const { email } = request.body;
-
-      // Silently handle all cases to prevent email enumeration
-      try {
-        await this.resendVerificationHandler.handle({ email });
-      } catch {
-        // Do not reveal whether the email exists or any other error
-      }
-
-      return ResponseHelper.ok(
-        reply,
-        'If an account with that email exists and is unverified, a verification email has been sent.',
-        { action: 'verification_sent' },
-      );
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
-  }
-
   async changePassword(
     request: AuthenticatedRequest<{ Body: ChangePasswordBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { currentPassword, newPassword } = request.body;
-
       const result = await this.changePasswordHandler.handle({
         userId: request.user.userId,
-        currentPassword,
-        newPassword,
+        currentPassword: request.body.currentPassword,
+        newPassword: request.body.newPassword,
       });
 
       if (!result.success) {
@@ -255,12 +213,10 @@ export class AuthController {
     reply: FastifyReply,
   ) {
     try {
-      const { newEmail, password } = request.body;
-
       const result = await this.changeEmailHandler.handle({
         userId: request.user.userId,
-        newEmail,
-        password,
+        newEmail: request.body.newEmail,
+        password: request.body.password,
       });
 
       if (!result.success) {
@@ -277,18 +233,61 @@ export class AuthController {
     }
   }
 
+  // --- Email verification commands ---
+
+  async verifyEmail(
+    request: FastifyRequest<{ Body: VerifyEmailBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.verifyEmailHandler.handle({ token: request.body.token });
+
+      if (result.success) {
+        return ResponseHelper.ok(reply, 'Email has been verified successfully.', {
+          action: 'email_verified',
+        });
+      }
+
+      return ResponseHelper.fromCommand(reply, result, 'Email verification failed');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async resendVerification(
+    request: FastifyRequest<{ Body: ResendVerificationBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      // Silently swallow handler errors to prevent email enumeration —
+      // response is identical whether the email exists or not.
+      try {
+        await this.resendVerificationHandler.handle({ email: request.body.email });
+      } catch {
+        // Intentional no-op — see comment above
+      }
+
+      return ResponseHelper.ok(
+        reply,
+        'If an account with that email exists and is unverified, a verification email has been sent.',
+        { action: 'verification_sent' },
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Account lifecycle commands ---
+
   async deleteAccount(
     request: AuthenticatedRequest<{ Body: DeleteAccountBody }>,
     reply: FastifyReply,
   ) {
     try {
-      const { password } = request.body;
-      const currentAccessToken = request.headers.authorization?.match(/^Bearer\s+(.+)$/)?.[1];
-
       const result = await this.deleteAccountHandler.handle({
         userId: request.user.userId,
-        password,
-        currentAccessToken,
+        password: request.body.password,
+        currentAccessToken: this.extractBearerToken(request),
       });
 
       if (result.success) {
@@ -301,15 +300,11 @@ export class AuthController {
     }
   }
 
-  async me(request: AuthenticatedRequest, reply: FastifyReply) {
-    try {
-      return ResponseHelper.ok(reply, 'User retrieved', {
-        userId: request.user.userId,
-        email: request.user.email,
-        role: request.user.role,
-      });
-    } catch (error: unknown) {
-      return ResponseHelper.error(reply, error);
-    }
+  // --- Private helpers ---
+
+  private extractBearerToken(
+    request: FastifyRequest | AuthenticatedRequest,
+  ): string | undefined {
+    return request.headers.authorization?.match(/^Bearer\s+(.+)$/)?.[1];
   }
 }

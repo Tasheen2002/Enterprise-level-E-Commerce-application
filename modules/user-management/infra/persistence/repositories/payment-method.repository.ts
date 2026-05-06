@@ -6,9 +6,10 @@ import {
   PaymentMethod,
   PaymentMethodProps,
 } from "../../../domain/entities/payment-method.entity";
-import { PaymentMethodType } from "../../../domain/enums/payment-method-type.enum";
-import { PaymentMethodId } from "../../../domain/value-objects/payment-method-id";
+import { PaymentMethodType } from "../../../domain/value-objects/payment-method-type.vo";
+import { PaymentMethodId } from "../../../domain/value-objects/payment-method-id.vo";
 import { UserId } from "../../../domain/value-objects/user-id.vo";
+import { AddressId } from "../../../domain/value-objects/address-id.vo";
 
 export class PaymentMethodRepository
   extends PrismaRepository<PaymentMethod>
@@ -16,50 +17,6 @@ export class PaymentMethodRepository
 {
   constructor(prisma: PrismaClient, eventBus?: IEventBus) {
     super(prisma, eventBus);
-  }
-
-  // Maps a Prisma record to a PaymentMethod domain entity
-  private toDomain(data: Prisma.PaymentMethodGetPayload<object>): PaymentMethod {
-    const props: PaymentMethodProps = {
-      id: PaymentMethodId.fromString(data.id),
-      userId: UserId.fromString(data.userId),
-      type: PaymentMethodType.fromString(data.type),
-      brand: data.brand,
-      last4: data.last4,
-      expMonth: data.expMonth,
-      expYear: data.expYear,
-      billingAddressId: data.billingAddressId,
-      providerRef: data.providerRef,
-      isDefault: data.isDefault,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-    };
-
-    return PaymentMethod.fromPersistence(props);
-  }
-
-  // Maps a PaymentMethod domain entity to a Prisma-compatible persistence object
-  private toPersistence(paymentMethod: PaymentMethod): {
-    create: Prisma.PaymentMethodUncheckedCreateInput;
-    update: Prisma.PaymentMethodUncheckedUpdateInput;
-  } {
-    const create = {
-      id: paymentMethod.id.getValue(),
-      userId: paymentMethod.userId.getValue(),
-      type: paymentMethod.type.toString(),
-      brand: paymentMethod.brand,
-      last4: paymentMethod.last4,
-      expMonth: paymentMethod.expMonth,
-      expYear: paymentMethod.expYear,
-      billingAddressId: paymentMethod.billingAddressId,
-      providerRef: paymentMethod.providerRef,
-      isDefault: paymentMethod.isDefault,
-      createdAt: paymentMethod.createdAt,
-    };
-
-    const { id, userId, createdAt, ...update } = create;
-
-    return { create, update };
   }
 
   async save(paymentMethod: PaymentMethod): Promise<void> {
@@ -75,19 +32,15 @@ export class PaymentMethodRepository
   }
 
   async findById(id: PaymentMethodId): Promise<PaymentMethod | null> {
-    const paymentMethodData = await this.prisma.paymentMethod.findUnique({
+    const row = await this.prisma.paymentMethod.findUnique({
       where: { id: id.getValue() },
     });
 
-    if (!paymentMethodData) {
-      return null;
-    }
-
-    return this.toDomain(paymentMethodData);
+    return row ? this.toDomain(row) : null;
   }
 
   async findByUserId(userId: UserId): Promise<PaymentMethod[]> {
-    const paymentMethods = await this.prisma.paymentMethod.findMany({
+    const rows = await this.prisma.paymentMethod.findMany({
       where: { userId: userId.getValue() },
       orderBy: [
         { isDefault: "desc" }, // Default payment methods first
@@ -95,7 +48,7 @@ export class PaymentMethodRepository
       ],
     });
 
-    return paymentMethods.map((data) => this.toDomain(data));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async delete(id: PaymentMethodId): Promise<void> {
@@ -106,36 +59,32 @@ export class PaymentMethodRepository
 
   async findByUserIdAndType(
     userId: UserId,
-    type: PaymentMethodType
+    type: PaymentMethodType,
   ): Promise<PaymentMethod[]> {
-    const paymentMethods = await this.prisma.paymentMethod.findMany({
+    const rows = await this.prisma.paymentMethod.findMany({
       where: {
         userId: userId.getValue(),
-        type: type.toString(),
+        type,
       },
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     });
 
-    return paymentMethods.map((data) => this.toDomain(data));
+    return rows.map((row) => this.toDomain(row));
   }
 
   async findDefaultByUserId(userId: UserId): Promise<PaymentMethod | null> {
-    const paymentMethodData = await this.prisma.paymentMethod.findFirst({
+    const row = await this.prisma.paymentMethod.findFirst({
       where: {
         userId: userId.getValue(),
         isDefault: true,
       },
     });
 
-    if (!paymentMethodData) {
-      return null;
-    }
-
-    return this.toDomain(paymentMethodData);
+    return row ? this.toDomain(row) : null;
   }
 
   async countByUserId(userId: UserId): Promise<number> {
-    return await this.prisma.paymentMethod.count({
+    return this.prisma.paymentMethod.count({
       where: { userId: userId.getValue() },
     });
   }
@@ -145,5 +94,49 @@ export class PaymentMethodRepository
       where: { userId: userId.getValue() },
     });
     return result.count;
+  }
+
+  // --- Persistence mapping ---
+
+  private toDomain(row: Prisma.PaymentMethodGetPayload<object>): PaymentMethod {
+    const props: PaymentMethodProps = {
+      id: PaymentMethodId.fromString(row.id),
+      userId: UserId.fromString(row.userId),
+      type: PaymentMethodType.fromString(row.type),
+      brand: row.brand,
+      last4: row.last4,
+      expMonth: row.expMonth,
+      expYear: row.expYear,
+      billingAddressId: row.billingAddressId ? AddressId.fromString(row.billingAddressId) : null,
+      providerRef: row.providerRef,
+      isDefault: row.isDefault,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    };
+
+    return PaymentMethod.fromPersistence(props);
+  }
+
+  private toPersistence(paymentMethod: PaymentMethod): {
+    create: Prisma.PaymentMethodUncheckedCreateInput;
+    update: Prisma.PaymentMethodUncheckedUpdateInput;
+  } {
+    const create = {
+      id: paymentMethod.id.getValue(),
+      userId: paymentMethod.userId.getValue(),
+      type: paymentMethod.type,
+      brand: paymentMethod.brand,
+      last4: paymentMethod.last4,
+      expMonth: paymentMethod.expMonth,
+      expYear: paymentMethod.expYear,
+      billingAddressId: paymentMethod.billingAddressId?.getValue() ?? null,
+      providerRef: paymentMethod.providerRef,
+      isDefault: paymentMethod.isDefault,
+      createdAt: paymentMethod.createdAt,
+    };
+
+    const { id, userId, createdAt, ...update } = create;
+
+    return { create, update };
   }
 }

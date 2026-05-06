@@ -7,11 +7,7 @@ import { WishlistItem } from "../../../domain/entities/wishlist-item.entity";
 import { WishlistId, WishlistItemId } from "../../../domain/value-objects";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
-// ============================================================================
-// Database Row Interface
-// The WishlistItem table uses a composite PK (wishlistId, variantId) — no
-// standalone id column. The synthetic `WishlistItemId` is in-memory only.
-// ============================================================================
+
 interface WishlistItemDatabaseRow {
   wishlistId: string;
   variantId: string;
@@ -19,16 +15,6 @@ interface WishlistItemDatabaseRow {
   updatedAt?: Date;
 }
 
-// ============================================================================
-// Repository Implementation
-//
-// `WishlistItem` is a child entity of the `Wishlist` aggregate. Writes
-// flow through `IWishlistRepository.save(wishlist)` after mutating items
-// via the aggregate root's methods. This repository exposes only
-// read-only cross-aggregate queries (`findByVariantId` — "which
-// wishlists include this variant?") and SQL-level aggregation
-// (`countByVariantId`).
-// ============================================================================
 export class WishlistItemRepositoryImpl implements IWishlistItemRepository {
   constructor(private readonly prisma: PrismaClient) {}
 

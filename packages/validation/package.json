@@ -1,0 +1,28 @@
+{
+  "name": "@tasheen/validation",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared Zod schemas used by both the Fastify backend and the Next.js frontends. Single source of truth for wire validation.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./cart": "./src/cart/index.ts",
+    "./product": "./src/product/index.ts",
+    "./order": "./src/order/index.ts",
+    "./payment": "./src/payment/index.ts",
+    "./user": "./src/user/index.ts",
+    "./common": "./src/common/index.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@tasheen/config": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

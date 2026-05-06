@@ -1,5 +1,5 @@
 {
-  "name": "@expense-tracker/core",
+  "name": "@tasheen/core",
   "version": "0.1.0",
   "private": true,
   "main": "./src/index.ts",
@@ -14,6 +14,6 @@
   "devDependencies": {
     "@types/node": "^20.11.0",
     "typescript": "^5.3.3",
-    "@expense-tracker/typescript-config": "workspace:*"
+    "@tasheen/config": "workspace:*"
   }
 }

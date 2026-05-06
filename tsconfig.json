@@ -2,7 +2,9 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "outDir": "./dist",
     "rootDir": "./",
     "strict": true,
@@ -15,22 +17,38 @@
     "sourceMap": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": "./",
     "paths": {
-      "@/*": ["./apps/*"],
-      "@modules/*": ["./modules/*"],
-      "@packages/*": ["./packages/*"]
+      "@/*": [
+        "./apps/*"
+      ],
+      "@modules/*": [
+        "./modules/*"
+      ],
+      "@packages/*": [
+        "./packages/*"
+      ]
     }
   },
   "include": [
-    "apps/**/*",
+    "apps/api/**/*",
     "modules/**/*",
-    "packages/**/*",
+    "packages/core/**/*",
+    "packages/types/**/*",
+    "packages/validation/**/*",
     "db/**/*",
     "scripts/**/*"
   ],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "apps/web",
+    "apps/admin",
+    "packages/ui",
+    "packages/api-client",
+    "packages/config"
+  ]
 }
