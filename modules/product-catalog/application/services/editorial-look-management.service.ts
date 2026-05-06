@@ -10,9 +10,10 @@ import {
   EditorialLookDTO,
   CreateEditorialLookData,
 } from "../../domain/entities/editorial-look.entity";
-import { EditorialLookId as EntityEditorialLookId } from "../../domain/value-objects/editorial-look-id.vo";
-import { MediaAssetId as EntityMediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
+import { EditorialLookId } from "../../domain/value-objects/editorial-look-id.vo";
+import { MediaAssetId } from "../../domain/value-objects/media-asset-id.vo";
 import { ProductId } from "../../domain/value-objects/product-id.vo";
+import { IHtmlSanitizer } from "./ihtml-sanitizer.service";
 import {
   ProductNotFoundError,
   EditorialLookNotFoundError,
@@ -20,78 +21,97 @@ import {
   DomainValidationError,
   InvalidOperationError,
 } from "../../domain/errors";
+import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
+
+// ── Result types (named, not anonymous) ────────────────────────────────
+
+export interface EditorialLookStats {
+  totalLooks: number;
+  publishedLooks: number;
+  scheduledLooks: number;
+  draftLooks: number;
+  looksWithHeroImage: number;
+  looksWithProducts: number;
+  looksWithContent: number;
+}
+
+export interface PopularProduct {
+  productId: string;
+  appearanceCount: number;
+}
+
+export interface ScheduledPublicationResult {
+  published: EditorialLookDTO[];
+  errors: string[];
+}
+
+export interface PublicationValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface BatchDeleteResult {
+  deleted: string[];
+  failed: Array<{ id: string; error: string }>;
+}
+
+export interface BatchPublishResult {
+  published: string[];
+  failed: Array<{ id: string; error: string }>;
+}
+
+export interface UpdateEditorialLookInput {
+  title?: string;
+  storyHtml?: string | null;
+  heroAssetId?: string | null;
+  publishedAt?: Date | null;
+}
+
+export interface EditorialLookFilters {
+  published?: boolean;
+  scheduled?: boolean;
+  draft?: boolean;
+  hasContent?: boolean;
+}
+
+export interface EditorialLookListOptions {
+  page?: number;
+  limit?: number;
+  sortBy?: "title" | "publishedAt" | "id";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface LooksByProductOptions extends EditorialLookListOptions {
+  includeUnpublished?: boolean;
+}
 
 export class EditorialLookManagementService {
   constructor(
     private readonly editorialLookRepository: IEditorialLookRepository,
     private readonly mediaAssetRepository: IMediaAssetRepository,
     private readonly productRepository: IProductRepository,
+    private readonly htmlSanitizer: IHtmlSanitizer,
   ) {}
 
-  private async getLook(id: string): Promise<EditorialLook> {
-    const lookId = EntityEditorialLookId.fromString(id);
-    const look = await this.editorialLookRepository.findById(lookId);
-    if (!look) {
-      throw new EditorialLookNotFoundError(id);
-    }
-    return look;
-  }
+  // ── Core CRUD ────────────────────────────────────────────────────────
 
-  // Core CRUD operations
   async createEditorialLook(
     data: CreateEditorialLookData,
   ): Promise<EditorialLookDTO> {
-    this.validateTitle(data.title);
-
-    if (data.storyHtml) {
-      this.validateHtmlContent(data.storyHtml);
-    }
-
-    // Allow any publishedAt date (past, present, future)
-
-    // Validate hero asset exists if provided
     if (data.heroAssetId) {
-      const heroAssetIdEntity = EntityMediaAssetId.fromString(data.heroAssetId);
-      const heroAsset =
-        await this.mediaAssetRepository.findById(heroAssetIdEntity);
-      if (!heroAsset) {
-        throw new MediaAssetNotFoundError(data.heroAssetId);
-      }
-
-      // Validate it's an image
-      if (!heroAsset.isImage()) {
-        throw new InvalidOperationError("Hero asset must be an image");
-      }
+      await this.assertHeroAssetIsImage(data.heroAssetId);
     }
 
-    // Validate all product IDs exist if provided
     if (data.productIds && data.productIds.length > 0) {
-      for (const productId of data.productIds) {
-        const productIdVo = ProductId.fromString(productId);
-        const product = await this.productRepository.findById(productIdVo);
-        if (!product) {
-          throw new ProductNotFoundError(productId);
-        }
-      }
+      await this.assertProductsExist(data.productIds);
     }
 
-    const look = EditorialLook.create(data);
-
-    try {
-      await this.editorialLookRepository.save(look);
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("duplicate") &&
-        error.message.includes("title")
-      ) {
-        throw new InvalidOperationError(
-          `Editorial look with title "${data.title}" already exists`,
-        );
-      }
-      throw error;
-    }
-
+    const look = EditorialLook.create({
+      ...data,
+      title: this.htmlSanitizer.sanitizeTitle(data.title),
+      storyHtml: data.storyHtml ? this.htmlSanitizer.sanitize(data.storyHtml) : undefined,
+    });
+    await this.editorialLookRepository.save(look);
     return EditorialLook.toDTO(look);
   }
 
@@ -127,45 +147,78 @@ export class EditorialLookManagementService {
     return looks.map(EditorialLook.toDTO);
   }
 
+  // Consolidates the routing previously done in handlers (published/scheduled/
+  // draft/hasContent branches). Returns the canonical PaginatedResult shape.
+  async findWithFilters(
+    filters: EditorialLookFilters,
+    options: EditorialLookListOptions = {},
+  ): Promise<PaginatedResult<EditorialLookDTO>> {
+    const { page = 1, limit = 20, sortBy = "id", sortOrder = "desc" } = options;
+    const offset = (page - 1) * limit;
+    const queryOptions: EditorialLookQueryOptions = { limit, offset, sortBy, sortOrder };
+
+    let looks: EditorialLook[];
+    let total: number;
+
+    if (filters.published === true) {
+      [looks, total] = await Promise.all([
+        this.editorialLookRepository.findPublished(queryOptions),
+        this.editorialLookRepository.count({ published: true }),
+      ]);
+    } else if (filters.scheduled === true) {
+      [looks, total] = await Promise.all([
+        this.editorialLookRepository.findScheduled(queryOptions),
+        this.editorialLookRepository.count({ scheduled: true }),
+      ]);
+    } else if (filters.draft === true) {
+      [looks, total] = await Promise.all([
+        this.editorialLookRepository.findDrafts(queryOptions),
+        this.editorialLookRepository.count({ draft: true }),
+      ]);
+    } else if (filters.hasContent !== undefined) {
+      // PERF: hasContent is JS-side because the repo doesn't expose it as a count
+      // option. Fetch all, filter, then paginate. Replace with a repo-side
+      // hasContent filter when look counts grow.
+      const allLooks = await this.editorialLookRepository.findAll();
+      const matching = allLooks.filter((l) => l.hasStory() === filters.hasContent);
+      total = matching.length;
+      looks = matching.slice(offset, offset + limit);
+    } else {
+      [looks, total] = await Promise.all([
+        this.editorialLookRepository.findAll(queryOptions),
+        this.editorialLookRepository.count(),
+      ]);
+    }
+
+    return {
+      items: looks.map(EditorialLook.toDTO),
+      total,
+      limit,
+      offset,
+      hasMore: offset + looks.length < total,
+    };
+  }
+
   async updateEditorialLook(
     id: string,
-    updates: {
-      title?: string;
-      storyHtml?: string | null;
-      heroAssetId?: string | null;
-      publishedAt?: Date | null;
-    },
+    updates: UpdateEditorialLookInput,
   ): Promise<EditorialLookDTO> {
     const look = await this.getLook(id);
 
     if (updates.title !== undefined) {
-      this.validateTitle(updates.title);
-      look.updateTitle(updates.title);
+      look.updateTitle(this.htmlSanitizer.sanitizeTitle(updates.title));
     }
 
     if (updates.storyHtml !== undefined) {
-      if (updates.storyHtml) {
-        this.validateHtmlContent(updates.storyHtml);
-      }
-      look.updateStoryHtml(updates.storyHtml);
+      const safeStoryHtml = updates.storyHtml
+        ? this.htmlSanitizer.sanitize(updates.storyHtml)
+        : updates.storyHtml;
+      look.updateStoryHtml(safeStoryHtml);
     }
 
     if (updates.heroAssetId !== undefined) {
       if (updates.heroAssetId !== null) {
-        // Validate hero asset exists
-        const heroAssetIdEntity = EntityMediaAssetId.fromString(
-          updates.heroAssetId,
-        );
-        const heroAsset =
-          await this.mediaAssetRepository.findById(heroAssetIdEntity);
-        if (!heroAsset) {
-          throw new MediaAssetNotFoundError(updates.heroAssetId);
-        }
-
-        // Validate it's an image
-        if (!heroAsset.isImage()) {
-          throw new InvalidOperationError("Hero asset must be an image");
-        }
+        await this.assertHeroAssetIsImage(updates.heroAssetId);
       }
       look.setHeroAsset(updates.heroAssetId);
     }
@@ -189,7 +242,7 @@ export class EditorialLookManagementService {
   }
 
   async deleteEditorialLook(id: string): Promise<void> {
-    const lookId = EntityEditorialLookId.fromString(id);
+    const lookId = EditorialLookId.fromString(id);
 
     if (!(await this.editorialLookRepository.exists(lookId))) {
       throw new EditorialLookNotFoundError(id);
@@ -198,7 +251,8 @@ export class EditorialLookManagementService {
     await this.editorialLookRepository.delete(lookId);
   }
 
-  // Publishing workflow
+  // ── Publishing workflow ──────────────────────────────────────────────
+
   async publishLook(id: string): Promise<EditorialLookDTO> {
     const look = await this.getLook(id);
 
@@ -249,10 +303,7 @@ export class EditorialLookManagementService {
     return looks.map(EditorialLook.toDTO);
   }
 
-  async processScheduledPublications(): Promise<{
-    published: EditorialLookDTO[];
-    errors: string[];
-  }> {
+  async processScheduledPublications(): Promise<ScheduledPublicationResult> {
     const readyLooks = await this.editorialLookRepository.findReadyToPublish();
     const published: EditorialLookDTO[] = [];
     const errors: string[] = [];
@@ -274,26 +325,13 @@ export class EditorialLookManagementService {
     return { published, errors };
   }
 
-  // Hero image management
+  // ── Hero image management ────────────────────────────────────────────
+
   async setHeroImage(id: string, assetId: string): Promise<EditorialLookDTO> {
     const look = await this.getLook(id);
-
-    // Validate hero asset exists
-    const heroAssetIdEntity = EntityMediaAssetId.fromString(assetId);
-    const heroAsset =
-      await this.mediaAssetRepository.findById(heroAssetIdEntity);
-    if (!heroAsset) {
-      throw new MediaAssetNotFoundError(assetId);
-    }
-
-    // Validate it's an image
-    if (!heroAsset.isImage()) {
-      throw new InvalidOperationError("Hero asset must be an image");
-    }
-
+    await this.assertHeroAssetIsImage(assetId);
     look.setHeroAsset(assetId);
     await this.editorialLookRepository.save(look);
-
     return EditorialLook.toDTO(look);
   }
 
@@ -301,24 +339,19 @@ export class EditorialLookManagementService {
     const look = await this.getLook(id);
     look.setHeroAsset(null);
     await this.editorialLookRepository.save(look);
-
     return EditorialLook.toDTO(look);
   }
 
   async getLooksByHeroAsset(assetId: string): Promise<EditorialLookDTO[]> {
-    const mediaAssetId = EntityMediaAssetId.fromString(assetId);
+    const mediaAssetId = MediaAssetId.fromString(assetId);
     const looks = await this.editorialLookRepository.findByHeroAsset(mediaAssetId);
     return looks.map(EditorialLook.toDTO);
   }
 
-  // Product association management — all mutations via entity methods + save()
+  // ── Product association management ───────────────────────────────────
+
   async addProductToLook(lookId: string, productId: string): Promise<void> {
-    // Validate product exists
-    const productIdVo = ProductId.fromString(productId);
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    await this.assertProductExists(productId);
 
     const look = await this.getLook(lookId);
 
@@ -352,14 +385,7 @@ export class EditorialLookManagementService {
     id: string,
     productIds: string[],
   ): Promise<EditorialLookDTO> {
-    // Validate all products exist
-    for (const productId of productIds) {
-      const productIdVo = ProductId.fromString(productId);
-      const product = await this.productRepository.findById(productIdVo);
-      if (!product) {
-        throw new ProductNotFoundError(productId);
-      }
-    }
+    await this.assertProductsExist(productIds);
 
     const look = await this.getLook(id);
     look.setProducts(productIds);
@@ -374,31 +400,36 @@ export class EditorialLookManagementService {
   }
 
   async getProductLooks(productId: string): Promise<string[]> {
-    // Validate product exists
     const productIdVo = ProductId.fromString(productId);
-    const product = await this.productRepository.findById(productIdVo);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    await this.assertProductExists(productId);
 
-    const looks = await this.editorialLookRepository.findByProductId(productId);
+    const looks = await this.editorialLookRepository.findByProductId(productIdVo);
     return looks.map((l) => l.id.getValue());
   }
 
   async getLooksByProduct(
     productId: string,
-    options?: EditorialLookQueryOptions,
-  ): Promise<EditorialLookDTO[]> {
-    const looks = await this.editorialLookRepository.findByProductId(productId, options);
-    return looks.map(EditorialLook.toDTO);
+    options: LooksByProductOptions = {},
+  ): Promise<PaginatedResult<EditorialLookDTO>> {
+    const { page = 1, limit = 20, sortBy = "id", sortOrder = "desc", includeUnpublished } = options;
+    const offset = (page - 1) * limit;
+
+    const allLooks = await this.editorialLookRepository.findByProductId(
+      ProductId.fromString(productId),
+      { sortBy, sortOrder, includeUnpublished },
+    );
+    const total = allLooks.length;
+    const items = allLooks.slice(offset, offset + limit).map(EditorialLook.toDTO);
+
+    return { items, total, limit, offset, hasMore: offset + items.length < total };
   }
 
-  // Content management
+  // ── Content management ──────────────────────────────────────────────
+
   async updateStoryContent(
     id: string,
     storyHtml: string,
   ): Promise<EditorialLookDTO> {
-    this.validateHtmlContent(storyHtml);
     return this.updateEditorialLook(id, { storyHtml });
   }
 
@@ -406,6 +437,7 @@ export class EditorialLookManagementService {
     return this.updateEditorialLook(id, { storyHtml: null });
   }
 
+  // PERF: filtering in JS — should be a repo-level filter (e.g. `hasContent: true`).
   async getLooksWithContent(
     options?: EditorialLookQueryOptions,
   ): Promise<EditorialLookDTO[]> {
@@ -413,6 +445,7 @@ export class EditorialLookManagementService {
     return allLooks.filter((look) => look.hasStory()).map(EditorialLook.toDTO);
   }
 
+  // PERF: filtering in JS — should be a repo-level filter (e.g. `hasContent: false`).
   async getLooksWithoutContent(
     options?: EditorialLookQueryOptions,
   ): Promise<EditorialLookDTO[]> {
@@ -420,17 +453,10 @@ export class EditorialLookManagementService {
     return allLooks.filter((look) => !look.hasStory()).map(EditorialLook.toDTO);
   }
 
-  // Analytics and statistics
-  async getEditorialLookStats(): Promise<{
-    totalLooks: number;
-    publishedLooks: number;
-    scheduledLooks: number;
-    draftLooks: number;
-    looksWithHeroImage: number;
-    looksWithProducts: number;
-    looksWithContent: number;
-  }> {
-    // Execute all counts in parallel for better performance
+  // ── Analytics & statistics ──────────────────────────────────────────
+
+  // PERF: `looksWithContent` requires fetching all looks; rest are parallel counts.
+  async getEditorialLookStats(): Promise<EditorialLookStats> {
     const [
       totalLooks,
       publishedLooks,
@@ -446,7 +472,7 @@ export class EditorialLookManagementService {
       this.editorialLookRepository.count({ draft: true }),
       this.editorialLookRepository.count({ hasHeroImage: true }),
       this.editorialLookRepository.count({ hasProducts: true }),
-      this.editorialLookRepository.findAll(), // Get all looks to count those with content
+      this.editorialLookRepository.findAll(),
     ]);
 
     const looksWithContent = allLooks.filter((look) => look.hasStory()).length;
@@ -462,15 +488,14 @@ export class EditorialLookManagementService {
     };
   }
 
-  async getPopularProducts(
-    limit: number = 10,
-  ): Promise<Array<{ productId: string; appearanceCount: number }>> {
+  // PERF: aggregates in JS over all looks; replace with SQL `groupBy` when looks scale.
+  async getPopularProducts(limit: number = 10): Promise<PopularProduct[]> {
     const allLooks = await this.getAllEditorialLooks();
     const productCounts = new Map<string, number>();
 
     for (const look of allLooks) {
       for (const productId of look.productIds) {
-        productCounts.set(productId, (productCounts.get(productId) || 0) + 1);
+        productCounts.set(productId, (productCounts.get(productId) ?? 0) + 1);
       }
     }
 
@@ -480,7 +505,8 @@ export class EditorialLookManagementService {
       .slice(0, limit);
   }
 
-  // Bulk operations
+  // ── Bulk operations ─────────────────────────────────────────────────
+
   async createMultipleEditorialLooks(
     looksData: CreateEditorialLookData[],
   ): Promise<EditorialLookDTO[]> {
@@ -507,10 +533,7 @@ export class EditorialLookManagementService {
     return createdLooks;
   }
 
-  async deleteMultipleEditorialLooks(ids: string[]): Promise<{
-    deleted: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
+  async deleteMultipleEditorialLooks(ids: string[]): Promise<BatchDeleteResult> {
     const deleted: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
 
@@ -529,10 +552,7 @@ export class EditorialLookManagementService {
     return { deleted, failed };
   }
 
-  async publishMultipleLooks(ids: string[]): Promise<{
-    published: string[];
-    failed: Array<{ id: string; error: string }>;
-  }> {
+  async publishMultipleLooks(ids: string[]): Promise<BatchPublishResult> {
     const published: string[] = [];
     const failed: Array<{ id: string; error: string }> = [];
 
@@ -551,10 +571,11 @@ export class EditorialLookManagementService {
     return { published, failed };
   }
 
-  // Validation methods
+  // ── Validation helpers (public) ─────────────────────────────────────
+
   async validateLookForPublication(
     id: string,
-  ): Promise<{ isValid: boolean; errors: string[] }> {
+  ): Promise<PublicationValidationResult> {
     const look = await this.getLook(id);
     const errors: string[] = [];
 
@@ -572,131 +593,69 @@ export class EditorialLookManagementService {
     };
   }
 
-  // Utility methods
+  // ── Utility ─────────────────────────────────────────────────────────
+
   async getEditorialLookCount(
     options?: EditorialLookCountOptions,
   ): Promise<number> {
-    return await this.editorialLookRepository.count(options);
+    return this.editorialLookRepository.count(options);
   }
 
   async duplicateEditorialLook(
     id: string,
     newTitle: string,
   ): Promise<EditorialLookDTO> {
-    const originalLook = await this.getEditorialLookById(id);
+    const original = await this.getLook(id);
 
-    const duplicateData: CreateEditorialLookData = {
+    return this.createEditorialLook({
       title: newTitle,
-      storyHtml: originalLook.storyHtml || undefined,
-      heroAssetId: originalLook.heroAssetId ?? undefined,
-      productIds: originalLook.productIds,
-    };
-
-    return this.createEditorialLook(duplicateData);
+      storyHtml: original.storyHtml ?? undefined,
+      heroAssetId: original.heroAssetId?.getValue() ?? undefined,
+      productIds: original.productIds.map((pid) => pid.getValue()),
+    });
   }
 
-  // Private validation methods
-  private validateTitle(title: string): void {
-    if (!title || title.trim().length === 0) {
-      throw new DomainValidationError("Editorial look title cannot be empty");
-    }
+  // ── Private helpers ─────────────────────────────────────────────────
 
-    if (title.trim().length > 200) {
-      throw new DomainValidationError(
-        "Editorial look title cannot be longer than 200 characters",
-      );
+  private async getLook(id: string): Promise<EditorialLook> {
+    const lookId = EditorialLookId.fromString(id);
+    const look = await this.editorialLookRepository.findById(lookId);
+    if (!look) {
+      throw new EditorialLookNotFoundError(id);
     }
+    return look;
+  }
 
-    // Check for potentially dangerous characters that could indicate injection attempts
-    const dangerousChars = /<script|javascript:|data:|vbscript:/i;
-    if (dangerousChars.test(title)) {
-      throw new DomainValidationError(
-        "Editorial look title contains potentially unsafe content",
-      );
+  private async assertHeroAssetIsImage(assetId: string): Promise<void> {
+    const heroAssetId = MediaAssetId.fromString(assetId);
+    const asset = await this.mediaAssetRepository.findById(heroAssetId);
+    if (!asset) {
+      throw new MediaAssetNotFoundError(assetId);
+    }
+    if (!asset.isImage()) {
+      throw new InvalidOperationError("Hero asset must be an image");
     }
   }
 
-  private validateHtmlContent(htmlContent: string): void {
-    if (htmlContent.length > 100000) {
-      throw new DomainValidationError(
-        "Editorial look content cannot exceed 100,000 characters",
-      );
+  private async assertProductExists(productId: string): Promise<void> {
+    const productIdVo = ProductId.fromString(productId);
+    const product = await this.productRepository.findById(productIdVo);
+    if (!product) {
+      throw new ProductNotFoundError(productId);
     }
+  }
 
-    // Check for potentially malicious content
-    const dangerousPatterns = [
-      /<script[^>]*>/i,
-      /<iframe[^>]*>/i,
-      /<object[^>]*>/i,
-      /<embed[^>]*>/i,
-      /javascript:/i,
-      /on\w+\s*=/i, // onclick, onload, etc.
-      /<form[^>]*>/i,
-      /<input[^>]*>/i,
-      /<link[^>]*>/i,
-      /<meta[^>]*>/i,
-    ];
+  // Single batched query instead of N findById calls.
+  private async assertProductsExist(productIds: string[]): Promise<void> {
+    if (productIds.length === 0) return;
 
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(htmlContent)) {
-        throw new DomainValidationError("HTML content contains potentially unsafe elements");
-      }
-    }
+    const ids = productIds.map((id) => ProductId.fromString(id));
+    const found = await this.productRepository.findByIds(ids);
 
-    // Improved HTML validation - check for balanced tags
-    const selfClosingTags = new Set([
-      "area",
-      "base",
-      "br",
-      "col",
-      "embed",
-      "hr",
-      "img",
-      "input",
-      "link",
-      "meta",
-      "param",
-      "source",
-      "track",
-      "wbr",
-    ]);
+    if (found.length === productIds.length) return;
 
-    const tagPattern = /<(\/?[a-zA-Z][a-zA-Z0-9]*)[^>]*>/g;
-    const openTags: string[] = [];
-    let match;
-
-    while ((match = tagPattern.exec(htmlContent)) !== null) {
-      const tagWithSlash = match[1];
-      const isClosingTag = tagWithSlash.startsWith("/");
-      const tagName = isClosingTag ? tagWithSlash.substring(1) : tagWithSlash;
-
-      // Skip self-closing tags
-      if (!isClosingTag && selfClosingTags.has(tagName.toLowerCase())) {
-        continue;
-      }
-
-      if (isClosingTag) {
-        const lastOpenTag = openTags.pop();
-        if (!lastOpenTag) {
-          throw new DomainValidationError(`Unexpected closing tag: </${tagName}>`);
-        }
-        if (lastOpenTag.toLowerCase() !== tagName.toLowerCase()) {
-          throw new DomainValidationError(
-            `Mismatched HTML tags: expected </${lastOpenTag}> but found </${tagName}>`,
-          );
-        }
-      } else {
-        // Check if it's a self-closing tag with />
-        const fullMatch = match[0];
-        if (fullMatch.endsWith("/>")) {
-          continue;
-        }
-        openTags.push(tagName);
-      }
-    }
-
-    if (openTags.length > 0) {
-      throw new DomainValidationError(`Unclosed HTML tags: ${openTags.join(", ")}`);
-    }
+    const foundIds = new Set(found.map((p) => p.id.getValue()));
+    const missing = productIds.filter((id) => !foundIds.has(id));
+    throw new ProductNotFoundError(missing[0]);
   }
 }
