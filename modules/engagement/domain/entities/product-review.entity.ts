@@ -101,7 +101,7 @@ export class ProductReview extends AggregateRoot {
       productId: params.productId,
       userId: params.userId,
       rating: params.rating,
-      status: ReviewStatus.pending(),
+      status: ReviewStatus.PENDING,
       title: params.title,
       body: params.body,
       createdAt: new Date(),
@@ -209,15 +209,15 @@ export class ProductReview extends AggregateRoot {
   }
 
   approve(): void {
-    this.updateStatus(ReviewStatus.approved());
+    this.updateStatus(ReviewStatus.APPROVED);
   }
 
   reject(): void {
-    this.updateStatus(ReviewStatus.rejected());
+    this.updateStatus(ReviewStatus.REJECTED);
   }
 
   flag(): void {
-    this.updateStatus(ReviewStatus.flagged());
+    this.updateStatus(ReviewStatus.FLAGGED);
   }
 
   // Helper methods
