@@ -1,12 +1,34 @@
 import { DomainValidationError } from "../errors/order-management.errors";
 
+
+export enum OrderEventTypes {
+  ORDER_CREATED = "order.created",
+  ORDER_UPDATED = "order.updated",
+  ORDER_CANCELLED = "order.cancelled",
+  ORDER_REFUNDED = "order.refunded",
+  ORDER_STATUS_CHANGED = "order.status_changed",
+  ORDER_PAID = "order.paid",
+  ORDER_FULFILLED = "order.fulfilled",
+  ORDER_ITEM_ADDED = "order.item_added",
+  ORDER_ITEM_REMOVED = "order.item_removed",
+  ORDER_ITEM_UPDATED = "order.item_updated",
+  ORDER_SHIPMENT_CREATED = "order.shipment_created",
+  ORDER_SHIPMENT_SHIPPED = "order.shipment_shipped",
+  ORDER_SHIPMENT_DELIVERED = "order.shipment_delivered",
+  PAYMENT_RECEIVED = "payment.received",
+  PAYMENT_FAILED = "payment.failed",
+  PAYMENT_REFUNDED = "payment.refunded",
+  ORDER_SYSTEM_NOTE = "order.system_note",
+  ORDER_ADMIN_ACTION = "order.admin_action",
+}
+
 export interface OrderEventProps {
   eventId: number | null;
   orderId: string;
   eventType: string;
   payload: Record<string, unknown>;
+  loggedBy?: string;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface OrderEventDTO {
@@ -14,28 +36,23 @@ export interface OrderEventDTO {
   orderId: string;
   eventType: string;
   payload: Record<string, unknown>;
+  loggedBy?: string;
   createdAt: string;
-  updatedAt: string;
 }
 
 export class OrderEvent {
-  private constructor(private props: OrderEventProps) {}
+  private constructor(private props: OrderEventProps) {
+    OrderEvent.validate(props);
+  }
 
   static create(
-    params: Omit<OrderEventProps, "eventId" | "createdAt" | "updatedAt">,
+    params: Omit<OrderEventProps, "eventId" | "createdAt">,
   ): OrderEvent {
-    OrderEvent.validateEventType(params.eventType);
-
-    if (!params.orderId || params.orderId.trim().length === 0) {
-      throw new DomainValidationError("Order ID is required");
-    }
-
     return new OrderEvent({
       ...params,
       eventId: null,
       payload: params.payload || {},
       createdAt: new Date(),
-      updatedAt: new Date(),
     });
   }
 
@@ -43,8 +60,12 @@ export class OrderEvent {
     return new OrderEvent(props);
   }
 
-  private static validateEventType(eventType: string): void {
-    if (!eventType || eventType.trim().length === 0) {
+  // Always-applicable invariants. Run on every construction path.
+  private static validate(props: OrderEventProps): void {
+    if (!props.orderId || props.orderId.trim().length === 0) {
+      throw new DomainValidationError("Order ID is required");
+    }
+    if (!props.eventType || props.eventType.trim().length === 0) {
       throw new DomainValidationError("Event type is required");
     }
   }
@@ -65,12 +86,12 @@ export class OrderEvent {
     return this.props.payload;
   }
 
-  get createdAt(): Date {
-    return this.props.createdAt;
+  get loggedBy(): string | undefined {
+    return this.props.loggedBy;
   }
 
-  get updatedAt(): Date {
-    return this.props.updatedAt;
+  get createdAt(): Date {
+    return this.props.createdAt;
   }
 
   equals(other: OrderEvent): boolean {
@@ -86,8 +107,8 @@ export class OrderEvent {
       orderId: entity.props.orderId,
       eventType: entity.props.eventType,
       payload: entity.props.payload,
+      loggedBy: entity.props.loggedBy,
       createdAt: entity.props.createdAt.toISOString(),
-      updatedAt: entity.props.updatedAt.toISOString(),
     };
   }
 }
