@@ -1,7 +1,8 @@
 import { VALID_PROMO_TYPES, PROMO_MAX_PERCENTAGE } from "../constants";
 import { DomainValidationError } from "../errors/cart.errors";
 
-export interface PromoData {
+
+export interface AppliedPromoData {
   id: string;
   code: string;
   type: "percentage" | "fixed_amount" | "free_shipping" | "buy_x_get_y";
@@ -11,9 +12,12 @@ export interface PromoData {
 }
 
 export class AppliedPromos {
-  private constructor(private readonly value: PromoData[]) {}
 
-  private static validatePromo(promo: PromoData, index: number): void {
+  private constructor(private readonly value: AppliedPromoData[]) {
+    value.forEach((promo, index) => AppliedPromos.validatePromo(promo, index));
+  }
+
+  private static validatePromo(promo: AppliedPromoData, index: number): void {
     if (!promo.id) {
       throw new DomainValidationError(`Promo at index ${index} must have an ID`);
     }
@@ -42,7 +46,7 @@ export class AppliedPromos {
     }
   }
 
-  private static removeDuplicates(promos: PromoData[]): PromoData[] {
+  private static removeDuplicates(promos: AppliedPromoData[]): AppliedPromoData[] {
     const seen = new Set<string>();
     return promos.filter((promo) => {
       if (seen.has(promo.id)) return false;
@@ -55,9 +59,18 @@ export class AppliedPromos {
     return new AppliedPromos([]);
   }
 
-  static fromArray(promos: PromoData[]): AppliedPromos {
-    promos.forEach((promo, index) => AppliedPromos.validatePromo(promo, index));
+  // Pattern C primary factory: takes the data shape and validates via the
+  // constructor. Duplicate promo IDs are silently de-duplicated (last
+  // occurrence kept) — this preserves prior behaviour where an upstream
+  // re-application of the same promo wasn't a domain error.
+  static create(promos: AppliedPromoData[]): AppliedPromos {
     return new AppliedPromos(AppliedPromos.removeDuplicates(promos));
+  }
+
+  // Repository reconstitution from a persisted JSON column. Constructor
+  // validates the parsed shape, so a corrupt row throws here.
+  static fromPersistence(promos: AppliedPromoData[]): AppliedPromos {
+    return new AppliedPromos([...promos]);
   }
 
   static fromJSON(json: string): AppliedPromos {
@@ -66,11 +79,11 @@ export class AppliedPromos {
       if (!Array.isArray(parsed)) {
         throw new DomainValidationError("JSON must represent an array of promos");
       }
-      const promos: PromoData[] = parsed.map((promo) => ({
+      const promos: AppliedPromoData[] = parsed.map((promo) => ({
         ...promo,
         appliedAt: new Date(promo.appliedAt),
       }));
-      return AppliedPromos.fromArray(promos);
+      return AppliedPromos.create(promos);
     } catch (error) {
       if (error instanceof DomainValidationError) throw error;
       throw new DomainValidationError(
@@ -79,7 +92,7 @@ export class AppliedPromos {
     }
   }
 
-  getValue(): PromoData[] {
+  getValue(): AppliedPromoData[] {
     return [...this.value];
   }
 
@@ -112,7 +125,7 @@ export class AppliedPromos {
     return this.value.some((promo) => promo.id === promoId);
   }
 
-  getPromo(promoId: string): PromoData | undefined {
+  getPromo(promoId: string): AppliedPromoData | undefined {
     return this.value.find((promo) => promo.id === promoId);
   }
 
@@ -136,11 +149,10 @@ export class AppliedPromos {
     return this.value.some((promo) => promo.type === "free_shipping");
   }
 
-  addPromo(promo: PromoData): AppliedPromos {
+  addPromo(promo: AppliedPromoData): AppliedPromos {
     if (this.hasPromo(promo.id)) {
       throw new DomainValidationError(`Promo with ID ${promo.id} is already applied`);
     }
-    AppliedPromos.validatePromo(promo, this.value.length);
     return new AppliedPromos([...this.value, promo]);
   }
 

@@ -1,60 +1,62 @@
-import { CheckoutStatusEnum } from "../enums/cart.enums";
 import { DomainValidationError } from "../errors/cart.errors";
-
-export { CheckoutStatusEnum };
+export enum CheckoutStatusValue {
+  PENDING = "pending",
+  COMPLETED = "completed",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+}
 
 export class CheckoutStatus {
-  private constructor(private readonly value: CheckoutStatusEnum) {}
+  static readonly PENDING = new CheckoutStatus(CheckoutStatusValue.PENDING);
+  static readonly COMPLETED = new CheckoutStatus(CheckoutStatusValue.COMPLETED);
+  static readonly EXPIRED = new CheckoutStatus(CheckoutStatusValue.EXPIRED);
+  static readonly CANCELLED = new CheckoutStatus(CheckoutStatusValue.CANCELLED);
 
-  static pending(): CheckoutStatus {
-    return new CheckoutStatus(CheckoutStatusEnum.PENDING);
+  private static readonly ALL: ReadonlyArray<CheckoutStatus> = [
+    CheckoutStatus.PENDING,
+    CheckoutStatus.COMPLETED,
+    CheckoutStatus.EXPIRED,
+    CheckoutStatus.CANCELLED,
+  ];
+
+  // Validation lives in the constructor so BOTH `create()` (input from a
+  // service caller) and `fromString()` (raw, for repository reconstitution)
+  // validate. Both factories route through `create()` to get shared-instance
+  // reference equality on success.
+  private constructor(private readonly value: CheckoutStatusValue) {
+    if (!Object.values(CheckoutStatusValue).includes(value)) {
+      throw new DomainValidationError(
+        `Invalid checkout status: ${value}. Must be one of: ${Object.values(CheckoutStatusValue).join(", ")}`,
+      );
+    }
   }
 
-  static completed(): CheckoutStatus {
-    return new CheckoutStatus(CheckoutStatusEnum.COMPLETED);
-  }
-
-  static expired(): CheckoutStatus {
-    return new CheckoutStatus(CheckoutStatusEnum.EXPIRED);
-  }
-
-  static cancelled(): CheckoutStatus {
-    return new CheckoutStatus(CheckoutStatusEnum.CANCELLED);
+  static create(value: string): CheckoutStatus {
+    const normalized = value.trim().toLowerCase();
+    return (
+      CheckoutStatus.ALL.find((s) => s.value === normalized) ??
+      new CheckoutStatus(normalized as CheckoutStatusValue)
+    );
   }
 
   static fromString(value: string): CheckoutStatus {
-    const enumValue = Object.values(CheckoutStatusEnum).find((v) => v === value);
-    if (!enumValue) {
-      throw new DomainValidationError(`Invalid checkout status: ${value}`);
-    }
-    return new CheckoutStatus(enumValue);
+    return CheckoutStatus.create(value);
   }
 
-  getValue(): string {
+  getValue(): CheckoutStatusValue {
     return this.value;
   }
 
-  isPending(): boolean {
-    return this.value === CheckoutStatusEnum.PENDING;
-  }
+  isPending(): boolean { return this.value === CheckoutStatusValue.PENDING; }
+  isCompleted(): boolean { return this.value === CheckoutStatusValue.COMPLETED; }
+  isExpired(): boolean { return this.value === CheckoutStatusValue.EXPIRED; }
+  isCancelled(): boolean { return this.value === CheckoutStatusValue.CANCELLED; }
 
-  isCompleted(): boolean {
-    return this.value === CheckoutStatusEnum.COMPLETED;
-  }
-
-  isExpired(): boolean {
-    return this.value === CheckoutStatusEnum.EXPIRED;
-  }
-
-  isCancelled(): boolean {
-    return this.value === CheckoutStatusEnum.CANCELLED;
+  equals(other: CheckoutStatus): boolean {
+    return this.value === other.value;
   }
 
   toString(): string {
     return this.value;
-  }
-
-  equals(other: CheckoutStatus): boolean {
-    return this.value === other.value;
   }
 }
