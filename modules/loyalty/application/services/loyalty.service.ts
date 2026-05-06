@@ -1,8 +1,12 @@
 import { LoyaltyAccount, LoyaltyAccountDTO } from '../../domain/entities/loyalty-account.entity';
-import { LoyaltyTransaction, LoyaltyTransactionDTO } from '../../domain/entities/loyalty-transaction.entity';
+import {
+  LoyaltyTransaction,
+  LoyaltyTransactionDTO,
+  LoyaltyTransactionType,
+} from '../../domain/entities/loyalty-transaction.entity';
 import { Points } from '../../domain/value-objects/points.vo';
 import { Tier } from '../../domain/value-objects/tier.vo';
-import { LoyaltyTransactionType, LoyaltyTransactionReason } from '../../domain/enums/loyalty.enums';
+import { LoyaltyTransactionReasonValue } from '../../domain/value-objects/loyalty-reason.vo';
 import { ILoyaltyAccountRepository } from '../../domain/repositories/loyalty-account.repository';
 import { ILoyaltyTransactionRepository } from '../../domain/repositories/loyalty-transaction.repository';
 import { LoyaltyAccountId } from '../../domain/value-objects/loyalty-account-id.vo';
@@ -16,7 +20,7 @@ import {
 export interface EarnPointsData {
   userId: string;
   points: number;
-  reason: LoyaltyTransactionReason;
+  reason: LoyaltyTransactionReasonValue;
   description?: string;
   referenceId?: string;
   orderId?: string;
@@ -25,7 +29,7 @@ export interface EarnPointsData {
 export interface RedeemPointsData {
   userId: string;
   points: number;
-  reason: LoyaltyTransactionReason;
+  reason: LoyaltyTransactionReasonValue;
   description?: string;
   referenceId?: string;
   orderId?: string;
@@ -60,7 +64,7 @@ export class LoyaltyService {
       await this._earnPoints(account, {
         userId,
         points: LOYALTY_SIGNUP_BONUS_POINTS,
-        reason: LoyaltyTransactionReason.SIGNUP,
+        reason: LoyaltyTransactionReasonValue.SIGNUP,
         description: 'Welcome bonus for joining our loyalty program',
       });
 
@@ -109,7 +113,7 @@ export class LoyaltyService {
     return this.earnPoints({
       userId,
       points,
-      reason: LoyaltyTransactionReason.PURCHASE,
+      reason: LoyaltyTransactionReasonValue.PURCHASE,
       description: `Earned ${points} points from order`,
       orderId,
     });
@@ -150,7 +154,7 @@ export class LoyaltyService {
       accountId: account.id.getValue(),
       type: LoyaltyTransactionType.ADJUST,
       points,
-      reason: LoyaltyTransactionReason.ADMIN_ADJUSTMENT,
+      reason: LoyaltyTransactionReasonValue.ADMIN_ADJUSTMENT,
       description: data.reason,
       referenceId: null,
       orderId: null,
@@ -175,7 +179,7 @@ export class LoyaltyService {
           accountId: account.id.getValue(),
           type: LoyaltyTransactionType.EXPIRE,
           points: expiredTx.points,
-          reason: LoyaltyTransactionReason.EXPIRY,
+          reason: LoyaltyTransactionReasonValue.EXPIRY,
           description: `Points expired from ${expiredTx.reason}`,
           referenceId: expiredTx.id.getValue(),
           orderId: null,
