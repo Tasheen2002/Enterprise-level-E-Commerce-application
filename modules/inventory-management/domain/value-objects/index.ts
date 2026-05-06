@@ -19,21 +19,8 @@ export { ReservationStatus, ReservationStatusVO } from "./reservation-status.vo"
 // Single-Value (Pattern B) Value Objects
 export { SupplierName } from "./supplier-name.vo";
 export { LocationName } from "./location-name.vo";
-
-// Composite-key Value Object (Pattern C). `StockId` is NOT a UUID — it's
-// the natural composite key (variantId × locationId) of the InventoryStock
-// row. Listed separately from the Pattern A IDs above so the distinction
-// is visible at the index level.
 export { StockId } from "./stock-id.vo";
 export type { StockIdData } from "./stock-id.vo";
-
-// Composite (Pattern C) Value Objects + their `XxxData` interfaces.
-//
-// The `Data` interface is the canonical Pattern C name (renamed from `Props`).
-// Strictly Pattern C says NOT to export it, but the corresponding entity DTO
-// mirrors the same shape — exporting `XxxData` lets the entity reuse it
-// without duplicating the field list. The deprecated `XxxProps` alias is kept
-// for backwards compatibility while consumers migrate.
 export { SupplierContact } from "./supplier-contact.vo";
 export type {
   SupplierContactData,
