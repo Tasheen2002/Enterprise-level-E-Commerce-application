@@ -8,15 +8,6 @@ export interface AuthHeroProps {
   imageAlt: string;
 }
 
-/**
- * Editorial side image for the auth pages. Falls back to a styled
- * placeholder block (cream backdrop, brand wordmark watermark) when the
- * file isn't available — so dev environments without the bundled brand
- * asset still render the page layout correctly.
- *
- * Drop the production file at `apps/web/public/images/auth/{name}.jpg`
- * to switch over to the real image.
- */
 export function AuthHero({ imageSrc, imageAlt }: AuthHeroProps) {
   const [errored, setErrored] = useState(false);
 
