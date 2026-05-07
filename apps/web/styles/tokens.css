@@ -1,0 +1,45 @@
+/*
+ * Tasheen design tokens.
+ *
+ * Tokens are exposed as CSS custom properties so they're themable at runtime
+ * (dark mode, tier-specific accents, A/B tests). The Tailwind preset in
+ * `packages/config/tailwind.preset.ts` resolves these into utility classes
+ * (e.g. `bg-cream`, `text-gold`).
+ *
+ * Color values are stored as `R G B` triplets — the Tailwind preset uses
+ * `rgb(var(--ts-...) / <alpha-value>)` so opacity utilities like
+ * `bg-charcoal/40` continue to work.
+ */
+
+:root {
+  /* Brand palette */
+  --ts-ivory: 245 241 232;          /* #F5F1E8 */
+  --ts-cream: 250 250 247;          /* #FAFAF7 */
+  --ts-charcoal: 26 26 26;          /* #1A1A1A */
+  --ts-gold: 201 169 97;            /* #C9A961 */
+  --ts-gold-deep: 171 137 65;       /* #AB8941 */
+  --ts-burgundy: 123 45 38;         /* #7B2D26 */
+  --ts-sage: 122 139 111;           /* #7A8B6F */
+  --ts-slate-muted: 74 74 74;       /* #4A4A4A */
+
+  /* Typography */
+  --ts-font-serif: "Cormorant Garamond", "Playfair Display", ui-serif, Georgia, serif;
+  --ts-font-sans: "Inter", "GT America", ui-sans-serif, system-ui, sans-serif;
+  --ts-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Motion */
+  --ts-ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  --ts-duration-300: 300ms;
+}
+
+/*
+ * Dark mode is reserved for the admin app (`apps/admin`) and a future
+ * "after hours" customer theme. The class is toggled on <html> via
+ * `next-themes`.
+ */
+.dark {
+  --ts-ivory: 26 26 26;
+  --ts-cream: 22 22 22;
+  --ts-charcoal: 245 241 232;
+  --ts-slate-muted: 180 180 180;
+}
