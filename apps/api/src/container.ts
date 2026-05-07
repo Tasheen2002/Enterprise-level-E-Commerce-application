@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
 
 // ============================================================
 // User Management — Imports
@@ -7,15 +8,12 @@ import { UserRepository } from "../../../modules/user-management/infra/persisten
 import { UserProfileRepository } from "../../../modules/user-management/infra/persistence/repositories/user-profile.repository";
 import { AddressRepository } from "../../../modules/user-management/infra/persistence/repositories/address.repository";
 import { PaymentMethodRepository } from "../../../modules/user-management/infra/persistence/repositories/payment-method.repository";
-import { VerificationTokenRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-token.repository";
-import { VerificationRateLimitRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-rate-limit.repository";
-import { VerificationAuditLogRepository } from "../../../modules/user-management/infra/persistence/repositories/verification-audit-log.repository";
 import { AuthenticationService } from "../../../modules/user-management/application/services/authentication.service";
 import { UserProfileService } from "../../../modules/user-management/application/services/user-profile.service";
 import { AddressManagementService } from "../../../modules/user-management/application/services/address-management.service";
 import { PaymentMethodService } from "../../../modules/user-management/application/services/payment-method.service";
-import { PasswordHasherService } from "../../../modules/user-management/application/services/password-hasher.service";
-import { VerificationService } from "../../../modules/user-management/application/services/verification.service";
+import { BcryptPasswordHasherAdapter } from "../../../modules/user-management/infra/security/bcrypt-password-hasher.adapter";
+import { NodemailerEmailService } from "../../../modules/user-management/infra/security/nodemailer-email.adapter";
 import { UserService } from "../../../modules/user-management/application/services/user.service";
 import { RegisterUserHandler } from "../../../modules/user-management/application/commands/register-user.command";
 import { LoginUserHandler } from "../../../modules/user-management/application/commands/login-user.command";
@@ -68,13 +66,13 @@ import {
   ProductMediaRepositoryImpl,
   VariantMediaRepositoryImpl,
 } from "../../../modules/product-catalog/infra/persistence/repositories";
+import { SanitizeHtmlAdapter } from "../../../modules/product-catalog/infra/security/sanitize-html.adapter";
 import {
   ProductManagementService,
   CategoryManagementService,
   MediaManagementService,
   VariantManagementService,
   ProductSearchService,
-  SlugGeneratorService,
   ProductTagManagementService,
   SizeGuideManagementService,
   EditorialLookManagementService,
@@ -111,10 +109,8 @@ import {
   SetProductCoverImageHandler,
   RemoveCoverImageHandler,
   ReorderProductMediaHandler,
-  MoveMediaPositionHandler,
   SetProductMediaHandler,
   DuplicateProductMediaHandler,
-  CompactProductMediaPositionsHandler,
   GetProductMediaHandler,
   GetProductsUsingAssetHandler,
   GetProductMediaAssetUsageCountHandler,
@@ -221,7 +217,6 @@ import {
   LocationRepositoryImpl,
   SupplierRepositoryImpl,
   PurchaseOrderRepositoryImpl,
-  PurchaseOrderItemRepositoryImpl,
   InventoryTransactionRepositoryImpl,
   StockAlertRepositoryImpl,
   PickupReservationRepositoryImpl,
@@ -296,7 +291,7 @@ import {
   ListTransactionsHandler,
   GetTransactionsByVariantHandler,
 } from "../../../modules/inventory-management/application";
-import { LocationType } from "../../../modules/inventory-management/domain/value-objects/location-type.vo";
+import { LocationTypeVO } from "../../../modules/inventory-management/domain/value-objects/location-type.vo";
 
 // ============================================================
 // Cart — Imports
@@ -308,6 +303,7 @@ import {
 } from "../../../modules/cart/infra/persistence/repositories";
 import { CartManagementService } from "../../../modules/cart/application/services/cart-management.service";
 import { ReservationService } from "../../../modules/cart/application/services/reservation.service";
+import { ReservationOrchestrator } from "../../../modules/cart/application/services/reservation-orchestrator.service";
 import { CheckoutService } from "../../../modules/cart/application/services/checkout.service";
 import { CheckoutOrderService } from "../../../modules/cart/application/services/checkout-order.service";
 import { CheckoutCompletionPortImpl } from "../../../modules/cart/infra/persistence/repositories/checkout-completion.port.impl";
@@ -374,7 +370,6 @@ import { SettingsService } from "../../../modules/admin/application/services/set
 // ============================================================
 import {
   OrderRepositoryImpl,
-  OrderItemRepositoryImpl,
   OrderAddressRepositoryImpl,
   OrderShipmentRepositoryImpl,
   OrderStatusHistoryRepositoryImpl,
@@ -384,15 +379,13 @@ import {
 } from "../../../modules/order-management/infra/persistence/repositories";
 import { OrderManagementService } from "../../../modules/order-management/application/services/order-management.service";
 import { OrderEventService } from "../../../modules/order-management/application/services/order-event.service";
-import { OrderItemManagementService } from "../../../modules/order-management/application/services/order-item-management.service";
-import { ShipmentManagementService } from "../../../modules/order-management/application/services/shipment-management.service";
 import { BackorderManagementService } from "../../../modules/order-management/application/services/backorder-management.service";
 import { PreorderManagementService } from "../../../modules/order-management/application/services/preorder-management.service";
 import {
   IExternalVariantService,
   IExternalProductService,
   IExternalStockService as IOrderExternalStockService,
-} from "../../../modules/order-management/domain/external-services";
+} from "../../../modules/order-management/domain/ports/external-services";
 import { ProductSnapshot } from "../../../modules/order-management/domain/value-objects/product-snapshot.vo";
 import { OrderId } from "../../../modules/order-management/domain/value-objects/order-id.vo";
 import {
@@ -619,18 +612,21 @@ export class Container {
   ): void {
 
     // ============================================================
+    // Shared Infrastructure — Event Bus
+    // ============================================================
+
+    const eventBus = new InMemoryEventBus();
+
+    // ============================================================
     // User Management Module
     // ============================================================
 
-    const userRepository = new UserRepository(prisma);
+    const userRepository = new UserRepository(prisma, eventBus);
     const userProfileRepository = new UserProfileRepository(prisma);
-    const addressRepository = new AddressRepository(prisma);
-    const paymentMethodRepository = new PaymentMethodRepository(prisma);
-    const verificationTokenRepository = new VerificationTokenRepository(prisma);
-    const verificationRateLimitRepository = new VerificationRateLimitRepository(prisma);
-    const verificationAuditLogRepository = new VerificationAuditLogRepository(prisma);
+    const addressRepository = new AddressRepository(prisma, eventBus);
+    const paymentMethodRepository = new PaymentMethodRepository(prisma, eventBus);
 
-    const passwordHasher = new PasswordHasherService();
+    const passwordHasher = new BcryptPasswordHasherAdapter();
     const jwtService = new JwtService({
       accessTokenSecret: config.jwtSecret,
       refreshTokenSecret: config.jwtSecret,
@@ -639,23 +635,23 @@ export class Container {
     });
     const authService = new AuthenticationService(userRepository, passwordHasher, jwtService);
     const profileService = new UserProfileService(userRepository, userProfileRepository, addressRepository, paymentMethodRepository);
-    const addressService = new AddressManagementService(addressRepository);
-    const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, addressRepository);
-    const verificationService = new VerificationService(userRepository, verificationTokenRepository, verificationRateLimitRepository, verificationAuditLogRepository);
+    const addressService = new AddressManagementService(addressRepository, userProfileRepository);
+    const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, addressRepository, userProfileRepository);
     const userService = new UserService(userRepository);
+    const emailService = new NodemailerEmailService();
 
     const authController = new AuthController(
-      new RegisterUserHandler(authService),
+      new RegisterUserHandler(authService, TokenBlacklistService, emailService),
       new LoginUserHandler(authService, TokenBlacklistService),
       new LogoutHandler(authService, TokenBlacklistService),
       new RefreshTokenHandler(authService, TokenBlacklistService),
       new ChangePasswordHandler(authService),
       new ChangeEmailHandler(authService),
-      new InitiatePasswordResetHandler(authService, TokenBlacklistService),
+      new InitiatePasswordResetHandler(authService, TokenBlacklistService, emailService),
       new ResetPasswordHandler(authService, TokenBlacklistService),
       new VerifyEmailHandler(authService, TokenBlacklistService),
       new DeleteAccountHandler(authService, TokenBlacklistService),
-      new ResendVerificationHandler(authService, TokenBlacklistService),
+      new ResendVerificationHandler(authService, TokenBlacklistService, emailService),
     );
     const profileController = new ProfileController(
       new GetUserProfileHandler(profileService),
@@ -683,6 +679,7 @@ export class Container {
       new ToggleUserEmailVerifiedHandler(userService),
     );
 
+    this.services.set("eventBus", eventBus);
     this.services.set("prisma", prisma);
     this.services.set("userRepository", userRepository);
     this.services.set("addressRepository", addressRepository);
@@ -690,7 +687,6 @@ export class Container {
     this.services.set("profileService", profileService);
     this.services.set("addressService", addressService);
     this.services.set("paymentMethodService", paymentMethodService);
-    this.services.set("verificationService", verificationService);
     this.services.set("authController", authController);
     this.services.set("profileController", profileController);
     this.services.set("addressesController", addressesController);
@@ -701,26 +697,26 @@ export class Container {
     // Product Catalog Module
     // ============================================================
 
-    const productRepository = new ProductRepositoryImpl(prisma);
-    const productVariantRepository = new ProductVariantRepositoryImpl(prisma);
-    const categoryRepository = new CategoryRepositoryImpl(prisma);
-    const mediaAssetRepository = new MediaAssetRepositoryImpl(prisma);
-    const productTagRepository = new ProductTagRepositoryImpl(prisma);
+    const productRepository = new ProductRepositoryImpl(prisma, eventBus);
+    const productVariantRepository = new ProductVariantRepositoryImpl(prisma, eventBus);
+    const categoryRepository = new CategoryRepositoryImpl(prisma, eventBus);
+    const mediaAssetRepository = new MediaAssetRepositoryImpl(prisma, eventBus);
+    const productTagRepository = new ProductTagRepositoryImpl(prisma, eventBus);
     const productTagAssociationRepository = new ProductTagAssociationRepositoryImpl(prisma);
-    const sizeGuideRepository = new SizeGuideRepositoryImpl(prisma);
-    const editorialLookRepository = new EditorialLookRepositoryImpl(prisma);
+    const sizeGuideRepository = new SizeGuideRepositoryImpl(prisma, eventBus);
+    const editorialLookRepository = new EditorialLookRepositoryImpl(prisma, eventBus);
     const productMediaRepository = new ProductMediaRepositoryImpl(prisma);
     const variantMediaRepository = new VariantMediaRepositoryImpl(prisma);
 
-    const slugGeneratorService = new SlugGeneratorService();
-    const productManagementService = new ProductManagementService(productRepository, productTagRepository);
+    const htmlSanitizer = new SanitizeHtmlAdapter();
+    const productManagementService = new ProductManagementService(productRepository, productTagAssociationRepository, htmlSanitizer);
     const categoryManagementService = new CategoryManagementService(categoryRepository);
     const mediaManagementService = new MediaManagementService(mediaAssetRepository);
     const variantManagementService = new VariantManagementService(productVariantRepository, productRepository);
     const productSearchService = new ProductSearchService(productRepository, categoryRepository);
     const productTagManagementService = new ProductTagManagementService(productTagRepository, productTagAssociationRepository);
-    const sizeGuideManagementService = new SizeGuideManagementService(sizeGuideRepository);
-    const editorialLookManagementService = new EditorialLookManagementService(editorialLookRepository, mediaAssetRepository, productRepository);
+    const sizeGuideManagementService = new SizeGuideManagementService(sizeGuideRepository, htmlSanitizer);
+    const editorialLookManagementService = new EditorialLookManagementService(editorialLookRepository, mediaAssetRepository, productRepository, htmlSanitizer);
     const productMediaManagementService = new ProductMediaManagementService(productMediaRepository, mediaAssetRepository, productRepository);
     const variantMediaManagementService = new VariantMediaManagementService(variantMediaRepository, mediaAssetRepository, productVariantRepository, productRepository);
 
@@ -730,7 +726,6 @@ export class Container {
       new DeleteProductHandler(productManagementService),
       new GetProductHandler(productManagementService),
       new ListProductsHandler(productManagementService),
-      new SearchProductsHandler(productSearchService),
     );
     const categoryController = new CategoryController(
       new CreateCategoryHandler(categoryManagementService),
@@ -762,10 +757,8 @@ export class Container {
       new SetProductCoverImageHandler(productMediaManagementService),
       new RemoveCoverImageHandler(productMediaManagementService),
       new ReorderProductMediaHandler(productMediaManagementService),
-      new MoveMediaPositionHandler(productMediaManagementService),
       new SetProductMediaHandler(productMediaManagementService),
       new DuplicateProductMediaHandler(productMediaManagementService),
-      new CompactProductMediaPositionsHandler(productMediaManagementService),
       new GetProductMediaHandler(productMediaManagementService),
       new GetProductsUsingAssetHandler(productMediaManagementService),
       new GetProductMediaAssetUsageCountHandler(productMediaManagementService),
@@ -890,19 +883,23 @@ export class Container {
     // Inventory Management Module
     // ============================================================
 
-    const stockRepository = new StockRepositoryImpl(prisma);
-    const locationRepository = new LocationRepositoryImpl(prisma);
-    const supplierRepository = new SupplierRepositoryImpl(prisma);
-    const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma);
-    const purchaseOrderItemRepository = new PurchaseOrderItemRepositoryImpl(prisma);
-    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma);
-    const stockAlertRepository = new StockAlertRepositoryImpl(prisma);
-    const pickupReservationRepository = new PickupReservationRepositoryImpl(prisma);
+    const stockRepository = new StockRepositoryImpl(prisma, eventBus);
+    const locationRepository = new LocationRepositoryImpl(prisma, eventBus);
+    const supplierRepository = new SupplierRepositoryImpl(prisma, eventBus);
+    const purchaseOrderRepository = new PurchaseOrderRepositoryImpl(prisma, eventBus);
+    // `IPurchaseOrderItemRepository` exists (read-only cross-PO queries —
+    // `findByVariant`, `getTotalOrderedQty`, `getTotalReceivedQty`) but no
+    // current service consumes it. PO item writes flow through the
+    // `PurchaseOrder` aggregate root via `IPurchaseOrderRepository.save()`.
+    // Wire `purchaseOrderItemRepository` here once a query handler needs it.
+    const inventoryTransactionRepository = new InventoryTransactionRepositoryImpl(prisma, eventBus);
+    const stockAlertRepository = new StockAlertRepositoryImpl(prisma, eventBus);
+    const pickupReservationRepository = new PickupReservationRepositoryImpl(prisma, eventBus);
 
     const stockManagementService = new StockManagementService(stockRepository, inventoryTransactionRepository);
     const locationManagementService = new LocationManagementService(locationRepository);
     const supplierManagementService = new SupplierManagementService(supplierRepository);
-    const purchaseOrderManagementService = new PurchaseOrderManagementService(purchaseOrderRepository, purchaseOrderItemRepository, stockRepository, inventoryTransactionRepository);
+    const purchaseOrderManagementService = new PurchaseOrderManagementService(purchaseOrderRepository, stockRepository, inventoryTransactionRepository);
     const stockAlertService = new StockAlertService(stockAlertRepository, stockRepository);
     const pickupReservationService = new PickupReservationService(pickupReservationRepository, stockRepository, inventoryTransactionRepository);
 
@@ -938,14 +935,10 @@ export class Container {
     const poController = new PurchaseOrderController(
       new CreatePurchaseOrderHandler(purchaseOrderManagementService),
       new CreatePurchaseOrderWithItemsHandler(purchaseOrderManagementService),
-      new AddPOItemHandler(purchaseOrderManagementService),
-      new UpdatePOItemHandler(purchaseOrderManagementService),
-      new RemovePOItemHandler(purchaseOrderManagementService),
       new UpdatePOStatusHandler(purchaseOrderManagementService),
       new ReceivePOItemsHandler(purchaseOrderManagementService),
       new DeletePurchaseOrderHandler(purchaseOrderManagementService),
       new GetPurchaseOrderHandler(purchaseOrderManagementService),
-      new GetPOItemsHandler(purchaseOrderManagementService),
       new ListPurchaseOrdersHandler(purchaseOrderManagementService),
       new GetOverduePurchaseOrdersHandler(purchaseOrderManagementService),
       new GetPendingReceivalHandler(purchaseOrderManagementService),
@@ -990,8 +983,8 @@ export class Container {
     // Cart Module
     // ============================================================
 
-    const cartRepository = new CartRepositoryImpl(prisma);
-    const checkoutRepository = new CheckoutRepositoryImpl(prisma);
+    const cartRepository = new CartRepositoryImpl(prisma, eventBus);
+    const checkoutRepository = new CheckoutRepositoryImpl(prisma, eventBus);
     const checkoutCompletionPort = new CheckoutCompletionPortImpl(prisma);
     const settingsService = new SettingsService();
 
@@ -1000,12 +993,12 @@ export class Container {
       adjustStock: (...args) => stockManagementService.adjustStock(...args),
       getTotalAvailableStock: (variantId) => stockManagementService.getTotalAvailableStock(variantId),
       async findWarehouseId() {
-        const locations = await locationRepository.findByType(LocationType.WAREHOUSE);
+        const locations = await locationRepository.findByType(LocationTypeVO.WAREHOUSE);
         return locations.length > 0 ? locations[0].locationId.getValue() : null;
       },
     };
 
-    const reservationRepository = new ReservationRepositoryImpl(prisma, stockServiceAdapter);
+    const reservationRepository = new ReservationRepositoryImpl(prisma, stockServiceAdapter, eventBus);
 
     const externalProductVariantRepository: IExternalProductVariantRepository = {
       findById: async (variantId) => {
@@ -1065,6 +1058,7 @@ export class Container {
       },
     };
 
+    const reservationOrchestrator = new ReservationOrchestrator(reservationRepository);
     const cartManagementService = new CartManagementService(
       cartRepository,
       reservationRepository,
@@ -1074,6 +1068,7 @@ export class Container {
       externalProductMediaRepository,
       externalMediaAssetRepository,
       settingsService,
+      reservationOrchestrator,
     );
     const reservationService = new ReservationService(reservationRepository, cartRepository);
     const checkoutService = new CheckoutService(checkoutRepository, cartRepository, settingsService);
@@ -1147,14 +1142,13 @@ export class Container {
     // Order Management Module
     // ============================================================
 
-    const orderRepository = new OrderRepositoryImpl(prisma);
-    const orderItemRepository = new OrderItemRepositoryImpl(prisma);
-    const orderAddressRepository = new OrderAddressRepositoryImpl(prisma);
+    const orderRepository = new OrderRepositoryImpl(prisma, eventBus);
+    const orderAddressRepository = new OrderAddressRepositoryImpl(prisma, eventBus);
     const orderShipmentRepository = new OrderShipmentRepositoryImpl(prisma);
     const orderStatusHistoryRepository = new OrderStatusHistoryRepositoryImpl(prisma);
     const orderEventRepository = new OrderEventRepositoryImpl(prisma);
-    const backorderRepository = new BackorderRepositoryImpl(prisma);
-    const preorderRepository = new PreorderRepositoryImpl(prisma);
+    const backorderRepository = new BackorderRepositoryImpl(prisma, eventBus);
+    const preorderRepository = new PreorderRepositoryImpl(prisma, eventBus);
 
     // Cross-module port adapters: bridge product-catalog & inventory into order's external port interfaces
     const externalVariantService: IExternalVariantService = {
@@ -1168,7 +1162,7 @@ export class Container {
             getSize: () => dto.size,
             getColor: () => dto.color,
             getWeightG: () => dto.weightG,
-            getDims: () => dto.dims,
+            getDims: () => dto.dims as Record<string, unknown> | null,
           };
         } catch {
           return null;
@@ -1199,12 +1193,20 @@ export class Container {
       },
       adjustStock: (...args) => stockManagementService.adjustStock(...args),
       reserveStock: (...args) => stockManagementService.reserveStock(...args),
+      releaseStock: (...args) => stockManagementService.releaseStock(...args),
     };
 
     const orderEventService = new OrderEventService(orderEventRepository);
-    const orderManagementService = new OrderManagementService(orderRepository, orderAddressRepository, orderShipmentRepository, orderStatusHistoryRepository, externalVariantService, externalProductService, externalStockService);
-    const orderItemManagementService = new OrderItemManagementService(orderItemRepository);
-    const shipmentManagementService = new ShipmentManagementService(orderShipmentRepository);
+    const orderManagementService = new OrderManagementService(
+      orderRepository,
+      orderAddressRepository,
+      orderShipmentRepository,
+      orderStatusHistoryRepository,
+      externalVariantService,
+      externalProductService,
+      externalStockService,
+      process.env.DEFAULT_STOCK_LOCATION ?? "",
+    );
     const backorderManagementService = new BackorderManagementService(backorderRepository);
     const preorderManagementService = new PreorderManagementService(preorderRepository);
 
@@ -1230,16 +1232,16 @@ export class Container {
       new AddOrderItemHandler(orderManagementService),
       new UpdateOrderItemHandler(orderManagementService),
       new RemoveOrderItemHandler(orderManagementService),
-      new ListOrderItemsHandler(orderItemManagementService),
-      new GetOrderItemHandler(orderItemManagementService),
+      new ListOrderItemsHandler(orderManagementService),
+      new GetOrderItemHandler(orderManagementService),
     );
     const orderShipmentController = new OrderShipmentController(
       new CreateShipmentHandler(orderManagementService),
       new UpdateShipmentTrackingHandler(orderManagementService),
       new MarkShipmentShippedHandler(orderManagementService),
       new MarkShipmentDeliveredHandler(orderManagementService),
-      new ListOrderShipmentsHandler(shipmentManagementService),
-      new GetShipmentHandler(shipmentManagementService),
+      new ListOrderShipmentsHandler(orderManagementService),
+      new GetShipmentHandler(orderManagementService),
     );
     const orderStatusHistoryController = new OrderStatusHistoryController(
       new LogOrderStatusChangeHandler(orderManagementService),
@@ -1280,14 +1282,14 @@ export class Container {
     // Payment Module
     // ============================================================
 
-    const paymentIntentRepository = new PaymentIntentRepositoryImpl(prisma);
-    const paymentTransactionRepository = new PaymentTransactionRepositoryImpl(prisma);
-    const paymentWebhookEventRepository = new PaymentWebhookEventRepositoryImpl(prisma);
-    const bnplTransactionRepository = new BnplTransactionRepositoryImpl(prisma);
-    const giftCardRepository = new GiftCardRepositoryImpl(prisma);
-    const giftCardTransactionRepository = new GiftCardTransactionRepositoryImpl(prisma);
-    const promotionRepository = new PromotionRepositoryImpl(prisma);
-    const promotionUsageRepository = new PromotionUsageRepositoryImpl(prisma);
+    const paymentIntentRepository = new PaymentIntentRepositoryImpl(prisma, eventBus);
+    const paymentTransactionRepository = new PaymentTransactionRepositoryImpl(prisma, eventBus);
+    const paymentWebhookEventRepository = new PaymentWebhookEventRepositoryImpl(prisma, eventBus);
+    const bnplTransactionRepository = new BnplTransactionRepositoryImpl(prisma, eventBus);
+    const giftCardRepository = new GiftCardRepositoryImpl(prisma, eventBus);
+    const giftCardTransactionRepository = new GiftCardTransactionRepositoryImpl(prisma, eventBus);
+    const promotionRepository = new PromotionRepositoryImpl(prisma, eventBus);
+    const promotionUsageRepository = new PromotionUsageRepositoryImpl(prisma, eventBus);
 
     // Cross-module port adapter: bridge order-management into payment's order query port
     const orderQueryPort: IExternalOrderQueryPort = {
@@ -1357,9 +1359,9 @@ export class Container {
     // Loyalty Module
     // ============================================================
 
-    const loyaltyAccountRepository = new LoyaltyAccountRepositoryImpl(prisma);
-    const loyaltyProgramRepository = new LoyaltyProgramRepositoryImpl(prisma);
-    const loyaltyTransactionRepository = new LoyaltyTransactionRepositoryImpl(prisma);
+    const loyaltyAccountRepository = new LoyaltyAccountRepositoryImpl(prisma, eventBus);
+    const loyaltyProgramRepository = new LoyaltyProgramRepositoryImpl(prisma, eventBus);
+    const loyaltyTransactionRepository = new LoyaltyTransactionRepositoryImpl(prisma, eventBus);
 
     const loyaltyService = new LoyaltyService(loyaltyAccountRepository, loyaltyTransactionRepository);
     const loyaltyProgramService = new LoyaltyProgramService(loyaltyProgramRepository);
@@ -1382,13 +1384,16 @@ export class Container {
     // Engagement Module
     // ============================================================
 
-    const wishlistRepository = new WishlistRepositoryImpl(prisma);
+    const wishlistRepository = new WishlistRepositoryImpl(prisma, eventBus);
+    // `WishlistItemRepositoryImpl` is read-only (no event dispatch);
+    // writes flow through `WishlistRepositoryImpl.save()` after mutating
+    // items via the `Wishlist` aggregate root.
     const wishlistItemRepository = new WishlistItemRepositoryImpl(prisma);
-    const reminderRepository = new ReminderRepositoryImpl(prisma);
-    const notificationRepository = new NotificationRepositoryImpl(prisma);
-    const appointmentRepository = new AppointmentRepositoryImpl(prisma);
-    const productReviewRepository = new ProductReviewRepositoryImpl(prisma);
-    const newsletterSubscriptionRepository = new NewsletterSubscriptionRepositoryImpl(prisma);
+    const reminderRepository = new ReminderRepositoryImpl(prisma, eventBus);
+    const notificationRepository = new NotificationRepositoryImpl(prisma, eventBus);
+    const appointmentRepository = new AppointmentRepositoryImpl(prisma, eventBus);
+    const productReviewRepository = new ProductReviewRepositoryImpl(prisma, eventBus);
+    const newsletterSubscriptionRepository = new NewsletterSubscriptionRepositoryImpl(prisma, eventBus);
 
     const wishlistManagementService = new WishlistManagementService(wishlistRepository, wishlistItemRepository);
     const reminderManagementService = new ReminderManagementService(reminderRepository);
@@ -1559,3 +1564,5 @@ export class Container {
 }
 
 export const container = Container.getInstance();
+
+

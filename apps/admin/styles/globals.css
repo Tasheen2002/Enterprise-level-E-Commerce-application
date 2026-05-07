@@ -1,0 +1,52 @@
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: var(--ts-font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: rgb(var(--ts-cream));
+    color: rgb(var(--ts-charcoal));
+  }
+
+  body {
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--ts-font-serif);
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background-color: rgb(var(--ts-gold) / 0.4);
+    color: rgb(var(--ts-charcoal));
+  }
+}
+
+@layer components {
+  /* Editorial input: borderless, gold-underline reveal on focus.
+     Used by the auth forms and other minimal-chrome inputs in the storefront. */
+  .ts-input-editorial {
+    @apply w-full border-0 border-b border-charcoal/20 bg-transparent px-0 py-2 text-charcoal placeholder:text-slate-muted/60 focus:border-gold focus:outline-none focus:ring-0 transition-colors;
+  }
+
+  /* Solid charcoal CTA with gold hover state. */
+  .ts-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-soft bg-charcoal px-6 py-3 text-sm font-medium text-cream transition-colors duration-300 ease-editorial hover:bg-gold hover:text-charcoal;
+  }
+
+  /* Ghost button — charcoal stroke, transparent fill. */
+  .ts-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-soft border border-charcoal px-6 py-3 text-sm font-medium text-charcoal transition-colors duration-300 ease-editorial hover:bg-charcoal hover:text-cream;
+  }
+}

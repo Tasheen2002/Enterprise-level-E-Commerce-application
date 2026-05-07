@@ -1,0 +1,39 @@
+{
+  "name": "@tasheen/admin",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tasheen staff console — internal Next.js application.",
+  "scripts": {
+    "dev": "next dev -p 3002",
+    "build": "next build",
+    "start": "next start -p 3002",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.7",
+    "@tasheen/api-client": "workspace:*",
+    "@tasheen/types": "workspace:*",
+    "@tasheen/ui": "workspace:*",
+    "@tasheen/validation": "workspace:*",
+    "next": "^15.1.4",
+    "next-themes": "^0.4.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^4.3.5",
+    "react-hook-form": "^7.54.2",
+    "@hookform/resolvers": "^3.10.0"
+  },
+  "devDependencies": {
+    "@tasheen/config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.1.4",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3"
+  }
+}

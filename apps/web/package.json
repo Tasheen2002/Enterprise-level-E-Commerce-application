@@ -1,0 +1,41 @@
+{
+  "name": "@tasheen/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tasheen storefront — customer-facing Next.js application.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.10.0",
+    "@tanstack/react-query": "^5.62.7",
+    "@tasheen/api-client": "workspace:*",
+    "@tasheen/types": "workspace:*",
+    "@tasheen/ui": "workspace:*",
+    "@tasheen/validation": "workspace:*",
+    "lucide-react": "^0.460.0",
+    "next": "^15.1.4",
+    "next-themes": "^0.4.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.54.2",
+    "sonner": "^2.0.7",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@tasheen/config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.1.4",
+    "postcss": "^8.5.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.3"
+  }
+}
