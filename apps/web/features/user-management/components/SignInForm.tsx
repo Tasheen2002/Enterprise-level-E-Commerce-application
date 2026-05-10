@@ -17,15 +17,35 @@ import {
   FormField,
 } from "@tasheen/ui";
 import { useLogin } from "../hooks/useLogin";
+import { useGoogleLogin } from "../hooks/useGoogleLogin";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
+
+// Firebase popup-cancelled codes — user closed the dialog, not a real failure.
+const SILENT_FIREBASE_CODES = new Set([
+  "auth/popup-closed-by-user",
+  "auth/cancelled-popup-request",
+  "auth/user-cancelled",
+]);
 
 export function SignInForm() {
   const router = useRouter();
   const login = useLogin();
+  const googleLogin = useGoogleLogin();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
 
+  const onGoogleClick = async () => {
+    setServerError(null);
+    try {
+      await googleLogin.mutateAsync();
+      toast.success("Welcome back to Slipperze");
+      router.push("/account");
+    } catch (err: any) {
+      if (SILENT_FIREBASE_CODES.has(err?.code)) return;
+      const message = err?.message || "Google sign in failed";
+      setServerError(message);
+      toast.error(message);
+    }
+  };
   const {
     register,
     handleSubmit,
@@ -58,20 +78,21 @@ export function SignInForm() {
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <header className="space-y-4 text-center pb-8 border-b border-stone-100">
-        <h1 className="font-serif text-6xl text-charcoal tracking-tight italic">Identity</h1>
-        <p className="text-[10px] tracking-[0.3em] uppercase text-gold font-bold">
-          Slipperze Artisanal Member
+      <header className="space-y-4 text-center pb-8 border-b border-sand/30">
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-charcoal tracking-tight italic">Welcome Back</h1>
+        <p className="text-[10px] tracking-[0.4em] uppercase text-gold font-bold">
+          The Slipperze Heritage
         </p>
       </header>
 
-      <FormField id="email" label="Correspondence / Email" error={errors.email?.message} className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400">
-        <input
+      <FormField id="email" label="Correspondence / Email" error={errors.email?.message} className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60">
+        <Input
           id="email"
           type="email"
+          variant="boxed"
           placeholder="e.g. member@slipperze.com"
           autoComplete="email"
-          className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+          hasError={Boolean(errors.email)}
           {...register("email")}
         />
       </FormField>
@@ -83,39 +104,29 @@ export function SignInForm() {
           error={errors.password?.message}
           className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400"
         >
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none pr-12"
-              {...register("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-300 hover:text-gold transition-colors"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            variant="boxed"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            {...register("password")}
+          />
         </FormField>
       </div>
 
       <div className="flex items-center justify-between">
         <label 
           htmlFor="rememberMe" 
-          className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-stone-400 cursor-pointer group select-none font-bold"
+          className="flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-slate-muted cursor-pointer group select-none font-bold"
         >
           <Checkbox id="rememberMe" {...register("rememberMe")} />
           <span className="group-hover:text-charcoal transition-colors">Maintain Access</span>
         </label>
         <Link
           href="/forgot-password"
-          className="text-[10px] font-bold text-burgundy uppercase tracking-[0.15em] hover:text-gold transition-colors"
+          className="text-[10px] font-bold text-charcoal/60 uppercase tracking-[0.15em] hover:text-gold transition-colors border-b border-transparent hover:border-gold"
         >
-          Recovery?
+          Forgotten Access?
         </Link>
       </div>
 
@@ -137,15 +148,23 @@ export function SignInForm() {
 
       <div className="relative py-4">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-slate-200" />
+          <span className="w-full border-t border-sand/20" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-2 text-slate-muted">Or continue with</span>
+          <span className="bg-cream px-4 text-[9px] tracking-[0.2em] font-bold text-slate-muted/50">Or continue with</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <Button type="button" variant="ghost" size="md" className="flex gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="md"
+          className="flex gap-2"
+          onClick={onGoogleClick}
+          isLoading={googleLogin.isPending}
+          disabled={googleLogin.isPending || isSubmitting || login.isPending}
+        >
           <svg className="h-4 w-4" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
