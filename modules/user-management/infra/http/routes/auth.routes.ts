@@ -10,6 +10,7 @@ import {
 import {
   registerSchema,
   loginSchema,
+  googleLoginSchema,
   logoutSchema,
   refreshTokenSchema,
   changePasswordSchema,
@@ -25,6 +26,7 @@ import {
   actionResponseSchema,
   RegisterBody,
   LoginBody,
+  GoogleLoginBody,
   RefreshTokenBody,
   ForgotPasswordBody,
   ResetPasswordBody,
@@ -41,6 +43,7 @@ const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
 // Pre-compute JSON Schemas from Zod (single source of truth — no drift).
 const registerBodyJson = toJsonSchema(registerSchema);
 const loginBodyJson = toJsonSchema(loginSchema);
+const googleLoginBodyJson = toJsonSchema(googleLoginSchema);
 const logoutBodyJson = toJsonSchema(logoutSchema);
 const refreshTokenBodyJson = toJsonSchema(refreshTokenSchema);
 const changePasswordBodyJson = toJsonSchema(changePasswordSchema);
@@ -103,6 +106,29 @@ export async function authRoutes(
     (request, reply) =>
       controller.login(
         request as FastifyRequest<{ Body: LoginBody }>,
+        reply,
+      ),
+  );
+
+  // POST /auth/google
+  fastify.post(
+    "/auth/google",
+    {
+      preHandler: [validateBody(googleLoginSchema)],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Sign in with Google",
+        description:
+          "Verify a Firebase ID token from a Google sign-in and exchange it for the app's own JWTs. Auto-creates a CUSTOMER account on first use; subsequent calls log into the same account by verified email match.",
+        body: googleLoginBodyJson,
+        response: {
+          200: successResponse(authResultResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.googleLogin(
+        request as FastifyRequest<{ Body: GoogleLoginBody }>,
         reply,
       ),
   );
