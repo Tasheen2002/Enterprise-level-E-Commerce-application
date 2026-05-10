@@ -17,6 +17,9 @@ import { NodemailerEmailService } from "../../../modules/user-management/infra/s
 import { UserService } from "../../../modules/user-management/application/services/user.service";
 import { RegisterUserHandler } from "../../../modules/user-management/application/commands/register-user.command";
 import { LoginUserHandler } from "../../../modules/user-management/application/commands/login-user.command";
+import { LoginWithGoogleHandler } from "../../../modules/user-management/application/commands/login-with-google.command";
+import { FirebaseAuthVerifierAdapter } from "../../../modules/user-management/infra/security/firebase-auth-verifier.adapter";
+import type { IFirebaseAuthVerifier } from "../../../modules/user-management/application/services/ifirebase-auth-verifier.service";
 import { LogoutHandler } from "../../../modules/user-management/application/commands/logout.command";
 import { RefreshTokenHandler } from "../../../modules/user-management/application/commands/refresh-token.command";
 import { ChangePasswordHandler } from "../../../modules/user-management/application/commands/change-password.command";
@@ -45,6 +48,7 @@ import { ListPaymentMethodsHandler } from "../../../modules/user-management/appl
 import { ListUsersHandler } from "../../../modules/user-management/application/queries/list-user.query";
 import { AuthController } from "../../../modules/user-management/infra/http/controllers/auth.controller";
 import { ProfileController } from "../../../modules/user-management/infra/http/controllers/profile.controller";
+import { ImageKitUploadAuthService } from "../../../modules/user-management/application/services/imagekit-upload-auth.service";
 import { AddressesController } from "../../../modules/user-management/infra/http/controllers/addresses.controller";
 import { PaymentMethodsController } from "../../../modules/user-management/infra/http/controllers/payment-methods.controller";
 import { UsersController } from "../../../modules/user-management/infra/http/controllers/users.controller";
@@ -494,8 +498,11 @@ import {
   GiftCardController,
   PromotionController,
   StripeWebhookController,
+  StripeCardSetupController,
 } from "../../../modules/payment/infra/http/controllers";
-import { isStripeConfigured } from "../../../modules/payment/infra/config/stripe.config";
+import { StripeCardSetupService } from "../../../modules/payment/application/services/stripe-card-setup.service";
+import { createStripeProvider } from "../../../modules/payment/infra/payment-providers/stripe.provider";
+import { getStripeConfig, isStripeConfigured } from "../../../modules/payment/infra/config/stripe.config";
 import type { IExternalOrderQueryPort } from "../../../modules/payment/domain/external-services";
 
 // ============================================================
@@ -608,6 +615,11 @@ export class Container {
     config: {
       jwtSecret: string;
       jwtExpiresIn: string;
+      firebaseAdmin?: {
+        projectId: string;
+        clientEmail: string;
+        privateKey: string;
+      };
     },
   ): void {
 
@@ -640,6 +652,20 @@ export class Container {
     const userService = new UserService(userRepository);
     const emailService = new NodemailerEmailService();
 
+    // Firebase Admin verifier — wired only if credentials are configured.
+    // When unset, /auth/google returns 503 via the unconfigured stub below.
+    const firebaseVerifier: IFirebaseAuthVerifier = config.firebaseAdmin
+      ? new FirebaseAuthVerifierAdapter(config.firebaseAdmin)
+      : {
+          async verifyIdToken() {
+            const err: Error & { statusCode?: number } = new Error(
+              "Google sign-in is not configured on this server",
+            );
+            err.statusCode = 503;
+            throw err;
+          },
+        };
+
     const authController = new AuthController(
       new RegisterUserHandler(authService, TokenBlacklistService, emailService),
       new LoginUserHandler(authService, TokenBlacklistService),
@@ -652,10 +678,23 @@ export class Container {
       new VerifyEmailHandler(authService, TokenBlacklistService),
       new DeleteAccountHandler(authService, TokenBlacklistService),
       new ResendVerificationHandler(authService, TokenBlacklistService, emailService),
+      new LoginWithGoogleHandler(authService, firebaseVerifier),
     );
+    // ImageKit upload-token issuer — only wired when both server-side
+    // ImageKit credentials are present. The avatar-upload route returns
+    // 503 when this is null.
+    const imageKitUploadAuth =
+      process.env.IMAGEKIT_PUBLIC_KEY && process.env.IMAGEKIT_PRIVATE_KEY
+        ? new ImageKitUploadAuthService({
+            publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
+            privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
+          })
+        : null;
+
     const profileController = new ProfileController(
       new GetUserProfileHandler(profileService),
       new UpdateProfileHandler(profileService),
+      imageKitUploadAuth,
     );
     const addressesController = new AddressesController(
       new AddAddressHandler(addressService),
@@ -1343,6 +1382,19 @@ export class Container {
       ? new StripeWebhookController(paymentService)
       : null;
 
+    // Stripe card-setup feature: SetupIntent flow + persisting confirmed
+    // PaymentMethods. Only wires up when Stripe is configured; otherwise
+    // the corresponding routes are skipped at registration.
+    const stripeCardSetupController = isStripeConfigured()
+      ? new StripeCardSetupController(
+          new StripeCardSetupService(
+            prisma,
+            createStripeProvider(getStripeConfig()),
+            paymentMethodService,
+          ),
+        )
+      : null;
+
     this.services.set("paymentService", paymentService);
     this.services.set("bnplTransactionService", bnplTransactionService);
     this.services.set("giftCardService", giftCardService);
@@ -1354,6 +1406,7 @@ export class Container {
     this.services.set("giftCardController", giftCardController);
     this.services.set("promotionController", promotionController);
     this.services.set("stripeController", stripeController);
+    this.services.set("stripeCardSetupController", stripeCardSetupController);
 
     // ============================================================
     // Loyalty Module
@@ -1534,6 +1587,7 @@ export class Container {
       giftCardController: this.get<GiftCardController>("giftCardController"),
       promotionController: this.get<PromotionController>("promotionController"),
       stripeController: this.get<StripeWebhookController | null>("stripeController"),
+      stripeCardSetupController: this.get<StripeCardSetupController | null>("stripeCardSetupController"),
     };
   }
 
