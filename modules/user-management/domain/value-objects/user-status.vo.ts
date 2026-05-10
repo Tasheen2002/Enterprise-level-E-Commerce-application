@@ -6,7 +6,6 @@ export enum UserStatus {
   BLOCKED = "blocked",
 }
 
-
 const ALL_USER_STATUSES: readonly UserStatus[] = [
   UserStatus.ACTIVE,
   UserStatus.INACTIVE,
