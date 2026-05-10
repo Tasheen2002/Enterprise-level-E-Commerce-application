@@ -71,7 +71,14 @@ export class NodemailerEmailService implements IEmailService {
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
     const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
-    
+
+    if (this.isDevelopment) {
+      console.log("----------------------------------------------------------------");
+      console.log(`[EmailService] PASSWORD RESET LINK GENERATED for ${email}:`);
+      console.log(`${resetUrl}`);
+      console.log("----------------------------------------------------------------");
+    }
+
     await this.sendEmail({
       to: email,
       subject: "Commission your member security key",

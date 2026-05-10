@@ -1,34 +1,46 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
-import { EditProfileForm } from "./EditProfileForm";
+import { imageKitUrl } from "@/lib/imagekit";
+const EditProfileForm = dynamic(() => import("./EditProfileForm").then(m => ({ default: m.EditProfileForm })), {
+  loading: () => <div className="flex items-center justify-center py-20"><div className="h-6 w-6 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>,
+});
+const AvatarUploadForm = dynamic(() => import("./AvatarUploadForm").then(m => ({ default: m.AvatarUploadForm })), {
+  loading: () => <div className="flex items-center justify-center py-20"><div className="h-6 w-6 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>,
+});
 import { useCurrentIdentity } from "../hooks/useCurrentIdentity";
 import { useUserProfile } from "../hooks/useUserProfile";
-import { Button, cn } from "@tasheen/ui";
-import { 
-  Package, 
-  Heart, 
-  Coins, 
+import {
+  Package,
+  Heart,
+  Coins,
   ChevronRight,
   Star,
   Loader2,
   Settings,
   Camera,
-  ArrowLeft
+  ArrowLeft,
 } from "lucide-react";
 
 export function AccountDashboard() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  // Identity + profile are SSR-prefetched in `app/account/layout.tsx`
+  // and rehydrated via HydrationBoundary, so first paint already has
+  // data. The route is gated by middleware, so by the time we render
+  // we know the user is authenticated.
   const { data: identity, isLoading: identityLoading } = useCurrentIdentity();
   const { data: profile, isLoading: profileLoading } = useUserProfile();
 
   const isLoading = identityLoading || profileLoading;
 
-  if (isLoading) {
+  // Only show the spinner on the genuine first load. Cached data should
+  // render immediately so navigation back to the dashboard doesn't flash.
+  if (isLoading && !identity && !profile) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-gold animate-spin" />
@@ -37,9 +49,11 @@ export function AccountDashboard() {
   }
 
   // Combine identity and profile data
+  const fallbackAvatarUrl = imageKitUrl("profile.jpg");
   const user = {
     firstName: profile?.firstName || "Guest",
     lastName: profile?.lastName || "Member",
+    avatarUrl: profile?.avatarUrl ?? null,
     email: identity?.email || "N/A",
     phone: profile?.phone || "Not provided",
     birthday: profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('en-GB', {
@@ -59,29 +73,32 @@ export function AccountDashboard() {
   };
 
   return (
-    <div className="flex-1 p-10 lg:p-20 space-y-16 bg-stone-50/20">
+    <div className="flex-1 p-5 sm:p-8 lg:p-20 space-y-10 sm:space-y-16 bg-cream/40">
+
       {/* Utility Return Link */}
       <div className="mb-8">
-        <Link 
-          href="/" 
-          className="inline-flex items-center gap-3 text-[9px] uppercase tracking-[0.4em] font-bold text-stone-400 hover:text-gold transition-all duration-500 group"
+        <Link
+          href="/"
+          className="inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.4em] font-bold text-slate-muted/60 hover:text-gold transition-all duration-500 group"
         >
-          <ArrowLeft className="h-3 w-3 transition-transform group-hover:-translate-x-1" />
+          <ArrowLeft className="h-3 w-3 transition-transform group-hover:-translate-x-1" strokeWidth={1.5} />
           Return to Boutique
         </Link>
       </div>
       {/* Header Profile Section */}
-      <div className="flex flex-col lg:flex-row items-center gap-12">
-        <div 
+      <div className="flex flex-col lg:flex-row items-center gap-6 sm:gap-10 lg:gap-12">
+        <div
           className="relative group cursor-pointer"
           onClick={() => setIsAvatarModalOpen(true)}
         >
-          <div className="h-48 w-48 rounded-full overflow-hidden border-4 border-white shadow-xl ring-1 ring-stone-100 relative">
+          <div className="h-32 w-32 sm:h-40 sm:w-40 lg:h-48 lg:w-48 rounded-full overflow-hidden border-4 border-white shadow-xl ring-1 ring-sand/30 relative">
             <Image
-              src="/images/placeholders/profile.jpg"
+              src={user.avatarUrl ?? fallbackAvatarUrl}
               alt={`${user.firstName} ${user.lastName}`}
               width={192}
               height={192}
+              sizes="(max-width: 640px) 128px, (max-width: 1024px) 160px, 192px"
+              priority
               className="object-cover transition-transform duration-700 group-hover:scale-110"
             />
             {/* Hover Overlay */}
@@ -100,15 +117,15 @@ export function AccountDashboard() {
           </div>
         </div>
 
-        <div className="text-center lg:text-left space-y-2">
-          <h1 className="font-serif text-5xl lg:text-7xl text-charcoal tracking-tight italic">
+        <div className="text-center lg:text-left space-y-2 max-w-full">
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-7xl text-charcoal tracking-tight italic break-words">
             {user.firstName} {user.lastName}
           </h1>
           <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
-            <p className="text-xs tracking-widest text-stone-400 uppercase">
+            <p className="text-[10px] tracking-[0.3em] text-slate-muted/60 uppercase font-bold">
               Member since {user.memberSince}
             </p>
-            <button 
+            <button
               onClick={() => setIsEditModalOpen(true)}
               className="flex items-center gap-1.5 text-[10px] tracking-[0.1em] uppercase text-gold hover:text-charcoal transition-colors font-bold group"
             >
@@ -116,27 +133,27 @@ export function AccountDashboard() {
               Edit Profile
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8 pt-8">
-            <div className="space-y-1 border-b border-stone-100 pb-2">
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">Email Address</p>
-              <p className="text-sm text-charcoal">{user.email}</p>
+            <div className="space-y-1 border-b border-sand/20 pb-2">
+              <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">Email Address</p>
+              <p className="text-sm text-charcoal font-medium">{user.email}</p>
             </div>
-            <div className="space-y-1 border-b border-stone-100 pb-2">
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">Phone Number</p>
-              <p className="text-sm text-charcoal">{user.phone}</p>
+            <div className="space-y-1 border-b border-sand/20 pb-2">
+              <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">Phone Number</p>
+              <p className="text-sm text-charcoal font-medium">{user.phone}</p>
             </div>
-            <div className="space-y-1 border-b border-stone-100 pb-2">
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">Birthday</p>
-              <p className="text-sm text-charcoal">{user.birthday}</p>
+            <div className="space-y-1 border-b border-sand/20 pb-2">
+              <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">Birthday</p>
+              <p className="text-sm text-charcoal font-medium">{user.birthday}</p>
             </div>
-            <div className="space-y-1 border-b border-stone-100 pb-2">
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">Pref. Currency</p>
-              <p className="text-sm text-charcoal">{user.currency}</p>
+            <div className="space-y-1 border-b border-sand/20 pb-2">
+              <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">Pref. Currency</p>
+              <p className="text-sm text-charcoal font-medium">{user.currency}</p>
             </div>
-            <div className="space-y-1 border-b border-stone-100 pb-2">
-              <p className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">Language (Locale)</p>
-              <p className="text-sm text-charcoal">{profile?.locale || "en-GB"}</p>
+            <div className="space-y-1 border-b border-sand/20 pb-2">
+              <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">Language (Locale)</p>
+              <p className="text-sm text-charcoal font-medium">{profile?.locale || "en-GB"}</p>
             </div>
           </div>
         </div>
@@ -145,101 +162,88 @@ export function AccountDashboard() {
       {/* Recent Activity Section */}
       <section className="space-y-8">
         <h2 className="font-serif text-2xl text-charcoal tracking-wide">Recent Activity</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-stone-100 divide-x divide-stone-100 bg-white shadow-sm">
-          <ActivityCard 
-            icon={Package} 
-            label="Active Orders" 
-            value={user.activeOrders} 
-            href="/account/orders" 
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-sand/30 divide-x divide-sand/20 bg-ivory/30 shadow-sm">
+          <ActivityCard
+            icon={Package}
+            label="Active Orders"
+            value={user.activeOrders}
+            href="/account/orders"
           />
-          <ActivityCard 
-            icon={Heart} 
-            label="Wishlist Items" 
-            value={user.wishlistItems} 
-            href="/account/wishlist" 
+          <ActivityCard
+            icon={Heart}
+            label="Wishlist Items"
+            value={user.wishlistItems}
+            href="/account/wishlist"
           />
-          <ActivityCard 
-            icon={Coins} 
-            label="Reward Points" 
-            value={user.rewardPoints} 
-            href="/account/loyalty" 
+          <ActivityCard
+            icon={Coins}
+            label="Reward Points"
+            value={user.rewardPoints}
+            href="/account/loyalty"
           />
         </div>
       </section>
 
-      {/* Edit Profile Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Edit Personal Information"
-      >
-        <EditProfileForm />
-      </Modal>
+      {/* Edit Profile Modal — only mount when open so the dynamic chunk
+          for EditProfileForm is fetched on first open, not on every page
+          render. */}
+      {isEditModalOpen && (
+        <Modal
+          isOpen
+          onClose={() => setIsEditModalOpen(false)}
+          title="Edit Personal Information"
+        >
+          <EditProfileForm />
+        </Modal>
+      )}
 
-      {/* Avatar Update Modal */}
-      <Modal
-        isOpen={isAvatarModalOpen}
-        onClose={() => setIsAvatarModalOpen(false)}
-        title="Update Profile Picture"
-      >
-        <div className="space-y-8 py-4">
-          <div className="flex flex-col items-center gap-6">
-            <div className="h-40 w-40 rounded-full overflow-hidden border-2 border-stone-100 shadow-inner">
-              <Image
-                src="/images/placeholders/profile.jpg"
-                alt="Current profile"
-                width={160}
-                height={160}
-                className="object-cover"
-              />
-            </div>
-            <div className="text-center space-y-1">
-              <p className="text-sm font-medium text-charcoal">Upload a new photograph</p>
-              <p className="text-xs text-stone-400">Preferred format: JPG or PNG, max 5MB.</p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col gap-3">
-            <Button variant="primary" fullWidth>
-              Choose Image
-            </Button>
-            <Button variant="ghost" fullWidth onClick={() => setIsAvatarModalOpen(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Avatar Update Modal — only mount when open so its dynamic chunk
+          and SetupIntent-equivalent (signed upload token) are requested
+          lazily. */}
+      {isAvatarModalOpen && (
+        <Modal
+          isOpen
+          onClose={() => setIsAvatarModalOpen(false)}
+          title="Update Profile Picture"
+        >
+          <AvatarUploadForm
+            currentAvatarUrl={user.avatarUrl}
+            fallbackImageUrl={fallbackAvatarUrl}
+            onSuccess={() => setIsAvatarModalOpen(false)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }
 
-function ActivityCard({ 
-  icon: Icon, 
-  label, 
-  value, 
-  href 
-}: { 
-  icon: any, 
-  label: string, 
-  value: string | number, 
-  href: string 
+function ActivityCard({
+  icon: Icon,
+  label,
+  value,
+  href
+}: {
+  icon: React.ComponentType<{ className?: string }>,
+  label: string,
+  value: string | number,
+  href: string
 }) {
   return (
-    <a 
+    <Link
       href={href}
-      className="group flex flex-col p-10 transition-all duration-500 hover:bg-stone-50/50"
+      className="group flex flex-col p-6 sm:p-10 transition-all duration-500 hover:bg-white/40"
     >
-      <div className="flex justify-between items-start mb-10">
-        <div className="text-stone-300 group-hover:text-gold transition-colors duration-500">
-          <Icon className="h-6 w-6 stroke-[1.5]" />
+      <div className="flex justify-between items-start mb-6 sm:mb-10">
+        <div className="text-slate-muted/30 group-hover:text-gold transition-colors duration-500">
+          <Icon className="h-6 w-6 stroke-[1.2]" />
         </div>
-        <ChevronRight className="h-4 w-4 text-stone-200 group-hover:text-gold group-hover:translate-x-1 transition-all" />
+        <ChevronRight className="h-4 w-4 text-sand/40 group-hover:text-gold group-hover:translate-x-1 transition-all" strokeWidth={1.5} />
       </div>
       <div className="space-y-2">
-        <p className="text-[9px] font-bold tracking-[0.3em] text-stone-400 uppercase">{label}</p>
-        <p className="text-5xl font-serif text-charcoal">{value}</p>
+        <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">{label}</p>
+        <p className="text-4xl sm:text-5xl font-serif text-charcoal group-hover:text-gold transition-colors duration-500">{value}</p>
       </div>
-    </a>
+    </Link>
   );
 }

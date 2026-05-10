@@ -51,6 +51,8 @@ export interface AuthResult {
     isGuest: boolean;
     emailVerified: boolean;
     phoneVerified: boolean;
+    updatedAt: string;
+    createdAt: string;
   };
   expiresIn: number;
 }
@@ -138,6 +140,63 @@ export class AuthenticationService {
     return this.buildAuthResult(user, credentials.rememberMe);
   }
 
+  // Google sign-in (find-or-create by Firebase-verified email).
+  //
+  // Trust model: caller has already verified the Firebase ID token via
+  // IFirebaseAuthVerifier and passes us the decoded identity. We only see
+  // emails Google has confirmed the user owns, so it is safe to:
+  //   - log into an existing password account by email match (Google has
+  //     proved ownership of the address)
+  //   - auto-create a new CUSTOMER account for unknown emails with
+  //     emailVerified=true.
+  //
+  // New accounts get a random unguessable passwordHash (the User entity's
+  // invariants require a non-empty hash for non-guests). The user can never
+  // sign in via /auth/login until they go through forgot-password to set a
+  // real one — exactly the behaviour we want for social-only accounts.
+  async loginWithGoogle(identity: {
+    email: string;
+    emailVerified: boolean;
+    name: string | null;
+  }): Promise<AuthResult> {
+    const emailVo = Email.create(identity.email);
+    let user = await this.userRepository.findByEmail(emailVo);
+
+    if (user && user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user && user.status === UserStatus.INACTIVE) throw new UserInactiveError();
+
+    if (!user || user.isGuest) {
+      const placeholderSecret = crypto.randomBytes(32).toString("hex");
+      const placeholderHash = await this.passwordHasher.hash(placeholderSecret);
+      if (!placeholderHash) {
+        throw new InvalidOperationError("Failed to initialise account");
+      }
+
+      const { firstName, lastName } = splitDisplayName(identity.name);
+
+      if (user && user.isGuest) {
+        user.convertFromGuest(identity.email, placeholderHash);
+      } else {
+        user = User.create({
+          email: identity.email,
+          passwordHash: placeholderHash,
+          firstName: firstName ?? undefined,
+          lastName: lastName ?? undefined,
+          isGuest: false,
+        });
+      }
+
+      // Google has already verified the email; skip our own verification flow.
+      if (identity.emailVerified) {
+        user.setEmailVerified(true);
+      }
+
+      await this.userRepository.save(user);
+    }
+
+    return this.buildAuthResult(user);
+  }
+
   async loginAsGuest(email?: string): Promise<AuthResult> {
     let user: User;
 
@@ -210,11 +269,15 @@ export class AuthenticationService {
         userId: user.id.getValue(),
         email: user.email.getValue(),
         role: user.role,
+        updatedAt: user.updatedAt.toISOString(),
+        createdAt: user.createdAt.toISOString(),
       }),
       refreshToken: this.jwtService.signRefresh({
         userId: user.id.getValue(),
         email: user.email.getValue(),
         role: user.role,
+        updatedAt: user.updatedAt.toISOString(),
+        createdAt: user.createdAt.toISOString(),
       }),
       expiresIn: this.jwtService.getAccessExpiresInSeconds(),
     };
@@ -409,11 +472,15 @@ export class AuthenticationService {
     return user;
   }
 
+  // ---
+
   private buildAuthResult(user: User, rememberMe: boolean = false): AuthResult {
     const base = {
       userId: user.id.getValue(),
       email: user.email.getValue(),
       role: user.role,
+      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt.toISOString(),
     };
 
     return {
@@ -426,8 +493,28 @@ export class AuthenticationService {
         isGuest: user.isGuest,
         emailVerified: user.emailVerified,
         phoneVerified: user.phoneVerified,
+        updatedAt: user.updatedAt.toISOString(),
+        createdAt: user.createdAt.toISOString(),
       },
       expiresIn: this.jwtService.getAccessExpiresInSeconds(),
     };
   }
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function splitDisplayName(displayName: string | null): {
+  firstName: string | null;
+  lastName: string | null;
+} {
+  if (!displayName) return { firstName: null, lastName: null };
+  const parts = displayName.trim().split(/\s+/);
+  if (parts.length === 0) return { firstName: null, lastName: null };
+  if (parts.length === 1) return { firstName: parts[0]!, lastName: null };
+  return {
+    firstName: parts[0]!,
+    lastName: parts.slice(1).join(" "),
+  };
 }

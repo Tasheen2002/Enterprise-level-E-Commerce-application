@@ -10,6 +10,8 @@ export interface UpdateProfileCommand extends ICommand {
   readonly userId: string;
   readonly defaultAddressId?: string;
   readonly defaultPaymentMethodId?: string;
+  // `null` clears the avatar; `undefined` leaves it unchanged.
+  readonly avatarUrl?: string | null;
   readonly prefs?: UserPreferences;
   readonly locale?: string;
   readonly currency?: string;
@@ -39,6 +41,7 @@ export class UpdateProfileHandler
       {
         defaultAddressId: command.defaultAddressId,
         defaultPaymentMethodId: command.defaultPaymentMethodId,
+        avatarUrl: command.avatarUrl,
         prefs: command.prefs,
         locale: command.locale,
         currency: command.currency,

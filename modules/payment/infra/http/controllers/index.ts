@@ -5,3 +5,4 @@ export * from "./bnpl-transaction.controller";
 export * from "./gift-card.controller";
 export * from "./promotion.controller";
 export * from "./stripe-webhook.controller";
+export * from "./stripe-card-setup.controller";

@@ -53,6 +53,20 @@ export const createServer = async (): Promise<FastifyInstance> => {
   container.register(server.prisma, {
     jwtSecret: server.config.JWT_SECRET,
     jwtExpiresIn: server.config.JWT_EXPIRES_IN,
+    firebaseAdmin:
+      server.config.FIREBASE_ADMIN_PROJECT_ID &&
+      server.config.FIREBASE_ADMIN_CLIENT_EMAIL &&
+      server.config.FIREBASE_ADMIN_PRIVATE_KEY
+        ? {
+            projectId: server.config.FIREBASE_ADMIN_PROJECT_ID,
+            clientEmail: server.config.FIREBASE_ADMIN_CLIENT_EMAIL,
+            // .env arrives with literal "\n" — un-escape so the PEM parses.
+            privateKey: server.config.FIREBASE_ADMIN_PRIVATE_KEY.replace(
+              /\\n/g,
+              "\n",
+            ),
+          }
+        : undefined,
   });
   server.log.info("✓ DI Container initialized");
 

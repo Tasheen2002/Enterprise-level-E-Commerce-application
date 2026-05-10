@@ -13,9 +13,9 @@ import {
   Button,
   PasswordInput,
   FormField,
-  PasswordStrengthMeter,
 } from "@tasheen/ui";
 import { useResetPassword } from "../hooks/useResetPassword";
+import { PasswordStrengthWatcher } from "./PasswordStrengthWatcher";
 import { KeyRound, ShieldCheck, ArrowRight } from "lucide-react";
 
 export function ResetPasswordForm() {
@@ -30,7 +30,7 @@ export function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordRequest>({
     resolver: zodResolver(resetPasswordRequestSchema),
@@ -39,8 +39,6 @@ export function ResetPasswordForm() {
       newPassword: "",
     },
   });
-
-  const passwordValue = watch("newPassword");
 
   const onSubmit = handleSubmit(async (values) => {
     if (!token) {
@@ -124,7 +122,7 @@ export function ResetPasswordForm() {
                   {...register("newPassword")}
                 />
               </FormField>
-              <PasswordStrengthMeter password={passwordValue ?? ""} />
+              <PasswordStrengthWatcher control={control} name="newPassword" />
             </div>
 
             {serverError && (

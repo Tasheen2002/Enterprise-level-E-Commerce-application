@@ -13,6 +13,7 @@ import {
   VerifyEmailHandler,
   DeleteAccountHandler,
   ResendVerificationHandler,
+  LoginWithGoogleHandler,
 } from '../../../application';
 import {
   RegisterBody,
@@ -26,6 +27,7 @@ import {
   ResendVerificationBody,
   ChangeEmailBody,
   DeleteAccountBody,
+  GoogleLoginBody,
 } from '../validation/auth.schema';
 
 export class AuthController {
@@ -41,6 +43,7 @@ export class AuthController {
     private readonly verifyEmailHandler: VerifyEmailHandler,
     private readonly deleteAccountHandler: DeleteAccountHandler,
     private readonly resendVerificationHandler: ResendVerificationHandler,
+    private readonly loginWithGoogleHandler: LoginWithGoogleHandler,
   ) { }
 
   // --- Queries ---
@@ -51,6 +54,8 @@ export class AuthController {
         userId: request.user.userId,
         email: request.user.email,
         role: request.user.role,
+        updatedAt: request.user.updatedAt,
+        createdAt: request.user.createdAt,
       });
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -99,6 +104,35 @@ export class AuthController {
       }
 
       return ResponseHelper.fromCommand(reply, result, 'Login failed');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async googleLogin(
+    request: FastifyRequest<{ Body: GoogleLoginBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.loginWithGoogleHandler.handle({
+        idToken: request.body.idToken,
+      });
+
+      if (result.success && result.data) {
+        const auth = result.data;
+        return ResponseHelper.ok(reply, 'Login successful', {
+          accessToken: auth.accessToken,
+          // Social sign-in always returns a refresh token — there is no
+          // "remember me" toggle on the popup, and users expect persistence
+          // across browser sessions for OAuth-style flows.
+          refreshToken: auth.refreshToken,
+          user: auth.user,
+          expiresIn: auth.expiresIn,
+          tokenType: 'Bearer',
+        });
+      }
+
+      return ResponseHelper.fromCommand(reply, result, 'Google sign-in failed');
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

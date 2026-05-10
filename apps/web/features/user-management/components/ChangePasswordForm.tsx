@@ -11,14 +11,15 @@ import {
 } from "@tasheen/ui";
 import { useChangePassword } from "../hooks/useChangePassword";
 import { Check, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Matches the design and the backend schema
 const changePasswordFormSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(8, "New password must be at least 8 characters"),
-  confirmPassword: z.string().min(1, "Please confirm your new password"),
+  currentPassword: z.string().min(1, "Current security key is required"),
+  newPassword: z.string().min(8, "New security key must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please verify your new security key"),
 }).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Entries do not match. Please verify your input.",
+  message: "New security keys do not match.",
   path: ["confirmPassword"],
 });
 
@@ -37,19 +38,30 @@ export function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
     resolver: zodResolver(changePasswordFormSchema),
   });
 
-  const onSubmit = handleSubmit(async (data) => {
-    setServerError(null);
-    try {
-      await changePassword.mutateAsync({
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword
-      });
-      reset();
-      onSuccess();
-    } catch (err: any) {
-      setServerError(err.message || "Failed to update security credentials.");
-    }
-  });
+  const onSubmit = handleSubmit(
+    async (data) => {
+      setServerError(null);
+      try {
+        await changePassword.mutateAsync({
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword,
+        });
+        toast.success("Security credentials updated successfully.");
+        reset();
+        onSuccess();
+      } catch (err: any) {
+        setServerError(err.message || "Failed to update security credentials.");
+        toast.error(err.message || "Credential update failed.");
+      }
+    },
+    (errors) => {
+      if (errors.confirmPassword) {
+        toast.error("Credential confirmation failed. Entries must match.");
+      } else {
+        toast.error("Please verify all security fields.");
+      }
+    },
+  );
 
   return (
     <form onSubmit={onSubmit} className="space-y-6 pt-4 pb-2">
@@ -69,11 +81,11 @@ export function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
           error={errors.currentPassword?.message}
           className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400"
         >
-          <input 
+          <PasswordInput 
             id="currentPassword" 
-            type="password"
+            variant="boxed"
             placeholder="••••••••" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+            hasError={Boolean(errors.currentPassword)}
             {...register("currentPassword")} 
           />
         </FormField>
@@ -84,11 +96,11 @@ export function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
           error={errors.newPassword?.message}
           className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400"
         >
-          <input 
+          <PasswordInput 
             id="newPassword" 
-            type="password"
+            variant="boxed"
             placeholder="Enter new credential" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+            hasError={Boolean(errors.newPassword)}
             {...register("newPassword")} 
           />
         </FormField>
@@ -99,11 +111,11 @@ export function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
           error={errors.confirmPassword?.message}
           className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400"
         >
-          <input 
+          <PasswordInput 
             id="confirmPassword" 
-            type="password"
+            variant="boxed"
             placeholder="Re-enter for confirmation" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+            hasError={Boolean(errors.confirmPassword)}
             {...register("confirmPassword")} 
           />
         </FormField>
@@ -121,7 +133,7 @@ export function ChangePasswordForm({ onSuccess }: { onSuccess: () => void }) {
           type="submit"
           variant="primary"
           fullWidth
-          className="h-16 uppercase tracking-[0.4em] text-[10px] font-bold rounded-none shadow-md hover:tracking-[0.5em] transition-all duration-700"
+          className="h-14 sm:h-16 uppercase tracking-[0.25em] sm:tracking-[0.4em] text-[10px] font-bold rounded-none shadow-md hover:tracking-[0.3em] sm:hover:tracking-[0.5em] transition-all duration-700"
           disabled={isSubmitting}
           isLoading={isSubmitting}
         >

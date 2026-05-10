@@ -7,16 +7,22 @@ const NAME_MAX = 50;
 // ─── Wire schemas (exact match with backend) ────────────────────────────────
 
 export const registerRequestSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(PASSWORD_MIN).max(PASSWORD_MAX),
+  email: z.string().email("Please provide a valid correspondence email"),
+  password: z
+    .string()
+    .min(
+      PASSWORD_MIN,
+      `Security Key must be at least ${PASSWORD_MIN} characters`,
+    )
+    .max(PASSWORD_MAX),
   phone: z.string().optional(),
   firstName: z.string().max(NAME_MAX).optional(),
   lastName: z.string().max(NAME_MAX).optional(),
 });
 
 export const loginRequestSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1).max(PASSWORD_MAX),
+  email: z.string().email("Please provide a valid correspondence email"),
+  password: z.string().min(1, "Security Key is required").max(PASSWORD_MAX),
   rememberMe: z.boolean().optional(),
 });
 
@@ -60,6 +66,10 @@ export const updateProfileRequestSchema = z.object({
   nationality: z.string().max(100).optional(),
   locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2,3})?$/).optional(),
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+  // Public ImageKit URL (or null to clear). Capped at 2 KB to defend
+  // against accidental payload bloat — real ImageKit URLs are well under
+  // 500 chars.
+  avatarUrl: z.string().url().max(2048).nullable().optional(),
   prefs: z.record(z.string(), z.unknown()).optional(),
   stylePreferences: z.record(z.string(), z.unknown()).optional(),
   preferredSizes: z.record(z.string(), z.string().optional()).optional(),
@@ -81,24 +91,16 @@ export const deleteAccountRequestSchema = z.object({
 
 export const signUpFormSchema = registerRequestSchema
   .extend({
-    firstName: z
-      .string()
-      .min(1, "First name is required")
-      .max(NAME_MAX),
-    lastName: z
-      .string()
-      .min(1, "Last name is required")
-      .max(NAME_MAX),
-    confirmPassword: z.string(),
-    agreeToTerms: z
-      .boolean()
-      .refine((v) => v === true, {
-        message: "You must agree to the Terms of Service and Privacy Policy",
-      }),
+    firstName: z.string().min(1, "Given Name is required").max(NAME_MAX),
+    lastName: z.string().min(1, "Surname is required").max(NAME_MAX),
+    confirmPassword: z.string().min(1, "Please verify your security key"),
+    agreeToTerms: z.boolean().refine((v) => v === true, {
+      message: "Your agreement is required to commission an account",
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: "Security Keys do not match",
   });
 
 export const signInFormSchema = loginRequestSchema;

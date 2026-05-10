@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { 
-  ShieldCheck, 
-  Key, 
+import {
+  ShieldCheck,
+  Key,
   Mail,
   AlertTriangle,
   ExternalLink,
   ChevronRight,
   ShieldAlert,
-  Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { Button } from "@tasheen/ui";
 import { useCurrentIdentity } from "../hooks/useCurrentIdentity";
@@ -20,7 +20,10 @@ import { ChangePasswordForm } from "./ChangePasswordForm";
 import { ChangeEmailForm } from "./ChangeEmailForm";
 
 export function SecuritySettings() {
-  const { data: identity, isLoading } = useCurrentIdentity();
+  // SSR-prefetched in `app/account/layout.tsx` and rehydrated via
+  // HydrationBoundary, so first paint already has data. Middleware
+  // ensures the user is authenticated by the time we render.
+  const { data: identity } = useCurrentIdentity();
   const [activeModal, setActiveModal] = useState<"password" | "email" | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -30,22 +33,28 @@ export function SecuritySettings() {
     setTimeout(() => setIsSuccess(false), 5000);
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 text-gold animate-spin" />
-      </div>
-    );
-  }
+  const formatExactDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  // Note: There is no dedicated `passwordChangedAt` field on the API.
+  // We only show "Last updated" after the user explicitly changes their
+  // password during this session (handled via `isSuccess` state below).
 
   return (
-    <div className="max-w-4xl space-y-12 animate-in fade-in duration-700">
+    <div className="max-w-4xl space-y-12">
       <header className="space-y-4">
         <div className="flex items-center gap-3 text-gold">
           <ShieldCheck className="h-6 w-6 stroke-[1.5]" />
           <h1 className="text-[9px] font-bold tracking-[0.4em] uppercase">Vault Security</h1>
         </div>
-        <h2 className="font-serif text-5xl text-charcoal leading-tight italic">
+        <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-charcoal leading-tight italic">
           Security & Access
         </h2>
         <p className="text-stone-400 max-w-2xl text-[11px] uppercase tracking-[0.2em] font-bold leading-relaxed">
@@ -62,7 +71,7 @@ export function SecuritySettings() {
 
       <div className="grid grid-cols-1 gap-0 border border-stone-100 bg-white shadow-sm divide-y divide-stone-100">
         {/* Authentication Card */}
-        <section className="p-10 lg:p-16 space-y-12">
+        <section className="p-6 sm:p-10 lg:p-16 space-y-12">
           <div className="space-y-2">
             <h3 className="font-serif text-3xl text-charcoal italic">Authentication</h3>
             <p className="text-[9px] text-stone-400 uppercase tracking-[0.3em] font-bold">Primary Member Access</p>
@@ -78,12 +87,17 @@ export function SecuritySettings() {
                 <div className="space-y-1">
                   <p className="text-sm font-bold text-charcoal uppercase tracking-wider">Password</p>
                   <p className="text-sm text-stone-400">Regularly updating your password is recommended for optimal security.</p>
-                  <p className="text-[10px] text-stone-300 font-medium italic mt-1">Last updated: Oct 2023</p>
+                  {isSuccess && (
+                    <p className="text-[10px] text-stone-300 font-medium italic mt-1 flex items-center gap-1.5">
+                      <Clock className="h-3 w-3" />
+                      Last updated: {formatExactDate(new Date().toISOString())}
+                    </p>
+                  )}
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => setActiveModal("password")}
                 className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
               >
@@ -103,9 +117,9 @@ export function SecuritySettings() {
                   <p className="text-[11px] text-stone-400 leading-relaxed">Primary channel for artisanal notifications.</p>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="md"
                 onClick={() => setActiveModal("email")}
                 className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
               >
@@ -118,7 +132,7 @@ export function SecuritySettings() {
         {/* Account Integrity Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-x divide-stone-100 border-t border-stone-100">
           {/* Recovery Card */}
-          <div className="p-12 space-y-6 hover:bg-stone-50/50 transition-colors duration-700">
+          <div className="p-6 sm:p-10 lg:p-12 space-y-6 hover:bg-stone-50/50 transition-colors duration-700">
              <div className="flex items-center gap-3 text-charcoal">
                 <ShieldAlert className="h-5 w-5 stroke-[1.5]" />
                 <h4 className="font-serif text-2xl italic text-charcoal">Account Integrity</h4>
@@ -132,7 +146,7 @@ export function SecuritySettings() {
           </div>
 
           {/* Deletion Card */}
-          <div className="p-12 space-y-6 hover:bg-burgundy/[0.02] transition-colors duration-700">
+          <div className="p-6 sm:p-10 lg:p-12 space-y-6 hover:bg-burgundy/[0.02] transition-colors duration-700">
              <div className="flex items-center gap-3 text-burgundy">
                 <AlertTriangle className="h-5 w-5 stroke-[1.5]" />
                 <h4 className="font-serif text-2xl italic">Privacy & Data</h4>
@@ -150,22 +164,28 @@ export function SecuritySettings() {
         </div>
       </div>
 
-      {/* Modals will be integrated here */}
-      <Modal 
-        isOpen={activeModal === "password"} 
-        onClose={() => setActiveModal(null)}
-        title="Update Security"
-      >
-        <ChangePasswordForm onSuccess={handleSuccess} />
-      </Modal>
+      {/* Modals — only mount when the matching modal is active so the
+          form components and their RHF/zod subtree are not reconciled on
+          every render. */}
+      {activeModal === "password" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="Update Security"
+        >
+          <ChangePasswordForm onSuccess={handleSuccess} />
+        </Modal>
+      )}
 
-      <Modal 
-        isOpen={activeModal === "email"} 
-        onClose={() => setActiveModal(null)}
-        title="Update Email Address"
-      >
-        <ChangeEmailForm onSuccess={handleSuccess} />
-      </Modal>
+      {activeModal === "email" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="Update Email Address"
+        >
+          <ChangeEmailForm onSuccess={handleSuccess} />
+        </Modal>
+      )}
     </div>
   );
 }

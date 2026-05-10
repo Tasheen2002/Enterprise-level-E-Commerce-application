@@ -45,9 +45,9 @@ export function AddressBook() {
   };
 
   return (
-    <div className="max-w-6xl space-y-12 animate-in fade-in duration-700">
+    <div className="max-w-6xl space-y-12">
       <header className="space-y-4">
-        <h1 className="font-serif text-5xl text-charcoal leading-tight">
+        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-charcoal leading-tight">
           Address Book
         </h1>
         <p className="text-stone-400 max-w-2xl text-sm leading-relaxed">
@@ -125,7 +125,7 @@ function AddressCard({
   isDeleting: boolean;
 }) {
   return (
-    <div className="group relative bg-white p-10 flex flex-col justify-between min-h-[320px] transition-all duration-500">
+    <div className="group relative bg-white p-6 sm:p-10 flex flex-col justify-between min-h-[260px] sm:min-h-[320px] transition-all duration-500">
       <div className="space-y-8">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
@@ -156,7 +156,7 @@ function AddressCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-8 pt-10 border-t border-stone-50 mt-10">
+      <div className="flex items-center gap-8 pt-6 mt-6 sm:pt-10 sm:mt-10 border-t border-stone-50">
         <button 
           onClick={onEdit}
           className="text-[9px] font-bold uppercase tracking-[0.25em] text-stone-400 hover:text-gold transition-colors flex items-center gap-2 group/btn"

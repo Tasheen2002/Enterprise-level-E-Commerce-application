@@ -55,7 +55,7 @@ export function DeleteAccountForm() {
         </p>
       </header>
 
-      <div className="bg-stone-50 border border-stone-100 p-8 lg:p-12 space-y-8 rounded-sm shadow-sm relative overflow-hidden">
+      <div className="bg-stone-50 border border-stone-100 p-5 sm:p-8 lg:p-12 space-y-8 rounded-sm shadow-sm relative overflow-hidden">
         {/* Subtle warning background pattern would go here */}
         <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
           <Trash2 className="h-32 w-32" />
@@ -89,7 +89,7 @@ export function DeleteAccountForm() {
           </Button>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 animate-in zoom-in-95 duration-300">
-            <div className="p-6 bg-burgundy/[0.02] border border-burgundy/10 rounded-sm space-y-6">
+            <div className="p-4 sm:p-6 bg-burgundy/[0.02] border border-burgundy/10 rounded-sm space-y-6">
               <div className="flex items-center gap-3 text-burgundy">
                 <AlertTriangle className="h-5 w-5" />
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Final Confirmation Required</span>

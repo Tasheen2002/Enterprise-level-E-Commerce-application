@@ -22,6 +22,9 @@ export const updateProfileSchema = z.object({
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
   defaultAddressId: z.uuid().optional(),
   defaultPaymentMethodId: z.uuid().optional(),
+  // Public ImageKit URL (or null to clear). Frontend writes this AFTER
+  // confirming an upload via the /upload-token + ImageKit upload-API flow.
+  avatarUrl: z.string().url().max(2048).nullable().optional(),
   prefs: z.record(z.string(), z.unknown()).optional(),
   stylePreferences: z.record(z.string(), z.unknown()).optional(),
   preferredSizes: z.record(z.string(), z.string().optional()).optional(),
@@ -101,8 +104,11 @@ export const profileResponseSchema = {
     currency: { type: 'string', nullable: true },
     defaultAddressId: { type: 'string', format: 'uuid', nullable: true },
     defaultPaymentMethodId: { type: 'string', format: 'uuid', nullable: true },
+    avatarUrl: { type: 'string', nullable: true },
     preferences: userPreferencesResponseSchema,
     stylePreferences: stylePreferencesResponseSchema,
     preferredSizes: preferredSizesResponseSchema,
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
   },
 };

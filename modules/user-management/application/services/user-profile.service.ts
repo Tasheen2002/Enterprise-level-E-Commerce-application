@@ -23,6 +23,8 @@ import {
 interface UpdateUserProfileParams {
   defaultAddressId?: string;
   defaultPaymentMethodId?: string;
+  // `null` means "remove the avatar"; `undefined` means "leave it alone".
+  avatarUrl?: string | null;
   prefs?: UserPreferences;
   locale?: string;
   currency?: string;
@@ -47,6 +49,7 @@ export interface UserProfileViewDTO extends UserProfileDTO {
   residentOf: string | null;
   nationality: string | null;
   createdAt: string;
+  updatedAt: string;
 }
 
 export class UserProfileService {
@@ -114,6 +117,7 @@ export class UserProfileService {
         currency: params.currency,
         defaultAddressId: params.defaultAddressId,
         defaultPaymentMethodId: params.defaultPaymentMethodId,
+        avatarUrl: params.avatarUrl ?? undefined,
       });
       await this.userProfileRepository.save(profile);
     } else {
@@ -144,6 +148,9 @@ export class UserProfileService {
       }
       if (params.preferredSizes !== undefined) {
         profile.setPreferredSizes(params.preferredSizes);
+      }
+      if (params.avatarUrl !== undefined) {
+        profile.setAvatarUrl(params.avatarUrl);
       }
       await this.userProfileRepository.save(profile);
     }
@@ -196,6 +203,7 @@ export class UserProfileService {
       residentOf: user.residentOf,
       nationality: user.nationality,
       createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
     };
   }
 }

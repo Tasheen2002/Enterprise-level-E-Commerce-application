@@ -9,18 +9,21 @@
  * Color values are stored as `R G B` triplets — the Tailwind preset uses
  * `rgb(var(--ts-...) / <alpha-value>)` so opacity utilities like
  * `bg-charcoal/40` continue to work.
+ *
+ * Palette: Warm heritage linen — inspired by Parisian artisanal maisons.
  */
 
 :root {
-  /* Brand palette */
-  --ts-ivory: 245 241 232;          /* #F5F1E8 */
-  --ts-cream: 250 250 247;          /* #FAFAF7 */
-  --ts-charcoal: 26 26 26;          /* #1A1A1A */
-  --ts-gold: 201 169 97;            /* #C9A961 */
-  --ts-gold-deep: 171 137 65;       /* #AB8941 */
-  --ts-burgundy: 123 45 38;         /* #7B2D26 */
-  --ts-sage: 122 139 111;           /* #7A8B6F */
-  --ts-slate-muted: 74 74 74;       /* #4A4A4A */
+  /* Brand palette — warm linen heritage */
+  --ts-ivory: 237 231 220;            /* #EDE7DC — warm parchment */
+  --ts-cream: 245 241 233;            /* #F5F1E9 — warm linen */
+  --ts-charcoal: 35 30 25;            /* #231E19 — warm espresso */
+  --ts-gold: 201 169 97;              /* #C9A961 — heritage gold */
+  --ts-gold-deep: 171 137 65;         /* #AB8941 — deep gold */
+  --ts-burgundy: 123 45 38;           /* #7B2D26 — rich burgundy */
+  --ts-sage: 122 139 111;             /* #7A8B6F — artisanal sage */
+  --ts-slate-muted: 100 90 78;        /* #645A4E — warm muted */
+  --ts-sand: 210 200 183;             /* #D2C8B7 — warm taupe */
 
   /* Typography */
   --ts-font-serif: "Cormorant Garamond", "Playfair Display", ui-serif, Georgia, serif;
@@ -40,6 +43,7 @@
 .dark {
   --ts-ivory: 26 26 26;
   --ts-cream: 22 22 22;
-  --ts-charcoal: 245 241 232;
+  --ts-charcoal: 237 231 220;
   --ts-slate-muted: 180 180 180;
+  --ts-sand: 55 50 45;
 }

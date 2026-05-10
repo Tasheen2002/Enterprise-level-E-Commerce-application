@@ -25,6 +25,9 @@ model User {
   emailVerified     Boolean            @default(false) @map("email_verified")
   phoneVerified     Boolean            @default(false) @map("phone_verified")
   isGuest           Boolean            @default(false) @map("is_guest")
+  // Stripe Customer ID (cus_…). Lazily populated on first SetupIntent so
+  // saved cards + future PaymentIntents attach to one persistent customer.
+  stripeCustomerId  String?            @unique @map("stripe_customer_id")
   createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   shoppingCarts        ShoppingCart[]
@@ -126,6 +129,9 @@ model UserProfile {
   userId                 String         @id @map("user_id") @db.Uuid
   defaultAddressId       String?        @map("default_address_id") @db.Uuid
   defaultPaymentMethodId String?        @map("default_payment_method_id") @db.Uuid
+  // Public ImageKit URL of the user's profile photo. Null = use default
+  // placeholder. Set via signed direct-to-ImageKit upload flow.
+  avatarUrl              String?        @map("avatar_url")
   prefs                  Json           @default("{}")
   locale                 String?
   currency               String?

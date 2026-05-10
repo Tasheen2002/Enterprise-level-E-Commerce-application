@@ -35,6 +35,7 @@ const preset: Partial<Config> = {
         },
         burgundy: "rgb(var(--ts-burgundy) / <alpha-value>)",
         sage: "rgb(var(--ts-sage) / <alpha-value>)",
+        sand: "rgb(var(--ts-sand) / <alpha-value>)",
         slate: {
           muted: "rgb(var(--ts-slate-muted) / <alpha-value>)",
         },
