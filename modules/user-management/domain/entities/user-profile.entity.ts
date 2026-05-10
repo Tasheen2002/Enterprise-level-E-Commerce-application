@@ -13,6 +13,9 @@ export interface UserProfileProps {
   userId: UserId;
   defaultAddressId: AddressId | null;
   defaultPaymentMethodId: PaymentMethodId | null;
+  // Public ImageKit URL of the user's profile photo. Null = no avatar
+  // saved (frontend falls back to a placeholder).
+  avatarUrl: string | null;
   preferences: UserPreferences;
   locale: Locale | null;
   currency: Currency | null;
@@ -28,6 +31,7 @@ export interface UserProfileDTO {
   userId: string;
   defaultAddressId: string | null;
   defaultPaymentMethodId: string | null;
+  avatarUrl: string | null;
   preferences: UserPreferences;
   locale: string | null;
   currency: string | null;
@@ -48,6 +52,7 @@ export class UserProfile {
     userId: string;
     defaultAddressId?: string;
     defaultPaymentMethodId?: string;
+    avatarUrl?: string;
     preferences?: UserPreferences;
     locale?: string;
     currency?: string;
@@ -58,6 +63,7 @@ export class UserProfile {
       userId: UserId.fromString(params.userId),
       defaultAddressId: params.defaultAddressId ? AddressId.fromString(params.defaultAddressId) : null,
       defaultPaymentMethodId: params.defaultPaymentMethodId ? PaymentMethodId.fromString(params.defaultPaymentMethodId) : null,
+      avatarUrl: params.avatarUrl ?? null,
       preferences: params.preferences ?? {},
       locale: params.locale ? Locale.fromString(params.locale) : null,
       currency: params.currency
@@ -77,6 +83,7 @@ export class UserProfile {
   get userId(): UserId { return this.props.userId; }
   get defaultAddressId(): AddressId | null { return this.props.defaultAddressId; }
   get defaultPaymentMethodId(): PaymentMethodId | null { return this.props.defaultPaymentMethodId; }
+  get avatarUrl(): string | null { return this.props.avatarUrl; }
   get preferences(): UserPreferences { return { ...this.props.preferences }; }
   get locale(): Locale | null { return this.props.locale; }
   get currency(): Currency | null { return this.props.currency; }
@@ -103,6 +110,14 @@ export class UserProfile {
 
   removeDefaultPaymentMethod(): void {
     this.props.defaultPaymentMethodId = null;
+  }
+
+  setAvatarUrl(url: string | null): void {
+    // Allow `null` (explicit removal) and any non-empty string. We don't
+    // validate the URL here — the upload-token flow only ever produces
+    // ImageKit URLs, and admin / migration paths may carry historical
+    // values from other CDNs.
+    this.props.avatarUrl = url && url.length > 0 ? url : null;
   }
 
   setLocale(locale: string): void {
@@ -224,6 +239,7 @@ export class UserProfile {
       userId: profile.props.userId.getValue(),
       defaultAddressId: profile.props.defaultAddressId?.getValue() ?? null,
       defaultPaymentMethodId: profile.props.defaultPaymentMethodId?.getValue() ?? null,
+      avatarUrl: profile.props.avatarUrl,
       preferences: { ...profile.props.preferences },
       locale: profile.props.locale?.getValue() ?? null,
       currency: profile.props.currency?.getValue() ?? null,
