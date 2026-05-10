@@ -11,6 +11,14 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default("http://localhost:3000"),
   RATE_LIMIT_MAX: z.string().default("100").transform(Number),
   RATE_LIMIT_TIMEWINDOW: z.string().default("15m"),
+
+  // Firebase Admin SDK — sourced from the service-account JSON downloaded
+  // from Firebase Console → Project Settings → Service Accounts. Optional
+  // because /auth/google is the only consumer; if unset, that endpoint
+  // returns 503 instead of crashing on boot.
+  FIREBASE_ADMIN_PROJECT_ID: z.string().optional(),
+  FIREBASE_ADMIN_CLIENT_EMAIL: z.string().optional(),
+  FIREBASE_ADMIN_PRIVATE_KEY: z.string().optional(),
 });
 
 export type Config = z.infer<typeof envSchema>;
