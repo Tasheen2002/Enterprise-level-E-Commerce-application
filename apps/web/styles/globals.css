@@ -11,10 +11,12 @@
     -moz-osx-font-smoothing: grayscale;
     background-color: rgb(var(--ts-cream));
     color: rgb(var(--ts-charcoal));
+    scroll-behavior: smooth;
   }
 
   body {
     min-height: 100vh;
+    @apply ts-scrollbar;
   }
 
   h1,
@@ -48,5 +50,81 @@
   /* Ghost button — charcoal stroke, transparent fill. */
   .ts-btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-soft border border-charcoal px-6 py-3 text-sm font-medium text-charcoal transition-colors duration-300 ease-editorial hover:bg-charcoal hover:text-cream;
+  }
+
+  /* Sleek Editorial Scrollbar — ultra-thin, auto-fading */
+  .ts-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.12) transparent;
+  }
+
+  .ts-scrollbar::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  .ts-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 4px 0;
+  }
+
+  .ts-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(var(--ts-charcoal) / 0.1);
+    border-radius: 99px;
+  }
+
+  .ts-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ts-gold) / 0.4);
+  }
+
+  .ts-scrollbar::-webkit-scrollbar-thumb:active {
+    background: rgb(var(--ts-gold) / 0.6);
+  }
+
+  /* Bolder variant — used inside modals/dialogs where the scroll affordance
+     needs to be obvious so users know the form is scrollable. */
+  .ts-scrollbar-bold {
+    scrollbar-width: auto;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.35) transparent;
+  }
+
+  .ts-scrollbar-bold::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ts-scrollbar-bold::-webkit-scrollbar-track {
+    background: rgb(var(--ts-charcoal) / 0.05);
+    margin: 4px 0;
+  }
+
+  .ts-scrollbar-bold::-webkit-scrollbar-thumb {
+    background: rgb(var(--ts-charcoal) / 0.3);
+    border-radius: 99px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .ts-scrollbar-bold::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ts-gold) / 0.7);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  .ts-scrollbar-bold::-webkit-scrollbar-thumb:active {
+    background: rgb(var(--ts-gold));
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  /* Hide the scrollbar entirely while keeping scroll functional —
+     used for horizontal navigation strips on mobile where a visible
+     bar would intrude on the editorial layout. */
+  .ts-scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .ts-scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
