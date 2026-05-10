@@ -79,96 +79,107 @@ export function AddressForm({ initialData, onSuccess }: AddressFormProps) {
   });
 
   return (
-    <form onSubmit={onSubmit} className="space-y-10 py-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+    <form onSubmit={onSubmit} className="space-y-6 sm:space-y-10 py-4 sm:py-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
         <FormField id="firstName" label="Given Name" error={errors.firstName?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="firstName" 
+            variant="boxed"
             placeholder="e.g. Eleanor" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.firstName)}
             {...register("firstName")} 
           />
         </FormField>
         <FormField id="lastName" label="Surname" error={errors.lastName?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="lastName" 
+            variant="boxed"
             placeholder="e.g. Vance" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.lastName)}
             {...register("lastName")} 
           />
         </FormField>
       </div>
 
       <FormField id="company" label="Establishment / Company (Optional)" error={errors.company?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-        <input 
+        <Input 
           id="company" 
+          variant="boxed"
           placeholder="Slipperze Artisans" 
-          className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+          hasError={Boolean(errors.company)}
           {...register("company")} 
         />
       </FormField>
 
-      <div className="space-y-10">
+      <div className="space-y-6 sm:space-y-10">
         <FormField id="addressLine1" label="Primary Address" error={errors.addressLine1?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="addressLine1" 
+            variant="boxed"
             placeholder="1000 Fifth Avenue" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.addressLine1)}
             {...register("addressLine1")} 
           />
         </FormField>
         <FormField id="addressLine2" label="Suite / Apartment (Optional)" error={errors.addressLine2?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="addressLine2" 
+            variant="boxed"
             placeholder="Apt 14B" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.addressLine2)}
             {...register("addressLine2")} 
           />
         </FormField>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-10">
         <FormField id="city" label="City" error={errors.city?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="city" 
+            variant="boxed"
             placeholder="New York" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.city)}
             {...register("city")} 
           />
         </FormField>
         <FormField id="state" label="Province" error={errors.state?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="state" 
+            variant="boxed"
             placeholder="NY" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.state)}
             {...register("state")} 
           />
         </FormField>
         <FormField id="postalCode" label="Postal Code" error={errors.postalCode?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="postalCode" 
+            variant="boxed"
             placeholder="10028" 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.postalCode)}
             {...register("postalCode")} 
           />
         </FormField>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
         <FormField id="country" label="Country (Code)" error={errors.country?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="country" 
+            variant="boxed"
             placeholder="US" 
             maxLength={2} 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal uppercase placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.country)}
+            className="uppercase" 
             {...register("country")} 
           />
         </FormField>
         <FormField id="phone" label="Primary Phone" error={errors.phone?.message} className="uppercase tracking-[0.15em] text-[9px] font-bold text-stone-400">
-          <input 
+          <Input 
             id="phone" 
+            variant="boxed"
             placeholder="+1 ..." 
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-5 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none" 
+            hasError={Boolean(errors.phone)}
             {...register("phone")} 
           />
         </FormField>
@@ -205,12 +216,12 @@ export function AddressForm({ initialData, onSuccess }: AddressFormProps) {
         </div>
       </div>
 
-      <div className="pt-10">
+      <div className="pt-8 sm:pt-10">
         <Button
           type="submit"
           variant="primary"
           fullWidth
-          className="h-16 uppercase tracking-[0.4em] text-[10px] font-bold rounded-none shadow-md hover:tracking-[0.5em] transition-all duration-700"
+          className="h-14 sm:h-16 uppercase tracking-[0.25em] sm:tracking-[0.4em] text-[10px] font-bold rounded-none shadow-md hover:tracking-[0.3em] sm:hover:tracking-[0.5em] transition-all duration-700"
           disabled={isSubmitting}
           isLoading={isSubmitting}
         >
