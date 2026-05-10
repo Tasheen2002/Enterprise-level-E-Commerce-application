@@ -15,8 +15,7 @@ import { toast } from "sonner";
 import { usePaymentMethods } from "../hooks/usePaymentMethods";
 import { PaymentMethod } from "../types";
 import { Modal } from "@/components/ui/Modal";
-// Import PaymentMethodForm when we create it
-// import { PaymentMethodForm } from "./PaymentMethodForm";
+import { StripeAddCardForm } from "./StripeAddCardForm";
 
 export function PaymentMethodsList() {
   const { paymentMethods, isLoading, deletePaymentMethod, setDefaultPaymentMethod } = usePaymentMethods();
@@ -55,7 +54,7 @@ export function PaymentMethodsList() {
   return (
     <div className="max-w-6xl space-y-12 animate-in fade-in duration-700">
       <header className="space-y-4">
-        <h1 className="font-serif text-5xl text-charcoal leading-tight">
+        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-charcoal leading-tight">
           Payment Methods
         </h1>
         <p className="text-stone-400 max-w-2xl text-sm leading-relaxed">
@@ -98,34 +97,16 @@ export function PaymentMethodsList() {
         </div>
       )}
 
-      <Modal 
-        isOpen={isAddModalOpen} 
+      <Modal
+        isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Add Payment Method"
       >
-        <div className="p-12 text-center space-y-6">
-           <div className="flex justify-center">
-             <div className="p-6 bg-stone-50 rounded-full">
-               <ShieldCheck className="h-12 w-12 text-gold" />
-             </div>
-           </div>
-           <div className="space-y-2">
-             <h3 className="font-serif text-2xl text-charcoal">Secure Payment Entry</h3>
-             <p className="text-stone-400 text-sm max-w-xs mx-auto leading-relaxed">
-               For your security, Slipperze uses Stripe to process and save payment information.
-             </p>
-           </div>
-           <Button 
-            variant="primary" 
-            className="w-full"
-            onClick={() => {
-              toast.info("Stripe integration coming soon in this demo environment.");
-              setIsAddModalOpen(false);
-            }}
-           >
-             Continue to Stripe
-           </Button>
-        </div>
+        {/* Mount the form only while open so each open gets a fresh
+            SetupIntent — old client_secrets would otherwise be reused. */}
+        {isAddModalOpen && (
+          <StripeAddCardForm onSuccess={() => setIsAddModalOpen(false)} />
+        )}
       </Modal>
     </div>
   );
@@ -145,7 +126,7 @@ function PaymentMethodCard({
   const isCard = method.type === "CARD";
 
   return (
-    <div className="group relative bg-white p-10 flex flex-col justify-between min-h-[280px] transition-all duration-500">
+    <div className="group relative bg-white p-6 sm:p-10 flex flex-col justify-between min-h-[240px] sm:min-h-[280px] transition-all duration-500">
       <div className="space-y-8">
         <div className="flex items-start justify-between">
           <div className="space-y-2">
@@ -154,11 +135,11 @@ function PaymentMethodCard({
                  <CheckCircle2 className="h-3 w-3" /> Primary Method
                </div>
              )}
-             <h3 className="font-serif text-3xl text-charcoal pt-2 flex items-center gap-3 italic">
+             <h3 className="font-serif text-2xl sm:text-3xl text-charcoal pt-2 flex items-center gap-3 italic">
                <CreditCard className="h-6 w-6 text-stone-200" strokeWidth={1.5} />
                {isCard ? (
                  <span className="flex items-center gap-3">
-                    <span className="text-stone-300 font-sans text-xl tracking-[0.3em]">••••</span> 
+                    <span className="text-stone-300 font-sans text-base sm:text-xl tracking-[0.2em] sm:tracking-[0.3em]">••••</span>
                     {method.last4}
                  </span>
                ) : (
