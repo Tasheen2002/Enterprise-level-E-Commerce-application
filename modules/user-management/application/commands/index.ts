@@ -1,5 +1,6 @@
 export { RegisterUserHandler } from "./register-user.command";
 export { LoginUserHandler } from "./login-user.command";
+export { LoginWithGoogleHandler } from "./login-with-google.command";
 export { UpdateProfileHandler } from "./update-profile.command";
 export { AddAddressHandler } from "./add-address.command";
 export { UpdateAddressHandler } from "./update-address.command";

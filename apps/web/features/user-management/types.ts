@@ -21,8 +21,11 @@ export interface UserIdentity {
   userId: string;
   email: string;
   role: string;
+  isGuest: boolean;
   emailVerified: boolean;
   phoneVerified: boolean;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface RefreshTokenResult {
@@ -42,11 +45,25 @@ export interface UserProfile {
   locale: string;
   currency: string;
   createdAt: string;
+  updatedAt: string;
   defaultAddressId?: string;
   defaultPaymentMethodId?: string;
+  // Public ImageKit URL of the user's profile photo. Null/undefined =
+  // no avatar saved (UI shows placeholder).
+  avatarUrl?: string | null;
   prefs?: Record<string, unknown>;
   stylePreferences?: Record<string, unknown>;
   preferredSizes?: Record<string, string | undefined>;
+}
+
+/** Signed ImageKit upload params returned by /users/me/profile/avatar/upload-token. */
+export interface AvatarUploadToken {
+  token: string;
+  expire: number;
+  signature: string;
+  publicKey: string;
+  folder: string;
+  uploadEndpoint: string;
 }
 
 export type AddressType = "shipping" | "billing";

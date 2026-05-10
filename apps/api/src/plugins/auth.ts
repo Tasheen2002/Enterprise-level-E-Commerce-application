@@ -6,6 +6,8 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role?: string;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 declare module "fastify" {

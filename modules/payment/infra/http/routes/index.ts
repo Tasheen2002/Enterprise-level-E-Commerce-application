@@ -6,12 +6,14 @@ import {
   GiftCardController,
   PromotionController,
   StripeWebhookController,
+  StripeCardSetupController,
 } from "../controllers";
 import { registerPaymentIntentRoutes } from "./payment-intent.routes";
 import { registerBnplTransactionRoutes } from "./bnpl-transaction.routes";
 import { registerGiftCardRoutes } from "./gift-card.routes";
 import { registerPromotionRoutes } from "./promotion.routes";
 import { registerWebhookRoutes } from "./webhook.routes";
+import { registerStripeCardSetupRoutes } from "./stripe-card-setup.routes";
 
 export interface PaymentRouteServices {
   paymentIntentController: PaymentIntentController;
@@ -20,6 +22,8 @@ export interface PaymentRouteServices {
   giftCardController: GiftCardController;
   promotionController: PromotionController;
   stripeController: StripeWebhookController | null;
+  // Optional: only registered when Stripe is configured (STRIPE_SECRET_KEY set).
+  stripeCardSetupController: StripeCardSetupController | null;
 }
 
 export async function registerPaymentRoutes(
@@ -34,6 +38,9 @@ export async function registerPaymentRoutes(
       await registerPromotionRoutes(instance, controllers.promotionController);
       if (controllers.stripeController) {
         await registerWebhookRoutes(instance, controllers.paymentWebhookController, controllers.stripeController);
+      }
+      if (controllers.stripeCardSetupController) {
+        await registerStripeCardSetupRoutes(instance, controllers.stripeCardSetupController);
       }
     },
     { prefix: "/api/v1" },
