@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "user_management"."user_profiles" ADD COLUMN "avatar_url" TEXT;
