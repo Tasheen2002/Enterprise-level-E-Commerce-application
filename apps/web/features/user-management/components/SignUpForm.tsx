@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
@@ -15,31 +15,24 @@ import {
   PasswordInput,
   Checkbox,
   FormField,
-  PasswordStrengthMeter,
 } from "@tasheen/ui";
 import { useRegister } from "../hooks/useRegister";
-import { useResendVerification } from "../hooks/useResendVerification";
+import { PasswordStrengthWatcher } from "./PasswordStrengthWatcher";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
-
 const TERMS_HREF = "/legal/terms";
 const PRIVACY_HREF = "/legal/privacy";
 
 export function SignUpForm() {
   const router = useRouter();
   const register = useRegister();
-  const resendVerification = useResendVerification();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register: registerField,
     handleSubmit,
     control,
     setError,
-    watch,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, submitCount },
   } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpFormSchema),
     defaultValues: {
@@ -52,7 +45,35 @@ export function SignUpForm() {
     },
   });
 
-  const passwordValue = watch("password");
+  const FIELD_LABELS: Record<string, string> = {
+    firstName: "Given Name",
+    lastName: "Surname",
+    email: "Correspondence Email",
+    password: "Security Key",
+    confirmPassword: "Verify Security Key",
+    agreeToTerms: "Terms agreement",
+  };
+
+  useEffect(() => {
+    if (submitCount === 0) return;
+    const errorEntries = Object.entries(errors);
+    if (errorEntries.length === 0) return;
+
+    if (errorEntries.length === 1) {
+      const [field, error] = errorEntries[0]!;
+      const message =
+        (error as { message?: string } | undefined)?.message ||
+        `${FIELD_LABELS[field] ?? field} is required`;
+      toast.error(message);
+      return;
+    }
+
+    const missing = errorEntries
+      .map(([field]) => FIELD_LABELS[field] ?? field)
+      .join(", ");
+    toast.error(`Please complete the highlighted fields: ${missing}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submitCount]);
 
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
@@ -63,8 +84,10 @@ export function SignUpForm() {
         firstName: values.firstName,
         lastName: values.lastName,
       });
-      toast.success("Welcome to the Slipperze community. Preparing your artisanal welcome...");
-      
+      toast.success(
+        "Welcome to the Slipperze community. Preparing your artisanal welcome...",
+      );
+
       // Redirect immediately to the verification page
       // We pass the email in the query param so the next page can show it
       router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
@@ -90,31 +113,33 @@ export function SignUpForm() {
           }
         }
       }
-      setServerError(err instanceof Error ? err.message : "Sign up failed");
+    } finally {
+      register.reset();
     }
   });
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <header className="space-y-4 text-center pb-10 border-b border-stone-100">
-        <h1 className="font-serif text-6xl text-charcoal tracking-tight italic">Registry</h1>
-        <p className="text-[10px] tracking-[0.3em] uppercase text-gold font-bold leading-relaxed">
-          Commission your artisanal member portfolio.
+      <header className="space-y-4 text-center pb-10 border-b border-sand/30">
+        <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-charcoal tracking-tight italic">Join the Family</h1>
+        <p className="text-[10px] tracking-[0.4em] uppercase text-gold font-bold leading-relaxed">
+          The Slipperze Heritage Community
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-x-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 sm:gap-x-10">
         <FormField
           id="firstName"
           label="Given Name"
           error={errors.firstName?.message}
-          className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400"
+          className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60"
         >
-          <input
+          <Input
             id="firstName"
+            variant="boxed"
             placeholder="e.g. Julian"
             autoComplete="given-name"
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+            hasError={Boolean(errors.firstName)}
             {...registerField("firstName")}
           />
         </FormField>
@@ -122,25 +147,27 @@ export function SignUpForm() {
           id="lastName"
           label="Surname"
           error={errors.lastName?.message}
-          className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400"
+          className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60"
         >
-          <input
+          <Input
             id="lastName"
+            variant="boxed"
             placeholder="e.g. Bennett"
             autoComplete="family-name"
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+            hasError={Boolean(errors.lastName)}
             {...registerField("lastName")}
           />
         </FormField>
       </div>
 
-      <FormField id="email" label="Correspondence / Email" error={errors.email?.message} className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400">
-        <input
+      <FormField id="email" label="Correspondence / Email" error={errors.email?.message} className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60">
+        <Input
           id="email"
           type="email"
+          variant="boxed"
           placeholder="member@slipperze.com"
           autoComplete="email"
-          className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none"
+          hasError={Boolean(errors.email)}
           {...registerField("email")}
         />
       </FormField>
@@ -150,52 +177,34 @@ export function SignUpForm() {
           id="password"
           label="Security Key / Password"
           error={errors.password?.message}
-          className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400"
+          className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60"
         >
-          <div className="relative">
-            <input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
-              autoComplete="new-password"
-              className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none pr-12"
-              {...registerField("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-300 hover:text-gold transition-colors"
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            variant="boxed"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            hasError={Boolean(errors.password)}
+            {...registerField("password")}
+          />
         </FormField>
-        <PasswordStrengthMeter password={passwordValue ?? ""} />
+        <PasswordStrengthWatcher control={control} name="password" />
       </div>
 
       <FormField
         id="confirmPassword"
         label="Verify Security Key"
         error={errors.confirmPassword?.message}
-        className="uppercase tracking-[0.2em] text-[9px] font-bold text-stone-400"
+        className="uppercase tracking-[0.2em] text-[9px] font-bold text-slate-muted/60"
       >
-        <div className="relative">
-          <input
-            id="confirmPassword"
-            type={showConfirmPassword ? "text" : "password"}
-            placeholder="••••••••"
-            autoComplete="new-password"
-            className="w-full bg-stone-50 border border-stone-100 px-6 py-4 text-sm text-charcoal placeholder:text-stone-300 focus:bg-white focus:border-gold focus:outline-none transition-all duration-500 rounded-none pr-12"
-            {...registerField("confirmPassword")}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-300 hover:text-gold transition-colors"
-          >
-            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
+        <PasswordInput
+          id="confirmPassword"
+          variant="boxed"
+          placeholder="••••••••"
+          autoComplete="new-password"
+          hasError={Boolean(errors.confirmPassword)}
+          {...registerField("confirmPassword")}
+        />
       </FormField>
 
       <Controller
@@ -250,7 +259,7 @@ export function SignUpForm() {
         variant="primary"
         className="h-16 uppercase tracking-[0.4em] text-[10px] font-bold transition-all duration-700 hover:tracking-[0.5em] rounded-none shadow-md"
         fullWidth
-        isLoading={isSubmitting || register.isPending}
+        isLoading={isSubmitting}
       >
         Commission Account
       </Button>
