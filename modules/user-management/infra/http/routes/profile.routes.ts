@@ -23,6 +23,19 @@ const writeRateLimiter = createRateLimiter({
 // Pre-compute JSON Schema from Zod (single source of truth — no drift).
 const updateProfileBodyJson = toJsonSchema(updateProfileSchema);
 
+// Mirrors the ImageKitUploadAuth interface — keep in lockstep.
+const avatarUploadTokenResponseSchema = {
+  type: "object",
+  properties: {
+    token: { type: "string" },
+    expire: { type: "number" },
+    signature: { type: "string" },
+    publicKey: { type: "string" },
+    folder: { type: "string" },
+    uploadEndpoint: { type: "string" },
+  },
+};
+
 export async function profileRoutes(
   fastify: FastifyInstance,
   controller: ProfileController,
@@ -72,5 +85,24 @@ export async function profileRoutes(
     },
     (request, reply) =>
       controller.updateCurrentUserProfile(request as AuthenticatedRequest, reply),
+  );
+
+  fastify.get(
+    "/users/me/profile/avatar/upload-token",
+    {
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      schema: {
+        tags: ["Profile"],
+        summary: "Issue an ImageKit avatar upload token",
+        description:
+          "Returns a signed, short-lived (5 min) ImageKit upload token scoped to the user's avatar folder.",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: successResponse(avatarUploadTokenResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.getAvatarUploadToken(request as AuthenticatedRequest, reply),
   );
 }
