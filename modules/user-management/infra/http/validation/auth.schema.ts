@@ -24,6 +24,12 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
+// Firebase ID tokens are JWTs (~1.5kB typically, but bursty) — cap at 4kB to
+// reject obvious junk while leaving headroom for future provider claims.
+export const googleLoginSchema = z.object({
+  idToken: z.string().min(1).max(4096),
+});
+
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -73,6 +79,7 @@ export const deleteAccountSchema = z.object({
 
 export type RegisterBody = z.infer<typeof registerSchema>;
 export type LoginBody = z.infer<typeof loginSchema>;
+export type GoogleLoginBody = z.infer<typeof googleLoginSchema>;
 export type RefreshTokenBody = z.infer<typeof refreshTokenSchema>;
 export type LogoutBody = z.infer<typeof logoutSchema>;
 export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
@@ -96,6 +103,8 @@ export const userResponseSchema = {
     isGuest: { type: 'boolean' },
     emailVerified: { type: 'boolean' },
     phoneVerified: { type: 'boolean' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    createdAt: { type: 'string', format: 'date-time' },
   },
 };
 
@@ -116,6 +125,8 @@ export const userIdentityResponseSchema = {
     userId: { type: 'string', format: 'uuid' },
     email: { type: 'string', format: 'email' },
     role: { type: 'string' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    createdAt: { type: 'string', format: 'date-time' },
   },
 };
 
