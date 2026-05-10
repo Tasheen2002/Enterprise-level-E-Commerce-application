@@ -98,7 +98,7 @@ export function VerifyEmailContent() {
                 <div className="space-y-4">
                   <Input 
                     placeholder="PASTE TOKEN HERE" 
-                    className="text-center tracking-[0.3em] font-mono text-xs h-12 bg-white border-stone-200 focus:border-gold transition-colors"
+                    className="text-center font-mono text-xs h-12 bg-white border-stone-200 focus:border-gold transition-colors"
                     value={manualToken}
                     onChange={(e) => setManualToken(e.target.value)}
                   />
