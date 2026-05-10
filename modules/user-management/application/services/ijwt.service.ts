@@ -3,6 +3,8 @@ export interface TokenPayload {
   email: string;
   role: string;
   type: "access" | "refresh";
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface GeneratedTokens {
