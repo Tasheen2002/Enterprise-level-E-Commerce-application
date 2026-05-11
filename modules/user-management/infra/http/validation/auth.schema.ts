@@ -30,6 +30,41 @@ export const googleLoginSchema = z.object({
   idToken: z.string().min(1).max(4096),
 });
 
+// Phone verification re-uses the same Firebase ID-token shape — the
+// token is minted by `signInWithPhoneNumber` on the client and carries
+// the verified phone in its `phone_number` claim. Same 4kB cap.
+export const verifyPhoneSchema = z.object({
+  idToken: z.string().min(1).max(4096),
+});
+
+// --- Two-factor authentication ---
+
+// Enable: a 6-digit TOTP code from the user's authenticator app proves
+// they can actually read codes from the secret we issued in /setup.
+export const enable2FASchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
+});
+
+// Disable: password-gated so a stolen access token alone cannot
+// downgrade the account's security profile.
+export const disable2FASchema = z.object({
+  password: z.string().min(1).max(128),
+});
+
+// Regenerate backup codes: same gate as disable.
+export const regenerateBackupCodesSchema = z.object({
+  password: z.string().min(1).max(128),
+});
+
+// Step 2 of login. `code` is either a 6-digit TOTP or a backup code
+// (XXXX-XXXX, dashes optional). We accept a wider range here and let
+// the service decide which path matched — the service's verify chain
+// short-circuits on the first hit.
+export const verify2FALoginSchema = z.object({
+  pendingToken: z.string().min(1).max(4096),
+  code: z.string().min(6).max(20),
+});
+
 export const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1),
 });
@@ -81,6 +116,11 @@ export type RegisterBody = z.infer<typeof registerSchema>;
 export type LoginBody = z.infer<typeof loginSchema>;
 export type GoogleLoginBody = z.infer<typeof googleLoginSchema>;
 export type RefreshTokenBody = z.infer<typeof refreshTokenSchema>;
+export type VerifyPhoneBody = z.infer<typeof verifyPhoneSchema>;
+export type Enable2FABody = z.infer<typeof enable2FASchema>;
+export type Disable2FABody = z.infer<typeof disable2FASchema>;
+export type RegenerateBackupCodesBody = z.infer<typeof regenerateBackupCodesSchema>;
+export type Verify2FALoginBody = z.infer<typeof verify2FALoginSchema>;
 export type LogoutBody = z.infer<typeof logoutSchema>;
 export type ChangePasswordBody = z.infer<typeof changePasswordSchema>;
 export type ForgotPasswordBody = z.infer<typeof forgotPasswordSchema>;
@@ -125,6 +165,10 @@ export const userIdentityResponseSchema = {
     userId: { type: 'string', format: 'uuid' },
     email: { type: 'string', format: 'email' },
     role: { type: 'string' },
+    isGuest: { type: 'boolean' },
+    emailVerified: { type: 'boolean' },
+    phoneVerified: { type: 'boolean' },
+    twoFactorEnabled: { type: 'boolean' },
     updatedAt: { type: 'string', format: 'date-time' },
     createdAt: { type: 'string', format: 'date-time' },
   },
@@ -146,4 +190,61 @@ export const actionResponseSchema = {
   properties: {
     action: { type: 'string' },
   },
+};
+
+// Phone verification echoes back the verified number so the client
+// doesn't need a separate `/users/me` round-trip to render the new
+// state. The number comes straight from the Firebase token claim.
+export const verifyPhoneResponseSchema = {
+  type: 'object',
+  properties: {
+    action: { type: 'string' },
+    phoneNumber: { type: 'string' },
+  },
+};
+
+// /auth/2fa/setup — secret + pre-rendered QR-code data URL.
+export const setup2FAResponseSchema = {
+  type: 'object',
+  properties: {
+    secret: { type: 'string' },
+    qrCodeDataUrl: { type: 'string' },
+  },
+};
+
+// /auth/2fa/enable + /backup-codes/regenerate — single-use codes shown
+// once. Plaintext is intentional: this is the only response that ever
+// carries them.
+export const backupCodesResponseSchema = {
+  type: 'object',
+  properties: {
+    backupCodes: { type: 'array', items: { type: 'string' } },
+  },
+};
+
+// Login response is now a discriminated union. The Fastify schema is
+// intentionally permissive (oneOf) — clients narrow on the `kind`
+// field. Keeping the schema loose here also lets us avoid splitting
+// /auth/login into two endpoints.
+export const loginResponseSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      properties: {
+        kind: { const: 'success' },
+        accessToken: { type: 'string' },
+        refreshToken: { type: 'string' },
+        user: userResponseSchema,
+        expiresIn: { type: 'number' },
+        tokenType: { type: 'string' },
+      },
+    },
+    {
+      type: 'object',
+      properties: {
+        kind: { const: 'two_factor_required' },
+        pendingToken: { type: 'string' },
+      },
+    },
+  ],
 };
