@@ -8,6 +8,8 @@ import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/c
 export interface RefreshTokenCommand extends ICommand {
   readonly refreshToken: string;
   readonly currentAccessToken?: string;
+  readonly ipAddress?: string;
+  readonly userAgent?: string;
 }
 
 export class RefreshTokenHandler
@@ -32,7 +34,10 @@ export class RefreshTokenHandler
     }
 
     // Generate new tokens
-    const tokens = await this.authService.refreshToken(command.refreshToken);
+    const tokens = await this.authService.refreshToken(command.refreshToken, {
+      ipAddress: command.ipAddress,
+      userAgent: command.userAgent,
+    });
 
     // Blacklist the old refresh token (one-time use)
     this.tokenBlacklistService.blacklistToken(command.refreshToken);
