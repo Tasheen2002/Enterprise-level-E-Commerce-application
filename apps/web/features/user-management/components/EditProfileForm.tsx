@@ -15,7 +15,7 @@ import {
 } from "@tasheen/ui";
 import { useUserProfile } from "../hooks/useUserProfile";
 import { useUpdateProfile } from "../hooks/useUpdateProfile";
-import { Check, Loader2, User, Phone, Calendar, Globe, CreditCard } from "lucide-react";
+import { Check, Loader2, User, Phone, Globe, Settings2 } from "lucide-react";
 
 export function EditProfileForm() {
   const { data: profile, isLoading: isFetching } = useUserProfile();
@@ -187,7 +187,7 @@ export function EditProfileForm() {
             {/* Preferences Section */}
             <div className="space-y-10">
               <h3 className="text-[9px] font-bold tracking-[0.3em] uppercase text-gold flex items-center gap-3 border-b border-stone-100 pb-5">
-                <CreditCard className="h-4 w-4 stroke-[1.5]" /> Preferences
+                <Settings2 className="h-4 w-4 stroke-[1.5]" /> Preferences
               </h3>
               
               <div className="grid grid-cols-1 gap-8">
