@@ -104,6 +104,7 @@ export function AccountSidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onMouseEnter={() => router.prefetch(item.href)}
                       className={cn(
                         "flex items-center gap-4 px-5 py-4 text-[10px] uppercase tracking-[0.25em] transition-colors",
                         isActive
@@ -175,6 +176,7 @@ export function AccountSidebar() {
               <li key={item.href} className="relative">
                 <Link
                   href={item.href}
+                  onMouseEnter={() => router.prefetch(item.href)}
                   className={cn(
                     "flex items-center gap-4 px-10 py-5 text-[10px] tracking-[0.25em] uppercase transition-all duration-500 ease-editorial",
                     isActive
