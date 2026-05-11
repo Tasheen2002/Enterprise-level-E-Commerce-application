@@ -6,28 +6,78 @@ import {
   ShieldCheck,
   Key,
   Mail,
+  Phone,
+  Smartphone,
   AlertTriangle,
   ExternalLink,
   ChevronRight,
   ShieldAlert,
   CheckCircle2,
   Clock,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "@tasheen/ui";
+import dynamic from "next/dynamic";
 import { useCurrentIdentity } from "../hooks/useCurrentIdentity";
+import { useUserProfile } from "../hooks/useUserProfile";
 import { Modal } from "@/components/ui/Modal";
-import { ChangePasswordForm } from "./ChangePasswordForm";
-import { ChangeEmailForm } from "./ChangeEmailForm";
+import { useQueryClient } from "@tanstack/react-query";
+import { authQueryKeys } from "../hooks/queryKeys";
+
+const ChangePasswordForm = dynamic(() => import("./ChangePasswordForm").then(m => m.ChangePasswordForm), {
+  loading: () => <div className="h-40 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const ChangeEmailForm = dynamic(() => import("./ChangeEmailForm").then(m => m.ChangeEmailForm), {
+  loading: () => <div className="h-32 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const PhoneVerificationForm = dynamic(() => import("./PhoneVerificationForm").then(m => m.PhoneVerificationForm), {
+  loading: () => <div className="h-48 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const Setup2FAForm = dynamic(() => import("./Setup2FAForm").then(m => m.Setup2FAForm), {
+  loading: () => <div className="h-64 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const Disable2FAForm = dynamic(() => import("./Disable2FAForm").then(m => m.Disable2FAForm), {
+  loading: () => <div className="h-32 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const RegenerateBackupCodesForm = dynamic(() => import("./RegenerateBackupCodesForm").then(m => m.RegenerateBackupCodesForm), {
+  loading: () => <div className="h-32 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
+
+const ActiveSessionsList = dynamic(() => import("./ActiveSessionsList").then(m => m.ActiveSessionsList), {
+  loading: () => <div className="h-20 w-full animate-pulse bg-stone-50 rounded-xl" />
+});
 
 export function SecuritySettings() {
   // SSR-prefetched in `app/account/layout.tsx` and rehydrated via
   // HydrationBoundary, so first paint already has data. Middleware
   // ensures the user is authenticated by the time we render.
   const { data: identity } = useCurrentIdentity();
-  const [activeModal, setActiveModal] = useState<"password" | "email" | null>(null);
+  const { data: profile } = useUserProfile();
+  const [activeModal, setActiveModal] = useState<
+    | "password"
+    | "email"
+    | "phone"
+    | "2fa-setup"
+    | "2fa-disable"
+    | "2fa-regenerate"
+    | null
+  >(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const twoFactorEnabled = !!(identity as any)?.twoFactorEnabled;
+
+  const queryClient = useQueryClient();
 
   const handleSuccess = () => {
+    // Invalidate identity (2FA status, verified flags) and profile (phone number)
+    // to ensure the UI reflects the changes immediately after modal close.
+    void queryClient.invalidateQueries({ queryKey: authQueryKeys.identity() });
+    void queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+    
     setActiveModal(null);
     setIsSuccess(true);
     setTimeout(() => setIsSuccess(false), 5000);
@@ -114,7 +164,7 @@ export function SecuritySettings() {
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-charcoal uppercase tracking-[0.2em]">Email Correspondence</p>
                   <p className="text-sm text-charcoal font-serif italic">{identity?.email}</p>
-                  <p className="text-[11px] text-stone-400 leading-relaxed">Primary channel for artisanal notifications.</p>
+                  <p className="text-[11px] text-stone-500 leading-relaxed">Primary channel for artisanal notifications.</p>
                 </div>
               </div>
               <Button
@@ -125,6 +175,95 @@ export function SecuritySettings() {
               >
                 Change Email
               </Button>
+            </div>
+
+            {/* Phone Item */}
+            <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
+              <div className="flex items-start gap-5">
+                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                  <Phone className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-charcoal uppercase tracking-[0.2em]">Mobile Number</p>
+                  <p className="text-sm text-charcoal font-serif italic">
+                    {profile?.phone && profile.phone.length > 0
+                      ? profile.phone
+                      : "Not set"}
+                  </p>
+                  <p className="text-[11px] text-stone-500 leading-relaxed">
+                    Verified mobile numbers unlock SMS-based account recovery and order alerts.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="md"
+                onClick={() => setActiveModal("phone")}
+                className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+              >
+                Verify Phone
+              </Button>
+            </div>
+
+            {/* Two-Factor Authentication Item */}
+            <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
+              <div className="flex items-start gap-5">
+                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                  <Smartphone className="h-5 w-5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-bold text-charcoal uppercase tracking-[0.2em]">
+                      Two-Factor Authentication
+                    </p>
+                    {twoFactorEnabled && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[9px] font-bold uppercase tracking-[0.15em]">
+                        <CheckCircle2 className="h-2.5 w-2.5" /> Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-charcoal font-serif italic">
+                    {twoFactorEnabled
+                      ? "Authenticator app + 10 single-use backup codes"
+                      : "Off"}
+                  </p>
+                  <p className="text-[11px] text-stone-500 leading-relaxed">
+                    Adds a 6-digit code from your authenticator app on every
+                    sign-in. The single most effective control against
+                    credential theft.
+                  </p>
+                </div>
+              </div>
+              {twoFactorEnabled ? (
+                <div className="flex flex-col sm:flex-row gap-2 self-start sm:self-center">
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => setActiveModal("2fa-regenerate")}
+                    className="border border-stone-200 hover:border-gold hover:text-gold"
+                  >
+                    <RefreshCcw className="h-3.5 w-3.5 mr-2" />
+                    New Codes
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => setActiveModal("2fa-disable")}
+                    className="border border-burgundy/20 text-burgundy/70 hover:border-burgundy hover:text-burgundy"
+                  >
+                    Disable
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onClick={() => setActiveModal("2fa-setup")}
+                  className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+                >
+                  Enable 2FA
+                </Button>
+              )}
             </div>
           </div>
         </section>
@@ -164,6 +303,23 @@ export function SecuritySettings() {
         </div>
       </div>
 
+      {/* Active Sessions Section */}
+      <div className="rounded-2xl border border-white/10 bg-black/40 p-6 md:p-8 backdrop-blur-xl">
+        <div className="mb-6 flex flex-col gap-2 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white flex items-center gap-3">
+              <Smartphone className="h-5 w-5 text-gold/80" />
+              Active Sessions
+            </h3>
+            <p className="mt-1 text-sm text-gray-200 font-medium opacity-90">
+              View and manage devices where you are currently logged in.
+            </p>
+          </div>
+        </div>
+        
+        <ActiveSessionsList />
+      </div>
+
       {/* Modals — only mount when the matching modal is active so the
           form components and their RHF/zod subtree are not reconciled on
           every render. */}
@@ -184,6 +340,46 @@ export function SecuritySettings() {
           title="Update Email Address"
         >
           <ChangeEmailForm onSuccess={handleSuccess} />
+        </Modal>
+      )}
+
+      {activeModal === "phone" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="Verify Phone Number"
+        >
+          <PhoneVerificationForm onSuccess={() => handleSuccess()} />
+        </Modal>
+      )}
+
+      {activeModal === "2fa-setup" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="Enable Two-Factor"
+        >
+          <Setup2FAForm onSuccess={handleSuccess} />
+        </Modal>
+      )}
+
+      {activeModal === "2fa-disable" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="Disable Two-Factor"
+        >
+          <Disable2FAForm onSuccess={handleSuccess} />
+        </Modal>
+      )}
+
+      {activeModal === "2fa-regenerate" && (
+        <Modal
+          isOpen
+          onClose={() => setActiveModal(null)}
+          title="New Backup Codes"
+        >
+          <RegenerateBackupCodesForm onSuccess={handleSuccess} />
         </Modal>
       )}
     </div>
