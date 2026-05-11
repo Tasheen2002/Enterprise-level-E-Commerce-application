@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { AuthenticatedRequest } from '@/api/src/shared/interfaces/authenticated-request.interface';
 import { ResponseHelper } from '@/api/src/shared/response.helper';
+import { AuthenticationService } from '../../../application/services/authentication.service';
 import {
   RegisterUserHandler,
   LoginUserHandler,
@@ -11,9 +12,15 @@ import {
   InitiatePasswordResetHandler,
   ResetPasswordHandler,
   VerifyEmailHandler,
+  VerifyPhoneHandler,
   DeleteAccountHandler,
   ResendVerificationHandler,
   LoginWithGoogleHandler,
+  Setup2FAHandler,
+  Enable2FAHandler,
+  Disable2FAHandler,
+  RegenerateBackupCodesHandler,
+  Verify2FALoginHandler,
 } from '../../../application';
 import {
   RegisterBody,
@@ -24,10 +31,15 @@ import {
   ForgotPasswordBody,
   ResetPasswordBody,
   VerifyEmailBody,
+  VerifyPhoneBody,
   ResendVerificationBody,
   ChangeEmailBody,
   DeleteAccountBody,
   GoogleLoginBody,
+  Enable2FABody,
+  Disable2FABody,
+  RegenerateBackupCodesBody,
+  Verify2FALoginBody,
 } from '../validation/auth.schema';
 
 export class AuthController {
@@ -44,19 +56,30 @@ export class AuthController {
     private readonly deleteAccountHandler: DeleteAccountHandler,
     private readonly resendVerificationHandler: ResendVerificationHandler,
     private readonly loginWithGoogleHandler: LoginWithGoogleHandler,
+    private readonly verifyPhoneHandler: VerifyPhoneHandler,
+    private readonly setup2FAHandler: Setup2FAHandler,
+    private readonly enable2FAHandler: Enable2FAHandler,
+    private readonly disable2FAHandler: Disable2FAHandler,
+    private readonly regenerateBackupCodesHandler: RegenerateBackupCodesHandler,
+    private readonly verify2FALoginHandler: Verify2FALoginHandler,
+    // Used by `/auth/me` to look up live identity fields (twoFactorEnabled,
+    // emailVerified, phoneVerified) that go stale on the JWT after a
+    // toggle. Could be re-cast as a query handler later, but the read
+    // is a single call and not worth its own command type.
+    private readonly authService: AuthenticationService,
   ) { }
 
   // --- Queries ---
 
   async me(request: AuthenticatedRequest, reply: FastifyReply) {
     try {
-      return ResponseHelper.ok(reply, 'User retrieved', {
-        userId: request.user.userId,
-        email: request.user.email,
-        role: request.user.role,
-        updatedAt: request.user.updatedAt,
-        createdAt: request.user.createdAt,
-      });
+      // DB lookup (not JWT-only) so live fields like twoFactorEnabled
+      // and phoneVerified reflect the current user state — the JWT is
+      // signed once at login and never refreshed mid-session.
+      const identity = await this.authService.getUserIdentity(
+        request.user.userId,
+      );
+      return ResponseHelper.ok(reply, 'User retrieved', identity);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
@@ -69,7 +92,15 @@ export class AuthController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.registerHandler.handle(request.body);
+      const userAgent = request.headers["user-agent"] as string;
+      const secChUa = request.headers["sec-ch-ua"] as string;
+      const finalUserAgent = (secChUa && secChUa.includes("Brave")) ? `${userAgent} Brave` : userAgent;
+
+      const result = await this.registerHandler.handle({
+        ...request.body,
+        ipAddress: request.ip,
+        userAgent: finalUserAgent,
+      });
       return ResponseHelper.fromCommand(reply, result, 'Registration successful', 201);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -83,17 +114,37 @@ export class AuthController {
     try {
       const { email, password, rememberMe } = request.body;
 
-      // Lockout key is composite (email + IP) — see LoginUserCommand.
+      const userAgent = request.headers["user-agent"] as string;
+      const secChUa = request.headers["sec-ch-ua"] as string;
+      const finalUserAgent = (secChUa && secChUa.includes("Brave")) ? `${userAgent} Brave` : userAgent;
+
       const result = await this.loginHandler.handle({
         email,
         password,
         rememberMe,
         ipAddress: request.ip,
+        userAgent: finalUserAgent,
       });
 
       if (result.success && result.data) {
-        const auth = result.data;
+        const outcome = result.data;
+        // 2FA-on accounts get a short-lived "I owe a code" token. The
+        // client redirects to a second-step page that POSTs to
+        // /auth/2fa/verify with the code from the authenticator app
+        // (or a backup code) to exchange it for the real session.
+        if (outcome.kind === 'two_factor_required') {
+          return ResponseHelper.ok(
+            reply,
+            'Two-factor authentication required',
+            {
+              kind: 'two_factor_required',
+              pendingToken: outcome.pendingToken,
+            },
+          );
+        }
+        const auth = outcome.authResult;
         return ResponseHelper.ok(reply, 'Login successful', {
+          kind: 'success',
           accessToken: auth.accessToken,
           // Refresh token only persisted when client opted into "remember me"
           refreshToken: rememberMe ? auth.refreshToken : undefined,
@@ -114,8 +165,14 @@ export class AuthController {
     reply: FastifyReply,
   ) {
     try {
+      const userAgent = request.headers["user-agent"] as string;
+      const secChUa = request.headers["sec-ch-ua"] as string;
+      const finalUserAgent = (secChUa && secChUa.includes("Brave")) ? `${userAgent} Brave` : userAgent;
+
       const result = await this.loginWithGoogleHandler.handle({
         idToken: request.body.idToken,
+        ipAddress: request.ip,
+        userAgent: finalUserAgent,
       });
 
       if (result.success && result.data) {
@@ -163,9 +220,15 @@ export class AuthController {
     reply: FastifyReply,
   ) {
     try {
+      const userAgent = request.headers["user-agent"] as string;
+      const secChUa = request.headers["sec-ch-ua"] as string;
+      const finalUserAgent = (secChUa && secChUa.includes("Brave")) ? `${userAgent} Brave` : userAgent;
+
       const result = await this.refreshTokenHandler.handle({
         refreshToken: request.body.refreshToken,
         currentAccessToken: this.extractBearerToken(request),
+        ipAddress: request.ip,
+        userAgent: finalUserAgent,
       });
 
       if (result.success && result.data) {
@@ -283,6 +346,127 @@ export class AuthController {
       }
 
       return ResponseHelper.fromCommand(reply, result, 'Email verification failed');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Two-factor authentication ---
+
+  async setup2FA(request: AuthenticatedRequest, reply: FastifyReply) {
+    try {
+      const result = await this.setup2FAHandler.handle({
+        userId: request.user.userId,
+      });
+      return ResponseHelper.fromCommand(reply, result, '');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async enable2FA(
+    request: AuthenticatedRequest<{ Body: Enable2FABody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.enable2FAHandler.handle({
+        userId: request.user.userId,
+        code: request.body.code,
+      });
+      return ResponseHelper.fromCommand(reply, result, '');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async disable2FA(
+    request: AuthenticatedRequest<{ Body: Disable2FABody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.disable2FAHandler.handle({
+        userId: request.user.userId,
+        password: request.body.password,
+      });
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, '');
+      }
+      return ResponseHelper.ok(
+        reply,
+        'Two-factor authentication has been disabled.',
+        { action: '2fa_disabled' },
+      );
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async regenerateBackupCodes(
+    request: AuthenticatedRequest<{ Body: RegenerateBackupCodesBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.regenerateBackupCodesHandler.handle({
+        userId: request.user.userId,
+        password: request.body.password,
+      });
+      return ResponseHelper.fromCommand(reply, result, '');
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async verify2FALogin(
+    request: FastifyRequest<{ Body: Verify2FALoginBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const userAgent = request.headers["user-agent"] as string;
+      const secChUa = request.headers["sec-ch-ua"] as string;
+      const finalUserAgent = (secChUa && secChUa.includes("Brave")) ? `${userAgent} Brave` : userAgent;
+
+      const result = await this.verify2FALoginHandler.handle({
+        pendingToken: request.body.pendingToken,
+        code: request.body.code,
+        ipAddress: request.ip,
+        userAgent: finalUserAgent,
+      });
+      if (!result.success || !result.data) {
+        return ResponseHelper.fromCommand(reply, result, '');
+      }
+      const auth = result.data;
+      return ResponseHelper.ok(reply, 'Login successful', {
+        kind: 'success',
+        accessToken: auth.accessToken,
+        refreshToken: auth.refreshToken,
+        user: auth.user,
+        expiresIn: auth.expiresIn,
+        tokenType: 'Bearer',
+      });
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async verifyPhone(
+    request: AuthenticatedRequest<{ Body: VerifyPhoneBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.verifyPhoneHandler.handle({
+        userId: request.user.userId,
+        idToken: request.body.idToken,
+      });
+
+      if (!result.success) {
+        return ResponseHelper.fromCommand(reply, result, 'Phone verification failed');
+      }
+
+      return ResponseHelper.ok(
+        reply,
+        'Phone number has been verified successfully.',
+        { action: 'phone_verified', phoneNumber: result.data?.phoneNumber },
+      );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }
