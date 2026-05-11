@@ -1,11 +1,17 @@
 import crypto from "crypto";
 import { IUserRepository } from "../../domain/repositories/iuser.repository";
+import { ITwoFactorBackupCodeRepository } from "../../domain/repositories/itwo-factor-backup-code.repository";
 import { IPasswordHasherService } from "./password-hasher.service";
 import { IJwtService } from "./ijwt.service";
+import { ITotpService } from "./itotp.service";
+import { ITwoFactorBackupCodeService } from "./itwo-factor-backup-code.service";
+import { ISessionRepository } from "../../domain/repositories/isession.repository";
+import { MemberSession } from "../../domain/entities/member-session.entity";
 import { Email } from "../../domain/value-objects/email.vo";
 import { UserId } from "../../domain/value-objects/user-id.vo";
 import { User, UserDTO } from "../../domain/entities/user.entity";
 import { UserStatus } from "../../domain/value-objects/user-status.vo";
+import { parseUserAgent } from "./user-agent-parser.util";
 import {
   UserNotFoundError,
   UserAlreadyExistsError,
@@ -26,6 +32,9 @@ interface LoginCredentials {
   email: string;
   password: string;
   rememberMe?: boolean;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
 }
 
 interface RegisterUserData {
@@ -35,6 +44,9 @@ interface RegisterUserData {
   firstName?: string;
   lastName?: string;
   role?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
 }
 
 // ============================================================================
@@ -69,11 +81,19 @@ export interface RefreshTokenResult {
 // Service
 // ============================================================================
 
+export type LoginOutcome =
+  | { kind: "success"; authResult: AuthResult }
+  | { kind: "two_factor_required"; pendingToken: string };
+
 export class AuthenticationService {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasherService,
     private readonly jwtService: IJwtService,
+    private readonly totpService: ITotpService,
+    private readonly backupCodeService: ITwoFactorBackupCodeService,
+    private readonly backupCodeRepository: ITwoFactorBackupCodeRepository,
+    private readonly sessionRepository: ISessionRepository,
   ) { }
 
   // --- Registration & login ---
@@ -117,10 +137,14 @@ export class AuthenticationService {
     }
 
     await this.userRepository.save(user);
-    return this.buildAuthResult(user);
+    return await this.buildAuthResult(user, false, {
+      ipAddress: userData.ipAddress,
+      userAgent: userData.userAgent,
+      deviceType: userData.deviceType,
+    });
   }
 
-  async login(credentials: LoginCredentials): Promise<LoginResult> {
+  async login(credentials: LoginCredentials): Promise<LoginOutcome> {
     const email = Email.create(credentials.email);
     const user = await this.userRepository.findByEmail(email);
 
@@ -137,7 +161,229 @@ export class AuthenticationService {
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
     if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
-    return this.buildAuthResult(user, credentials.rememberMe);
+    // 2FA enforcement only applies when the user has fully completed
+    // setup (boolean true). A user mid-enrolment with a stored secret
+    // but `twoFactorEnabled = false` continues to log in normally.
+    if (user.twoFactorEnabled) {
+      const pendingToken = this.jwtService.signTwoFactorPending({
+        userId: user.id.getValue(),
+        email: user.email.getValue(),
+        rememberMe: credentials.rememberMe ?? false,
+      });
+      return { kind: "two_factor_required", pendingToken };
+    }
+
+    return {
+      kind: "success",
+      authResult: await this.buildAuthResult(user, credentials.rememberMe, {
+        ipAddress: credentials.ipAddress,
+        userAgent: credentials.userAgent,
+        deviceType: credentials.deviceType,
+      }),
+    };
+  }
+
+  /**
+   * Step 2 of the email/password + 2FA login. Verifies the pending
+   * token (proves the password step passed within the last 5 minutes)
+   * + a TOTP code from the authenticator app OR a backup code, then
+   * issues the real session tokens.
+   */
+  async verifyTwoFactorLogin(
+    pendingToken: string,
+    code: string,
+    sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }
+  ): Promise<AuthResult> {
+    let payload;
+    try {
+      payload = this.jwtService.verifyTwoFactorPending(pendingToken);
+    } catch {
+      throw new InvalidCredentialsError();
+    }
+
+    const user = await this.userRepository.findById(
+      UserId.fromString(payload.userId),
+    );
+    if (!user) throw new UserNotFoundError(payload.userId);
+    if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
+
+    // The user could have disabled 2FA after the pending token was
+    // issued (race window: ≤5 min). Treat that as "go through normal
+    // login again" rather than silently letting the request through
+    // with no second factor.
+    if (!user.twoFactorEnabled || !user.twoFactorSecret) {
+      throw new InvalidCredentialsError();
+    }
+
+    const matched = await this.consumeTwoFactorCode(user, code);
+    if (!matched) throw new InvalidCredentialsError();
+
+    return await this.buildAuthResult(user, payload.rememberMe, sessionMeta);
+  }
+
+  // --- Two-factor enrolment lifecycle ---
+
+  /**
+   * Generate (or replace) a pending TOTP secret for the user and
+   * return the `otpauth://` URL the client renders as a QR code.
+   * Does not enable 2FA — that requires a follow-up `enable` call
+   * with a valid code from the authenticator app.
+   */
+  async setupTwoFactor(userId: string): Promise<{
+    secret: string;
+    qrCodeDataUrl: string;
+  }> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (user.isGuest) {
+      throw new InvalidOperationError("Guest users cannot enable 2FA");
+    }
+    if (user.twoFactorEnabled) {
+      throw new InvalidOperationError(
+        "2FA is already enabled — disable it first to re-enrol",
+      );
+    }
+
+    const { secret, otpAuthUrl } = await this.totpService.generateSecret({
+      accountName: user.email.getValue(),
+      issuer: "Slipperze",
+    });
+
+    user.beginTwoFactorSetup(secret);
+    await this.userRepository.save(user);
+
+    const qrCodeDataUrl = await this.totpService.toQrCodeDataUrl(otpAuthUrl);
+    return { secret, qrCodeDataUrl };
+  }
+
+  /**
+   * Verify a TOTP code against the staged secret, then activate 2FA
+   * and issue a fresh batch of backup codes (returned in plaintext to
+   * the caller; only their hashes hit the DB).
+   */
+  async enableTwoFactor(
+    userId: string,
+    code: string,
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (user.isGuest) {
+      throw new InvalidOperationError("Guest users cannot enable 2FA");
+    }
+    if (user.twoFactorEnabled) {
+      throw new InvalidOperationError("2FA is already enabled");
+    }
+    if (!user.twoFactorSecret) {
+      throw new InvalidOperationError(
+        "No 2FA setup in progress — start setup first",
+      );
+    }
+
+    const valid = this.totpService.verifyCode({
+      secret: user.twoFactorSecret,
+      code,
+    });
+    if (!valid) {
+      throw new DomainValidationError("Invalid verification code");
+    }
+
+    user.confirmTwoFactorEnable();
+
+    const { plainCodes, codeHashes } = this.backupCodeService.generate(10);
+    // Save the user (now `twoFactorEnabled = true`) + replace backup
+    // codes. Done sequentially because the two repos write to
+    // different tables; an error between them would leave 2FA "on"
+    // with no backup codes — recoverable via the regenerate flow, so
+    // we don't need a cross-table transaction.
+    await this.userRepository.save(user);
+    await this.backupCodeRepository.replaceForUser(user.id, codeHashes);
+
+    return { backupCodes: plainCodes };
+  }
+
+  /**
+   * Turn 2FA off. Requires password confirmation because removing a
+   * factor is a sensitive operation — losing the password alone
+   * should not let an attacker downgrade the account's security.
+   */
+  async disableTwoFactor(userId: string, password: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (!user.passwordHash) {
+      throw new InvalidOperationError("Account has no password set");
+    }
+    const valid = await this.passwordHasher.verify(password, user.passwordHash);
+    if (!valid) throw new InvalidPasswordError();
+
+    if (!user.twoFactorEnabled) {
+      // Idempotent — user already off, no-op.
+      return;
+    }
+
+    user.disableTwoFactor();
+    await this.userRepository.save(user);
+    await this.backupCodeRepository.deleteAllForUser(user.id);
+  }
+
+  /**
+   * Replace the user's backup-code set. Useful when the user has
+   * burned through them or thinks an old printout has leaked.
+   * Password-gated for the same reason as disable.
+   */
+  async regenerateBackupCodes(
+    userId: string,
+    password: string,
+  ): Promise<{ backupCodes: string[] }> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (!user.twoFactorEnabled) {
+      throw new InvalidOperationError(
+        "Cannot regenerate backup codes — 2FA is not enabled",
+      );
+    }
+    if (!user.passwordHash) {
+      throw new InvalidOperationError("Account has no password set");
+    }
+    const valid = await this.passwordHasher.verify(password, user.passwordHash);
+    if (!valid) throw new InvalidPasswordError();
+
+    const { plainCodes, codeHashes } = this.backupCodeService.generate(10);
+    await this.backupCodeRepository.replaceForUser(user.id, codeHashes);
+    return { backupCodes: plainCodes };
+  }
+
+  /**
+   * Try the user-supplied code as a TOTP first (cheap), then fall
+   * back to a backup-code lookup (one DB query). On a backup match
+   * the row is marked used so the same code can't be replayed.
+   * Returns false if neither path matches.
+   */
+  private async consumeTwoFactorCode(
+    user: User,
+    code: string,
+  ): Promise<boolean> {
+    const trimmed = code.trim();
+    if (!trimmed) return false;
+
+    if (user.twoFactorSecret) {
+      const totpOk = this.totpService.verifyCode({
+        secret: user.twoFactorSecret,
+        code: trimmed,
+      });
+      if (totpOk) return true;
+    }
+
+    const candidates = await this.backupCodeRepository.findUnusedByUser(
+      user.id,
+    );
+    for (const candidate of candidates) {
+      if (this.backupCodeService.verify(trimmed, candidate.codeHash)) {
+        await this.backupCodeRepository.markUsed(candidate.id);
+        return true;
+      }
+    }
+    return false;
   }
 
   // Google sign-in (find-or-create by Firebase-verified email).
@@ -158,7 +404,7 @@ export class AuthenticationService {
     email: string;
     emailVerified: boolean;
     name: string | null;
-  }): Promise<AuthResult> {
+  }, sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }): Promise<AuthResult> {
     const emailVo = Email.create(identity.email);
     let user = await this.userRepository.findByEmail(emailVo);
 
@@ -194,10 +440,10 @@ export class AuthenticationService {
       await this.userRepository.save(user);
     }
 
-    return this.buildAuthResult(user);
+    return await this.buildAuthResult(user, true, sessionMeta);
   }
 
-  async loginAsGuest(email?: string): Promise<AuthResult> {
+  async loginAsGuest(email?: string, sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }): Promise<AuthResult> {
     let user: User;
 
     if (email) {
@@ -219,22 +465,18 @@ export class AuthenticationService {
       await this.userRepository.save(user);
     }
 
-    return this.buildAuthResult(user);
+    return await this.buildAuthResult(user, false, sessionMeta);
   }
 
-  async logout(userId: string, accessToken?: string): Promise<void> {
-    const user = await this.userRepository.findById(UserId.fromString(userId));
-    if (!user) throw new UserNotFoundError(userId);
-
-    if (accessToken) {
-      let payload;
-      try {
-        payload = this.jwtService.verifyAccess(accessToken);
-      } catch {
-        payload = null;
-      }
-      if (payload && payload.userId !== userId) {
-        throw new DomainValidationError("Token does not belong to this user");
+  async logout(userId: string, accessToken?: string, refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+      const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+      const session = await this.sessionRepository.findByTokenHash(hash);
+      
+      // Direct validation: if session exists and belongs to user, revoke it.
+      // No need to fetch the full User entity from DB first.
+      if (session && session.userId.getValue() === userId && session.id) {
+        await this.sessionRepository.revoke(session.id);
       }
     }
   }
@@ -246,7 +488,7 @@ export class AuthenticationService {
 
   // --- Token operations ---
 
-  async refreshToken(refreshToken: string): Promise<RefreshTokenResult> {
+  async refreshToken(refreshToken: string, sessionMeta?: { ipAddress?: string; userAgent?: string }): Promise<RefreshTokenResult> {
     let payload;
     try {
       payload = this.jwtService.verifyRefresh(refreshToken);
@@ -258,27 +500,53 @@ export class AuthenticationService {
       throw new DomainValidationError("Invalid token type");
     }
 
+    // Verify session in DB
+    const oldTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+    const session = await this.sessionRepository.findByTokenHash(oldTokenHash);
+
+    if (!session || session.isRevoked || session.expiresAt < new Date()) {
+      throw new DomainValidationError("Session invalid, revoked, or expired");
+    }
+
     const user = await this.userRepository.findById(
       UserId.fromString(payload.userId),
     );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
 
+    const base = {
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      role: user.role,
+      updatedAt: user.updatedAt.toISOString(),
+      createdAt: user.createdAt.toISOString(),
+    };
+
+    const accessToken = this.jwtService.signAccess(base);
+    const newRefreshToken = this.jwtService.signRefresh(base, true); // Assume persistent if they have a refresh token
+    const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
+
+    const newExpiresAt = new Date();
+    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+
+    session.rotateToken(newTokenHash, newExpiresAt);
+    
+    if (sessionMeta) {
+      const uaInfo = parseUserAgent(sessionMeta.userAgent);
+      session.updateMetadata({
+        ipAddress: sessionMeta.ipAddress,
+        userAgent: sessionMeta.userAgent,
+        deviceType: uaInfo.deviceType,
+        browser: uaInfo.browser,
+        os: uaInfo.os,
+      });
+    }
+
+    await this.sessionRepository.update(session);
+
     return {
-      accessToken: this.jwtService.signAccess({
-        userId: user.id.getValue(),
-        email: user.email.getValue(),
-        role: user.role,
-        updatedAt: user.updatedAt.toISOString(),
-        createdAt: user.createdAt.toISOString(),
-      }),
-      refreshToken: this.jwtService.signRefresh({
-        userId: user.id.getValue(),
-        email: user.email.getValue(),
-        role: user.role,
-        updatedAt: user.updatedAt.toISOString(),
-        createdAt: user.createdAt.toISOString(),
-      }),
+      accessToken,
+      refreshToken: newRefreshToken,
       expiresIn: this.jwtService.getAccessExpiresInSeconds(),
     };
   }
@@ -421,6 +689,70 @@ export class AuthenticationService {
     await this.userRepository.save(user);
   }
 
+  /**
+   * Mark the user's phone number as verified using a number that has
+   * already been confirmed out-of-band (currently: a Firebase
+   * `signInWithPhoneNumber` ID token whose `phone_number` claim was
+   * extracted by `IFirebaseAuthVerifier.verifyPhoneIdToken`).
+   *
+   * Two cases:
+   * 1. User has no phone yet — set it to the verified number, then mark
+   *    verified.
+   * 2. User has a different phone — replace it (`updatePhone` resets
+   *    `phoneVerified` to false), then mark the new number verified.
+   *
+   * Same number + already verified is a no-op so the endpoint is safe
+   * to call repeatedly without throwing.
+   */
+  async verifyPhone(userId: string, phoneNumber: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    if (user.isGuest) {
+      throw new InvalidOperationError("Guest users cannot verify a phone");
+    }
+
+    const sameNumber = user.phone?.getValue() === phoneNumber;
+    if (sameNumber && user.phoneVerified) return;
+
+    if (!sameNumber) {
+      user.updatePhone(phoneNumber);
+    }
+    user.verifyPhone();
+    await this.userRepository.save(user);
+  }
+
+  /**
+   * Live identity snapshot for `/auth/me`. The JWT carries stale data
+   * once the user toggles 2FA / verifies their phone, so this hits the
+   * DB on every call. Cached on the client by React Query (5 min) so
+   * the extra query is amortised.
+   */
+  async getUserIdentity(userId: string): Promise<{
+    userId: string;
+    email: string;
+    role: string;
+    isGuest: boolean;
+    emailVerified: boolean;
+    phoneVerified: boolean;
+    twoFactorEnabled: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
+    return {
+      userId: user.id.getValue(),
+      email: user.email.getValue(),
+      role: user.role,
+      isGuest: user.isGuest,
+      emailVerified: user.emailVerified,
+      phoneVerified: user.phoneVerified,
+      twoFactorEnabled: user.twoFactorEnabled,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
+  }
+
   async getUserByEmail(
     email: string,
   ): Promise<{ userId: string; emailVerified: boolean }> {
@@ -474,7 +806,11 @@ export class AuthenticationService {
 
   // ---
 
-  private buildAuthResult(user: User, rememberMe: boolean = false): AuthResult {
+  private async buildAuthResult(
+    user: User,
+    rememberMe: boolean = false,
+    sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }
+  ): Promise<AuthResult> {
     const base = {
       userId: user.id.getValue(),
       email: user.email.getValue(),
@@ -483,9 +819,35 @@ export class AuthenticationService {
       createdAt: user.createdAt.toISOString(),
     };
 
+    const accessToken = this.jwtService.signAccess(base);
+    const refreshToken = this.jwtService.signRefresh(base, rememberMe);
+
+    // Hash the refresh token before storing it
+    const refreshTokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
+
+    // Refresh tokens typically live for 30 days (or 7 days if not rememberMe, based on your jwtService)
+    // We'll use a standard 30-day expiry for the DB record for simplicity, the JWT signature enforces the exact expiry.
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + (rememberMe ? 30 : 7));
+
+    const uaInfo = parseUserAgent(sessionMeta?.userAgent);
+
+    const session = MemberSession.create({
+      userId: user.id,
+      refreshTokenHash,
+      ipAddress: sessionMeta?.ipAddress,
+      userAgent: sessionMeta?.userAgent,
+      deviceType: sessionMeta?.deviceType || uaInfo.deviceType,
+      browser: uaInfo.browser,
+      os: uaInfo.os,
+      expiresAt,
+    });
+
+    await this.sessionRepository.create(session);
+
     return {
-      accessToken: this.jwtService.signAccess(base),
-      refreshToken: this.jwtService.signRefresh(base, rememberMe),
+      accessToken,
+      refreshToken,
       user: {
         id: user.id.getValue(),
         email: user.email.getValue(),

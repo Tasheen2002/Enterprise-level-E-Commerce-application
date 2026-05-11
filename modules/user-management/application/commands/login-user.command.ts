@@ -1,6 +1,6 @@
 import {
   AuthenticationService,
-  AuthResult,
+  LoginOutcome,
 } from '../services/authentication.service';
 import { ITokenBlacklistService } from '../services/itoken-blacklist.service';
 import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/core/src/application/cqrs';
@@ -15,10 +15,11 @@ export interface LoginUserCommand extends ICommand {
   // unaffected unless an attacker is on the same NAT, which is the accepted
   // industry-standard trade-off for this pattern.
   readonly ipAddress: string;
+  readonly userAgent?: string;
 }
 
 export class LoginUserHandler
-  implements ICommandHandler<LoginUserCommand, CommandResult<AuthResult>> {
+  implements ICommandHandler<LoginUserCommand, CommandResult<LoginOutcome>> {
   constructor(
     private readonly authService: AuthenticationService,
     private readonly tokenBlacklistService: ITokenBlacklistService,
@@ -26,7 +27,7 @@ export class LoginUserHandler
 
   async handle(
     command: LoginUserCommand
-  ): Promise<CommandResult<AuthResult>> {
+  ): Promise<CommandResult<LoginOutcome>> {
     // Composite key prevents account-DoS by an attacker who only knows the
     // victim's email — the lockout follows the attacker's IP, not the victim.
     const lockoutKey = `${command.email}|${command.ipAddress}`;
@@ -40,13 +41,18 @@ export class LoginUserHandler
     }
 
     try {
-      const authResult = await this.authService.login({
+      const outcome = await this.authService.login({
         email: command.email,
         password: command.password,
         rememberMe: command.rememberMe,
+        ipAddress: command.ipAddress,
+        userAgent: command.userAgent,
       });
+      // Both outcomes prove the password step succeeded — clear the
+      // lockout counter regardless of whether the second factor still
+      // owes a code.
       this.tokenBlacklistService.clearFailedAttempts(lockoutKey);
-      return CommandResult.success(authResult);
+      return CommandResult.success(outcome);
     } catch (error) {
       this.tokenBlacklistService.recordFailedAttempt(lockoutKey);
       throw error;

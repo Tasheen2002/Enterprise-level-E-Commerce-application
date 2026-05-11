@@ -12,6 +12,10 @@
     background-color: rgb(var(--ts-cream));
     color: rgb(var(--ts-charcoal));
     scroll-behavior: smooth;
+    /* Stable gutter prevents 'jumping' when layout changes from short to long page */
+    scrollbar-gutter: stable;
+    /* Modern, GPU-friendly scrollbar width */
+    scrollbar-width: thin;
   }
 
   body {

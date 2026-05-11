@@ -1,6 +1,7 @@
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import {
   IJwtService,
+  PendingTwoFactorPayload,
   TokenPayload,
 } from '../../../application/services/ijwt.service';
 
@@ -50,6 +51,48 @@ export class JwtService implements IJwtService {
 
   verifyRefresh(token: string): TokenPayload {
     return jwt.verify(token, this.refreshTokenSecret) as TokenPayload;
+  }
+
+  /**
+   * Sign the short-lived "passed password, owe TOTP" token. Uses the
+   * access-token secret with a fixed 5-minute lifetime — a separate
+   * secret would be over-engineered for a 5-minute token, and the
+   * `type: '2fa_pending'` claim guarantees this token is rejected if
+   * fed back into `verifyAccess` or `verifyRefresh` (those don't
+   * type-check the claim, but the controllers do via their distinct
+   * verify methods).
+   */
+  signTwoFactorPending(
+    payload: Omit<PendingTwoFactorPayload, 'type'>,
+  ): string {
+    return jwt.sign(
+      { ...payload, type: '2fa_pending' },
+      this.accessTokenSecret,
+      { expiresIn: '5m' } as SignOptions,
+    );
+  }
+
+  verifyTwoFactorPending(token: string): PendingTwoFactorPayload {
+    const decoded = jwt.verify(
+      token,
+      this.accessTokenSecret,
+    ) as Partial<PendingTwoFactorPayload>;
+    if (decoded.type !== '2fa_pending') {
+      throw new Error('Invalid token type for 2FA challenge');
+    }
+    if (
+      typeof decoded.userId !== 'string' ||
+      typeof decoded.email !== 'string' ||
+      typeof decoded.rememberMe !== 'boolean'
+    ) {
+      throw new Error('Malformed 2FA pending token');
+    }
+    return {
+      userId: decoded.userId,
+      email: decoded.email,
+      rememberMe: decoded.rememberMe,
+      type: '2fa_pending',
+    };
   }
 
   getAccessExpiresInSeconds(): number {

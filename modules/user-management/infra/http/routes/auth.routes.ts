@@ -17,13 +17,22 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyEmailSchema,
+  verifyPhoneSchema,
   resendVerificationSchema,
   changeEmailSchema,
   deleteAccountSchema,
+  enable2FASchema,
+  disable2FASchema,
+  regenerateBackupCodesSchema,
+  verify2FALoginSchema,
   authResultResponseSchema,
   refreshTokenResponseSchema,
   userIdentityResponseSchema,
   actionResponseSchema,
+  verifyPhoneResponseSchema,
+  setup2FAResponseSchema,
+  backupCodesResponseSchema,
+  loginResponseSchema,
   RegisterBody,
   LoginBody,
   GoogleLoginBody,
@@ -31,7 +40,12 @@ import {
   ForgotPasswordBody,
   ResetPasswordBody,
   VerifyEmailBody,
+  VerifyPhoneBody,
   ResendVerificationBody,
+  Enable2FABody,
+  Disable2FABody,
+  RegenerateBackupCodesBody,
+  Verify2FALoginBody,
 } from "../validation/auth.schema";
 import {
   createRateLimiter,
@@ -50,6 +64,11 @@ const changePasswordBodyJson = toJsonSchema(changePasswordSchema);
 const forgotPasswordBodyJson = toJsonSchema(forgotPasswordSchema);
 const resetPasswordBodyJson = toJsonSchema(resetPasswordSchema);
 const verifyEmailBodyJson = toJsonSchema(verifyEmailSchema);
+const verifyPhoneBodyJson = toJsonSchema(verifyPhoneSchema);
+const enable2FABodyJson = toJsonSchema(enable2FASchema);
+const disable2FABodyJson = toJsonSchema(disable2FASchema);
+const regenerateBackupCodesBodyJson = toJsonSchema(regenerateBackupCodesSchema);
+const verify2FALoginBodyJson = toJsonSchema(verify2FALoginSchema);
 const resendVerificationBodyJson = toJsonSchema(resendVerificationSchema);
 const changeEmailBodyJson = toJsonSchema(changeEmailSchema);
 const deleteAccountBodyJson = toJsonSchema(deleteAccountSchema);
@@ -96,10 +115,10 @@ export async function authRoutes(
         tags: ["Authentication"],
         summary: "Login",
         description:
-          "Authenticate with email and password. Returns JWT tokens on success.",
+          "Authenticate with email and password. Returns either the full JWT pair (`kind: 'success'`) or — when the account has 2FA enabled — a short-lived pending token (`kind: 'two_factor_required'`) that the client exchanges via `/auth/2fa/verify`.",
         body: loginBodyJson,
         response: {
-          200: successResponse(authResultResponseSchema),
+          200: successResponse(loginResponseSchema),
         },
       },
     },
@@ -335,6 +354,148 @@ export async function authRoutes(
     },
     (request, reply) =>
       controller.changeEmail(request as AuthenticatedRequest, reply),
+  );
+
+  // POST /auth/2fa/setup
+  fastify.post(
+    "/auth/2fa/setup",
+    {
+      preHandler: [authenticate],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Begin 2FA enrolment",
+        description:
+          "Generate a TOTP secret + QR-code data URL for the authenticated user. The secret is staged on the user record but 2FA is NOT activated yet — the client must follow up with `/auth/2fa/enable` and a valid TOTP code to flip the enforcement flag.",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: successResponse(setup2FAResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.setup2FA(request as AuthenticatedRequest, reply),
+  );
+
+  // POST /auth/2fa/enable
+  fastify.post(
+    "/auth/2fa/enable",
+    {
+      preHandler: [authenticate, validateBody(enable2FASchema)],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Activate 2FA after enrolment",
+        description:
+          "Verify a TOTP code against the staged secret, flip `twoFactorEnabled = true`, and issue a fresh batch of single-use backup codes. The plaintext codes are returned ONLY here — they are never re-emitted.",
+        security: [{ bearerAuth: [] }],
+        body: enable2FABodyJson,
+        response: {
+          200: successResponse(backupCodesResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.enable2FA(
+        request as AuthenticatedRequest<{ Body: Enable2FABody }>,
+        reply,
+      ),
+  );
+
+  // POST /auth/2fa/disable
+  fastify.post(
+    "/auth/2fa/disable",
+    {
+      preHandler: [authenticate, validateBody(disable2FASchema)],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Disable 2FA",
+        description:
+          "Turn 2FA off, wipe the TOTP secret, and delete all backup codes. Requires password confirmation — losing the password alone must not let an attacker downgrade the account's security profile.",
+        security: [{ bearerAuth: [] }],
+        body: disable2FABodyJson,
+        response: {
+          200: successResponse(actionResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.disable2FA(
+        request as AuthenticatedRequest<{ Body: Disable2FABody }>,
+        reply,
+      ),
+  );
+
+  // POST /auth/2fa/backup-codes/regenerate
+  fastify.post(
+    "/auth/2fa/backup-codes/regenerate",
+    {
+      preHandler: [authenticate, validateBody(regenerateBackupCodesSchema)],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Regenerate 2FA backup codes",
+        description:
+          "Replace the user's set of backup codes with a fresh batch. Old codes are invalidated atomically. Same password gate as `/auth/2fa/disable`.",
+        security: [{ bearerAuth: [] }],
+        body: regenerateBackupCodesBodyJson,
+        response: {
+          200: successResponse(backupCodesResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.regenerateBackupCodes(
+        request as AuthenticatedRequest<{ Body: RegenerateBackupCodesBody }>,
+        reply,
+      ),
+  );
+
+  // POST /auth/2fa/verify  (no auth — the pending token IS the auth)
+  fastify.post(
+    "/auth/2fa/verify",
+    {
+      preHandler: [validateBody(verify2FALoginSchema)],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Complete 2FA login",
+        description:
+          "Step 2 of the email/password + 2FA login. Exchange a pending token (issued by `/auth/login`) plus a TOTP code OR a backup code for a real session. Backup codes are single-use and consumed on success.",
+        body: verify2FALoginBodyJson,
+        response: {
+          200: successResponse(authResultResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.verify2FALogin(
+        request as FastifyRequest<{ Body: Verify2FALoginBody }>,
+        reply,
+      ),
+  );
+
+  // POST /auth/verify-phone
+  fastify.post(
+    "/auth/verify-phone",
+    {
+      preHandler: [
+        authenticate,
+        validateBody(verifyPhoneSchema),
+      ],
+      schema: {
+        tags: ["Authentication"],
+        summary: "Verify phone number",
+        description:
+          "Confirm ownership of a phone number using a Firebase ID token issued by `signInWithPhoneNumber` + OTP confirm on the client. The phone number is taken from the verified `phone_number` claim on the token — clients cannot pass it separately.",
+        security: [{ bearerAuth: [] }],
+        body: verifyPhoneBodyJson,
+        response: {
+          200: successResponse(verifyPhoneResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.verifyPhone(
+        request as AuthenticatedRequest<{ Body: VerifyPhoneBody }>,
+        reply,
+      ),
   );
 
   // POST /auth/delete-account

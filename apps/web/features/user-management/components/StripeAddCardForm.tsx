@@ -165,16 +165,17 @@ function StripeAddCardFormInner({ onSuccess }: StripeAddCardFormProps) {
         </div>
       </div>
 
-      <label className="flex items-center gap-3 text-xs text-charcoal cursor-pointer select-none">
+      <label className="flex items-center gap-3 p-4 rounded-xl border border-stone-100 bg-white hover:bg-stone-50 cursor-pointer transition-colors group">
         <input
           type="checkbox"
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
-          className="h-4 w-4 accent-gold"
+          className="w-4 h-4 rounded border-stone-300 text-gold focus:ring-gold"
         />
-        <span className="uppercase tracking-[0.2em] text-[10px] font-bold text-stone-500">
-          Set as primary payment method
-        </span>
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-bold text-charcoal uppercase tracking-widest">Set as primary payment method</p>
+          <p className="text-[9px] text-stone-400">Use this card for future artisanal orders.</p>
+        </div>
       </label>
 
       {stripeError && (

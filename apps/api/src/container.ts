@@ -27,6 +27,16 @@ import { ChangeEmailHandler } from "../../../modules/user-management/application
 import { InitiatePasswordResetHandler } from "../../../modules/user-management/application/commands/initiate-password-reset.command";
 import { ResetPasswordHandler } from "../../../modules/user-management/application/commands/reset-password.command";
 import { VerifyEmailHandler } from "../../../modules/user-management/application/commands/verify-email.command";
+import { VerifyPhoneHandler } from "../../../modules/user-management/application/commands/verify-phone.command";
+import { Setup2FAHandler } from "../../../modules/user-management/application/commands/setup-2fa.command";
+import { Enable2FAHandler } from "../../../modules/user-management/application/commands/enable-2fa.command";
+import { Disable2FAHandler } from "../../../modules/user-management/application/commands/disable-2fa.command";
+import { RegenerateBackupCodesHandler } from "../../../modules/user-management/application/commands/regenerate-backup-codes.command";
+import { Verify2FALoginHandler } from "../../../modules/user-management/application/commands/verify-2fa-login.command";
+import { SpeakeasyTotpService } from "../../../modules/user-management/infra/security/speakeasy-totp.adapter";
+import { TwoFactorBackupCodeService } from "../../../modules/user-management/infra/security/two-factor-backup-code.adapter";
+import { TwoFactorBackupCodeRepository } from "../../../modules/user-management/infra/persistence/repositories/two-factor-backup-code.repository";
+import { PrismaSessionRepository } from "../../../modules/user-management/infra/persistence/repositories/prisma-session.repository";
 import { DeleteAccountHandler } from "../../../modules/user-management/application/commands/delete-account.command";
 import { ResendVerificationHandler } from "../../../modules/user-management/application/commands/resend-verification.command";
 import { UpdateProfileHandler } from "../../../modules/user-management/application/commands/update-profile.command";
@@ -46,6 +56,8 @@ import { GetUserDetailsHandler } from "../../../modules/user-management/applicat
 import { ListAddressesHandler } from "../../../modules/user-management/application/queries/list-addresses.query";
 import { ListPaymentMethodsHandler } from "../../../modules/user-management/application/queries/list-payment-methods.query";
 import { ListUsersHandler } from "../../../modules/user-management/application/queries/list-user.query";
+import { GetActiveSessionsHandler } from "../../../modules/user-management/application/queries/get-active-sessions.query";
+import { RevokeSessionHandler } from "../../../modules/user-management/application/commands/revoke-session.command";
 import { AuthController } from "../../../modules/user-management/infra/http/controllers/auth.controller";
 import { ProfileController } from "../../../modules/user-management/infra/http/controllers/profile.controller";
 import { ImageKitUploadAuthService } from "../../../modules/user-management/application/services/imagekit-upload-auth.service";
@@ -645,7 +657,24 @@ export class Container {
       accessTokenExpiresIn: "15m",
       refreshTokenExpiresIn: config.jwtExpiresIn,
     });
-    const authService = new AuthenticationService(userRepository, passwordHasher, jwtService);
+    // 2FA infrastructure — TOTP issuer/verifier (speakeasy + qrcode) plus
+    // single-use backup-code generator/hasher. Both are pure services
+    // (no IO of their own) so they're cheap to instantiate up-front and
+    // reuse across requests.
+    const totpService = new SpeakeasyTotpService();
+    const backupCodeService = new TwoFactorBackupCodeService();
+    const twoFactorBackupCodeRepository = new TwoFactorBackupCodeRepository(prisma);
+    const sessionRepository = new PrismaSessionRepository(prisma);
+
+    const authService = new AuthenticationService(
+      userRepository,
+      passwordHasher,
+      jwtService,
+      totpService,
+      backupCodeService,
+      twoFactorBackupCodeRepository,
+      sessionRepository
+    );
     const profileService = new UserProfileService(userRepository, userProfileRepository, addressRepository, paymentMethodRepository);
     const addressService = new AddressManagementService(addressRepository, userProfileRepository);
     const paymentMethodService = new PaymentMethodService(paymentMethodRepository, userRepository, addressRepository, userProfileRepository);
@@ -660,6 +689,13 @@ export class Container {
           async verifyIdToken() {
             const err: Error & { statusCode?: number } = new Error(
               "Google sign-in is not configured on this server",
+            );
+            err.statusCode = 503;
+            throw err;
+          },
+          async verifyPhoneIdToken() {
+            const err: Error & { statusCode?: number } = new Error(
+              "Phone verification is not configured on this server",
             );
             err.statusCode = 503;
             throw err;
@@ -679,6 +715,13 @@ export class Container {
       new DeleteAccountHandler(authService, TokenBlacklistService),
       new ResendVerificationHandler(authService, TokenBlacklistService, emailService),
       new LoginWithGoogleHandler(authService, firebaseVerifier),
+      new VerifyPhoneHandler(authService, firebaseVerifier),
+      new Setup2FAHandler(authService),
+      new Enable2FAHandler(authService),
+      new Disable2FAHandler(authService),
+      new RegenerateBackupCodesHandler(authService),
+      new Verify2FALoginHandler(authService),
+      authService,
     );
     // ImageKit upload-token issuer — only wired when both server-side
     // ImageKit credentials are present. The avatar-upload route returns
@@ -694,6 +737,8 @@ export class Container {
     const profileController = new ProfileController(
       new GetUserProfileHandler(profileService),
       new UpdateProfileHandler(profileService),
+      new GetActiveSessionsHandler(sessionRepository),
+      new RevokeSessionHandler(sessionRepository),
       imageKitUploadAuth,
     );
     const addressesController = new AddressesController(
