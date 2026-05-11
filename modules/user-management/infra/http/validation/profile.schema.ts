@@ -112,3 +112,20 @@ export const profileResponseSchema = {
     updatedAt: { type: 'string', format: 'date-time' },
   },
 };
+
+export const activeSessionResponseSchema = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      id: { type: "string" },
+      ipAddress: { type: ["string", "null"] },
+      userAgent: { type: ["string", "null"] },
+      deviceType: { type: ["string", "null"] },
+      browser: { type: ["string", "null"] },
+      os: { type: ["string", "null"] },
+      createdAt: { type: "string", format: "date-time" },
+      expiresAt: { type: "string", format: "date-time" },
+    },
+  },
+};
