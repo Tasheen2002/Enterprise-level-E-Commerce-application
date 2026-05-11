@@ -8,6 +8,7 @@ import { getAuth } from "firebase-admin/auth";
 import {
   IFirebaseAuthVerifier,
   VerifiedFirebaseIdentity,
+  VerifiedFirebasePhoneIdentity,
 } from "../../application/services/ifirebase-auth-verifier.service";
 import {
   DomainValidationError,
@@ -60,6 +61,34 @@ export class FirebaseAuthVerifierAdapter implements IFirebaseAuthVerifier {
       emailVerified: decoded.email_verified === true,
       name: (decoded.name as string | undefined) ?? null,
       picture: (decoded.picture as string | undefined) ?? null,
+    };
+  }
+
+  async verifyPhoneIdToken(
+    idToken: string,
+  ): Promise<VerifiedFirebasePhoneIdentity> {
+    let decoded;
+    try {
+      decoded = await getAuth(this.app).verifyIdToken(idToken);
+    } catch {
+      throw new DomainValidationError("Invalid phone verification token");
+    }
+
+    // The phone number lives at `phone_number` (top-level) on a token
+    // minted by `signInWithPhoneNumber`. We don't trust any phone
+    // number sent separately by the client — only the claim signed by
+    // Firebase counts.
+    const phoneNumber =
+      (decoded as { phone_number?: unknown }).phone_number;
+    if (typeof phoneNumber !== "string" || phoneNumber.length === 0) {
+      throw new InvalidOperationError(
+        "Phone verification token did not include a phone number",
+      );
+    }
+
+    return {
+      uid: decoded.uid,
+      phoneNumber,
     };
   }
 }
