@@ -11,6 +11,8 @@ import {
 
 export interface LoginWithGoogleCommand extends ICommand {
   readonly idToken: string;
+  readonly ipAddress?: string;
+  readonly userAgent?: string;
 }
 
 export class LoginWithGoogleHandler
@@ -29,6 +31,9 @@ export class LoginWithGoogleHandler
       email: identity.email,
       emailVerified: identity.emailVerified,
       name: identity.name,
+    }, {
+      ipAddress: command.ipAddress,
+      userAgent: command.userAgent,
     });
     return CommandResult.success(result);
   }
