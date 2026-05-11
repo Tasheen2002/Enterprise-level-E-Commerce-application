@@ -74,6 +74,26 @@ export class UserPhoneVerifiedEvent extends DomainEvent {
   }
 }
 
+export class UserTwoFactorEnabledEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
+  }
+  get eventType(): string { return 'user.two_factor_enabled'; }
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
+export class UserTwoFactorDisabledEvent extends DomainEvent {
+  constructor(public readonly userId: string) {
+    super(userId, 'User');
+  }
+  get eventType(): string { return 'user.two_factor_disabled'; }
+  getPayload(): Record<string, unknown> {
+    return { userId: this.userId };
+  }
+}
+
 export class UserStatusChangedEvent extends DomainEvent {
   constructor(
     public readonly userId: string,
@@ -142,6 +162,14 @@ export interface UserProps {
   status: UserStatus;
   emailVerified: boolean;
   phoneVerified: boolean;
+  // TOTP shared secret in base32. Null until the user runs the 2FA setup
+  // flow. Presence alone does NOT mean 2FA is enforced — that requires
+  // `twoFactorEnabled = true` (set after the user proves they can read
+  // codes from their authenticator app). This split lets us persist the
+  // pending secret across the QR-display + first-confirm step without
+  // gating logins yet.
+  twoFactorSecret: string | null;
+  twoFactorEnabled: boolean;
   isGuest: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -165,6 +193,9 @@ export interface UserDTO {
   status: UserStatus;
   emailVerified: boolean;
   phoneVerified: boolean;
+  // The DTO intentionally does NOT carry the secret — that would let it
+  // leak to API responses. Only the boolean is exposed.
+  twoFactorEnabled: boolean;
   isGuest: boolean;
   createdAt: string;
   updatedAt: string;
@@ -211,6 +242,8 @@ export class User extends AggregateRoot {
       status: UserStatus.ACTIVE,
       emailVerified: false,
       phoneVerified: false,
+      twoFactorSecret: null,
+      twoFactorEnabled: false,
       isGuest,
       createdAt: now,
       updatedAt: now,
@@ -244,6 +277,8 @@ export class User extends AggregateRoot {
       status: UserStatus.ACTIVE,
       emailVerified: false,
       phoneVerified: false,
+      twoFactorSecret: null,
+      twoFactorEnabled: false,
       isGuest: true,
       createdAt: now,
       updatedAt: now,
@@ -303,6 +338,12 @@ export class User extends AggregateRoot {
   get status(): UserStatus { return this.props.status; }
   get emailVerified(): boolean { return this.props.emailVerified; }
   get phoneVerified(): boolean { return this.props.phoneVerified; }
+  get twoFactorEnabled(): boolean { return this.props.twoFactorEnabled; }
+  /**
+   * Raw TOTP secret. Exposed for the verify path only — application code
+   * must never echo this to the wire. The DTO mapper drops it.
+   */
+  get twoFactorSecret(): string | null { return this.props.twoFactorSecret; }
   get isGuest(): boolean { return this.props.isGuest; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
@@ -408,6 +449,61 @@ export class User extends AggregateRoot {
     this.addDomainEvent(new UserPhoneVerifiedEvent(this.props.id.getValue()));
   }
 
+  /**
+   * Stage a TOTP secret without enabling 2FA yet. The user still needs
+   * to confirm they can read codes from their authenticator app via
+   * `confirmTwoFactorEnable` — until then logins remain single-factor.
+   * Re-running setup overwrites any pending secret, which is the
+   * desired behaviour if the user lost their phone mid-setup.
+   */
+  beginTwoFactorSetup(secret: string): void {
+    if (!secret || secret.trim().length === 0) {
+      throw new DomainValidationError('TOTP secret cannot be empty');
+    }
+    if (this.props.twoFactorEnabled) {
+      throw new InvalidOperationError(
+        'Two-factor authentication is already enabled — disable it first to re-enrol',
+      );
+    }
+    this.props.twoFactorSecret = secret;
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Flip the enforcement bit. Caller MUST have verified a TOTP code
+   * against `twoFactorSecret` before calling this — the entity trusts
+   * the caller because TOTP verification needs a clock + the
+   * speakeasy library, neither of which belong in the domain layer.
+   */
+  confirmTwoFactorEnable(): void {
+    if (!this.props.twoFactorSecret) {
+      throw new InvalidOperationError(
+        'No 2FA setup in progress — call beginTwoFactorSetup first',
+      );
+    }
+    if (this.props.twoFactorEnabled) return;
+    this.props.twoFactorEnabled = true;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserTwoFactorEnabledEvent(this.props.id.getValue()),
+    );
+  }
+
+  /**
+   * Turn 2FA off and wipe the secret so a re-enable starts from
+   * scratch. Backup-code rows are owned by a separate aggregate; the
+   * caller is responsible for deleting them in the same transaction.
+   */
+  disableTwoFactor(): void {
+    if (!this.props.twoFactorEnabled && !this.props.twoFactorSecret) return;
+    this.props.twoFactorEnabled = false;
+    this.props.twoFactorSecret = null;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new UserTwoFactorDisabledEvent(this.props.id.getValue()),
+    );
+  }
+
   activate(): void {
     if (this.props.status === UserStatus.ACTIVE) return;
     const prev = this.props.status;
@@ -505,6 +601,7 @@ export class User extends AggregateRoot {
       status: user.props.status,
       emailVerified: user.props.emailVerified,
       phoneVerified: user.props.phoneVerified,
+      twoFactorEnabled: user.props.twoFactorEnabled,
       isGuest: user.props.isGuest,
       createdAt: user.props.createdAt.toISOString(),
       updatedAt: user.props.updatedAt.toISOString(),
