@@ -25,12 +25,7 @@ type Paths = paths;
 export interface CreateApiClientOptions {
   baseUrl: string;
   getToken?: () => string | null | undefined;
-  /**
-   * Called on a 401 to try rotating the access token. Should return the
-   * new access token string on success, or `null` to fall through to
-   * `onUnauthorized`. The middleware then retries the original request
-   * once with the new token.
-   */
+
   refreshToken?: () => Promise<string | null>;
   onUnauthorized?: () => void | Promise<void>;
 }
@@ -38,10 +33,6 @@ export interface CreateApiClientOptions {
 export function createApiClient(options: CreateApiClientOptions) {
   const client = createClient<Paths>({ baseUrl: options.baseUrl });
 
-  // openapi-fetch's `onResponse` only sees the already-consumed Request,
-  // so we stash a clone in `onRequest` (keyed by request id) and use it
-  // to construct the retry. WeakMap on the Request object would also
-  // work, but the `id` is the documented stable key.
   const retryClones = new Map<string, Request>();
 
   const authMiddleware: Middleware = {
