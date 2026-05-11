@@ -119,7 +119,7 @@ export function SecuritySettings() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-0 border border-stone-100 bg-white shadow-sm divide-y divide-stone-100">
+      <div className="grid grid-cols-1 gap-0 border border-sand/20 bg-ivory divide-y divide-sand/20 shadow-sm">
         {/* Authentication Card */}
         <section className="p-6 sm:p-10 lg:p-16 space-y-12">
           <div className="space-y-2">
@@ -127,16 +127,16 @@ export function SecuritySettings() {
             <p className="text-[9px] text-stone-400 uppercase tracking-[0.3em] font-bold">Primary Member Access</p>
           </div>
 
-          <div className="divide-y divide-stone-50">
+          <div className="divide-y divide-sand/10">
             {/* Password Item */}
             <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
               <div className="flex items-start gap-5">
-                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                <div className="mt-1 p-3 bg-white text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500 shadow-sm">
                   <Key className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-charcoal uppercase tracking-wider">Password</p>
-                  <p className="text-sm text-stone-400">Regularly updating your password is recommended for optimal security.</p>
+                  <p className="text-[10px] font-bold text-charcoal uppercase tracking-[0.2em]">Password</p>
+                  <p className="text-sm text-stone-400 max-w-sm leading-relaxed">Regularly updating your password is recommended for optimal security.</p>
                   {isSuccess && (
                     <p className="text-[10px] text-stone-300 font-medium italic mt-1 flex items-center gap-1.5">
                       <Clock className="h-3 w-3" />
@@ -149,7 +149,7 @@ export function SecuritySettings() {
                 variant="ghost"
                 size="md"
                 onClick={() => setActiveModal("password")}
-                className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+                className="self-start sm:self-center border border-sand/30 hover:border-gold hover:text-gold text-[10px] uppercase tracking-widest font-bold"
               >
                 Update Password
               </Button>
@@ -158,7 +158,7 @@ export function SecuritySettings() {
             {/* Email Item */}
             <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
               <div className="flex items-start gap-5">
-                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                <div className="mt-1 p-3 bg-white text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500 shadow-sm">
                   <Mail className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
@@ -171,7 +171,7 @@ export function SecuritySettings() {
                 variant="ghost"
                 size="md"
                 onClick={() => setActiveModal("email")}
-                className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+                className="self-start sm:self-center border border-sand/30 hover:border-gold hover:text-gold text-[10px] uppercase tracking-widest font-bold"
               >
                 Change Email
               </Button>
@@ -180,7 +180,7 @@ export function SecuritySettings() {
             {/* Phone Item */}
             <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
               <div className="flex items-start gap-5">
-                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                <div className="mt-1 p-3 bg-white text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500 shadow-sm">
                   <Phone className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
@@ -199,7 +199,7 @@ export function SecuritySettings() {
                 variant="ghost"
                 size="md"
                 onClick={() => setActiveModal("phone")}
-                className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+                className="self-start sm:self-center border border-sand/30 hover:border-gold hover:text-gold text-[10px] uppercase tracking-widest font-bold"
               >
                 Verify Phone
               </Button>
@@ -208,7 +208,7 @@ export function SecuritySettings() {
             {/* Two-Factor Authentication Item */}
             <div className="py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 group">
               <div className="flex items-start gap-5">
-                <div className="mt-1 p-3 bg-stone-50 text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500">
+                <div className="mt-1 p-3 bg-white text-stone-400 rounded-full group-hover:bg-charcoal group-hover:text-gold transition-colors duration-500 shadow-sm">
                   <Smartphone className="h-5 w-5" />
                 </div>
                 <div className="space-y-1">
@@ -228,9 +228,7 @@ export function SecuritySettings() {
                       : "Off"}
                   </p>
                   <p className="text-[11px] text-stone-500 leading-relaxed">
-                    Adds a 6-digit code from your authenticator app on every
-                    sign-in. The single most effective control against
-                    credential theft.
+                    Adds a 6-digit code from your authenticator app on every sign-in.
                   </p>
                 </div>
               </div>
@@ -240,7 +238,7 @@ export function SecuritySettings() {
                     variant="ghost"
                     size="md"
                     onClick={() => setActiveModal("2fa-regenerate")}
-                    className="border border-stone-200 hover:border-gold hover:text-gold"
+                    className="border border-sand/30 hover:border-gold hover:text-gold text-[10px] uppercase tracking-widest font-bold"
                   >
                     <RefreshCcw className="h-3.5 w-3.5 mr-2" />
                     New Codes
@@ -249,7 +247,7 @@ export function SecuritySettings() {
                     variant="ghost"
                     size="md"
                     onClick={() => setActiveModal("2fa-disable")}
-                    className="border border-burgundy/20 text-burgundy/70 hover:border-burgundy hover:text-burgundy"
+                    className="border border-burgundy/20 text-burgundy/70 hover:border-burgundy hover:text-burgundy text-[10px] uppercase tracking-widest font-bold"
                   >
                     Disable
                   </Button>
@@ -259,7 +257,7 @@ export function SecuritySettings() {
                   variant="ghost"
                   size="md"
                   onClick={() => setActiveModal("2fa-setup")}
-                  className="self-start sm:self-center border border-stone-200 hover:border-gold hover:text-gold"
+                  className="self-start sm:self-center border border-sand/30 hover:border-gold hover:text-gold text-[10px] uppercase tracking-widest font-bold"
                 >
                   Enable 2FA
                 </Button>
@@ -269,9 +267,9 @@ export function SecuritySettings() {
         </section>
 
         {/* Account Integrity Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-x divide-stone-100 border-t border-stone-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-x divide-sand/20 border-t border-sand/20 bg-ivory/20">
           {/* Recovery Card */}
-          <div className="p-6 sm:p-10 lg:p-12 space-y-6 hover:bg-stone-50/50 transition-colors duration-700">
+          <div className="p-6 sm:p-10 lg:p-12 space-y-6 hover:bg-ivory transition-colors duration-700">
              <div className="flex items-center gap-3 text-charcoal">
                 <ShieldAlert className="h-5 w-5 stroke-[1.5]" />
                 <h4 className="font-serif text-2xl italic text-charcoal">Account Integrity</h4>
@@ -304,20 +302,22 @@ export function SecuritySettings() {
       </div>
 
       {/* Active Sessions Section */}
-      <div className="rounded-2xl border border-white/10 bg-black/40 p-6 md:p-8 backdrop-blur-xl">
-        <div className="mb-6 flex flex-col gap-2 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-white flex items-center gap-3">
-              <Smartphone className="h-5 w-5 text-gold/80" />
+      <div className="border border-sand/20 bg-ivory shadow-sm overflow-hidden">
+        <div className="p-6 sm:p-10 lg:p-16 border-b border-sand/20 bg-ivory/20">
+          <div className="space-y-2">
+            <h3 className="font-serif text-3xl text-charcoal italic flex items-center gap-4">
+              <Smartphone className="h-6 w-6 text-gold stroke-[1.5]" />
               Active Sessions
             </h3>
-            <p className="mt-1 text-sm text-gray-200 font-medium opacity-90">
-              View and manage devices where you are currently logged in.
+            <p className="mt-1 text-[9px] text-stone-500 uppercase tracking-[0.4em] font-bold">
+              Current Member Access Registry
             </p>
           </div>
         </div>
         
-        <ActiveSessionsList />
+        <div className="p-6 sm:p-10 lg:p-16">
+          <ActiveSessionsList />
+        </div>
       </div>
 
       {/* Modals — only mount when the matching modal is active so the

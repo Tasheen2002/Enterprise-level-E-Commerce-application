@@ -17,15 +17,17 @@ import { AccountSkeleton } from "./AccountSkeleton";
  */
 export default function AccountLayout({ children }: { children: ReactNode }) {
   return (
-    <Container size="full" className="flex-1 p-0">
-      <div className="flex flex-col lg:flex-row min-h-[calc(100vh-10rem)] bg-white">
+    <div className="min-h-screen bg-cream">
+      <div className="flex flex-col lg:flex-row min-h-screen">
         <AccountSidebar />
         <AccountMain>
-          <Suspense fallback={<AccountSkeleton />}>
-            <AccountPrefetchBoundary>{children}</AccountPrefetchBoundary>
-          </Suspense>
+          <div className="bg-cream min-h-full">
+            <Suspense fallback={<AccountSkeleton />}>
+              <AccountPrefetchBoundary>{children}</AccountPrefetchBoundary>
+            </Suspense>
+          </div>
         </AccountMain>
       </div>
-    </Container>
+    </div>
   );
 }

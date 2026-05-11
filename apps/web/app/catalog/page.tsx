@@ -135,7 +135,7 @@ function CatalogContent() {
       </section>
 
       {/* ─── Editorial Section ─── */}
-      <section className="relative grid grid-cols-1 md:grid-cols-2 bg-ivory">
+      <section className="relative grid grid-cols-1 md:grid-cols-2 bg-cream">
         <div className="relative aspect-square md:aspect-auto h-full overflow-hidden">
           <Image
             src={content.editorial.img}
@@ -163,8 +163,6 @@ function CatalogContent() {
           </Link>
         </div>
       </section>
-
-      <MarketingFooter />
     </div>
   );
 }

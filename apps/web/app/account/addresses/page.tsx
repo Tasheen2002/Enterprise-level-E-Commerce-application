@@ -11,7 +11,7 @@ export const metadata = buildMetadata({
 
 export default function AddressPage() {
   return (
-    <div className="flex-1 p-8 lg:p-16 bg-stone-50/20">
+    <div className="flex-1 p-8 lg:p-16">
       <Suspense fallback={<PageSpinner />}>
         <AddressBook />
       </Suspense>
