@@ -18,6 +18,8 @@ export interface RegisterUserCommand extends ICommand {
   readonly firstName?: string;
   readonly lastName?: string;
   readonly role?: UserRole;
+  readonly ipAddress?: string;
+  readonly userAgent?: string;
 }
 
 export class RegisterUserHandler implements ICommandHandler<
@@ -38,6 +40,8 @@ export class RegisterUserHandler implements ICommandHandler<
       firstName: command.firstName,
       lastName: command.lastName,
       role: command.role,
+      ipAddress: command.ipAddress,
+      userAgent: command.userAgent,
     });
 
     // Trigger verification email automatically on registration
