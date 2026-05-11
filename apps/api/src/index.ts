@@ -5,7 +5,7 @@ const start = async () => {
 
   try {
     const port = server.config.PORT;
-    await server.listen({ port, host: "0.0.0.0" });
+    await server.listen({ port, host: "::" });
     server.log.info(`Swagger docs available at http://localhost:${port}/docs`);
   } catch (err) {
     server.log.error(err);
