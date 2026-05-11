@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.4.0",
     "@tanstack/react-query": "^5.62.7",
@@ -19,12 +20,14 @@
     "@tasheen/types": "workspace:*",
     "@tasheen/ui": "workspace:*",
     "@tasheen/validation": "workspace:*",
+    "date-fns": "^4.1.0",
     "firebase": "^12.13.0",
     "lucide-react": "^0.460.0",
     "next": "^15.1.4",
     "next-themes": "^0.4.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-easy-crop": "^5.5.7",
     "react-hook-form": "^7.54.2",
     "sonner": "^2.0.7",
     "zod": "^4.3.5"
