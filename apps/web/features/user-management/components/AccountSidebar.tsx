@@ -67,9 +67,9 @@ export function AccountSidebar() {
   const CurrentIcon = currentItem.icon;
 
   return (
-    <aside className="w-full lg:w-72 flex flex-col bg-stone-50/30 lg:border-r border-stone-100 lg:sticky lg:top-0 lg:h-[calc(100vh-4rem)]">
+    <aside className="w-full lg:w-72 flex flex-col bg-cream lg:border-r border-sand/20 lg:sticky lg:top-0 lg:h-screen overflow-y-auto overflow-x-hidden">
       {/* ─── Mobile: compact toggle bar ─── */}
-      <div className="lg:hidden border-b border-stone-100">
+      <div className="lg:hidden border-b border-sand/20">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -201,7 +201,7 @@ export function AccountSidebar() {
         </ul>
       </nav>
 
-      <div className="hidden lg:block p-4 border-t border-stone-100">
+      <div className="hidden lg:block p-4 border-t border-sand/20">
         <button
           type="button"
           onMouseEnter={prefetchSignIn}

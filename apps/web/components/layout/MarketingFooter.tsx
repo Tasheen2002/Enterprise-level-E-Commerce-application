@@ -96,8 +96,6 @@ const SOCIAL_LINKS = [
  * columns, or social row.
  */
 export function MarketingFooter() {
-  const year = new Date().getFullYear();
-
   return (
     <footer>
       {/* ─── Trust Bar ─── */}
@@ -188,29 +186,6 @@ export function MarketingFooter() {
                 <strong className="text-charcoal">10% off</strong> your first order.*
               </p>
               <NewsletterForm />
-            </div>
-          </div>
-        </Container>
-      </section>
-
-      {/* ─── Bottom Bar ─── */}
-      <section className="bg-charcoal">
-        <Container size="wide">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
-            <p className="text-[10px] uppercase tracking-[0.18em] text-cream/40">
-              © {year} Slipperze. Handcrafted Heritage.
-            </p>
-
-            {/* Payment Icons */}
-            <div className="flex items-center gap-4">
-              {["Visa", "Mastercard", "Amex", "PayPal"].map((brand) => (
-                <span
-                  key={brand}
-                  className="text-[9px] uppercase tracking-wider text-cream/30 border border-cream/15 px-2 py-1 rounded-sm"
-                >
-                  {brand}
-                </span>
-              ))}
             </div>
           </div>
         </Container>
