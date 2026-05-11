@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "generate": "openapi-typescript http://localhost:3000/docs/json -o ./src/generated/schema.ts",
+    "generate": "openapi-typescript http://localhost:3001/docs/json -o ./src/generated/schema.ts",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
