@@ -45,12 +45,20 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const secure = isSecureRequest(request);
 
+  // The access token JWT itself expires server-side after ~15m, but we
+  // keep the cookie alive for the full refresh-token window so the
+  // middleware doesn't bounce a returning user to /sign-in on a fresh
+  // page load. Once they're in, the API client transparently rotates
+  // the access token via the refresh token, and re-syncs this cookie.
+  // 7d is a safe upper bound that matches the default refresh-token
+  // lifetime ("remember me" extends the refresh token to 30d, but the
+  // cookie still effectively lives until its content is rotated).
   cookieStore.set(TOKEN_COOKIE, accessToken, {
     httpOnly: true,
     sameSite: "lax",
     secure,
     path: "/",
-    maxAge: 60 * 60 * 24, // 24h — matches typical access token lifetime
+    maxAge: 60 * 60 * 24 * 7,
   });
 
   if (refreshToken) {

@@ -9,10 +9,11 @@ import {
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { validateBody, toJsonSchema } from "../validation/validator";
-import { successResponse } from "@/api/src/shared/http/response-schemas";
+import { successResponse, actionSuccessResponse } from "@/api/src/shared/http/response-schemas";
 import {
   updateProfileSchema,
   profileResponseSchema,
+  activeSessionResponseSchema,
 } from "../validation/profile.schema";
 
 const writeRateLimiter = createRateLimiter({
@@ -102,7 +103,52 @@ export async function profileRoutes(
         },
       },
     },
-    (request, reply) =>
-      controller.getAvatarUploadToken(request as AuthenticatedRequest, reply),
+    (req, reply) =>
+      controller.getAvatarUploadToken(req as AuthenticatedRequest, reply),
+  );
+
+  // GET /users/me/sessions
+  fastify.get(
+    "/users/me/sessions",
+    {
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      schema: {
+        tags: ["Profile"],
+        summary: "Get active sessions",
+        description: "List all active devices where the user is currently logged in.",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: successResponse(activeSessionResponseSchema),
+        },
+      },
+    },
+    (req, reply) =>
+      controller.getCurrentUserSessions(req as AuthenticatedRequest, reply),
+  );
+
+  // DELETE /users/me/sessions/:id
+  fastify.delete(
+    "/users/me/sessions/:id",
+    {
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      schema: {
+        tags: ["Profile"],
+        summary: "Revoke a session",
+        description: "Revoke a specific active session by ID.",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+          },
+          required: ["id"],
+        },
+        response: {
+          200: actionSuccessResponse(),
+        },
+      },
+    },
+    (req, reply) =>
+      controller.revokeCurrentUserSession(req as any, reply),
   );
 }

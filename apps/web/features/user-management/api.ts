@@ -1,5 +1,6 @@
 import { config } from "@/lib/config";
-import { setAuthToken, setRefreshToken, syncAuthCookies } from "@/lib/auth";
+import { setAuthToken, setRefreshToken, syncAuthCookies, onUnauthorized } from "@/lib/auth";
+import { refreshAccessToken } from "@/lib/auth-refresh";
 import type {
   LoginRequest,
   RegisterRequest,
@@ -12,7 +13,7 @@ import type {
   ChangeEmailRequest,
   DeleteAccountRequest,
 } from "@tasheen/validation/auth";
-import type { AuthResult, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken } from "./types";
+import type { AuthResult, LoginResponse, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken, BackupCodesResult, Setup2FAResult } from "./types";
 import { getAuthToken } from "@/lib/auth";
 
 
@@ -62,6 +63,14 @@ async function request<T>(
   path: string,
   init: RequestInit & { body?: BodyInit | null },
 ): Promise<T> {
+  return doRequest<T>(path, init, false);
+}
+
+async function doRequest<T>(
+  path: string,
+  init: RequestInit & { body?: BodyInit | null },
+  isRetry: boolean,
+): Promise<T> {
   const token = getAuthToken();
   const response = await fetch(`${config.apiBaseUrl}${API_PREFIX}${path}`, {
     ...init,
@@ -72,6 +81,27 @@ async function request<T>(
       ...(init.headers ?? {}),
     },
   });
+
+  // 401 with a valid-looking session ⇒ access token expired. Try a
+  // single refresh + retry before surfacing the failure. The refresh
+  // helper is concurrency-safe (singleton in-flight Promise) so a burst
+  // of parallel 401s share one rotation. `isRetry` guards against an
+  // infinite loop if the rotated token still 401s. The `/auth/refresh`
+  // path is excluded so a refresh-itself-401 doesn't recurse.
+  if (
+    response.status === 401 &&
+    !isRetry &&
+    path !== "/auth/refresh"
+  ) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      return doRequest<T>(path, init, true);
+    }
+    // Refresh failed ⇒ session is dead. Surface as ApiCallError below
+    // and also kick off the sign-out redirect. Fire-and-forget so the
+    // caller's await chain unblocks immediately.
+    void onUnauthorized();
+  }
 
   if (response.status === 204) {
     return {} as T;
@@ -138,12 +168,17 @@ export async function register(input: RegisterRequest): Promise<AuthResult> {
   return result;
 }
 
-export async function login(input: LoginRequest): Promise<AuthResult> {
-  const result = await request<AuthResult>("/auth/login", {
+export async function login(input: LoginRequest): Promise<LoginResponse> {
+  const result = await request<LoginResponse>("/auth/login", {
     method: "POST",
     body: JSON.stringify(input),
   });
-  await persistTokens(result);
+  // Only persist tokens on the success branch. The 2FA-required branch
+  // carries a pending token that's NOT a session — the caller redirects
+  // to the challenge page and posts to /auth/2fa/verify with the code.
+  if (result.kind === "success") {
+    await persistTokens(result);
+  }
   return result;
 }
 
@@ -214,6 +249,68 @@ export async function verifyEmail(input: VerifyEmailRequest): Promise<void> {
   await request<void>("/auth/verify-email", {
     method: "POST",
     body: JSON.stringify(input),
+  });
+}
+
+// --- Two-factor authentication ---
+
+export async function setup2FA(): Promise<Setup2FAResult> {
+  return request<Setup2FAResult>("/auth/2fa/setup", { method: "POST" });
+}
+
+export async function enable2FA(code: string): Promise<BackupCodesResult> {
+  return request<BackupCodesResult>("/auth/2fa/enable", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function disable2FA(password: string): Promise<void> {
+  await request<void>("/auth/2fa/disable", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+}
+
+export async function regenerateBackupCodes(
+  password: string,
+): Promise<BackupCodesResult> {
+  return request<BackupCodesResult>("/auth/2fa/backup-codes/regenerate", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  });
+}
+
+/**
+ * Step 2 of the email/password + 2FA login. Exchanges the pending
+ * token + a TOTP/backup code for a real session. Persists tokens on
+ * success.
+ */
+export async function verify2FALogin(
+  pendingToken: string,
+  code: string,
+): Promise<AuthResult> {
+  const result = await request<AuthResult & { kind?: string }>(
+    "/auth/2fa/verify",
+    {
+      method: "POST",
+      body: JSON.stringify({ pendingToken, code }),
+    },
+  );
+  await persistTokens(result);
+  return result;
+}
+
+/**
+ * Send a Firebase phone-auth ID token to the backend so it can mark
+ * the user's phone as verified. The phone number is extracted from the
+ * verified `phone_number` claim on the token server-side; the client
+ * sees it echoed back in the response.
+ */
+export async function verifyPhone(idToken: string): Promise<{ phoneNumber: string }> {
+  return request<{ phoneNumber: string }>("/auth/verify-phone", {
+    method: "POST",
+    body: JSON.stringify({ idToken }),
   });
 }
 

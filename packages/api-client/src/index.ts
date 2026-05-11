@@ -25,26 +25,61 @@ type Paths = paths;
 export interface CreateApiClientOptions {
   baseUrl: string;
   getToken?: () => string | null | undefined;
+
+  refreshToken?: () => Promise<string | null>;
   onUnauthorized?: () => void | Promise<void>;
 }
 
 export function createApiClient(options: CreateApiClientOptions) {
   const client = createClient<Paths>({ baseUrl: options.baseUrl });
 
-  // Auth middleware: attach Bearer token from the supplied resolver.
+  const retryClones = new Map<string, Request>();
+
   const authMiddleware: Middleware = {
-    async onRequest({ request }) {
+    async onRequest({ request, id }) {
       const token = options.getToken?.();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
       }
+      // Stash a clone BEFORE the body stream is consumed by fetch — we
+      // need an unconsumed body to be able to retry the request.
+      if (options.refreshToken) {
+        retryClones.set(id, request.clone());
+      }
       return request;
     },
-    async onResponse({ response }) {
-      if (response.status === 401 && options.onUnauthorized) {
-        await options.onUnauthorized();
+    async onResponse({ request, response, id }) {
+      const clone = retryClones.get(id);
+      retryClones.delete(id);
+
+      if (response.status !== 401) return response;
+
+      // No refresh hook configured — preserve the legacy behaviour of
+      // immediately signing the user out.
+      if (!options.refreshToken) {
+        await options.onUnauthorized?.();
+        return response;
       }
-      return response;
+
+      const newToken = await options.refreshToken();
+      if (!newToken || !clone) {
+        await options.onUnauthorized?.();
+        return response;
+      }
+
+      // Retry the original request once with the rotated token. We use
+      // the global `fetch` (not the openapi-fetch client) so this retry
+      // does NOT re-enter the middleware — preventing a refresh loop if
+      // the retry itself comes back 401.
+      const retryHeaders = new Headers(clone.headers);
+      retryHeaders.set("Authorization", `Bearer ${newToken}`);
+      const retryRequest = new Request(clone, { headers: retryHeaders });
+      const retryResponse = await fetch(retryRequest);
+
+      if (retryResponse.status === 401) {
+        await options.onUnauthorized?.();
+      }
+      return retryResponse;
     },
   };
 

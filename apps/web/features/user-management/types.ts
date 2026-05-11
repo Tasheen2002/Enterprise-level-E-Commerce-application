@@ -17,6 +17,16 @@ export interface AuthResult {
   user: AuthUser;
 }
 
+/**
+ * Login response from `/auth/login`. The discriminated `kind` lets the
+ * client tell whether the user is fully signed in or still owes a 2FA
+ * code. The 2FA branch carries a short-lived (5 min) pending token
+ * that the second step exchanges via `/auth/2fa/verify`.
+ */
+export type LoginResponse =
+  | (AuthResult & { kind: "success" })
+  | { kind: "two_factor_required"; pendingToken: string };
+
 export interface UserIdentity {
   userId: string;
   email: string;
@@ -24,8 +34,21 @@ export interface UserIdentity {
   isGuest: boolean;
   emailVerified: boolean;
   phoneVerified: boolean;
+  twoFactorEnabled: boolean;
   updatedAt?: string;
   createdAt?: string;
+}
+
+/** Plaintext backup codes — returned ONLY by enable + regenerate. */
+export interface BackupCodesResult {
+  backupCodes: string[];
+}
+
+export interface Setup2FAResult {
+  /** Base32 secret, for users who can't scan the QR. */
+  secret: string;
+  /** Pre-rendered base64 PNG; drop into an `<img src>` directly. */
+  qrCodeDataUrl: string;
 }
 
 export interface RefreshTokenResult {

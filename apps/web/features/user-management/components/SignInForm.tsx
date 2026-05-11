@@ -18,6 +18,7 @@ import {
 } from "@tasheen/ui";
 import { useLogin } from "../hooks/useLogin";
 import { useGoogleLogin } from "../hooks/useGoogleLogin";
+import { Login2FAChallenge } from "./Login2FAChallenge";
 import { toast } from "sonner";
 
 // Firebase popup-cancelled codes — user closed the dialog, not a real failure.
@@ -32,6 +33,12 @@ export function SignInForm() {
   const login = useLogin();
   const googleLogin = useGoogleLogin();
   const [serverError, setServerError] = useState<string | null>(null);
+  // When the user has 2FA on, step 1 (this form) returns a pending
+  // token and we swap to the challenge UI without changing the URL.
+  // Holding the token in component state (rather than URL/storage)
+  // means a refresh discards it — exactly what we want, since the
+  // token is short-lived and re-entry should restart from credentials.
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
 
   const onGoogleClick = async () => {
     setServerError(null);
@@ -62,11 +69,19 @@ export function SignInForm() {
   const onSubmit = handleSubmit(async (values) => {
     setServerError(null);
     try {
-      await login.mutateAsync({
+      const result = await login.mutateAsync({
         email: values.email,
         password: values.password,
         rememberMe: values.rememberMe,
       });
+      if (result.kind === "two_factor_required") {
+        // Hold the pending token in state and re-render as the
+        // challenge UI. No toast yet — credentials checked out but
+        // the user isn't actually signed in until the second factor
+        // verifies.
+        setPendingToken(result.pendingToken);
+        return;
+      }
       toast.success("Welcome back to Slipperze");
       router.push("/account");
     } catch (err: any) {
@@ -75,6 +90,19 @@ export function SignInForm() {
       toast.error(message);
     }
   });
+
+  if (pendingToken) {
+    return (
+      <Login2FAChallenge
+        pendingToken={pendingToken}
+        onSuccess={() => router.push("/account")}
+        onCancel={() => {
+          setPendingToken(null);
+          setServerError(null);
+        }}
+      />
+    );
+  }
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-6">

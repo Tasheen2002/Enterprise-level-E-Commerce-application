@@ -16,7 +16,7 @@ export class LogoutHandler
   ) { }
 
   async handle(command: LogoutCommand): Promise<CommandResult<void>> {
-    await this.authService.logout(command.userId, command.token);
+    await this.authService.logout(command.userId, command.token, command.refreshToken);
 
     if (command.token) {
       this.tokenBlacklistService.blacklistToken(command.token);

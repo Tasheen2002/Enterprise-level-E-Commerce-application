@@ -1,5 +1,7 @@
 export { AuthenticationService } from './authentication.service';
-export type { AuthResult, LoginResult, RefreshTokenResult } from './authentication.service';
+export type { AuthResult, LoginResult, LoginOutcome, RefreshTokenResult } from './authentication.service';
+export type { ITotpService } from './itotp.service';
+export type { ITwoFactorBackupCodeService } from './itwo-factor-backup-code.service';
 export { UserService } from './user.service';
 export type { IJwtService, TokenPayload } from './ijwt.service';
 export type { ITokenBlacklistService } from './itoken-blacklist.service';

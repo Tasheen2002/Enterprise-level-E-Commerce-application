@@ -4,6 +4,8 @@ import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
   GetUserProfileHandler,
   UpdateProfileHandler,
+  GetActiveSessionsHandler,
+  RevokeSessionHandler,
 } from "../../../application";
 import { UpdateProfileBody } from "../validation/profile.schema";
 import { ImageKitUploadAuthService } from "../../../application/services/imagekit-upload-auth.service";
@@ -12,6 +14,8 @@ export class ProfileController {
   constructor(
     private readonly getProfileHandler: GetUserProfileHandler,
     private readonly updateProfileHandler: UpdateProfileHandler,
+    private readonly getActiveSessionsHandler: GetActiveSessionsHandler,
+    private readonly revokeSessionHandler: RevokeSessionHandler,
     // Optional — null when ImageKit isn't configured. The avatar upload
     // route returns 503 in that case.
     private readonly imageKitUploadAuth: ImageKitUploadAuthService | null,
@@ -85,6 +89,37 @@ export class ProfileController {
         subjectId: request.user.userId,
       });
       return ResponseHelper.ok(reply, "Upload token issued", token);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  // --- Sessions ---
+
+  async getCurrentUserSessions(
+    request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.getActiveSessionsHandler.handle({
+        userId: request.user.userId,
+      });
+      return ResponseHelper.ok(reply, "Active sessions retrieved", result.data);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async revokeCurrentUserSession(
+    request: AuthenticatedRequest<{ Params: { id: string } }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.revokeSessionHandler.handle({
+        userId: request.user.userId,
+        sessionId: request.params.id,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Session revoked");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

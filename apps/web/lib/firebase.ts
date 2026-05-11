@@ -39,3 +39,51 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     photoURL: credential.user.photoURL,
   };
 }
+
+/** 
+ * PHONE VERIFICATION 
+ */
+
+export interface PhoneVerificationResult {
+  confirmationResult: any;
+}
+
+/** 
+ * Initializes the invisible reCAPTCHA verifier on a specific container ID.
+ */
+export async function setupRecaptcha(containerId: string): Promise<any> {
+  const { getAuth, RecaptchaVerifier } = await import("firebase/auth");
+  const { getApps, getApp, initializeApp } = await import("firebase/app");
+  
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  return new RecaptchaVerifier(auth, containerId, {
+    size: "invisible",
+    callback: () => {
+      // reCAPTCHA solved
+    }
+  });
+}
+
+/**
+ * Sends a 6-digit SMS code to the provided phone number.
+ * Returns the confirmationResult needed for the next step.
+ */
+export async function sendPhoneCode(phoneNumber: string, verifier: any): Promise<any> {
+  const { getAuth, signInWithPhoneNumber } = await import("firebase/auth");
+  const { getApps, getApp, initializeApp } = await import("firebase/app");
+  
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  return signInWithPhoneNumber(auth, phoneNumber, verifier);
+}
+
+/**
+ * Confirms the 6-digit code and returns the Firebase ID token as proof.
+ */
+export async function verifyPhoneCode(confirmationResult: any, code: string): Promise<string> {
+  const result = await confirmationResult.confirm(code);
+  return result.user.getIdToken();
+}

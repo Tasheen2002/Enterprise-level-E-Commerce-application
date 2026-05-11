@@ -60,7 +60,7 @@ export function AddressBook() {
           <Loader2 className="h-8 w-8 text-gold animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0 border border-stone-100 divide-x divide-y divide-stone-100 bg-white shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-8">
           {/* Existing Addresses */}
           {addresses.map((address) => (
             <AddressCard 
@@ -76,13 +76,13 @@ export function AddressBook() {
           {/* Add New Card */}
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="group relative flex flex-col items-center justify-center gap-6 p-12 min-h-[320px] bg-stone-50/20 hover:bg-white transition-all duration-700"
+            className="group relative flex flex-col items-center justify-center gap-6 p-8 min-h-[260px] rounded-2xl border-2 border-dashed border-stone-100 bg-stone-50/10 hover:bg-stone-50 hover:border-gold/30 transition-all duration-500"
           >
-            <div className="p-5 bg-white rounded-full text-stone-300 group-hover:text-gold shadow-sm transition-all duration-700">
-              <Plus className="h-6 w-6 stroke-[1.5]" />
+            <div className="p-4 bg-white rounded-full text-stone-300 group-hover:text-gold shadow-sm transition-all duration-500">
+              <Plus className="h-5 w-5 stroke-[1.5]" />
             </div>
-            <div className="text-center space-y-2">
-              <h4 className="font-serif text-2xl text-charcoal tracking-wide">Add destination</h4>
+            <div className="text-center space-y-1">
+              <h4 className="font-serif text-xl text-charcoal tracking-wide">Add destination</h4>
               <p className="text-[9px] text-stone-400 max-w-[180px] mx-auto leading-relaxed uppercase tracking-[0.2em]">
                 Register a new artisanal delivery point.
               </p>
@@ -120,62 +120,73 @@ function AddressCard({
 }: { 
   address: Address; 
   onEdit: () => void; 
-  onDelete: () => void;
+  onDelete: () => void; 
   onSetDefault: () => void;
   isDeleting: boolean;
 }) {
   return (
-    <div className="group relative bg-white p-6 sm:p-10 flex flex-col justify-between min-h-[260px] sm:min-h-[320px] transition-all duration-500">
-      <div className="space-y-8">
+    <div className="relative group bg-[#fcfaf6] p-8 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:shadow-md hover:border-gold/20">
+      <div className="space-y-6">
         <div className="flex items-start justify-between">
-          <div className="space-y-2">
+          <div className="space-y-1.5">
              {address.isDefault && (
-               <div className="flex items-center gap-2 text-[8px] font-bold text-gold uppercase tracking-[0.2em]">
-                 <CheckCircle2 className="h-3 w-3" /> Default Shipping
+               <div className="flex items-center gap-1.5 px-3 py-1 bg-gold text-white text-[9px] font-bold uppercase tracking-widest rounded-full shadow-sm mb-2 w-fit">
+                 <CheckCircle2 className="h-2.5 w-2.5 fill-current" />
+                 Primary
                </div>
              )}
-             <h3 className="font-serif text-3xl text-charcoal pt-2 italic">
+             <h3 className="font-serif text-2xl text-charcoal italic tracking-tight leading-none pt-1">
                {address.firstName} {address.lastName}
              </h3>
-             <p className="text-[9px] text-stone-400 font-bold uppercase tracking-[0.2em]">
-               {address.type} Destination
+             <p className="text-[10px] text-stone-400 font-bold uppercase tracking-[0.2em]">
+               {address.type} Residence
              </p>
           </div>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <p className="text-sm text-stone-600 leading-relaxed font-medium">
             {address.addressLine1}
             {address.addressLine2 && <span className="block">{address.addressLine2}</span>}
             <span className="block">{address.city}, {address.state} {address.postalCode}</span>
           </p>
-          <div className="flex items-center gap-2 text-[10px] text-stone-400 pt-4 uppercase tracking-[0.2em] font-bold">
-             <Globe className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 text-[10px] text-stone-400 pt-3 uppercase tracking-[0.2em] font-bold">
+             <Globe className="h-3.5 w-3.5 text-stone-300" />
              {address.country}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-8 pt-6 mt-6 sm:pt-10 sm:mt-10 border-t border-stone-50">
+      <div className="flex items-center gap-8 pt-6 mt-6 border-t border-stone-100/50">
         <button 
           onClick={onEdit}
-          className="text-[9px] font-bold uppercase tracking-[0.25em] text-stone-400 hover:text-gold transition-colors flex items-center gap-2 group/btn"
+          className="text-[10px] font-bold uppercase tracking-[0.15em] text-stone-400 hover:text-gold transition-colors underline-offset-4 hover:underline"
         >
-          <Edit3 className="h-3 w-3" /> 
           Edit
         </button>
+        
+        {!address.isDefault ? (
+          <button 
+            onClick={onSetDefault}
+            className="text-[10px] font-bold uppercase tracking-[0.15em] text-stone-400 hover:text-gold transition-colors"
+          >
+            Set Default
+          </button>
+        ) : (
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gold">
+            Verified
+          </div>
+        )}
+
         <button 
           onClick={() => onDelete()}
           disabled={isDeleting || address.isDefault}
           className={cn(
-            "text-[9px] font-bold uppercase tracking-[0.25em] transition-colors flex items-center gap-2 group/btn",
-            address.isDefault 
-              ? "text-stone-100 cursor-not-allowed" 
-              : "text-stone-400 hover:text-burgundy"
+            "ml-auto p-2 transition-colors duration-500",
+            address.isDefault ? "text-stone-100 cursor-not-allowed" : "text-stone-300 hover:text-burgundy"
           )}
         >
-          {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-          Remove
+          {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 stroke-[1.5]" />}
         </button>
       </div>
     </div>

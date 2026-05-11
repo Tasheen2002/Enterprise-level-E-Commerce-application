@@ -20,13 +20,14 @@ export default function HomePage() {
           href="/catalog?gender=women"
           className="relative group h-[55vh] lg:h-full w-full overflow-hidden flex items-center justify-center"
         >
-          <Image
+            <Image
             src={imageKitUrl("hero-women.png")}
             alt="Women's Collection"
             fill
             priority
+            decoding="async"
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover transition-transform duration-[3000ms] ease-editorial group-hover:scale-105"
+            className="object-cover transition-transform duration-[2000ms] ease-editorial group-hover:scale-105 will-change-transform"
           />
           {/* Subtle warm grain overlay */}
           <div className="absolute inset-0 bg-charcoal/10 group-hover:bg-charcoal/0 transition-colors duration-1000" />
@@ -43,13 +44,14 @@ export default function HomePage() {
           href="/catalog?gender=men"
           className="relative group h-[55vh] lg:h-full w-full overflow-hidden flex items-center justify-center"
         >
-          <Image
+            <Image
             src={imageKitUrl("hero-men.png")}
             alt="Men's Collection"
             fill
             priority
+            decoding="async"
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover transition-transform duration-[3000ms] ease-editorial group-hover:scale-105"
+            className="object-cover transition-transform duration-[2000ms] ease-editorial group-hover:scale-105 will-change-transform"
           />
           <div className="absolute inset-0 bg-charcoal/10 group-hover:bg-charcoal/0 transition-colors duration-1000" />
 

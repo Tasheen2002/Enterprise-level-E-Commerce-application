@@ -52,6 +52,35 @@ export const verifyEmailRequestSchema = z.object({
   token: z.string().min(1),
 });
 
+// Phone verification: the wire payload is just the Firebase ID token
+// from `signInWithPhoneNumber` + OTP confirm. The phone number itself
+// rides on the `phone_number` claim inside that token — clients do
+// not (and must not) pass it separately.
+export const verifyPhoneRequestSchema = z.object({
+  idToken: z.string().min(1).max(4096),
+});
+
+// --- Two-factor authentication ---
+
+export const enable2FARequestSchema = z.object({
+  code: z.string().regex(/^\d{6}$/, "Code must be 6 digits"),
+});
+
+export const disable2FARequestSchema = z.object({
+  password: z.string().min(1, "Password is required").max(128),
+});
+
+export const regenerateBackupCodesRequestSchema = z.object({
+  password: z.string().min(1, "Password is required").max(128),
+});
+
+export const verify2FALoginRequestSchema = z.object({
+  pendingToken: z.string().min(1).max(4096),
+  // Either a 6-digit TOTP or a XXXX-XXXX backup code (case/dash
+  // tolerant — backend normalises before hashing).
+  code: z.string().min(6, "Code is required").max(20),
+});
+
 export const resendVerificationRequestSchema = z.object({
   email: z.string().email(),
 });
@@ -115,6 +144,11 @@ export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
 export type VerifyEmailRequest = z.infer<typeof verifyEmailRequestSchema>;
+export type VerifyPhoneRequest = z.infer<typeof verifyPhoneRequestSchema>;
+export type Enable2FARequest = z.infer<typeof enable2FARequestSchema>;
+export type Disable2FARequest = z.infer<typeof disable2FARequestSchema>;
+export type RegenerateBackupCodesRequest = z.infer<typeof regenerateBackupCodesRequestSchema>;
+export type Verify2FALoginRequest = z.infer<typeof verify2FALoginRequestSchema>;
 export type ResendVerificationRequest = z.infer<
   typeof resendVerificationRequestSchema
 >;
