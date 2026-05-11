@@ -3,3 +3,4 @@ export * from "./iuser-profile.repository";
 export * from "./iaddress.repository";
 export * from "./ipayment-method.repository";
 export * from "./isocial-login.repository";
+export * from "./itwo-factor-backup-code.repository";
