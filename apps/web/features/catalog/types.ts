@@ -6,6 +6,22 @@ export interface SubCategory {
   description?: string;
 }
 
+export interface Size {
+  value: string;
+  isAvailable: boolean;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  color: string;
+  price: number;
+  currency: string;
+  images: string[];
+  href: string;
+  sizes: Size[];
+}
+
 export interface CategoryPageData {
   title: string;
   description: string;
