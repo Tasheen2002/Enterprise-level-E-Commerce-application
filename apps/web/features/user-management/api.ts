@@ -1,5 +1,5 @@
-import { request } from "@/lib/api-client";
-import { config } from "@/lib/config";
+import { request, ApiCallError } from "@/lib/api-client";
+export { ApiCallError };
 import { setAuthToken, setRefreshToken, syncAuthCookies } from "@/lib/auth";
 import type {
   LoginRequest,
@@ -31,9 +31,6 @@ export async function login(input: LoginRequest): Promise<LoginResponse> {
     method: "POST",
     body: JSON.stringify(input),
   });
-  // Only persist tokens on the success branch. The 2FA-required branch
-  // carries a pending token that's NOT a session — the caller redirects
-  // to the challenge page and posts to /auth/2fa/verify with the code.
   if (result.kind === "success") {
     await persistTokens(result);
   }
@@ -61,9 +58,6 @@ async function persistTokens(result: AuthResult): Promise<void> {
   if (result.refreshToken) {
     setRefreshToken(result.refreshToken);
   }
-  // Mirror into httpOnly cookies so middleware + Server Components can see
-  // the session. Awaited so callers (login/register hooks) can rely on the
-  // cookie being in place before navigating into a middleware-gated route.
   await syncAuthCookies(result.accessToken, result.refreshToken);
 }
 
@@ -96,9 +90,6 @@ export async function refreshToken(input: RefreshTokenRequest): Promise<RefreshT
   if (result.refreshToken) {
     setRefreshToken(result.refreshToken);
   }
-  // Keep the httpOnly cookie in sync with the rotated token so middleware
-  // continues to recognise the session and Server Components see the new
-  // access token on subsequent renders.
   await syncAuthCookies(result.accessToken, result.refreshToken);
   return result;
 }
@@ -159,12 +150,6 @@ export async function verify2FALogin(
   return result;
 }
 
-/**
- * Send a Firebase phone-auth ID token to the backend so it can mark
- * the user's phone as verified. The phone number is extracted from the
- * verified `phone_number` claim on the token server-side; the client
- * sees it echoed back in the response.
- */
 export async function verifyPhone(idToken: string): Promise<{ phoneNumber: string }> {
   return request<{ phoneNumber: string }>("/auth/verify-phone", {
     method: "POST",
@@ -288,10 +273,6 @@ export interface SetupIntentResult {
   customerId: string;
 }
 
-/**
- * Ask the backend to start a SetupIntent. Returns the `client_secret`
- * that Stripe Elements needs in `confirmCardSetup`.
- */
 export async function createPaymentMethodSetupIntent(): Promise<SetupIntentResult> {
   return request<SetupIntentResult>("/users/me/payment-methods/setup-intent", {
     method: "POST",
@@ -299,10 +280,6 @@ export async function createPaymentMethodSetupIntent(): Promise<SetupIntentResul
   });
 }
 
-/**
- * After Stripe has confirmed the card on the client, post the resulting
- * `pm_…` ID. Backend re-fetches details from Stripe and persists.
- */
 export async function attachPaymentMethod(input: {
   stripePaymentMethodId: string;
   isDefault?: boolean;
