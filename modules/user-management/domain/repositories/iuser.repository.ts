@@ -25,7 +25,7 @@ export interface UserFilters {
 
 /** Projection returned by read-side list queries — avoids full entity hydration. */
 export interface UserListItem {
-  userId: string;
+  id: string;
   email: string;
   phone: string | null;
   firstName: string | null;
