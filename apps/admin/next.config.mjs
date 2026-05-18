@@ -13,7 +13,13 @@ const nextConfig = {
   },
   experimental: {
     typedRoutes: true,
+    optimizePackageImports: [
+      "lucide-react",
+      "@tasheen/ui",
+      "sonner",
+    ],
   },
 };
+
 
 export default nextConfig;
