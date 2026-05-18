@@ -142,7 +142,7 @@ export class UserRepository
     ]);
 
     const items: UserListItem[] = rows.map((r: UserListRow) => ({
-      userId: r.id,
+      id: r.id,
       email: r.email,
       phone: r.phone ?? null,
       firstName: r.firstName ?? null,

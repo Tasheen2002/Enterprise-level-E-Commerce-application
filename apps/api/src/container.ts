@@ -64,8 +64,14 @@ import { ImageKitUploadAuthService } from "../../../modules/user-management/appl
 import { AddressesController } from "../../../modules/user-management/infra/http/controllers/addresses.controller";
 import { PaymentMethodsController } from "../../../modules/user-management/infra/http/controllers/payment-methods.controller";
 import { UsersController } from "../../../modules/user-management/infra/http/controllers/users.controller";
+import { AdminInvitationController } from "../../../modules/user-management/infra/http/controllers/admin-invitation.controller";
 import { JwtService } from "../../../modules/user-management/infra/http/security/jwt.service";
 import { TokenBlacklistService } from "../../../modules/user-management/infra/http/security/token-blacklist";
+import { AdminInvitationRepository } from "../../../modules/user-management/infra/persistence/repositories/admin-invitation.repository";
+import { InviteAdminHandler } from "../../../modules/user-management/application/commands/invite-admin.command";
+import { AcceptAdminInvitationHandler } from "../../../modules/user-management/application/commands/accept-admin-invitation.command";
+import { RevokeAdminInvitationHandler } from "../../../modules/user-management/application/commands/revoke-admin-invitation.command";
+import { ListAdminInvitationsHandler } from "../../../modules/user-management/application/queries/list-admin-invitations.query";
 
 // ============================================================
 // Product Catalog — Imports
@@ -763,6 +769,15 @@ export class Container {
       new ToggleUserEmailVerifiedHandler(userService),
     );
 
+    // --- Admin Invitation wiring ---
+    const adminInvitationRepository = new AdminInvitationRepository(prisma);
+    const adminInvitationController = new AdminInvitationController(
+      new InviteAdminHandler(adminInvitationRepository, userRepository, emailService),
+      new AcceptAdminInvitationHandler(adminInvitationRepository, userRepository, authService, TokenBlacklistService, emailService),
+      new RevokeAdminInvitationHandler(adminInvitationRepository),
+      new ListAdminInvitationsHandler(adminInvitationRepository),
+    );
+
     this.services.set("eventBus", eventBus);
     this.services.set("prisma", prisma);
     this.services.set("userRepository", userRepository);
@@ -776,6 +791,7 @@ export class Container {
     this.services.set("addressesController", addressesController);
     this.services.set("paymentMethodsController", paymentMethodsController);
     this.services.set("usersController", usersController);
+    this.services.set("adminInvitationController", adminInvitationController);
 
     // ============================================================
     // Product Catalog Module
@@ -1571,6 +1587,7 @@ export class Container {
       addressesController: this.get<AddressesController>("addressesController"),
       paymentMethodsController: this.get<PaymentMethodsController>("paymentMethodsController"),
       usersController: this.get<UsersController>("usersController"),
+      adminInvitationController: this.get<AdminInvitationController>("adminInvitationController"),
       prisma: this.get<PrismaClient>("prisma"),
     };
   }

@@ -28,3 +28,6 @@ export { LogoutHandler } from "./logout.command";
 export { RefreshTokenHandler } from "./refresh-token.command";
 export { DeleteAccountHandler } from "./delete-account.command";
 export { ResendVerificationHandler } from "./resend-verification.command";
+export { InviteAdminHandler } from "./invite-admin.command";
+export { AcceptAdminInvitationHandler } from "./accept-admin-invitation.command";
+export { RevokeAdminInvitationHandler } from "./revoke-admin-invitation.command";

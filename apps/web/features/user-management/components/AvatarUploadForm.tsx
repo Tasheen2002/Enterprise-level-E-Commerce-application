@@ -151,25 +151,41 @@ export function AvatarUploadForm({
               onCropChange={setCrop}
               onCropComplete={onCropComplete}
               onZoomChange={setZoom}
+              restrictPosition={false}
+              minZoom={0.5}
             />
           </div>
-          <div className="flex items-center gap-4 px-2">
-            <span className="text-[10px] uppercase tracking-widest text-stone-500 font-bold">Zoom</span>
+          <div className="flex items-center gap-6 px-4 py-2 bg-stone-50 border border-stone-100 rounded-sm">
+            <span className="text-[9px] uppercase tracking-[0.3em] text-stone-500 font-bold whitespace-nowrap">
+              Adjust Scale
+            </span>
             <input
               type="range"
               value={zoom}
-              min={1}
+              min={0.5}
               max={3}
               step={0.1}
               aria-labelledby="Zoom"
               onChange={(e) => setZoom(Number(e.target.value))}
-              className="w-full accent-gold"
+              className="w-full accent-gold h-1 bg-stone-200 rounded-lg appearance-none cursor-pointer"
             />
           </div>
-          <div className="flex gap-3 pt-4">
-            <Button variant="ghost" fullWidth onClick={() => handlePickFile(null)}>Cancel</Button>
-            <Button variant="primary" fullWidth onClick={generateCroppedImage}>
-              <Crop className="h-4 w-4 mr-2" /> Apply Crop
+          <div className="flex gap-4 pt-4">
+            <Button 
+              variant="ghost" 
+              fullWidth 
+              onClick={() => handlePickFile(null)}
+              className="text-[10px] uppercase tracking-[0.2em] font-bold"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="primary" 
+              fullWidth 
+              onClick={generateCroppedImage}
+              className="text-[10px] uppercase tracking-[0.2em] font-bold"
+            >
+              <Crop className="h-3.5 w-3.5 mr-2" /> Apply Selection
             </Button>
           </div>
         </div>

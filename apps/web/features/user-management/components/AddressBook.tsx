@@ -76,7 +76,7 @@ export function AddressBook() {
           {/* Add New Card */}
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="group relative flex flex-col items-center justify-center gap-6 p-8 min-h-[260px] rounded-2xl border-2 border-dashed border-stone-100 bg-stone-50/10 hover:bg-stone-50 hover:border-gold/30 transition-all duration-500"
+            className="group relative flex flex-col items-center justify-center gap-6 p-8 min-h-[260px] rounded-2xl border-2 border-dashed border-sand/30 bg-cream hover:bg-ivory/20 hover:border-gold/30 transition-all duration-500"
           >
             <div className="p-4 bg-white rounded-full text-stone-300 group-hover:text-gold shadow-sm transition-all duration-500">
               <Plus className="h-5 w-5 stroke-[1.5]" />
@@ -125,7 +125,7 @@ function AddressCard({
   isDeleting: boolean;
 }) {
   return (
-    <div className="relative group bg-[#fcfaf6] p-8 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:shadow-md hover:border-gold/20">
+    <div className="relative group bg-ivory p-8 rounded-2xl border border-sand/20 shadow-sm flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:shadow-md hover:border-gold/20">
       <div className="space-y-6">
         <div className="flex items-start justify-between">
           <div className="space-y-1.5">
@@ -157,10 +157,10 @@ function AddressCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-8 pt-6 mt-6 border-t border-stone-100/50">
+      <div className="flex items-center gap-8 pt-6 mt-6 border-t border-sand/20">
         <button 
           onClick={onEdit}
-          className="text-[10px] font-bold uppercase tracking-[0.15em] text-stone-400 hover:text-gold transition-colors underline-offset-4 hover:underline"
+          className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 hover:text-gold transition-colors underline-offset-4 hover:underline"
         >
           Edit
         </button>
@@ -168,12 +168,12 @@ function AddressCard({
         {!address.isDefault ? (
           <button 
             onClick={onSetDefault}
-            className="text-[10px] font-bold uppercase tracking-[0.15em] text-stone-400 hover:text-gold transition-colors"
+            className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400 hover:text-gold transition-colors"
           >
             Set Default
           </button>
         ) : (
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gold">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gold">
             Verified
           </div>
         )}

@@ -124,6 +124,7 @@ export class AuthenticationService {
     if (existingUser && existingUser.isGuest) {
       existingUser.convertFromGuest(userData.email, passwordHash);
       if (userData.phone) existingUser.updatePhone(userData.phone);
+      if (userData.role) existingUser.updateRole(userData.role as any);
       user = existingUser;
     } else {
       user = User.create({
@@ -132,6 +133,7 @@ export class AuthenticationService {
         phone: userData.phone,
         firstName: userData.firstName,
         lastName: userData.lastName,
+        role: userData.role as any,
         isGuest: false,
       });
     }

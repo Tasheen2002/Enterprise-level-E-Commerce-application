@@ -55,26 +55,26 @@ export function DeleteAccountForm() {
         </p>
       </header>
 
-      <div className="bg-stone-50 border border-stone-100 p-5 sm:p-8 lg:p-12 space-y-8 rounded-sm shadow-sm relative overflow-hidden">
-        {/* Subtle warning background pattern would go here */}
-        <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-          <Trash2 className="h-32 w-32" />
+      <div className="bg-ivory border border-sand/20 p-5 sm:p-8 lg:p-12 space-y-10 rounded-soft shadow-sm relative overflow-hidden">
+        {/* Subtle warning background pattern */}
+        <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+          <Trash2 className="h-48 w-48" />
         </div>
 
         <div className="space-y-6 relative z-10">
-          <h2 className="font-serif text-xl text-charcoal">What happens next?</h2>
-          <ul className="space-y-4 text-sm text-stone-600">
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-1 w-1 rounded-full bg-burgundy shrink-0" />
-              <span>Instant revocation of all artisanal member benefits and early-access privileges.</span>
+          <h2 className="font-serif text-2xl italic text-charcoal tracking-wide">What happens next?</h2>
+          <ul className="space-y-6 text-[11px] font-bold uppercase tracking-[0.15em] text-stone-500">
+            <li className="flex items-start gap-4">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-burgundy shrink-0" />
+              <span className="leading-relaxed">Instant revocation of all artisanal member benefits and early-access privileges.</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-1 w-1 rounded-full bg-burgundy shrink-0" />
-              <span>Permanent removal of your order history and digital wardrobe.</span>
+            <li className="flex items-start gap-4">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-burgundy shrink-0" />
+              <span className="leading-relaxed">Permanent removal of your order history and digital wardrobe.</span>
             </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1 h-1 w-1 rounded-full bg-burgundy shrink-0" />
-              <span>Loss of saved bespoke measurements and leather detailing preferences.</span>
+            <li className="flex items-start gap-4">
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-burgundy shrink-0" />
+              <span className="leading-relaxed">Loss of saved bespoke measurements and leather detailing preferences.</span>
             </li>
           </ul>
         </div>
@@ -82,24 +82,24 @@ export function DeleteAccountForm() {
         {!isConfirmOpen ? (
           <Button 
             variant="ghost" 
-            className="text-burgundy hover:bg-burgundy/5 hover:text-burgundy font-bold uppercase tracking-[0.2em] text-[10px]"
+            className="text-burgundy border border-sand/30 hover:bg-burgundy/5 hover:text-burgundy font-bold uppercase tracking-[0.3em] text-[10px] h-14 px-8"
             onClick={() => setIsConfirmOpen(true)}
           >
             Initiate Deletion Process
           </Button>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 animate-in zoom-in-95 duration-300">
-            <div className="p-4 sm:p-6 bg-burgundy/[0.02] border border-burgundy/10 rounded-sm space-y-6">
+            <div className="p-4 sm:p-8 bg-burgundy/[0.03] border border-burgundy/10 rounded-soft space-y-8">
               <div className="flex items-center gap-3 text-burgundy">
                 <AlertTriangle className="h-5 w-5" />
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Final Confirmation Required</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Final Confirmation Required</span>
               </div>
               
               <FormField id="delete-password" label="Security Verification" error={errors.password?.message}>
                 <PasswordInput 
                   {...register("password")}
                   placeholder="Enter your password to authorize"
-                  className="bg-white border-stone-200 focus:border-burgundy transition-colors"
+                  className="bg-white border-sand/30 focus:border-burgundy transition-colors h-14"
                 />
               </FormField>
 
@@ -122,7 +122,7 @@ export function DeleteAccountForm() {
                     setIsConfirmOpen(false);
                     reset();
                   }}
-                  className="flex-1 h-14 uppercase tracking-[0.2em] text-[10px] font-bold border-stone-200 hover:bg-stone-50"
+                  className="flex-1 h-14 uppercase tracking-[0.3em] text-[10px] font-bold border border-sand/30 text-stone-400 hover:text-charcoal hover:bg-white transition-all duration-500"
                 >
                   Cancel
                 </Button>
@@ -132,7 +132,7 @@ export function DeleteAccountForm() {
         )}
       </div>
 
-      <footer className="pt-8 border-t border-stone-100 flex justify-between items-center text-[9px] uppercase tracking-[0.3em] text-stone-400">
+      <footer className="pt-8 border-t border-sand/20 flex justify-between items-center text-[9px] uppercase tracking-[0.4em] font-bold text-stone-400">
         <span>Slipperze Account Protection</span>
         <span>Secure Purge Protocol</span>
       </footer>

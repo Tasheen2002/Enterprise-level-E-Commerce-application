@@ -1,8 +1,8 @@
 import React from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Monitor, Smartphone, Globe, LogOut, Clock, ShieldAlert } from "lucide-react";
+import { Monitor, Smartphone, Globe, LogOut, Clock, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { useActiveSessions, useRevokeSession } from "../hooks/useActiveSessions";
-import { Button } from "@tasheen/ui";
+import { Button, cn } from "@tasheen/ui";
 
 export function ActiveSessionsList() {
   const { data: sessions, isLoading, isError } = useActiveSessions();
@@ -35,46 +35,46 @@ export function ActiveSessionsList() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sessions.map((session, index) => {
-        const isCurrentSession = index === 0; // The query orders by createdAt DESC, so the first one is the newest (current). In a real app we'd match the exact token ID.
+        const isCurrentSession = index === 0;
         
         return (
           <div
             key={session.id}
-            className="flex flex-col gap-4 rounded-xl border border-white/10 bg-white/5 p-5 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-white/[0.07]"
+            className="flex flex-col gap-6 rounded-none border border-stone-200 bg-white p-6 sm:flex-row sm:items-center sm:justify-between transition-all duration-500 shadow-lg hover:shadow-xl hover:border-gold group"
           >
-            <div className="flex items-start gap-4">
-              <div className="rounded-full bg-white/10 p-3">
+            <div className="flex items-start gap-6">
+              <div className="rounded-full bg-stone-50 p-4 text-stone-400 group-hover:bg-charcoal group-hover:text-gold transition-all duration-500 border border-stone-100">
                 {session.deviceType === "mobile" || session.os?.toLowerCase().includes("ios") || session.os?.toLowerCase().includes("android") ? (
-                  <Smartphone className="h-6 w-6 text-gray-300" />
+                  <Smartphone className="h-6 w-6 stroke-[1.5]" />
                 ) : (
-                  <Monitor className="h-6 w-6 text-gray-300" />
+                  <Monitor className="h-6 w-6 stroke-[1.5]" />
                 )}
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-medium text-white">
-                    {session.os || "Unknown OS"} • {session.browser || "Unknown Browser"}
+                <div className="flex flex-wrap items-center gap-3">
+                  <h4 className="font-serif text-2xl text-charcoal italic leading-none">
+                    {session.os || "Unknown System"} • {session.browser || "Unknown Browser"}
                   </h4>
                   {isCurrentSession && (
-                    <span className="rounded-full bg-green-500/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-400 border border-green-500/30">
-                      Current Device
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gold text-white text-[9px] font-bold uppercase tracking-[0.2em] shadow-sm">
+                      <CheckCircle2 className="h-2.5 w-2.5" /> Current Device
                     </span>
                   )}
                 </div>
                 
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-300 font-medium">
-                  <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/5">
-                    <Globe className="h-3 w-3 text-blue-400" />
-                    {session.ipAddress || "Hidden IP"}
-                  </span>
-                  <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-white/5 border border-white/5">
-                    <Clock className="h-3 w-3 text-purple-400" />
+                <div className="mt-5 flex flex-wrap items-center gap-x-8 gap-y-2">
+                  <div className="flex items-center gap-2.5 text-[11px] uppercase tracking-[0.1em] font-bold text-stone-600">
+                    <Globe className="h-4 w-4 text-gold/60" />
+                    <span>{session.ipAddress || "Hidden Network"}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-[11px] uppercase tracking-[0.1em] font-bold text-stone-600">
+                    <Clock className="h-4 w-4 text-gold/60" />
                     <span suppressHydrationWarning>
-                      Started {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
                     </span>
-                  </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -84,10 +84,15 @@ export function ActiveSessionsList() {
               size="sm"
               disabled={isRevoking || isCurrentSession}
               onClick={() => revokeSession(session.id)}
-              className="w-full sm:w-auto h-9 text-xs font-bold uppercase tracking-wider border-white/10 bg-white/5 text-white hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all disabled:opacity-30"
+              className={cn(
+                "w-full sm:w-auto h-12 px-8 text-[10px] font-bold uppercase tracking-[0.2em] transition-all duration-300",
+                isCurrentSession 
+                  ? "bg-stone-50 text-stone-300 border-stone-200 cursor-not-allowed"
+                  : "bg-charcoal text-white hover:bg-gold hover:text-white border-transparent"
+              )}
             >
-              <LogOut className="mr-2 h-3.5 w-3.5" />
-              {isCurrentSession ? "Active" : "Revoke"}
+              <LogOut className="mr-2 h-4 w-4 stroke-[1.5]" />
+              {isCurrentSession ? "Authenticated" : "Revoke Access"}
             </Button>
           </div>
         );

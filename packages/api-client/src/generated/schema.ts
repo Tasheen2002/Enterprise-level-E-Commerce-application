@@ -376,6 +376,10 @@ export interface paths {
                                 /** Format: email */
                                 email?: string;
                                 role?: string;
+                                isGuest?: boolean;
+                                emailVerified?: boolean;
+                                phoneVerified?: boolean;
+                                twoFactorEnabled?: boolean;
                                 /** Format: date-time */
                                 updatedAt?: string;
                                 /** Format: date-time */
@@ -2579,6 +2583,246 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/api/v1/admin/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List pending invitations
+         * @description Retrieve all pending admin/staff invitations.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                /** Format: email */
+                                email?: string;
+                                role?: string;
+                                status?: string;
+                                /** Format: uuid */
+                                invitedById?: string;
+                                /** Format: date-time */
+                                expiresAt?: string;
+                                /** Format: date-time */
+                                acceptedAt?: string | null;
+                                /** Format: date-time */
+                                createdAt?: string;
+                                /** Format: date-time */
+                                updatedAt?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Invite a new admin/staff member
+         * @description Create an invitation for a new staff member. The invited person receives an email with a tokenised link to set up their account. Only ADMIN users can send invitations.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: email */
+                        email: string;
+                        /** @enum {string} */
+                        role: "ADMIN" | "INVENTORY_STAFF" | "CUSTOMER_SERVICE" | "ANALYST";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 201;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                /** Format: email */
+                                email?: string;
+                                role?: string;
+                                status?: string;
+                                /** Format: uuid */
+                                invitedById?: string;
+                                /** Format: date-time */
+                                expiresAt?: string;
+                                /** Format: date-time */
+                                acceptedAt?: string | null;
+                                /** Format: date-time */
+                                createdAt?: string;
+                                /** Format: date-time */
+                                updatedAt?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept an invitation and set up account
+         * @description Exchange an invitation token for a new admin account. The invited user sets their password and optionally provides their name. Returns JWT tokens on success.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        password: string;
+                        firstName?: string;
+                        lastName?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 201;
+                            message: string;
+                            data: {
+                                accessToken?: string;
+                                refreshToken?: string;
+                                expiresIn?: number;
+                                tokenType?: string;
+                                user?: {
+                                    /** Format: uuid */
+                                    id?: string;
+                                    /** Format: email */
+                                    email?: string;
+                                    role?: string;
+                                    isGuest?: boolean;
+                                    emailVerified?: boolean;
+                                    phoneVerified?: boolean;
+                                    /** Format: date-time */
+                                    updatedAt?: string;
+                                    /** Format: date-time */
+                                    createdAt?: string;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a pending invitation
+         * @description Revoke a pending invitation before it has been accepted.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    invitationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/products": {

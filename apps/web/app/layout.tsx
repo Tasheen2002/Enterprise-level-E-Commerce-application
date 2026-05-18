@@ -65,11 +65,15 @@ export default function RootLayout({
     >
       <head>
         {apiOrigin && (
-          <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
+          <>
+            <link rel="preconnect" href={apiOrigin} crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href={apiOrigin} />
+          </>
         )}
         <link rel="preconnect" href="https://ik.imagekit.io" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://ik.imagekit.io" />
       </head>
+
       <body suppressHydrationWarning>
         <ThemeProvider>
           <QueryProvider>

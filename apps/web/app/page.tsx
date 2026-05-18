@@ -13,14 +13,14 @@ import { imageKitUrl } from "@/lib/imagekit";
  */
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-cream selection:bg-gold selection:text-white">
+    <div className="relative min-h-screen w-[100vw] max-w-full overflow-hidden bg-cream selection:bg-gold selection:text-white">
       <main className="relative grid grid-cols-1 lg:grid-cols-2 lg:h-screen">
         {/* Women Universe */}
         <Link
           href="/catalog?gender=women"
           className="relative group h-[55vh] lg:h-full w-full overflow-hidden flex items-center justify-center"
         >
-            <Image
+          <Image
             src={imageKitUrl("hero-women.png")}
             alt="Women's Collection"
             fill
@@ -42,9 +42,9 @@ export default function HomePage() {
         {/* Men Universe */}
         <Link
           href="/catalog?gender=men"
-          className="relative group h-[55vh] lg:h-full w-full overflow-hidden flex items-center justify-center"
+          className="relative group h-[55vh] lg:h-full w-full lg:w-[calc(100%+1px)] overflow-hidden flex items-center justify-center"
         >
-            <Image
+          <Image
             src={imageKitUrl("hero-men.png")}
             alt="Men's Collection"
             fill

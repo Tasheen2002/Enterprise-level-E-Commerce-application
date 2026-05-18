@@ -14,8 +14,8 @@ export function QueryProvider({ children }: PropsWithChildren) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000,
-            gcTime: 5 * 60_000,
+            staleTime: 2 * 60_000, // 2 minutes stale time for refined catalog navigation
+            gcTime: 10 * 60_000,  // 10 minutes cache garbage collection
             retry: 1,
             refetchOnWindowFocus: false,
           },
@@ -23,6 +23,7 @@ export function QueryProvider({ children }: PropsWithChildren) {
             retry: 0,
           },
         },
+
       }),
   );
 

@@ -94,6 +94,23 @@ export class NodemailerEmailService implements IEmailService {
   }
 
   async sendVerificationEmail(email: string, token: string): Promise<void> {
+    // Special case for admin invitation acceptance — we don't need a tokenised link
+    // since the account is already verified.
+    if (token === "WELCOME_ADMIN") {
+      await this.sendEmail({
+        to: email,
+        subject: "Welcome to the Atelier — Credentials Verified",
+        text: `Your administrative access to the Slipperze Atelier has been activated.`,
+        html: `
+          <h1 style="font-family: serif; font-style: italic;">Welcome to the Atelier</h1>
+          <p>Your administrative credentials have been successfully commissioned and verified.</p>
+          <p>You may now access the administrative control suite:</p>
+          <a href="${process.env.ADMIN_APP_URL || "http://localhost:3002"}/login" style="color: #c5a059; text-decoration: none; font-weight: bold; letter-spacing: 0.1em;">ENTER ATELIER</a>
+        `,
+      });
+      return;
+    }
+
     const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/verify-email?token=${token}`;
     
     if (this.isDevelopment) {
@@ -112,6 +129,28 @@ export class NodemailerEmailService implements IEmailService {
         <p>To finalize your member portfolio and gain full boutique access, please verify your credentials:</p>
         <a href="${verifyUrl}" style="color: #c5a059; text-decoration: none; font-weight: bold; letter-spacing: 0.1em;">CONFIRM IDENTITY</a>
         <p style="font-size: 10px; color: #999; margin-top: 20px;">Artisanal Excellence since 2024</p>
+      `,
+    });
+  }
+
+  async sendInvitationEmail(email: string, inviteUrl: string, roleName: string): Promise<void> {
+    if (this.isDevelopment) {
+      console.log("----------------------------------------------------------------");
+      console.log(`[EmailService] ADMIN INVITATION LINK GENERATED for ${email} (${roleName}):`);
+      console.log(`${inviteUrl}`);
+      console.log("----------------------------------------------------------------");
+    }
+
+    await this.sendEmail({
+      to: email,
+      subject: `Invitation: Join the Slipperze Atelier as ${roleName}`,
+      text: `You have been invited to join the Slipperze Atelier team. Set up your account here: ${inviteUrl}`,
+      html: `
+        <h1 style="font-family: serif; font-style: italic;">Atelier Invitation</h1>
+        <p>You have been personally invited to join the Slipperze administrative team as <strong>${roleName}</strong>.</p>
+        <p>Please follow the link below to commission your secure credentials and activate your access:</p>
+        <a href="${inviteUrl}" style="color: #c5a059; text-decoration: none; font-weight: bold; letter-spacing: 0.1em;">ACTIVATE ACCESS</a>
+        <p style="font-size: 10px; color: #999; margin-top: 20px;">This invitation expires in 72 hours.</p>
       `,
     });
   }
