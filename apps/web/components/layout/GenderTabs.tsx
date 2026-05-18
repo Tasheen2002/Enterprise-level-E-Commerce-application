@@ -27,15 +27,15 @@ export function GenderTabs({ isTransparent }: { isTransparent: boolean }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "text-[11px] font-bold uppercase tracking-[0.25em] pb-1 transition-all duration-300 border-b-2",
+              "text-[10px] font-bold uppercase tracking-[0.3em] pb-0.5 transition-all duration-300 border-b",
               isTransparent
                 ? cn(
                     "text-cream hover:text-cream",
                     isActive ? "border-cream" : "border-transparent hover:border-cream"
                   )
                 : cn(
-                    "text-charcoal hover:text-gold",
-                    isActive ? "border-charcoal" : "border-transparent hover:border-gold/70"
+                    "text-charcoal hover:text-charcoal",
+                    isActive ? "border-charcoal" : "border-transparent hover:border-charcoal/30"
                   )
             )}
           >

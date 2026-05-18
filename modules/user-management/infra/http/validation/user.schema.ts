@@ -19,7 +19,7 @@ const MAX_PAGE_SIZE = 100;
 // ============================================================================
 
 export const userIdParamsSchema = z.object({
-  userId: z.uuid(),
+  userId: z.string().uuid(),
 });
 
 // ============================================================================
@@ -115,7 +115,7 @@ export const userListResponseSchema = {
 export const userStatusUpdateResponseSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'string', format: 'uuid' },
+    id: { type: 'string', format: 'uuid' },
     status: { type: 'string' },
   },
 } as const;
@@ -124,7 +124,7 @@ export const userStatusUpdateResponseSchema = {
 export const userRoleUpdateResponseSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'string', format: 'uuid' },
+    id: { type: 'string', format: 'uuid' },
     role: { type: 'string' },
   },
 } as const;
@@ -133,7 +133,7 @@ export const userRoleUpdateResponseSchema = {
 export const userEmailVerifiedResponseSchema = {
   type: 'object',
   properties: {
-    userId: { type: 'string', format: 'uuid' },
+    id: { type: 'string', format: 'uuid' },
     emailVerified: { type: 'boolean' },
   },
 } as const;

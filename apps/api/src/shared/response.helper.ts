@@ -58,10 +58,10 @@ export class ResponseHelper {
     const errorName =
       statusCode === 409 ? "Conflict"
         : statusCode === 404 ? "Not Found"
-        : statusCode === 401 ? "Unauthorized"
-        : statusCode === 403 ? "Forbidden"
-        : statusCode === 400 ? "Bad Request"
-        : "Internal Server Error";
+          : statusCode === 401 ? "Unauthorized"
+            : statusCode === 403 ? "Forbidden"
+              : statusCode === 400 ? "Bad Request"
+                : "Internal Server Error";
 
     return reply.status(statusCode).send({
       success: false,

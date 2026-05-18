@@ -29,6 +29,6 @@ export async function onUnauthorized(): Promise<void> {
   clearAuthToken();
   if (typeof window !== "undefined") {
     const next = encodeURIComponent(window.location.pathname);
-    window.location.href = `/signin?next=${next}`;
+    window.location.href = `/login?next=${next}`;
   }
 }

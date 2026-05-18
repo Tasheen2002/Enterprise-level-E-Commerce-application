@@ -73,7 +73,7 @@ export function AccountDashboard() {
   };
 
   return (
-    <div className="flex-1 p-5 sm:p-8 lg:p-20 space-y-10 sm:space-y-16 bg-cream/40">
+    <div className="flex-1 p-5 sm:p-8 lg:p-20 space-y-10 sm:space-y-16">
 
       {/* Utility Return Link */}
       <div className="mb-8">
@@ -161,9 +161,9 @@ export function AccountDashboard() {
 
       {/* Recent Activity Section */}
       <section className="space-y-8">
-        <h2 className="font-serif text-2xl text-charcoal tracking-wide">Recent Activity</h2>
+        <h2 className="font-serif text-3xl italic text-charcoal tracking-wide">Recent Activity</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-sand/30 divide-x divide-sand/20 bg-ivory/30 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-sand/20 divide-x divide-sand/20 bg-ivory shadow-sm overflow-hidden">
           <ActivityCard
             icon={Package}
             label="Active Orders"
@@ -232,13 +232,13 @@ function ActivityCard({
   return (
     <Link
       href={href}
-      className="group flex flex-col p-6 sm:p-10 transition-all duration-500 hover:bg-white/40"
+      className="group flex flex-col p-6 sm:p-10 transition-all duration-700 hover:bg-white/50"
     >
       <div className="flex justify-between items-start mb-6 sm:mb-10">
-        <div className="text-slate-muted/30 group-hover:text-gold transition-colors duration-500">
+        <div className="text-sand group-hover:text-gold transition-colors duration-500">
           <Icon className="h-6 w-6 stroke-[1.2]" />
         </div>
-        <ChevronRight className="h-4 w-4 text-sand/40 group-hover:text-gold group-hover:translate-x-1 transition-all" strokeWidth={1.5} />
+        <ChevronRight className="h-4 w-4 text-sand/30 group-hover:text-gold group-hover:translate-x-1 transition-all" strokeWidth={1.5} />
       </div>
       <div className="space-y-2">
         <p className="text-[9px] font-bold tracking-[0.3em] text-slate-muted/50 uppercase">{label}</p>

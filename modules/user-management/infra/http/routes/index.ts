@@ -4,11 +4,13 @@ import { ProfileController } from "../controllers/profile.controller";
 import { AddressesController } from "../controllers/addresses.controller";
 import { PaymentMethodsController } from "../controllers/payment-methods.controller";
 import { UsersController } from "../controllers/users.controller";
+import { AdminInvitationController } from "../controllers/admin-invitation.controller";
 import { authRoutes } from "./auth.routes";
 import { profileRoutes } from "./profile.routes";
 import { addressRoutes } from "./addresses.routes";
 import { paymentMethodRoutes } from "./payment-methods.routes";
 import { userRoutes } from "./users.routes";
+import { adminInvitationRoutes } from "./admin-invitations.routes";
 
 export interface UserManagementControllers {
   authController: AuthController;
@@ -16,6 +18,7 @@ export interface UserManagementControllers {
   addressesController: AddressesController;
   paymentMethodsController: PaymentMethodsController;
   usersController: UsersController;
+  adminInvitationController: AdminInvitationController;
 }
 
 export async function registerUserManagementRoutes(
@@ -29,6 +32,7 @@ export async function registerUserManagementRoutes(
       await addressRoutes(instance, controllers.addressesController);
       await paymentMethodRoutes(instance, controllers.paymentMethodsController);
       await userRoutes(instance, controllers.usersController);
+      await adminInvitationRoutes(instance, controllers.adminInvitationController);
     },
     { prefix: "/api/v1" },
   );

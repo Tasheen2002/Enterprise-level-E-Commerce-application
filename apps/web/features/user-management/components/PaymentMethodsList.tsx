@@ -76,7 +76,7 @@ export function PaymentMethodsList() {
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-charcoal leading-tight">
           Payment Methods
         </h1>
-        <p className="text-stone-400 max-w-2xl text-sm leading-relaxed">
+        <p className="text-stone-400 max-w-2xl text-[11px] uppercase tracking-[0.2em] font-bold leading-relaxed">
           Manage your saved cards and payment instruments for secure, effortless transactions across the Slipperze boutique.
         </p>
       </header>
@@ -102,14 +102,14 @@ export function PaymentMethodsList() {
           {/* Add New Card */}
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="group relative flex flex-col items-center justify-center gap-6 p-8 min-h-[260px] rounded-2xl border-2 border-dashed border-stone-100 bg-stone-50/10 hover:bg-stone-50 hover:border-gold/30 transition-all duration-500"
+            className="group relative flex flex-col items-center justify-center gap-6 p-8 min-h-[260px] rounded-2xl border-2 border-dashed border-sand/30 bg-cream hover:bg-ivory/20 hover:border-gold/30 transition-all duration-500"
           >
             <div className="p-4 bg-white rounded-full text-stone-300 group-hover:text-gold shadow-sm transition-all duration-500">
               <Plus className="h-5 w-5 stroke-[1.5]" />
             </div>
             <div className="text-center space-y-1">
               <h4 className="font-serif text-xl text-charcoal tracking-wide">Add a card</h4>
-              <p className="text-[9px] text-stone-400 max-w-[180px] mx-auto leading-relaxed uppercase tracking-[0.2em]">
+              <p className="text-[9px] text-stone-400 max-w-[180px] mx-auto leading-relaxed uppercase tracking-[0.2em] font-bold">
                 Secure a new payment method.
               </p>
             </div>
@@ -188,7 +188,7 @@ function PaymentMethodCard({
   };
 
   return (
-    <div className="relative group bg-[#fcfaf6] p-8 rounded-2xl border border-stone-100 shadow-sm flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:shadow-md hover:border-gold/20">
+    <div className="relative group bg-ivory p-8 rounded-2xl border border-sand/20 shadow-sm flex flex-col justify-between min-h-[260px] transition-all duration-500 hover:shadow-md hover:border-gold/20">
       
       {/* Top Header: Brand + Default Badge */}
       <div className="flex items-start justify-between mb-auto">
@@ -250,7 +250,7 @@ function PaymentMethodCard({
       </div>
 
       {/* Bottom: Expiry + Edit Link */}
-      <div className="pt-6 border-t border-stone-100/50 flex items-end justify-between mt-auto">
+      <div className="pt-6 border-t border-sand/20 flex items-end justify-between mt-auto">
         <div className="space-y-1.5">
           <p className="text-[10px] text-stone-400 font-bold uppercase tracking-[0.15em]">
             Expires
