@@ -1,34 +1,25 @@
-import { useState, useEffect } from "react";
-import { SubCategory } from "../types";
+import { useQuery } from "@tanstack/react-query";
 import { getSubCategories } from "../api";
 
 /**
  * Enterprise Pattern: useCategories Hook
  * 
- * Provides a clean interface for UI components to access catalog data.
- * Currently handles local mock state, but is designed to integrate 
- * perfectly with @tanstack/react-query later.
+ * Provides a clean interface for UI components to access catalog categories
+ * with robust, out-of-the-box client-side caching and automatic deduplication
+ * via @tanstack/react-query.
  */
 export function useCategories(categorySlug: string) {
-  const [data, setData] = useState<SubCategory[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data = [], isLoading, error } = useQuery({
+    queryKey: ["catalog-categories", categorySlug],
+    queryFn: () => getSubCategories(categorySlug),
+    enabled: !!categorySlug,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for static subcategories
+    gcTime: 10 * 60 * 1000,   // 10 minutes garbage collection
+  });
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setIsLoading(true);
-        const result = await getSubCategories(categorySlug);
-        setData(result);
-      } catch (e) {
-        setError(e instanceof Error ? e : new Error("Failed to load categories"));
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    load();
-  }, [categorySlug]);
-
-  return { data, isLoading, error };
+  return { 
+    data, 
+    isLoading, 
+    error: error instanceof Error ? error : error ? new Error(String(error)) : null 
+  };
 }
