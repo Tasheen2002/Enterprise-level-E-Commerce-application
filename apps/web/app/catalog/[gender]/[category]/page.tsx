@@ -2,6 +2,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
 import { CategoryGallery } from "@/features/catalog/components/CategoryGallery";
+import { ProductGallery } from "@/features/catalog/components/ProductGallery";
+import { getSubCategories } from "@/features/catalog/api";
 
 interface Props {
   params: Promise<{
@@ -22,6 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CatalogCategoryPage({ params }: Props) {
   const { gender, category } = await params;
+  
+  // Logic to determine if we show subcategories or products
+  const subCategories = await getSubCategories(category);
+  const isProductCategory = subCategories.length === 0;
 
   return (
     <main className="min-h-screen bg-cream">
@@ -36,8 +42,12 @@ export default async function CatalogCategoryPage({ params }: Props) {
         </h1>
       </div>
 
-      {/* Main Gallery */}
-      <CategoryGallery category={category} />
+      {/* Dynamic Gallery: Categories or Products */}
+      {isProductCategory ? (
+        <ProductGallery category={category} />
+      ) : (
+        <CategoryGallery category={category} />
+      )}
 
       {/* Editorial Footer - Storytelling & Navigation */}
       <div className="pb-24 px-6 text-center max-w-4xl mx-auto space-y-8">
