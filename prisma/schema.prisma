@@ -52,6 +52,7 @@ model User {
   profile              UserProfile?
   twoFactorBackupCodes TwoFactorBackupCode[]
   memberSessions       MemberSession[]
+  sentInvitations      AdminInvitation[]
 
   @@index([status])
   @@index([role])
@@ -116,6 +117,31 @@ model TwoFactorBackupCode {
   @@index([userId])
   @@index([userId, usedAt])
   @@map("two_factor_backup_codes")
+  @@schema("user_management")
+}
+
+// Invitation-based admin registration. A Super Admin creates an invitation
+// for a new staff member; the recipient clicks a tokenised link and sets
+// their password. Token is sha256-hashed at rest — the plaintext is only
+// ever in the email link.
+model AdminInvitation {
+  id          String               @id @default(dbgenerated("gen_random_uuid()")) @map("invitation_id") @db.Uuid
+  email       String
+  role        UserRole             @default(ADMIN)
+  tokenHash   String               @unique @map("token_hash")
+  status      InvitationStatusEnum @default(pending)
+  invitedById String               @map("invited_by_id") @db.Uuid
+  expiresAt   DateTime             @map("expires_at") @db.Timestamptz(6)
+  acceptedAt  DateTime?            @map("accepted_at") @db.Timestamptz(6)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  invitedBy   User                 @relation(fields: [invitedById], references: [id], onUpdate: NoAction)
+
+  @@index([email])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([invitedById])
+  @@map("admin_invitations")
   @@schema("user_management")
 }
 
@@ -1750,4 +1776,14 @@ enum EventTypeEnum {
 
   @@map("event_type_enum")
   @@schema("analytics")
+}
+
+enum InvitationStatusEnum {
+  pending
+  accepted
+  expired
+  revoked
+
+  @@map("invitation_status_enum")
+  @@schema("user_management")
 }
