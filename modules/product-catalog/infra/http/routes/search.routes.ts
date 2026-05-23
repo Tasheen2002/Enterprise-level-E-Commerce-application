@@ -8,7 +8,7 @@ import {
   RateLimitPresets,
   userKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
-import { validateQuery, toJsonSchema } from "../validation/validator";
+import { validateQuery } from "../validation/validator";
 import {
   successResponse,
 } from "@/api/src/shared/http/response-schemas";
@@ -27,11 +27,6 @@ const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userKeyGenerator,
 });
-
-// Pre-compute JSON Schemas from Zod (single source of truth — no drift).
-const searchQueryJson = toJsonSchema(searchQuerySchema);
-const searchSuggestionsQueryJson = toJsonSchema(searchSuggestionsQuerySchema);
-const searchFiltersQueryJson = toJsonSchema(searchFiltersQuerySchema);
 
 export async function searchRoutes(
   fastify: FastifyInstance,
@@ -54,7 +49,6 @@ export async function searchRoutes(
         description: "Full-text search across products with filtering and sorting",
         tags: ["Search"],
         summary: "Search Products",
-        querystring: searchQueryJson,
         response: {
           200: successResponse(searchResultsResponseSchema),
         },
@@ -73,7 +67,6 @@ export async function searchRoutes(
         description: "Get autocomplete suggestions for a search query",
         tags: ["Search"],
         summary: "Get Search Suggestions",
-        querystring: searchSuggestionsQueryJson,
         response: {
           200: successResponse(searchSuggestionsResponseSchema),
         },
@@ -109,7 +102,6 @@ export async function searchRoutes(
         description: "Get available filters for search results",
         tags: ["Search"],
         summary: "Get Search Filters",
-        querystring: searchFiltersQueryJson,
         response: {
           200: successResponse(searchFiltersResponseSchema),
         },

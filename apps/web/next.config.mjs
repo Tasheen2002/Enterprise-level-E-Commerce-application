@@ -19,8 +19,8 @@ const nextConfig = {
     minimumCacheTTL: 31_536_000,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
   },
+  typedRoutes: false,
   experimental: {
-    typedRoutes: false,
     // Auto-rewrites barrel imports of these packages to per-symbol imports
     // so unused icons / utilities are tree-shaken in dev and prod. Saves
     // ~30-60 KB per route that imports lucide-react.

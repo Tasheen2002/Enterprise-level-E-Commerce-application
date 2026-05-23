@@ -11,15 +11,28 @@ export interface Size {
   isAvailable: boolean;
 }
 
+export interface Variant {
+  id: string;
+  productId: string;
+  sku: string;
+  size: string | null;
+  color: string | null;
+}
+
 export interface Product {
   id: string;
   name: string;
   color: string;
   price: number;
+  priceUsd?: number | null;
+  priceSgd?: number | null;
   currency: string;
   images: string[];
   href: string;
   sizes: Size[];
+  status?: string;
+  categoryIds?: string[];
+  variants?: Variant[];
 }
 
 export interface CategoryPageData {

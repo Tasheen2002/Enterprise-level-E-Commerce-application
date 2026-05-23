@@ -28,9 +28,7 @@ export function useRevokeSession() {
 
   return useMutation({
     mutationFn: async (sessionId: string) => {
-      const { error } = await api.DELETE("/api/v1/users/me/sessions/{id}", {
-        params: { path: { id: sessionId } }
-      });
+      const { error } = await api.DELETE(`/api/v1/users/me/sessions/${sessionId}`);
       if (error) throw error;
     },
     onSuccess: () => {

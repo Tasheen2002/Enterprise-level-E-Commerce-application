@@ -46,8 +46,12 @@ export function AdminTopBar() {
 
         <div className="flex items-center gap-6">
           <Link href="/profile" className="flex items-center gap-3 text-[11px] text-charcoal/60 group hover:opacity-80 transition-all">
-            <div className="w-8 h-8 rounded-full bg-[#EFEBE0] flex items-center justify-center border border-charcoal/5 group-hover:border-burgundy/20 transition-colors">
-              <User className="w-3.5 h-3.5 text-charcoal/40 group-hover:text-burgundy/50 transition-colors" strokeWidth={1.2} />
+            <div className="w-8 h-8 rounded-full bg-[#EFEBE0] flex items-center justify-center border border-charcoal/5 group-hover:border-burgundy/20 transition-colors overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="User profile" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-3.5 h-3.5 text-charcoal/40 group-hover:text-burgundy/50 transition-colors" strokeWidth={1.2} />
+              )}
             </div>
             <span className="hidden md:block tracking-wide font-medium group-hover:text-charcoal transition-colors">
               {displayName}

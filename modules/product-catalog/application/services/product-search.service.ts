@@ -186,19 +186,22 @@ export class ProductSearchService {
 
     if (type === "brands" || type === "all") {
       const products = await this.productRepository.search(trimmed, { limit: 50 });
-      const brands = new Set<string>();
+      const brandsMap = new Map<string, string>(); // lowercase -> original label
       for (const p of products) {
-        if (p.brand && p.brand.toLowerCase().includes(lowerQuery)) {
-          brands.add(p.brand);
+        if (p.brand) {
+          const trimmedBrand = p.brand.trim();
+          if (trimmedBrand.toLowerCase().includes(lowerQuery)) {
+            brandsMap.set(trimmedBrand.toLowerCase(), trimmedBrand);
+          }
         }
       }
       suggestions.push(
-        ...Array.from(brands)
+        ...Array.from(brandsMap.entries())
           .slice(0, perTypeLimit)
-          .map<SearchSuggestion>((brand) => ({
+          .map<SearchSuggestion>(([lowerBrand, originalBrand]) => ({
             type: "brand",
-            value: brand.toLowerCase(),
-            label: brand,
+            value: lowerBrand,
+            label: originalBrand,
           })),
       );
     }
@@ -223,10 +226,16 @@ export class ProductSearchService {
     }
 
     const allProducts = await this.productRepository.findAll({ limit: 200 });
-    const brandCounts = new Map<string, number>();
+    const brandCounts = new Map<string, number>(); // lowercase -> count
+    const brandLabels = new Map<string, string>(); // lowercase -> original label
     for (const p of allProducts) {
       if (p.brand) {
-        brandCounts.set(p.brand, (brandCounts.get(p.brand) ?? 0) + 1);
+        const trimmedBrand = p.brand.trim();
+        const lowerBrand = trimmedBrand.toLowerCase();
+        brandCounts.set(lowerBrand, (brandCounts.get(lowerBrand) ?? 0) + 1);
+        if (!brandLabels.has(lowerBrand)) {
+          brandLabels.set(lowerBrand, trimmedBrand);
+        }
       }
     }
     if (brandCounts.size > 0) {
@@ -235,9 +244,9 @@ export class ProductSearchService {
         type: "select",
         options: Array.from(brandCounts.entries())
           .sort((a, b) => b[1] - a[1])
-          .map(([brand, count]) => ({
-            value: brand.toLowerCase(),
-            label: brand,
+          .map(([lowerBrand, count]) => ({
+            value: lowerBrand,
+            label: brandLabels.get(lowerBrand) || lowerBrand,
             count,
           })),
       });

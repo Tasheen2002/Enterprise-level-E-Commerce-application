@@ -102,6 +102,8 @@ export class ProductController {
         compareAtPrice: request.body.compareAtPrice,
         categoryIds: request.body.categoryIds,
         tags: request.body.tags,
+        slug: request.body.slug,
+        images: request.body.images,
       });
       return ResponseHelper.fromCommand(reply, result, "Product updated successfully");
     } catch (error: unknown) {

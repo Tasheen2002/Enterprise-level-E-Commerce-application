@@ -54,3 +54,6 @@ export type { SubscribeNewsletterCommand } from "./subscribe-newsletter.command"
 
 export { UnsubscribeNewsletterHandler } from "./unsubscribe-newsletter.command";
 export type { UnsubscribeNewsletterCommand } from "./unsubscribe-newsletter.command";
+
+export { TransferWishlistHandler } from "./transfer-wishlist.command";
+export type { TransferWishlistCommand } from "./transfer-wishlist.command";

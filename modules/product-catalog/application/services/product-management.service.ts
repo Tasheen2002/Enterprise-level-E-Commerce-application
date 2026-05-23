@@ -25,6 +25,7 @@ import { randomUUID } from "crypto";
 
 export interface CreateProductInput {
   title: string;
+  slug?: string | null;
   brand?: string | null;
   shortDesc?: string | null;
   longDescHtml?: string | null;
@@ -40,6 +41,7 @@ export interface CreateProductInput {
   compareAtPrice?: number | null;
   categoryIds?: string[];
   tags?: string[];
+  images?: string[];
 }
 
 export type UpdateProductInput = Partial<CreateProductInput>;
@@ -73,9 +75,16 @@ export class ProductManagementService {
     }
 
     const sanitized = this.sanitizeProductInput(data);
-    const product = Product.create(sanitized);
+    const baseSlug = sanitized.slug
+      ? Slug.fromString(sanitized.slug)
+      : Slug.create(sanitized.title);
+    const uniqueSlug = await this.resolveUniqueSlug(baseSlug);
 
-    await this.assertSlugAvailable(product.slug);
+    const product = Product.create({
+      ...sanitized,
+      slug: uniqueSlug.getValue(),
+      images: sanitized.images,
+    });
 
     await this.productRepository.save(product);
     await this.productRepository.replaceCategories(
@@ -197,6 +206,13 @@ export class ProductManagementService {
     const sanitized = this.sanitizeProductInput(data);
 
     if (sanitized.title !== undefined) product.updateTitle(sanitized.title);
+    if (sanitized.slug !== undefined && sanitized.slug !== null) {
+      const newSlug = Slug.fromString(sanitized.slug);
+      if (!newSlug.equals(product.slug)) {
+        const uniqueSlug = await this.resolveUniqueSlug(newSlug, id);
+        product.updateSlug(uniqueSlug.getValue());
+      }
+    }
     if (sanitized.brand !== undefined) product.updateBrand(sanitized.brand ?? null);
     if (sanitized.shortDesc !== undefined) product.updateShortDesc(sanitized.shortDesc ?? null);
     if (sanitized.longDescHtml !== undefined) product.updateLongDescHtml(sanitized.longDescHtml ?? null);
@@ -226,6 +242,10 @@ export class ProductManagementService {
 
     if (data.tags !== undefined) {
       await this.replaceProductTags(ProductId.fromString(id), data.tags);
+    }
+
+    if (sanitized.images !== undefined) {
+      product.updateImages(sanitized.images);
     }
 
     await this.productRepository.save(product);
@@ -357,11 +377,22 @@ export class ProductManagementService {
     }
   }
 
-  // Race-prone soft check; the DB should enforce a unique index on slug.
-  // The global P2002 handler maps DB violations to a 409 response.
-  private async assertSlugAvailable(slug: Slug): Promise<void> {
-    if (await this.productRepository.existsBySlug(slug)) {
-      throw new ProductAlreadyExistsError(slug.getValue());
+  private async resolveUniqueSlug(baseSlug: Slug, excludeId?: string): Promise<Slug> {
+    let slugStr = baseSlug.getValue();
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+
+    while (true) {
+      const existingProduct = await this.productRepository.findBySlug(uniqueSlug);
+      if (!existingProduct) {
+        break;
+      }
+      if (excludeId && existingProduct.id.getValue() === excludeId) {
+        break;
+      }
+      uniqueSlug = Slug.fromString(`${slugStr}-${counter}`);
+      counter++;
     }
+    return uniqueSlug;
   }
 }

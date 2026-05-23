@@ -567,6 +567,7 @@ import {
   GetUserWishlistsHandler,
   GetPublicWishlistsHandler,
   GetWishlistItemsHandler,
+  TransferWishlistHandler,
   CreateReminderHandler,
   MarkReminderAsSentHandler,
   UnsubscribeReminderHandler,
@@ -1526,6 +1527,7 @@ export class Container {
       new GetUserWishlistsHandler(wishlistManagementService),
       new GetPublicWishlistsHandler(wishlistManagementService),
       new GetWishlistItemsHandler(wishlistManagementService),
+      new TransferWishlistHandler(wishlistManagementService),
     );
     const reminderController = new ReminderController(
       new CreateReminderHandler(reminderManagementService),

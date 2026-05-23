@@ -20,6 +20,8 @@ export interface CreateProductCommand extends ICommand {
   readonly compareAtPrice?: number;
   readonly categoryIds?: string[];
   readonly tags?: string[];
+  readonly slug?: string;
+  readonly images?: string[];
 }
 
 export class CreateProductHandler implements ICommandHandler<CreateProductCommand, CommandResult<ProductDTO>> {

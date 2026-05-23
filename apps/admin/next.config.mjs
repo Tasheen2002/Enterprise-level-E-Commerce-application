@@ -9,7 +9,13 @@ const nextConfig = {
   ],
   images: {
     formats: ["image/avif", "image/webp"],
-    remotePatterns: [],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+        pathname: "/**",
+      },
+    ],
   },
   experimental: {
     typedRoutes: true,

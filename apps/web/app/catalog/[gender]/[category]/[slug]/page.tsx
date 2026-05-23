@@ -12,7 +12,7 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { gender, category, slug } = await params;
+  const { category, slug } = await params;
   const product = await getProductBySlug(slug);
   const title = product ? `${product.name} | ${category.replace(/-/g, " ")} | Slipperze` : 'Product | Slipperze';
 

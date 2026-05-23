@@ -137,6 +137,10 @@ export function unwrap<T>(data: T | undefined | null): T {
   return data;
 }
 
+export interface SafeRequestOptions extends Omit<RequestInit, "method" | "body"> {
+  body?: unknown;
+}
+
 /**
  * Shared API client instance.
  * Provides clean HTTP verb methods for feature services.
@@ -146,35 +150,35 @@ export const api = {
   // Lowercase methods: throw ApiCallError on failure
   get: <T>(path: string, options?: RequestInit) =>
     request<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, body: any, options?: RequestInit) =>
+  post: <T>(path: string, body: unknown, options?: RequestInit) =>
     request<T>(path, { ...options, method: "POST", body: JSON.stringify(body) }),
-  put: <T>(path: string, body: any, options?: RequestInit) =>
+  put: <T>(path: string, body: unknown, options?: RequestInit) =>
     request<T>(path, { ...options, method: "PUT", body: JSON.stringify(body) }),
-  patch: <T>(path: string, body: any, options?: RequestInit) =>
+  patch: <T>(path: string, body: unknown, options?: RequestInit) =>
     request<T>(path, { ...options, method: "PATCH", body: JSON.stringify(body) }),
   delete: <T>(path: string, options?: RequestInit) =>
     request<T>(path, { ...options, method: "DELETE" }),
 
   // Uppercase aliases: return { data, error } object (openapi-fetch style)
-  GET: <T>(path: string, options?: any) => safeRequest<T>(path, "GET", options),
-  POST: <T>(path: string, options?: any) => safeRequest<T>(path, "POST", options),
-  PUT: <T>(path: string, options?: any) => safeRequest<T>(path, "PUT", options),
-  PATCH: <T>(path: string, options?: any) => safeRequest<T>(path, "PATCH", options),
-  DELETE: <T>(path: string, options?: any) => safeRequest<T>(path, "DELETE", options),
+  GET: <T>(path: string, options?: SafeRequestOptions) => safeRequest<T>(path, "GET", options),
+  POST: <T>(path: string, options?: SafeRequestOptions) => safeRequest<T>(path, "POST", options),
+  PUT: <T>(path: string, options?: SafeRequestOptions) => safeRequest<T>(path, "PUT", options),
+  PATCH: <T>(path: string, options?: SafeRequestOptions) => safeRequest<T>(path, "PATCH", options),
+  DELETE: <T>(path: string, options?: SafeRequestOptions) => safeRequest<T>(path, "DELETE", options),
 };
 
 /**
  * Internal helper for the uppercase { data, error } pattern.
  */
-async function safeRequest<T>(path: string, method: string, options?: any) {
+async function safeRequest<T>(path: string, method: string, options?: SafeRequestOptions) {
   try {
     const data = await request<T>(path, {
       ...options,
       method,
       ...(options?.body ? { body: JSON.stringify(options.body) } : {}),
-    });
+    } as RequestInit);
     return { data, error: null };
   } catch (error) {
-    return { data: null, error };
+    return { data: null, error: error as Error };
   }
 }

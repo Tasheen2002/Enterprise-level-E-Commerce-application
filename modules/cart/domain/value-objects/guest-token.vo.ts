@@ -5,7 +5,7 @@ import { DomainValidationError } from "../errors/cart.errors";
 export class GuestToken {
 
   private constructor(private readonly value: string) {
-    const tokenRegex = new RegExp(`^[a-f0-9]{${GUEST_TOKEN_HEX_LENGTH}}$`, "i");
+    const tokenRegex = new RegExp(`^(?:[a-f0-9]{${GUEST_TOKEN_HEX_LENGTH}}|guest_[a-z0-9]+)$`, "i");
     if (!tokenRegex.test(value)) {
       throw new DomainValidationError("Invalid guest token format");
     }

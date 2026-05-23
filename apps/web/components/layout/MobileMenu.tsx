@@ -17,6 +17,8 @@ import {
 import { cn } from "@tasheen/ui";
 import { BrandWordmark } from "./BrandWordmark";
 import { imageKitUrl } from "@/lib/imagekit";
+import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 
 const GENDER_TILES = [
   {
@@ -77,7 +79,7 @@ const DIRECT_LINKS = [
 
 const ACCOUNT_LINKS = [
   { label: "My Account", href: "/account", Icon: User },
-  { label: "Wishlist", href: "/account/wishlist", Icon: Heart },
+  { label: "Wishlist", href: "/wishlist", Icon: Heart },
   { label: "Bag", href: "/cart", Icon: ShoppingBag },
 ] as const;
 
@@ -107,6 +109,10 @@ const SUPPORT_LINKS = [
 export function MobileMenu({ isTransparent }: { isTransparent: boolean }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>("Collection");
+  const { cart } = useCart();
+  const { wishlistItems } = useWishlist();
+  const count = cart?.summary?.itemCount || 0;
+  const wishlistCount = wishlistItems?.length || 0;
 
   const close = () => setMobileOpen(false);
 
@@ -173,7 +179,19 @@ export function MobileMenu({ isTransparent }: { isTransparent: boolean }) {
                   onClick={close}
                   className="flex flex-col items-center justify-center gap-2 py-5 bg-stone-50/50 hover:bg-stone-100 transition-colors"
                 >
-                  <Icon className="h-5 w-5 text-charcoal/80" strokeWidth={1.4} />
+                  <div className="relative">
+                    <Icon className="h-5 w-5 text-charcoal/80" strokeWidth={1.4} />
+                    {label === "Bag" && count > 0 && (
+                      <span className="absolute -top-1.5 -right-2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gold text-cream text-[8px] font-bold animate-in zoom-in-50">
+                        {count}
+                      </span>
+                    )}
+                    {label === "Wishlist" && wishlistCount > 0 && (
+                      <span className="absolute -top-1.5 -right-2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-gold text-cream text-[8px] font-bold animate-in zoom-in-50">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] uppercase tracking-[0.2em] text-charcoal/80 font-bold">
                     {label}
                   </span>

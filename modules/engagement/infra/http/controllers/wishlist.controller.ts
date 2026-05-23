@@ -11,6 +11,7 @@ import {
   GetUserWishlistsHandler,
   GetPublicWishlistsHandler,
   GetWishlistItemsHandler,
+  TransferWishlistHandler,
 } from "../../../application";
 import {
   CreateWishlistBody,
@@ -20,6 +21,7 @@ import {
   WishlistItemParams,
   UserIdParams,
   PaginationQuery,
+  TransferWishlistBody,
 } from "../validation/wishlist.schema";
 
 export class WishlistController {
@@ -33,6 +35,7 @@ export class WishlistController {
     private readonly getUserWishlistsHandler: GetUserWishlistsHandler,
     private readonly getPublicWishlistsHandler: GetPublicWishlistsHandler,
     private readonly getWishlistItemsHandler: GetWishlistItemsHandler,
+    private readonly transferWishlistHandler: TransferWishlistHandler,
   ) {}
 
   // ── Reads (queries) ────────────────────────────────────────────────
@@ -167,6 +170,30 @@ export class WishlistController {
     try {
       const result = await this.deleteWishlistHandler.handle({ wishlistId: request.params.wishlistId });
       return ResponseHelper.fromCommand(reply, result, "Wishlist deleted successfully", undefined, 204);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async transferGuestWishlistToUser(
+    request: AuthenticatedRequest<{ Body: TransferWishlistBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { guestWishlistId, guestToken } = request.body;
+      const authenticatedUserId = request.user?.userId;
+      
+      if (!authenticatedUserId) {
+        return ResponseHelper.error(reply, new Error("Unauthorized: User session required for transfer"));
+      }
+
+      const result = await this.transferWishlistHandler.handle({
+        guestWishlistId,
+        guestToken,
+        userId: authenticatedUserId,
+      });
+
+      return ResponseHelper.fromCommand(reply, result, "Wishlist transferred and merged successfully", 200);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

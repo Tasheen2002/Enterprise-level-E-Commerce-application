@@ -1,5 +1,4 @@
 import { Suspense, type ReactNode } from "react";
-import { Container } from "@tasheen/ui";
 import { AccountSidebar } from "@/features/user-management/components/AccountSidebar";
 import { AccountMain } from "./AccountMain";
 import { AccountPrefetchBoundary } from "./AccountPrefetchBoundary";

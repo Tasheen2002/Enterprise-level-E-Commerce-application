@@ -5,9 +5,12 @@ import { QueryProvider } from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ModalProvider } from "@/providers/ModalProvider";
+import { CartProvider } from "@/providers/CartProvider";
+import { WishlistProvider } from "@/providers/WishlistProvider";
 import { buildMetadata } from "@/lib/seo";
 import { Toaster } from "sonner";
 import { CookieConsentBanner } from "@/components/legal/CookieConsentBanner";
+import { NewsletterModal } from "@/components/marketing/NewsletterModal";
 
 const serif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -78,12 +81,17 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>
-              <ModalProvider>{children}</ModalProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <ModalProvider>{children}</ModalProvider>
+                </CartProvider>
+              </WishlistProvider>
               {/* Bottom-fixed banner — only renders when no consent
                   decision exists. Sits outside ModalProvider so it
                   layers above everything but its own preferences modal
                   (z-90 banner, z-110 modal). */}
               <CookieConsentBanner />
+              <NewsletterModal />
               <Toaster
                 position="top-center"
                 expand={false}
