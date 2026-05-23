@@ -1,3 +1,5 @@
+import type { ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
+
 /**
  * Firebase wrapper — kept dependency-free at module level so the SDK
  * (~250 KB compressed) does NOT land in the initial JS chunk for /sign-in.
@@ -45,13 +47,13 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
  */
 
 export interface PhoneVerificationResult {
-  confirmationResult: any;
+  confirmationResult: ConfirmationResult;
 }
 
 /** 
  * Initializes the invisible reCAPTCHA verifier on a specific container ID.
  */
-export async function setupRecaptcha(containerId: string): Promise<any> {
+export async function setupRecaptcha(containerId: string): Promise<RecaptchaVerifier> {
   const { getAuth, RecaptchaVerifier } = await import("firebase/auth");
   const { getApps, getApp, initializeApp } = await import("firebase/app");
   
@@ -70,7 +72,7 @@ export async function setupRecaptcha(containerId: string): Promise<any> {
  * Sends a 6-digit SMS code to the provided phone number.
  * Returns the confirmationResult needed for the next step.
  */
-export async function sendPhoneCode(phoneNumber: string, verifier: any): Promise<any> {
+export async function sendPhoneCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
   const { getAuth, signInWithPhoneNumber } = await import("firebase/auth");
   const { getApps, getApp, initializeApp } = await import("firebase/app");
   
@@ -83,7 +85,7 @@ export async function sendPhoneCode(phoneNumber: string, verifier: any): Promise
 /**
  * Confirms the 6-digit code and returns the Firebase ID token as proof.
  */
-export async function verifyPhoneCode(confirmationResult: any, code: string): Promise<string> {
+export async function verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<string> {
   const result = await confirmationResult.confirm(code);
   return result.user.getIdToken();
 }

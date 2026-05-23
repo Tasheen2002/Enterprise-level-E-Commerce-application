@@ -1,9 +1,12 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Search, ShoppingBag, User, Heart, type LucideIcon } from "lucide-react";
+import { User, type LucideIcon } from "lucide-react";
 import { Container, cn } from "@tasheen/ui";
 import { GenderTabs } from "./GenderTabs";
 import { MobileMenu } from "./MobileMenu";
+import { HeaderCartButton } from "./HeaderCartButton";
+import { HeaderWishlistButton } from "./HeaderWishlistButton";
+import { HeaderSearchButton } from "./HeaderSearchButton";
 
 const NAV_ITEMS = [
   { label: "Collection", href: "/catalog" },
@@ -27,10 +30,7 @@ interface IconLink {
 }
 
 const ICON_LINKS: readonly IconLink[] = [
-  { label: "Search", href: "/search", Icon: Search, mobileVisible: false },
   { label: "Account", href: "/account", Icon: User, prefetch: false, mobileVisible: false },
-  { label: "Wishlist", href: "/account/wishlist", Icon: Heart, prefetch: false, mobileVisible: false },
-  { label: "Cart", href: "/cart", Icon: ShoppingBag, mobileVisible: true },
 ];
 
 /**
@@ -49,8 +49,10 @@ const ICON_LINKS: readonly IconLink[] = [
  */
 export function MarketingHeader({
   variant = "solid",
+  showSearch = true,
 }: {
   variant?: "solid" | "transparent";
+  showSearch?: boolean;
 }) {
   const isTransparent = variant === "transparent";
 
@@ -92,7 +94,7 @@ export function MarketingHeader({
 
             {/* Center: Brand Wordmark (Absolute center for stability) */}
             <div className="absolute left-1/2 top-1/2 lg:top-[40px] -translate-x-1/2 -translate-y-1/2">
-              <Link href="/" aria-label="Slipperze Home">
+              <Link href="/catalog?gender=women" aria-label="Slipperze Boutique">
                 <h1 className={cn(
                   "font-serif text-2xl sm:text-3xl lg:text-5xl tracking-[0.15em] sm:tracking-[0.18em] leading-none transition-colors duration-500",
                   isTransparent ? "text-cream" : "text-charcoal"
@@ -110,6 +112,7 @@ export function MarketingHeader({
                 still reachable via the mobile menu drawer. Cart stays
                 visible because checkout-in-progress UX needs it. */}
             <div className="flex items-center gap-4 sm:gap-6">
+              {showSearch && <HeaderSearchButton isTransparent={isTransparent} />}
               {ICON_LINKS.map(({ label, href, Icon, prefetch, mobileVisible }) => (
                 <Link
                   key={href}
@@ -127,6 +130,8 @@ export function MarketingHeader({
                   <Icon className="h-[18px] w-[18px]" strokeWidth={1.2} />
                 </Link>
               ))}
+              <HeaderWishlistButton isTransparent={isTransparent} />
+              <HeaderCartButton isTransparent={isTransparent} />
             </div>
           </div>
 

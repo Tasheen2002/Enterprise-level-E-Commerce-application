@@ -12,6 +12,7 @@ import {
   sendPhoneCode,
   verifyPhoneCode as confirmFirebaseOtp,
 } from "@/lib/firebase";
+import type { ConfirmationResult, RecaptchaVerifier } from "firebase/auth";
 import { useVerifyPhone } from "../hooks/useVerifyPhone";
 
 /**
@@ -75,8 +76,8 @@ export function PhoneVerificationForm({
   // `verifier.clear()` doesn't always wipe the iframe Firebase
   // injects into the container.
   const [recaptchaKey, setRecaptchaKey] = useState(0);
-  const confirmationRef = useRef<unknown>(null);
-  const recaptchaRef = useRef<{ clear?: () => void } | null>(null);
+  const confirmationRef = useRef<ConfirmationResult | null>(null);
+  const recaptchaRef = useRef<RecaptchaVerifier | null>(null);
 
   // Tear down the reCAPTCHA verifier when the form unmounts so a
   // re-open mounts a fresh one. Without this, Firebase complains about
@@ -84,7 +85,7 @@ export function PhoneVerificationForm({
   useEffect(() => {
     return () => {
       try {
-        recaptchaRef.current?.clear?.();
+        recaptchaRef.current?.clear();
       } catch {
         // Verifier may already be torn down; nothing to do.
       }
@@ -105,7 +106,7 @@ export function PhoneVerificationForm({
 
   const resetRecaptcha = () => {
     try {
-      recaptchaRef.current?.clear?.();
+      recaptchaRef.current?.clear();
     } catch {
       // verifier may already be torn down; nothing to do
     }
@@ -124,7 +125,7 @@ export function PhoneVerificationForm({
       // can be in a half-torn-down state from the previous run.
       if (recaptchaRef.current) {
         try {
-          recaptchaRef.current.clear?.();
+          recaptchaRef.current.clear();
         } catch {
           // ignore
         }
@@ -136,13 +137,12 @@ export function PhoneVerificationForm({
       const container = document.getElementById(RECAPTCHA_CONTAINER_ID);
       if (container) container.innerHTML = "";
 
-      recaptchaRef.current = (await setupRecaptcha(
-        RECAPTCHA_CONTAINER_ID,
-      )) as { clear?: () => void };
+      const verifier = await setupRecaptcha(RECAPTCHA_CONTAINER_ID);
+      recaptchaRef.current = verifier;
 
       confirmationRef.current = await sendPhoneCode(
         phone,
-        recaptchaRef.current,
+        verifier,
       );
       setVerifiedPhone(phone);
       setStep("code");

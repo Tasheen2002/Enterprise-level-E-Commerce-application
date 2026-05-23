@@ -91,24 +91,35 @@ export class WishlistRepositoryImpl
           updatedAt: wishlist.updatedAt,
         },
         update: {
+          userId: wishlist.userId,
+          guestToken: wishlist.guestToken,
           name: wishlist.name,
           isDefault: wishlist.isDefault,
           isPublic: wishlist.isPublic,
           description: wishlist.description,
+          updatedAt: wishlist.updatedAt,
         },
       });
 
       const desiredVariantIds = wishlist.items.map((i) => i.variantId);
 
       // Delete items removed from the aggregate.
-      await tx.wishlistItem.deleteMany({
-        where: {
-          wishlistId: wishlistIdValue,
-          variantId: {
-            notIn: desiredVariantIds.length > 0 ? desiredVariantIds : ["__none__"],
+      if (desiredVariantIds.length === 0) {
+        await tx.wishlistItem.deleteMany({
+          where: {
+            wishlistId: wishlistIdValue,
           },
-        },
-      });
+        });
+      } else {
+        await tx.wishlistItem.deleteMany({
+          where: {
+            wishlistId: wishlistIdValue,
+            variantId: {
+              notIn: desiredVariantIds,
+            },
+          },
+        });
+      }
 
       // Upsert each item present on the aggregate. WishlistItem has a
       // composite PK (wishlistId, variantId).
@@ -219,9 +230,15 @@ export class WishlistRepositoryImpl
   async findDefaultByUserId(userId: string): Promise<Wishlist | null> {
     const record = await this.prisma.wishlist.findFirst({
       where: { userId, isDefault: true },
+      include: { items: true },
     });
 
-    return record ? this.toEntity(record as WishlistDatabaseRow) : null;
+    return record
+      ? this.toEntity(
+          record as WishlistDatabaseRow,
+          record.items as WishlistItemDatabaseRow[],
+        )
+      : null;
   }
 
   async findPublicWishlists(

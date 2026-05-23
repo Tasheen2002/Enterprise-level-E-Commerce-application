@@ -1,4 +1,5 @@
 import { PrismaClient, Prisma, ProductStatusEnum } from "@prisma/client";
+import { randomUUID } from "crypto";
 import {
   IProductRepository,
   ProductQueryOptions,
@@ -18,6 +19,11 @@ import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastruct
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
 type ProductRow = Prisma.ProductGetPayload<object>;
+
+type ProductDomainRow = ProductRow & {
+  media?: Array<{ asset: { storageKey: string } }>;
+  categories?: Array<{ categoryId: string }>;
+};
 
 const PUBLIC_STATUSES: ProductStatusEnum[] = [
   ProductStatusEnum.published,
@@ -73,11 +79,14 @@ export class ProductRepositoryImpl
     }
   }
 
-  private toDomain(row: ProductRow): Product {
+  private toDomain(row: ProductDomainRow): Product {
     const slug = row.slug ? Slug.fromString(row.slug) : Slug.create(row.title);
     // Base price currency: read row.currency if the schema has it, otherwise fall back
     // to DEFAULT_CURRENCY. priceSgd/priceUsd carry their currency by column convention.
     const baseCurrency = row.currency ?? DEFAULT_CURRENCY;
+    const images = row.media?.map((m) => m.asset.storageKey) || [];
+    const categoryIds = row.categories?.map((c) => c.categoryId) || [];
+
     return Product.fromPersistence({
       id: ProductId.fromString(row.id),
       title: row.title,
@@ -102,6 +111,8 @@ export class ProductRepositoryImpl
         : null,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      images,
+      categoryIds,
     });
   }
 
@@ -132,12 +143,55 @@ export class ProductRepositoryImpl
       },
       update: updateData,
     });
+
+    if (product.images !== undefined) {
+      // Sync images in DB
+      await this.prisma.productMedia.deleteMany({
+        where: { productId: product.id.getValue() },
+      });
+
+      for (let i = 0; i < product.images.length; i++) {
+        const imageUrl = product.images[i];
+        
+        let asset = await this.prisma.mediaAsset.findFirst({
+          where: { storageKey: imageUrl },
+        });
+
+        if (!asset) {
+          asset = await this.prisma.mediaAsset.create({
+            data: {
+              id: randomUUID(),
+              storageKey: imageUrl,
+              mime: "image/png",
+            },
+          });
+        }
+
+        await this.prisma.productMedia.create({
+          data: {
+            id: randomUUID(),
+            productId: product.id.getValue(),
+            assetId: asset.id,
+            position: i + 1,
+            isCover: i === 0,
+          },
+        });
+      }
+    }
+
     await this.dispatchEvents(product);
   }
 
   async findById(id: ProductId): Promise<Product | null> {
     const productData = await this.prisma.product.findUnique({
       where: { id: id.getValue() },
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
     });
 
     if (!productData) {
@@ -151,6 +205,13 @@ export class ProductRepositoryImpl
     if (ids.length === 0) return [];
     const rows = await this.prisma.product.findMany({
       where: { id: { in: ids.map((id) => id.getValue()) } },
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
     });
     return rows.map((r) => this.toDomain(r));
   }
@@ -158,6 +219,13 @@ export class ProductRepositoryImpl
   async findBySlug(slug: Slug): Promise<Product | null> {
     const productData = await this.prisma.product.findUnique({
       where: { slug: slug.getValue() },
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
     });
 
     if (!productData) {
@@ -196,6 +264,13 @@ export class ProductRepositoryImpl
 
     const products = await this.prisma.product.findMany({
       where: whereClause,
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
@@ -217,6 +292,13 @@ export class ProductRepositoryImpl
 
     const products = await this.prisma.product.findMany({
       where: { status: this.mapStatusToPrisma(status) },
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
@@ -244,6 +326,13 @@ export class ProductRepositoryImpl
 
     const products = await this.prisma.product.findMany({
       where: whereClause,
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
@@ -274,6 +363,13 @@ export class ProductRepositoryImpl
 
     const products = await this.prisma.product.findMany({
       where: whereClause,
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
@@ -298,27 +394,45 @@ export class ProductRepositoryImpl
       priceRange,
     } = options || {};
 
+    const searchTerms = [query];
+    const queryLower = query.toLowerCase();
+    if (queryLower.endsWith("s") && queryLower.length > 3) {
+      searchTerms.push(query.slice(0, -1));
+    }
+
     const whereClause: Record<string, unknown> = {
-      OR: [
+      OR: searchTerms.flatMap((term) => [
         {
           title: {
-            contains: query,
+            contains: term,
             mode: "insensitive",
           },
         },
         {
           shortDesc: {
-            contains: query,
+            contains: term,
             mode: "insensitive",
           },
         },
         {
           brand: {
-            contains: query,
+            contains: term,
             mode: "insensitive",
           },
         },
-      ],
+        {
+          categories: {
+            some: {
+              category: {
+                name: {
+                  contains: term,
+                  mode: "insensitive",
+                },
+              },
+            },
+          },
+        },
+      ]),
     };
 
     if (!includeDrafts) {
@@ -356,6 +470,13 @@ export class ProductRepositoryImpl
 
     const products = await this.prisma.product.findMany({
       where: whereClause,
+      include: {
+        media: {
+          include: { asset: true },
+          orderBy: { position: "asc" },
+        },
+        categories: true,
+      },
       take: limit,
       skip: offset,
       orderBy: { [sortBy]: sortOrder },
@@ -456,10 +577,10 @@ export class ProductRepositoryImpl
     for (const product of enrichedProducts) {
       enrichmentMap.set(product.id, {
         variants:
-          product.variants?.map((v: any) => {
+          product.variants?.map((v) => {
             const totalInventory =
               v.inventoryStocks?.reduce(
-                (sum: number, stock: any) =>
+                (sum, stock) =>
                   sum + (stock.onHand - stock.reserved),
                 0,
               ) || 0;
@@ -472,17 +593,18 @@ export class ProductRepositoryImpl
             };
           }) || [],
         images:
-          product.media?.map((m: any) => ({
+          product.media?.map((m) => ({
             url: m.asset.storageKey,
             alt: m.asset.altText,
             width: m.asset.width,
             height: m.asset.height,
           })) || [],
         categories:
-          product.categories?.map((pc: any) => ({
+          product.categories?.map((pc) => ({
             id: pc.category.id,
             name: pc.category.name,
             slug: pc.category.slug,
+
             position: pc.category.position,
           })) || [],
       });
@@ -515,10 +637,10 @@ export class ProductRepositoryImpl
 
     return {
       variants:
-        enrichedProduct.variants?.map((v: any) => {
+        enrichedProduct.variants?.map((v) => {
           const totalInventory =
             v.inventoryStocks?.reduce(
-              (sum: number, stock: any) =>
+              (sum, stock) =>
                 sum + (stock.onHand - stock.reserved),
               0,
             ) || 0;
@@ -531,14 +653,14 @@ export class ProductRepositoryImpl
           };
         }) || [],
       images:
-        enrichedProduct.media?.map((m: any) => ({
+        enrichedProduct.media?.map((m) => ({
           url: m.asset.storageKey,
           alt: m.asset.altText,
           width: m.asset.width,
           height: m.asset.height,
         })) || [],
       categories:
-        enrichedProduct.categories?.map((pc: any) => ({
+        enrichedProduct.categories?.map((pc) => ({
           id: pc.category.id,
           name: pc.category.name,
           slug: pc.category.slug,
@@ -560,20 +682,21 @@ export class ProductRepositoryImpl
 
     return {
       images:
-        enrichedProduct?.media?.map((m: any) => ({
+        enrichedProduct?.media?.map((m) => ({
           url: m.asset.storageKey,
           alt: m.asset.altText,
           width: m.asset.width,
           height: m.asset.height,
         })) || [],
       media:
-        enrichedProduct?.media?.map((m: any) => ({
+        enrichedProduct?.media?.map((m) => ({
           id: m.id,
           productId: m.productId,
           assetId: m.assetId,
           position: m.position,
           asset: {
             id: m.asset.id,
+
             storageKey: m.asset.storageKey,
             altText: m.asset.altText,
             width: m.asset.width,

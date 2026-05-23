@@ -43,6 +43,7 @@ export const listProductsSchema = z.object({
 
 export const createProductSchema = z.object({
   title: z.string().min(1),
+  slug: z.string().optional(),
   brand: z.string().optional(),
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
@@ -58,10 +59,12 @@ export const createProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
+  images: z.array(z.string()).optional(),
 });
 
 export const updateProductSchema = z.object({
   title: z.string().min(1).optional(),
+  slug: z.string().optional(),
   brand: z.string().optional(),
   shortDesc: z.string().optional(),
   longDescHtml: z.string().optional(),
@@ -77,6 +80,7 @@ export const updateProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
+  images: z.array(z.string()).optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────
@@ -110,6 +114,8 @@ export const productResponseSchema = {
     currency: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
+    images: { type: "array", items: { type: "string" } },
+    categoryIds: { type: "array", items: { type: "string" } },
   },
 } as const;
 

@@ -41,7 +41,11 @@ export function CategoryGallery({ category }: { category: string }) {
         >
           <Link href={item.href} className="block h-full w-full">
             <Image
-              src={item.image.startsWith('/') ? item.image : `/images/catalog/leather-goods/${item.image}`}
+              src={
+                item.image.startsWith("http") || item.image.startsWith("/")
+                  ? item.image
+                  : imageKitUrl(item.image)
+              }
               alt={item.title}
               fill
               className="object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-110"

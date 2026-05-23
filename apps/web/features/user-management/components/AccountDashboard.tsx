@@ -174,7 +174,7 @@ export function AccountDashboard() {
             icon={Heart}
             label="Wishlist Items"
             value={user.wishlistItems}
-            href="/account/wishlist"
+            href="/wishlist"
           />
           <ActivityCard
             icon={Coins}

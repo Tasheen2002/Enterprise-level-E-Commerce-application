@@ -313,7 +313,7 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
       where: { variant: { productId: sourceProductId.getValue() } },
     });
     const sourceMedia = sourceRows.map((r) => this.toDomain(r));
-    const creates: any[] = [];
+    const creates: ReturnType<typeof this.prisma.variantMedia.create>[] = [];
     for (const m of sourceMedia) {
       const targetVid = variantMapping.get(m.variantId.getValue());
       if (targetVid) {
@@ -368,7 +368,7 @@ export class VariantMediaRepositoryImpl implements IVariantMediaRepository {
       select: { variantId: true },
       distinct: ["variantId"],
     });
-    return rows.map((r: any) => VariantId.fromString(r.variantId));
+    return rows.map((r) => VariantId.fromString(r.variantId));
   }
 
   // Not implemented — computing unused assets requires a full asset list to diff against.

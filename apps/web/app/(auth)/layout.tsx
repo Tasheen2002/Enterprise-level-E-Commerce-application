@@ -10,7 +10,7 @@ import { MarketingFooter } from "@/components/layout/MarketingFooter";
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-cream">
-      <MarketingHeader />
+      <MarketingHeader showSearch={false} />
       <main className="flex flex-1 flex-col">{children}</main>
       <MarketingFooter />
     </div>

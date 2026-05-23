@@ -54,6 +54,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
 
     fetchUser();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("profile-updated", fetchUser);
+      return () => {
+        window.removeEventListener("profile-updated", fetchUser);
+      };
+    }
   }, []);
 
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;

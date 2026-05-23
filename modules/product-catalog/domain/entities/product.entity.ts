@@ -65,6 +65,8 @@ export interface ProductProps {
   compareAtPrice: Money | null;
   createdAt: Date;
   updatedAt: Date;
+  images?: string[];
+  categoryIds?: string[];
 }
 
 export interface ProductDTO {
@@ -86,6 +88,8 @@ export interface ProductDTO {
   compareAtPrice: number | null;
   createdAt: string;
   updatedAt: string;
+  images?: string[];
+  categoryIds?: string[];
 }
 
 // ── Entity ─────────────────────────────────────────────────────────────
@@ -98,6 +102,7 @@ export class Product extends AggregateRoot {
 
   static create(params: {
     title: string;
+    slug?: string | null;
     brand?: string | null;
     shortDesc?: string | null;
     longDescHtml?: string | null;
@@ -111,9 +116,13 @@ export class Product extends AggregateRoot {
     priceSgd?: number | null;
     priceUsd?: number | null;
     compareAtPrice?: number | null;
+    images?: string[];
+    categoryIds?: string[];
   }): Product {
     const productId = ProductId.create();
-    const slug = Slug.create(params.title);
+    const slug = params.slug
+      ? Slug.fromString(params.slug)
+      : Slug.create(params.title);
     const baseCurrency = params.currency ?? DEFAULT_CURRENCY;
     const now = new Date();
 
@@ -138,6 +147,8 @@ export class Product extends AggregateRoot {
           : null,
       createdAt: now,
       updatedAt: now,
+      images: params.images || [],
+      categoryIds: params.categoryIds || [],
     });
 
     product.addDomainEvent(
@@ -183,13 +194,14 @@ export class Product extends AggregateRoot {
   get compareAtPrice(): Money | null { return this.props.compareAtPrice; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
+  get images(): string[] | undefined { return this.props.images; }
+  get categoryIds(): string[] | undefined { return this.props.categoryIds; }
 
   // ── Business Logic ─────────────────────────────────────────────────
 
   updateTitle(newTitle: string): void {
     Product.validateTitle(newTitle);
     this.props.title = newTitle.trim();
-    this.props.slug = Slug.create(newTitle);
     this.markUpdated();
   }
 
@@ -249,6 +261,11 @@ export class Product extends AggregateRoot {
     } else {
       this.props.compareAtPrice = null;
     }
+    this.markUpdated();
+  }
+
+  updateImages(newImages: string[]): void {
+    this.props.images = newImages;
     this.markUpdated();
   }
 
@@ -355,6 +372,8 @@ export class Product extends AggregateRoot {
       compareAtPrice: entity.props.compareAtPrice?.getAmount() ?? null,
       createdAt: entity.props.createdAt.toISOString(),
       updatedAt: entity.props.updatedAt.toISOString(),
+      images: entity.props.images,
+      categoryIds: entity.props.categoryIds,
     };
   }
 }

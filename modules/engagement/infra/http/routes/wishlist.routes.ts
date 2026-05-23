@@ -31,6 +31,7 @@ import {
   addToWishlistSchema,
   wishlistResponseSchema,
   wishlistItemResponseSchema,
+  transferWishlistSchema,
 } from "../validation/wishlist.schema";
 
 // Pre-compute JSON Schemas from Zod (single source of truth — no drift).
@@ -41,6 +42,7 @@ const paginationQueryJson = toJsonSchema(paginationQuerySchema);
 const createWishlistBodyJson = toJsonSchema(createWishlistSchema);
 const updateWishlistBodyJson = toJsonSchema(updateWishlistSchema);
 const addToWishlistBodyJson = toJsonSchema(addToWishlistSchema);
+const transferWishlistBodyJson = toJsonSchema(transferWishlistSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -248,5 +250,26 @@ export async function wishlistRoutes(
     },
     (request, reply) =>
       controller.deleteWishlist(request as AuthenticatedRequest, reply),
+  );
+
+  // POST /engagement/wishlists/transfer — Transfer guest wishlist to authenticated user
+  fastify.post(
+    "/engagement/wishlists/transfer",
+    {
+      preValidation: [validateBody(transferWishlistSchema)],
+      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      schema: {
+        description: "Transfer guest wishlist items to the authenticated user's default wishlist",
+        summary: "Transfer Wishlist",
+        tags: ["Engagement - Wishlists"],
+        security: [{ bearerAuth: [] }],
+        body: transferWishlistBodyJson,
+        response: {
+          200: successResponse(wishlistResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      controller.transferGuestWishlistToUser(request as AuthenticatedRequest, reply),
   );
 }

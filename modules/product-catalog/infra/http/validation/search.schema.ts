@@ -19,7 +19,7 @@ const SEARCHABLE_PRODUCT_STATUSES = [
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
 export const searchQuerySchema = z.object({
-  q: z.string().min(2),
+  q: z.string().min(1),
   page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   category: z.string().optional(),
@@ -75,8 +75,17 @@ const searchSuggestionItemSchema = {
 } as const;
 
 export const searchSuggestionsResponseSchema = {
-  type: "array",
-  items: searchSuggestionItemSchema,
+  type: "object",
+  required: ["suggestions", "query", "type", "limit"],
+  properties: {
+    suggestions: {
+      type: "array",
+      items: searchSuggestionItemSchema,
+    },
+    query: { type: "string" },
+    type: { type: "string" },
+    limit: { type: "integer" },
+  },
 } as const;
 
 const popularSearchTermSchema = {

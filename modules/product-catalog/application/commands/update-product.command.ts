@@ -21,6 +21,8 @@ export interface UpdateProductCommand extends ICommand {
   readonly compareAtPrice?: number | null;
   readonly categoryIds?: string[];
   readonly tags?: string[];
+  readonly slug?: string;
+  readonly images?: string[];
 }
 
 export class UpdateProductHandler implements ICommandHandler<UpdateProductCommand, CommandResult<ProductDTO>> {

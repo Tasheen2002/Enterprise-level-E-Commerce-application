@@ -142,6 +142,48 @@ export class WishlistManagementService {
     return Wishlist.toDTO(wishlist);
   }
 
+  async mergeOrTransferWishlist(
+    guestWishlistId: string,
+    guestToken: string,
+    userId: string,
+  ): Promise<WishlistDTO> {
+    const guestWishlist = await this.wishlistRepository.findById(WishlistId.fromString(guestWishlistId));
+    if (!guestWishlist) throw new WishlistNotFoundError(guestWishlistId);
+
+    // Verify token matches guest wishlist ownership
+    if (guestWishlist.guestToken !== guestToken) {
+      throw new Error("Unauthorized: Guest token does not match wishlist ownership");
+    }
+
+    // Find if the user already has a default wishlist
+    const userDefaultWishlist = await this.wishlistRepository.findDefaultByUserId(userId);
+
+    if (userDefaultWishlist) {
+      // User has an existing default wishlist: merge items
+      const guestVariantIds = guestWishlist.items.map((item) => item.variantId);
+      
+      for (const variantId of guestVariantIds) {
+        if (!userDefaultWishlist.hasItem(variantId)) {
+          userDefaultWishlist.addItem(variantId);
+        }
+      }
+      
+      await this.wishlistRepository.save(userDefaultWishlist);
+      
+      // Delete guest wishlist (cascade delete of items in DB)
+      await this.wishlistRepository.delete(guestWishlist.id);
+      
+      return Wishlist.toDTO(userDefaultWishlist);
+    } else {
+      // User does not have a default wishlist: transfer guest wishlist & make default
+      guestWishlist.transferToUser(userId);
+      guestWishlist.makeDefault();
+      
+      await this.wishlistRepository.save(guestWishlist);
+      return Wishlist.toDTO(guestWishlist);
+    }
+  }
+
   async deleteWishlist(wishlistId: string): Promise<void> {
     const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
     if (!wishlist) throw new WishlistNotFoundError(wishlistId);

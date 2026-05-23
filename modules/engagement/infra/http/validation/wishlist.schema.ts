@@ -81,3 +81,10 @@ export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 export type CreateWishlistBody = z.infer<typeof createWishlistSchema>;
 export type UpdateWishlistBody = z.infer<typeof updateWishlistSchema>;
 export type AddToWishlistBody = z.infer<typeof addToWishlistSchema>;
+
+export const transferWishlistSchema = z.object({
+  guestWishlistId: z.uuid(),
+  guestToken: z.string().min(1),
+});
+
+export type TransferWishlistBody = z.infer<typeof transferWishlistSchema>;

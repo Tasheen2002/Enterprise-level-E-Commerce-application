@@ -75,10 +75,12 @@ export function CookieConsentBanner() {
         </div>
       )}
 
-      <CookiePreferencesModal
-        isOpen={prefsOpen}
-        onClose={() => setPrefsOpen(false)}
-      />
+      {prefsOpen && (
+        <CookiePreferencesModal
+          isOpen={prefsOpen}
+          onClose={() => setPrefsOpen(false)}
+        />
+      )}
     </>
   );
 }

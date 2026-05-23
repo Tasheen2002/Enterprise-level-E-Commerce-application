@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, unwrap } from "../../lib/api-client";
 import { setAuthToken } from "../../lib/auth";
 import { Eye, EyeOff } from "lucide-react";
 
-export default function SetupAccountPage() {
+function SetupAccountForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -201,5 +201,24 @@ export default function SetupAccountPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SetupAccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F5F1E8] flex items-center justify-center p-6 select-none">
+        <div className="w-full max-w-[500px] text-center">
+          <h1 className="font-serif italic text-4xl text-[#333] mb-2 tracking-tight">
+            Atelier Setup
+          </h1>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#333]/60 font-bold">
+            Loading Administrative Account Setup...
+          </p>
+        </div>
+      </div>
+    }>
+      <SetupAccountForm />
+    </Suspense>
   );
 }

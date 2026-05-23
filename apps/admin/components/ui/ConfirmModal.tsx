@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface ConfirmModalProps {
@@ -8,7 +8,7 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   onClose: () => void;
   variant?: "danger" | "warning" | "info";
 }
@@ -22,6 +22,8 @@ export function ConfirmModal({
   onClose,
   variant = "danger",
 }: ConfirmModalProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const getVariantStyles = () => {
     switch (variant) {
       case "danger":
@@ -47,12 +49,24 @@ export function ConfirmModal({
 
   const styles = getVariantStyles();
 
+  const handleConfirm = async () => {
+    setIsSubmitting(true);
+    try {
+      await onConfirm();
+      onClose();
+    } catch (err) {
+      console.error("Action confirmation failed:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm transition-opacity" 
-        onClick={onClose}
+        onClick={isSubmitting ? undefined : onClose}
       />
       
       {/* Modal Content */}
@@ -80,18 +94,17 @@ export function ConfirmModal({
         <div className="bg-[#F9F8F4] px-6 py-4 flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-charcoal/40 hover:text-charcoal transition-colors"
+            disabled={isSubmitting}
+            className="px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-charcoal/40 hover:text-charcoal transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             {cancelLabel}
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-            className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm shadow-lg shadow-black/5 transition-all active:scale-95 ${styles.button}`}
+            onClick={handleConfirm}
+            disabled={isSubmitting}
+            className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm shadow-lg shadow-black/5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
           >
-            {confirmLabel}
+            {isSubmitting ? "Processing..." : confirmLabel}
           </button>
         </div>
       </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, unwrap } from "../../lib/api-client";
 import { setAuthToken } from "../../lib/auth";
 import { Eye, EyeOff, ShieldCheck, ArrowLeft } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/";
@@ -265,5 +265,24 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F5F1E8] flex items-center justify-center p-6 select-none">
+        <div className="w-full max-w-[440px] text-center">
+          <h1 className="font-serif italic text-4xl text-[#333] mb-2 tracking-tight">
+            Atelier Boutique
+          </h1>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#333]/60 font-bold">
+            Loading Administrative Suite...
+          </p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

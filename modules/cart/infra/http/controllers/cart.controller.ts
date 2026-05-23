@@ -113,13 +113,6 @@ export class CartController {
     reply: FastifyReply,
   ) {
     try {
-      if (request.user?.userId) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Authenticated users cannot access guest carts. Use the user cart endpoint instead.",
-        );
-      }
-
       const { guestToken } = request.params;
       const result = await this.getActiveCartByGuestTokenHandler.handle({
         guestToken,
@@ -189,13 +182,6 @@ export class CartController {
     reply: FastifyReply,
   ) {
     try {
-      if (request.user?.userId) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Authenticated users cannot create guest carts. Use the user cart endpoint instead.",
-        );
-      }
-
       const { guestToken } = request.params;
       const cartData = request.body || {};
       const result = await this.createGuestCartHandler.handle({
@@ -475,13 +461,6 @@ export class CartController {
     reply: FastifyReply,
   ) {
     try {
-      if (request.user?.userId) {
-        return ResponseHelper.badRequest(
-          reply,
-          "Authenticated users cannot clear guest carts. Use the user cart endpoint instead.",
-        );
-      }
-
       const { guestToken } = request.params;
       const result = await this.clearGuestCartHandler.handle({ guestToken });
       return ResponseHelper.fromCommand(

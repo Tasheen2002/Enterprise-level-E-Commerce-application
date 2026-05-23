@@ -119,28 +119,28 @@ export function userOrIpKeyGenerator(request: FastifyRequest): string {
 export const RateLimitPresets = {
   auth: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 100,
+    maxRequests: 1000,
     message: "Too many authentication attempts. Please try again in 15 minutes.",
   },
   api: {
     windowMs: 60 * 1000,
-    maxRequests: 100,
+    maxRequests: 5000,
   },
   readOperations: {
     windowMs: 60 * 1000,
-    maxRequests: 300,
+    maxRequests: 5000,
   },
   writeOperations: {
     windowMs: 60 * 1000,
-    maxRequests: 30,
+    maxRequests: 2000,
   },
   checkout: {
     windowMs: 60 * 1000,
-    maxRequests: 10,
+    maxRequests: 1000,
     message: "Too many checkout attempts. Please wait before trying again.",
   },
   productSearch: {
     windowMs: 60 * 1000,
-    maxRequests: 200,
+    maxRequests: 5000,
   },
 };
