@@ -23,6 +23,7 @@ import {
   updatePOEtaSchema,
   receivePOItemsSchema,
   purchaseOrderResponseSchema,
+  purchaseOrderWithItemsResponseSchema,
 } from "../validation/purchase-order.schema";
 
 // Pre-compute JSON Schemas from Zod (single source of truth — no drift).
@@ -156,7 +157,7 @@ export async function purchaseOrderRoutes(
         security: [{ bearerAuth: [] }],
         body: createPurchaseOrderWithItemsBodyJson,
         response: {
-          201: successResponse(purchaseOrderResponseSchema, 201),
+          201: successResponse(purchaseOrderWithItemsResponseSchema, 201),
         },
       },
     },

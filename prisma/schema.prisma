@@ -14,28 +14,24 @@ model User {
   email                String                @unique
   passwordHash         String?               @map("password_hash")
   phone                String?
-  firstName            String?               @map("first_name")
-  lastName             String?               @map("last_name")
-  title                String?
-  dateOfBirth          DateTime?             @map("date_of_birth") @db.Date
-  residentOf           String?               @map("resident_of")
-  nationality          String?
   role                 UserRole              @default(CUSTOMER)
   status               UserStatus            @default(active)
   emailVerified        Boolean               @default(false) @map("email_verified")
   phoneVerified        Boolean               @default(false) @map("phone_verified")
-  // TOTP secret in base32. Non-null while the user has either started
-  // or completed 2FA setup. The boolean below is what gates login.
-  twoFactorSecret      String?               @map("two_factor_secret")
-  twoFactorEnabled     Boolean               @default(false) @map("two_factor_enabled")
   isGuest              Boolean               @default(false) @map("is_guest")
-  // Stripe Customer ID (cus_…). Lazily populated on first SetupIntent so
-  // saved cards + future PaymentIntents attach to one persistent customer.
-  stripeCustomerId     String?               @unique @map("stripe_customer_id")
   createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  shoppingCarts        ShoppingCart[]
+  dateOfBirth          DateTime?             @map("date_of_birth") @db.Date
+  firstName            String?               @map("first_name")
+  lastName             String?               @map("last_name")
+  nationality          String?
+  residentOf           String?               @map("resident_of")
+  title                String?
+  stripeCustomerId     String?               @unique @map("stripe_customer_id")
+  twoFactorSecret      String?               @map("two_factor_secret")
+  twoFactorEnabled     Boolean               @default(false) @map("two_factor_enabled")
   checkouts            Checkout[]
+  shoppingCarts        ShoppingCart[]
   chat_sessions        ChatSession[]
   customer_feedback    CustomerFeedback[]
   goodwill_records     GoodwillRecord[]
@@ -46,13 +42,13 @@ model User {
   wishlists            Wishlist[]
   orders               Order[]
   loyaltyAccount       LoyaltyAccount?
+  sentInvitations      AdminInvitation[]
+  memberSessions       MemberSession[]
   paymentMethods       PaymentMethod[]
   socialLogins         SocialLogin[]
+  twoFactorBackupCodes TwoFactorBackupCode[]
   addresses            UserAddress[]
   profile              UserProfile?
-  twoFactorBackupCodes TwoFactorBackupCode[]
-  memberSessions       MemberSession[]
-  sentInvitations      AdminInvitation[]
 
   @@index([status])
   @@index([role])
@@ -77,7 +73,6 @@ model MemberSession {
   expiresAt        DateTime @map("expires_at") @db.Timestamptz(6)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId])
@@ -86,7 +81,6 @@ model MemberSession {
   @@map("member_sessions")
   @@schema("user_management")
 }
-
 
 model SocialLogin {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @map("social_id") @db.Uuid
@@ -102,10 +96,6 @@ model SocialLogin {
   @@schema("user_management")
 }
 
-// One row per single-use 2FA backup code. Plaintext is shown to the
-// user exactly once at issue time; only `codeHash` (sha256, hex) lives
-// here. `usedAt` is mutated rather than the row deleted so we can
-// audit which codes were consumed without losing the count.
 model TwoFactorBackupCode {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @map("backup_code_id") @db.Uuid
   userId    String    @map("user_id") @db.Uuid
@@ -120,10 +110,6 @@ model TwoFactorBackupCode {
   @@schema("user_management")
 }
 
-// Invitation-based admin registration. A Super Admin creates an invitation
-// for a new staff member; the recipient clicks a tokenised link and sets
-// their password. Token is sha256-hashed at rest — the plaintext is only
-// ever in the email link.
 model AdminInvitation {
   id          String               @id @default(dbgenerated("gen_random_uuid()")) @map("invitation_id") @db.Uuid
   email       String
@@ -203,14 +189,12 @@ model UserProfile {
   userId                 String         @id @map("user_id") @db.Uuid
   defaultAddressId       String?        @map("default_address_id") @db.Uuid
   defaultPaymentMethodId String?        @map("default_payment_method_id") @db.Uuid
-  // Public ImageKit URL of the user's profile photo. Null = use default
-  // placeholder. Set via signed direct-to-ImageKit upload flow.
-  avatarUrl              String?        @map("avatar_url")
   prefs                  Json           @default("{}")
   locale                 String?
   currency               String?
   stylePreferences       Json           @default("{}") @map("style_preferences")
   preferredSizes         Json           @default("{}") @map("preferred_sizes")
+  avatarUrl              String?        @map("avatar_url")
   defaultAddress         UserAddress?   @relation("DefaultAddress", fields: [defaultAddressId], references: [id], onUpdate: NoAction)
   defaultPaymentMethod   PaymentMethod? @relation("DefaultPaymentMethod", fields: [defaultPaymentMethodId], references: [id], onUpdate: NoAction)
   user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -231,13 +215,13 @@ model Product {
   countryOfOrigin       String?                 @map("country_of_origin")
   seoTitle              String?                 @map("seo_title")
   seoDescription        String?                 @map("seo_description")
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  compareAtPrice        Decimal?                @map("compare_at_price") @db.Decimal(12, 2)
+  currency              String                  @default("SGD")
   price                 Decimal                 @default(0) @db.Decimal(12, 2)
   priceSgd              Decimal?                @map("price_sgd") @db.Decimal(12, 2)
   priceUsd              Decimal?                @map("price_usd") @db.Decimal(12, 2)
-  compareAtPrice        Decimal?                @map("compare_at_price") @db.Decimal(12, 2)
-  currency              String                  @default("SGD")
-  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt             DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   reviews               ProductReview[]
   editorialLookProducts EditorialLookProduct[]
   categories            ProductCategory[]
@@ -368,8 +352,8 @@ model ProductMedia {
 model VariantMedia {
   variantId    String         @map("variant_id") @db.Uuid
   assetId      String         @map("asset_id") @db.Uuid
-  displayOrder Int            @default(0) @map("display_order")
   createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  displayOrder Int            @default(0) @map("display_order")
   updatedAt    DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   asset        MediaAsset     @relation(fields: [assetId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -476,8 +460,8 @@ model ShoppingCart {
   createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   items                 CartItem[]
-  reservations          Reservation[]
   checkouts             Checkout[]
+  reservations          Reservation[]
   user                  User?         @relation(fields: [userId], references: [id], onUpdate: NoAction)
 
   @@index([userId])
@@ -538,10 +522,10 @@ model Checkout {
   completedAt   DateTime?          @map("completed_at") @db.Timestamptz(6)
   createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user          User?              @relation(fields: [userId], references: [id], onUpdate: NoAction)
   cart          ShoppingCart       @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  paymentIntent PaymentIntent?     @relation("PaymentIntentCheckout")
+  user          User?              @relation(fields: [userId], references: [id], onUpdate: NoAction)
   orders        Order[]            @relation("CheckoutOrders")
+  paymentIntent PaymentIntent?     @relation("PaymentIntentCheckout")
 
   @@index([userId], map: "idx_checkouts_user_id")
   @@index([status], map: "idx_checkouts_status")
@@ -575,8 +559,8 @@ model Order {
   items                  OrderItem[]
   shipments              OrderShipment[]
   statusHistory          OrderStatusHistory[]
+  checkout               Checkout?             @relation("CheckoutOrders", fields: [checkoutId], references: [id])
   user                   User?                 @relation(fields: [userId], references: [id], onUpdate: NoAction)
-  checkout               Checkout?             @relation("CheckoutOrders", fields: [checkoutId], references: [id], onDelete: SetNull)
   bnpl_transactions      BnplTransaction[]
   gift_card_transactions GiftCardTransaction[]
   loyalty_transactions   LoyaltyTransaction[]
@@ -693,8 +677,8 @@ model OrderEvent {
   orderId   String   @map("order_id") @db.Uuid
   eventType String   @map("event_type")
   payload   Json     @default("{}")
-  loggedBy  String?  @map("logged_by")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  loggedBy  String?  @map("logged_by")
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([orderId])
@@ -720,7 +704,6 @@ model Shipment {
   isGift      Boolean            @default(false) @map("is_gift")
   giftMessage String?            @map("gift_message")
   items       ShipmentItem[]
-  // Note: Fulfillment shipments are independent entities, not directly related to Order model
 
   @@index([orderId], map: "idx_fulfillment_shipments_order_id")
   @@index([status], map: "idx_fulfillment_shipments_status")
@@ -901,9 +884,9 @@ model PaymentIntent {
   createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime                @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   bnplTransactions BnplTransaction[]
+  checkout         Checkout?               @relation("PaymentIntentCheckout", fields: [checkoutId], references: [id])
   order            Order?                  @relation("PaymentIntentOrder", fields: [orderId], references: [id])
   transactions     PaymentTransaction[]
-  checkout         Checkout?               @relation("PaymentIntentCheckout", fields: [checkoutId], references: [id])
 
   @@index([orderId])
   @@index([provider])
@@ -919,11 +902,11 @@ model PaymentTransaction {
   intentId      String             @map("intent_id") @db.Uuid
   type          PaymentTxnTypeEnum
   amount        Decimal            @db.Decimal(12, 2)
-  currency      String             @default("USD")
   status        String
   failureReason String?            @map("failure_reason")
   pspRef        String?            @map("psp_ref")
   createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  currency      String             @default("USD")
   updatedAt     DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   paymentIntent PaymentIntent      @relation(fields: [intentId], references: [intentId], onDelete: Cascade, onUpdate: NoAction)
 
@@ -964,10 +947,10 @@ model GiftCard {
   currency       String
   expiresAt      DateTime?             @map("expires_at") @db.Timestamptz(6)
   status         String
+  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  message        String?
   recipientEmail String?               @map("recipient_email")
   recipientName  String?               @map("recipient_name")
-  message        String?
-  createdAt      DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   transactions   GiftCardTransaction[]
 
@@ -1016,12 +999,12 @@ model Promotion {
 }
 
 model PromotionUsage {
-  usageId        String    @id @default(dbgenerated("gen_random_uuid()")) @map("usage_id") @db.Uuid
   promoId        String    @map("promo_id") @db.Uuid
   orderId        String    @map("order_id") @db.Uuid
   discountAmount Decimal   @map("discount_amount") @db.Decimal(12, 2)
-  currency       String    @default("USD")
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  currency       String    @default("USD")
+  usageId        String    @id @default(dbgenerated("gen_random_uuid()")) @map("usage_id") @db.Uuid
   orders         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   promotion      Promotion @relation(fields: [promoId], references: [promoId], onDelete: Cascade, onUpdate: NoAction)
 
@@ -1049,15 +1032,15 @@ model LoyaltyProgram {
 model LoyaltyAccount {
   accountId           String               @id @default(dbgenerated("gen_random_uuid()")) @map("account_id") @db.Uuid
   userId              String               @unique @map("user_id") @db.Uuid
-  currentBalance      BigInt               @default(0) @map("current_balance")
-  totalPointsEarned   BigInt               @default(0) @map("total_points_earned")
-  totalPointsRedeemed BigInt               @default(0) @map("total_points_redeemed")
-  lifetimePoints      BigInt               @default(0) @map("lifetime_points")
   tier                String               @default("STYLE_LOVER")
+  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  currentBalance      BigInt               @default(0) @map("current_balance")
   joinedAt            DateTime             @map("joined_at") @db.Timestamptz(6)
   lastActivityAt      DateTime?            @map("last_activity_at") @db.Timestamptz(6)
-  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt           DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lifetimePoints      BigInt               @default(0) @map("lifetime_points")
+  totalPointsEarned   BigInt               @default(0) @map("total_points_earned")
+  totalPointsRedeemed BigInt               @default(0) @map("total_points_redeemed")
   users               User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   transactions        LoyaltyTransaction[]
 
@@ -1069,18 +1052,18 @@ model LoyaltyAccount {
 }
 
 model LoyaltyTransaction {
-  transactionId String         @id @default(dbgenerated("gen_random_uuid()")) @map("transaction_id") @db.Uuid
   accountId     String         @map("account_id") @db.Uuid
-  type          String
-  points        BigInt
-  reason        String
-  description   String?
-  referenceId   String?        @map("reference_id") @db.Uuid
   orderId       String?        @map("order_id") @db.Uuid
-  createdBy     String?        @map("created_by") @db.Uuid
-  expiresAt     DateTime?      @map("expires_at") @db.Timestamptz(6)
-  balanceAfter  BigInt         @map("balance_after")
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  balanceAfter  BigInt         @map("balance_after")
+  createdBy     String?        @map("created_by") @db.Uuid
+  description   String?
+  expiresAt     DateTime?      @map("expires_at") @db.Timestamptz(6)
+  points        BigInt
+  referenceId   String?        @map("reference_id") @db.Uuid
+  transactionId String         @id @default(dbgenerated("gen_random_uuid()")) @map("transaction_id") @db.Uuid
+  type          String
+  reason        String
   account       LoyaltyAccount @relation(fields: [accountId], references: [accountId], onDelete: Cascade, onUpdate: NoAction)
   orders        Order?         @relation(fields: [orderId], references: [id], onUpdate: NoAction)
 
@@ -1437,6 +1420,36 @@ model NewsletterSubscription {
   @@schema("engagement")
 }
 
+model AnalyticsEvent {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @map("event_id") @db.Uuid
+  eventType      EventTypeEnum @map("event_type")
+  userId         String?       @map("user_id") @db.Uuid
+  guestToken     String?       @map("guest_token")
+  sessionId      String        @map("session_id")
+  productId      String?       @map("product_id") @db.Uuid
+  variantId      String?       @map("variant_id") @db.Uuid
+  cartId         String?       @map("cart_id") @db.Uuid
+  eventData      Json?         @map("event_data")
+  userAgent      String?       @map("user_agent")
+  ipAddress      String?       @map("ip_address")
+  referrer       String?       @map("referrer")
+  eventTimestamp DateTime      @map("event_timestamp") @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([eventType])
+  @@index([productId])
+  @@index([variantId])
+  @@index([cartId])
+  @@index([userId])
+  @@index([guestToken])
+  @@index([sessionId])
+  @@index([eventTimestamp])
+  @@index([eventType, productId])
+  @@index([eventType, eventTimestamp])
+  @@map("analytics_events")
+  @@schema("analytics")
+}
+
 enum UserStatus {
   active
   inactive
@@ -1719,51 +1732,6 @@ enum cm_sender_type_enum {
   agent
 
   @@schema("customer_care")
-}
-
-// ============================================================================
-// ANALYTICS MODULE
-// ============================================================================
-
-model AnalyticsEvent {
-  id        String        @id @default(dbgenerated("gen_random_uuid()")) @map("event_id") @db.Uuid
-  eventType EventTypeEnum @map("event_type")
-
-  // User context (either userId OR guestToken)
-  userId     String? @map("user_id") @db.Uuid
-  guestToken String? @map("guest_token")
-  sessionId  String  @map("session_id")
-
-  // Product reference
-  productId String? @map("product_id") @db.Uuid
-  variantId String? @map("variant_id") @db.Uuid
-  cartId    String? @map("cart_id") @db.Uuid
-
-  // Event-specific data (JSON for flexibility)
-  eventData Json? @map("event_data")
-
-  // Metadata
-  userAgent String? @map("user_agent")
-  ipAddress String? @map("ip_address")
-  referrer  String? @map("referrer")
-
-  // Timestamps
-  eventTimestamp DateTime @map("event_timestamp") @db.Timestamptz(6)
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  // Indexes for performance
-  @@index([eventType])
-  @@index([productId])
-  @@index([variantId])
-  @@index([cartId])
-  @@index([userId])
-  @@index([guestToken])
-  @@index([sessionId])
-  @@index([eventTimestamp])
-  @@index([eventType, productId])
-  @@index([eventType, eventTimestamp])
-  @@map("analytics_events")
-  @@schema("analytics")
 }
 
 enum EventTypeEnum {

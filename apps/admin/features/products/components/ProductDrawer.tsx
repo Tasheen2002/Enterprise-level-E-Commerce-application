@@ -3,34 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, Save, Globe, Sparkles, AlertCircle, HelpCircle, Image as ImageIcon, Layers } from "lucide-react";
-import { api } from "../../lib/api-client";
 import { toast } from "sonner";
-import { imageKitUrl } from "../../lib/imagekit";
+import { imageKitUrl } from "../../../lib/imagekit";
 import Link from "next/link";
-
-interface Category {
-  id: string;
-  title: string;
-  slug: string;
-}
-
-interface Product {
-  id?: string;
-  title: string;
-  slug: string;
-  brand?: string;
-  shortDesc?: string;
-  longDescHtml?: string;
-  status: "DRAFT" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
-  price: number;
-  compareAtPrice?: number | null;
-  currency: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  categoryIds?: string[];
-  sizes?: { value: string; isAvailable: boolean }[];
-  images?: string[];
-}
+import { Category, Product } from "../types";
 
 interface ProductDrawerProps {
   isOpen: boolean;
@@ -47,6 +23,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
   const [formData, setFormData] = useState<Product>({
     title: "",
     slug: "",
@@ -117,16 +94,6 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
       slug: product ? prev.slug : slug, // Don't overwrite slug when editing an existing product
       seoTitle: product ? prev.seoTitle : title,
     }));
-  };
-
-  const handleSizeToggle = (index: number) => {
-    const currentSizes = formData.sizes;
-    if (!currentSizes) return;
-    const newSizes = [...currentSizes];
-    if (newSizes[index]) {
-      newSizes[index].isAvailable = !newSizes[index].isAvailable;
-    }
-    setFormData((prev) => ({ ...prev, sizes: newSizes }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -395,8 +362,6 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                 </div>
               </div>
 
-
-
               {/* Media Gallery Assets Card */}
               <div className="bg-white border border-charcoal/5 rounded-2xl p-6 shadow-sm space-y-6">
                 <h3 className="text-[10px] font-bold uppercase tracking-wider text-charcoal/50">Media Gallery Configuration</h3>
@@ -481,7 +446,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                             if (url) {
                               setFormData(prev => ({
                                 ...prev,
-                                  images: [...(prev.images || []), url]
+                                images: [...(prev.images || []), url]
                               }));
                               input.value = "";
                               toast.success("Asset URL added to gallery");
