@@ -2,30 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Search, Plus, Trash2, Edit2, AlertCircle, ShoppingBag, Eye, RefreshCw, Layers } from "lucide-react";
-import { imageKitUrl } from "../../lib/imagekit";
-
-interface Category {
-  id: string;
-  title: string;
-  slug: string;
-}
-
-interface Product {
-  id?: string;
-  title: string;
-  slug: string;
-  brand?: string;
-  shortDesc?: string;
-  longDescHtml?: string;
-  status: "DRAFT" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
-  price: number;
-  compareAtPrice?: number | null;
-  currency: string;
-  categoryIds?: string[];
-  sizes?: { value: string; isAvailable: boolean }[];
-  images?: string[];
-}
+import { Search, Plus, Trash2, Edit2, ShoppingBag, RefreshCw, Layers } from "lucide-react";
+import { imageKitUrl } from "../../../lib/imagekit";
+import { Category, Product } from "../types";
 
 interface ProductRegistryProps {
   products: Product[];
@@ -48,7 +27,6 @@ export function ProductRegistry({
 }: ProductRegistryProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [stockFilter, setStockFilter] = useState<string>("ALL");
 
   // Filter products based on search query and dropdown selections
@@ -64,12 +42,7 @@ export function ProductRegistry({
       return false;
     }
 
-    // 3. Category Filter
-    if (categoryFilter !== "ALL" && !product.categoryIds?.includes(categoryFilter)) {
-      return false;
-    }
-
-    // 4. Stock Health Filter
+    // 3. Stock Health Filter
     if (product.sizes) {
       const availableCount = product.sizes.filter((s) => s.isAvailable).length;
       if (stockFilter === "OUT_OF_STOCK" && availableCount > 0) {
@@ -96,14 +69,13 @@ export function ProductRegistry({
       case "SCHEDULED":
         return "bg-amber-50 text-amber-700 border-amber-500/10";
       case "ARCHIVED":
-        default:
+      default:
         return "bg-charcoal/5 text-charcoal/50 border-charcoal/10";
     }
   };
 
   const getStockSummary = (product: Product) => {
     if (!product.sizes) return { label: "Unknown", color: "text-charcoal/40" };
-    const totalSizes = product.sizes.length;
     const availableCount = product.sizes.filter((s) => s.isAvailable).length;
 
     if (availableCount === 0) {
@@ -225,7 +197,6 @@ export function ProductRegistry({
                             alt={product.title}
                             className="w-full h-full object-cover rounded-full"
                             onError={(e) => {
-                              // If loading locally/locally fetched URL failed, fall back
                               e.currentTarget.src = imageKitUrl("cat-heeled-sandals.png");
                             }}
                           />

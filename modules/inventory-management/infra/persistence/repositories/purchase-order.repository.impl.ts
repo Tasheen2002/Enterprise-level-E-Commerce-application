@@ -71,12 +71,18 @@ export class PurchaseOrderRepositoryImpl
       const desiredVariantIds = purchaseOrder.items.map((i) => i.variantId);
 
       // Delete items removed from the aggregate.
-      await tx.purchaseOrderItem.deleteMany({
-        where: {
-          poId,
-          variantId: { notIn: desiredVariantIds.length > 0 ? desiredVariantIds : ["__none__"] },
-        },
-      });
+      if (desiredVariantIds.length === 0) {
+        await tx.purchaseOrderItem.deleteMany({
+          where: { poId },
+        });
+      } else {
+        await tx.purchaseOrderItem.deleteMany({
+          where: {
+            poId,
+            variantId: { notIn: desiredVariantIds },
+          },
+        });
+      }
 
       // Upsert each item present on the aggregate.
       for (const item of purchaseOrder.items) {
