@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { CategoryGallery } from "@/features/catalog/components/CategoryGallery";
-import { ProductGallery } from "@/features/catalog/components/ProductGallery";
-import { getSubCategories } from "@/features/catalog/api";
+import { CategoryGallery } from "@/features/product-catalog/components/CategoryGallery";
+import { ProductGallery } from "@/features/product-catalog/components/ProductGallery";
+import { getSubCategories } from "@/features/product-catalog/api";
 
 interface Props {
   params: Promise<{

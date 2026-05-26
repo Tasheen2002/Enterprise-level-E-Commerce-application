@@ -13,7 +13,7 @@ import { api, ApiCallError } from "@/lib/api-client";
 import { useAuth } from "@/providers/AuthProvider";
 import { toast } from "sonner";
 import { imageKitUrl } from "@/lib/imagekit";
-import { buildProductHref } from "@/features/catalog/api";
+import { buildProductHref } from "@/features/product-catalog/api";
 
 // Re-use same guest token generator
 function getOrCreateGuestToken(): string {

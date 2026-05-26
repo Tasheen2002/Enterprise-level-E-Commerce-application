@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { productsApi } from "../../../../../features/products/api";
+import { useAdminVariants } from "../../../../../features/products/hooks/useAdminVariants";
 import { VariantTable } from "../../../../../features/products/components/VariantTable";
 import { VariantModal } from "../../../../../features/products/components/VariantModal";
 import { Variant } from "../../../../../features/products/types";
@@ -14,44 +14,11 @@ export default function VariantsManagementPage() {
   const params = useParams();
   const productId = params.id as string;
 
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [productTitle, setProductTitle] = useState("Loading...");
-
+  const { variants, product, loading, refetch, saveVariant, deleteVariant } = useAdminVariants(productId);
   const [isEditing, setIsEditing] = useState(false);
   const [currentVariant, setCurrentVariant] = useState<Partial<Variant> | null>(null);
 
-  const fetchVariants = async () => {
-    setIsLoading(true);
-    try {
-      const prod = await productsApi.getProduct(productId);
-      if (prod) {
-        setProductTitle(prod.title);
-      }
-
-      const list = await productsApi.getVariants(productId);
-      const sortedItems = [...list].sort((a, b) => {
-        const sizeA = a.size ? parseFloat(a.size) : NaN;
-        const sizeB = b.size ? parseFloat(b.size) : NaN;
-        if (!isNaN(sizeA) && !isNaN(sizeB)) return sizeA - sizeB;
-        if (!isNaN(sizeA)) return -1;
-        if (!isNaN(sizeB)) return 1;
-        return (a.size || "").localeCompare(b.size || "");
-      });
-      setVariants(sortedItems);
-    } catch (err) {
-      toast.error("Failed to load variants");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (productId) {
-      fetchVariants();
-    }
-  }, [productId]);
+  const productTitle = product ? product.title : "Loading...";
 
   const handleDelete = (variantId: string) => {
     toast.error("Are you sure you want to delete this variant?", {
@@ -60,9 +27,7 @@ export default function VariantsManagementPage() {
         label: "Delete",
         onClick: async () => {
           try {
-            await productsApi.deleteVariant(variantId);
-            toast.success("Variant deleted successfully");
-            fetchVariants();
+            await deleteVariant(variantId);
           } catch (err) {
             toast.error("Failed to delete variant");
           }
@@ -73,14 +38,8 @@ export default function VariantsManagementPage() {
 
   const handleSave = async (variantData: Partial<Variant>) => {
     try {
-      if (variantData.id) {
-        await productsApi.updateVariant(variantData.id, variantData);
-        toast.success("Variant updated");
-      } else {
-        await productsApi.createVariant(productId, variantData);
-        toast.success("Variant created");
-      }
-      fetchVariants();
+      await saveVariant(currentVariant as any, variantData);
+      setIsEditing(false);
     } catch (err) {
       toast.error("Failed to save variant");
     }
@@ -88,7 +47,6 @@ export default function VariantsManagementPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#FAF9F6]">
-      {/* Header */}
       <div className="flex items-center justify-between px-8 py-6 bg-white border-b border-charcoal/10">
         <div className="flex items-center gap-4">
           <Link href="/products" className="p-2 -ml-2 text-charcoal/40 hover:text-charcoal hover:bg-charcoal/5 rounded-full transition-colors">
@@ -106,12 +64,12 @@ export default function VariantsManagementPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchVariants}
+            onClick={refetch}
             className="flex items-center justify-center p-2 text-charcoal/40 hover:text-charcoal border border-charcoal/10 rounded-full hover:bg-charcoal/5 transition-all"
             title="Refresh"
-            disabled={isLoading}
+            disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
@@ -119,7 +77,7 @@ export default function VariantsManagementPage() {
       <div className="flex-1 p-8 overflow-auto">
         <VariantTable
           variants={variants}
-          isLoading={isLoading}
+          isLoading={loading}
           onEdit={(v) => { setCurrentVariant(v); setIsEditing(true); }}
           onDelete={handleDelete}
           onAddNew={() => {

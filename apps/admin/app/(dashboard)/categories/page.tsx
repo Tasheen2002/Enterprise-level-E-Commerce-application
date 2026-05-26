@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
-import { categoriesApi } from "../../../features/categories/api";
+import { useAdminCategories } from "../../../features/categories/hooks/useAdminCategories";
 import { Category } from "../../../features/categories/types";
 import { CategoryTreeView } from "../../../features/categories/components/CategoryTreeView";
 import { CategoryModal } from "../../../features/categories/components/CategoryModal";
-import { toast } from "sonner";
 import { Search, RotateCcw } from "lucide-react";
 
 const MOCK_CATEGORIES: Category[] = [
@@ -16,70 +15,22 @@ const MOCK_CATEGORIES: Category[] = [
 ];
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories, loading, refetch, saveCategory, deleteCategory } = useAdminCategories();
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const fetchCategories = async () => {
-    setLoading(true);
-    try {
-      const data = await categoriesApi.getCategories();
-      setCategories(data.length > 0 ? data : MOCK_CATEGORIES);
-    } catch (err) {
-      console.warn("Backend categories unavailable, using fallback mock state.", err);
-      setCategories(MOCK_CATEGORIES);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  const activeCategories = categories.length > 0 ? categories : MOCK_CATEGORIES;
 
   const handleSave = async (formData: { name: string; slug: string; parentId: string; position: number }) => {
-    if (!formData.name.trim()) {
-      toast.error("Category name is required");
-      return;
-    }
-    try {
-      const payload = {
-        name: formData.name.trim(),
-        slug: formData.slug.trim() || undefined,
-        parentId: formData.parentId || undefined,
-        position: Number(formData.position),
-      };
-
-      if (selectedCategory) {
-        await categoriesApi.updateCategory(selectedCategory.id, {
-          ...payload,
-          parentId: formData.parentId || null,
-        });
-        toast.success("Category updated successfully");
-      } else {
-        await categoriesApi.createCategory(payload);
-        toast.success("Category created successfully");
-      }
-      fetchCategories();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to save category");
-      throw err;
-    }
+    await saveCategory(selectedCategory, formData);
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
     try {
-      await categoriesApi.deleteCategory(deleteId);
-      toast.success("Category deleted successfully");
-      fetchCategories();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Failed to delete category");
+      await deleteCategory(deleteId);
     } finally {
       setDeleteId(null);
     }
@@ -116,7 +67,7 @@ export default function CategoriesPage() {
           />
         </div>
         <button
-          onClick={fetchCategories}
+          onClick={refetch}
           className="px-4 py-3 border border-charcoal/10 hover:border-charcoal/20 bg-[#FCFBF8] hover:bg-[#F9F8F4] transition-all flex items-center justify-center gap-2 rounded-sm text-[10px] font-bold uppercase tracking-[0.15em] text-charcoal/60 active:scale-95"
         >
           <RotateCcw className="w-[12px] h-[12px]" strokeWidth={1.5} />
@@ -132,7 +83,7 @@ export default function CategoriesPage() {
           </div>
         ) : (
           <CategoryTreeView
-            categories={categories}
+            categories={activeCategories}
             searchQuery={searchQuery}
             onEdit={(cat) => { setSelectedCategory(cat); setModalOpen(true); }}
             onDelete={setDeleteId}
@@ -144,7 +95,7 @@ export default function CategoriesPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         selectedCategory={selectedCategory}
-        categories={categories}
+        categories={activeCategories}
         onSave={handleSave}
       />
 
