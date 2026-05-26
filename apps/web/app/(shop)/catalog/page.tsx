@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { CatalogContent } from "@/features/catalog/components/CatalogContent";
+import { CatalogContent } from "@/features/product-catalog/components/CatalogContent";
 
 export const metadata: Metadata = {
   title: "Artisanal Footwear Catalog | Slipperze",

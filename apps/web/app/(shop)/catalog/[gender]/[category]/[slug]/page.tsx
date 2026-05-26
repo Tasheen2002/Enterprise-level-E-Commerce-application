@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { MarketingHeader } from "@/components/layout/MarketingHeader";
-import { ProductDetail } from "@/features/catalog/components/ProductDetail";
-import { getProductBySlug } from "@/features/catalog/api";
+import { ProductDetail } from "@/features/product-catalog/components/ProductDetail";
+import { getProductBySlug } from "@/features/product-catalog/api";
 
 interface Props {
   params: Promise<{

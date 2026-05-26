@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { SlidersHorizontal, RefreshCw, X, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { Container } from "@tasheen/ui";
-import { ProductCard } from "@/features/catalog/components/ProductCard";
-import { searchProducts, getSearchFilters, getSearchSuggestions, getProducts, getProductRootCategorySlug, Product, SearchFilter } from "@/features/catalog/api";
+import { ProductCard } from "@/features/product-catalog/components/ProductCard";
+import { searchProducts, getSearchFilters, getSearchSuggestions, getProducts, getProductRootCategorySlug, Product, SearchFilter } from "@/features/product-catalog/api";
 import { cn } from "@tasheen/ui";
 
 export function SearchResultsContent() {

@@ -13,15 +13,15 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Container, cn } from "@tasheen/ui";
-import { ProductCard } from "@/features/catalog/components/ProductCard";
+import { ProductCard } from "@/features/product-catalog/components/ProductCard";
 import {
   searchProducts,
   getSearchFilters,
   getSearchSuggestions,
   getProducts,
   getProductRootCategorySlug,
-} from "@/features/catalog/api";
-import type { Product, SearchFilter } from "@/features/catalog/api";
+} from "@/features/product-catalog/api";
+import type { Product, SearchFilter } from "@/features/product-catalog/api";
 
 /* ─────────────────────────── Types ─────────────────────────── */
 
