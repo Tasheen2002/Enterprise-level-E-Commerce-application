@@ -73,7 +73,7 @@ export function AccountDashboard() {
   };
 
   return (
-    <div className="flex-1 p-5 sm:p-8 lg:p-20 space-y-10 sm:space-y-16">
+    <div className="flex-1 p-5 sm:p-8 lg:px-16 lg:pb-16 lg:pt-24 space-y-10 sm:space-y-16">
 
       {/* Utility Return Link */}
       <div className="mb-8">
