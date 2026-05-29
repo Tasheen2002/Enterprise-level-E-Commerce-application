@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 export function AccountMain({ children }: { children: ReactNode }) {
   return (
-    <main className="flex-1 animate-in fade-in duration-200">
+    <main className="flex-1 animate-in fade-in duration-200 relative z-30">
       {children}
     </main>
   );

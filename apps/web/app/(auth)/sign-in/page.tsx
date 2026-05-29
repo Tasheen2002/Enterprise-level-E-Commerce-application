@@ -6,7 +6,7 @@ import { SignInForm } from "@/features/user-management/components/SignInForm";
 
 export const metadata = buildMetadata({
   title: "Sign In",
-  description: "Welcome back to Tasheen — sign in to continue your story.",
+  description: "Welcome back to Slipperze — sign in to continue your story.",
   path: "/sign-in",
 });
 
@@ -16,7 +16,7 @@ export default function SignInPage() {
       <div className="grid min-h-[calc(100vh-12rem)] grid-cols-1 lg:grid-cols-2 lg:gap-16">
         <AuthHero
           imageSrc={imageKitUrl("signin-hero.jpg")}
-          imageAlt="Tasheen artisanal loafers in multiple leather shades."
+          imageAlt="Slipperze artisanal loafers in multiple leather shades."
         />
         <div className="flex items-center justify-center px-2 py-10 lg:px-12">
           <div className="w-full max-w-md">

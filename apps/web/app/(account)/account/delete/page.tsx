@@ -5,13 +5,13 @@ import { PageSpinner } from "@/components/ui/PageSpinner";
 
 export const metadata = buildMetadata({
   title: "Account Deletion",
-  description: "Permanently close your Tasheen member registry.",
+  description: "Permanently close your Slipperze member registry.",
   path: "/account/delete",
 });
 
 export default function DeleteAccountPage() {
   return (
-    <div className="flex-1 p-8 lg:p-16 bg-stone-50/20">
+    <div className="flex-1 p-8 lg:px-16 lg:pb-16 lg:pt-24 bg-stone-50/20">
       <Suspense fallback={<PageSpinner />}>
         <DeleteAccountForm />
       </Suspense>

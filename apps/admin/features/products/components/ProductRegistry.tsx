@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Search, Plus, Trash2, Edit2, ShoppingBag, RefreshCw, Layers } from "lucide-react";
 import { imageKitUrl } from "../../../lib/imagekit";
 import { Category, Product } from "../types";
+import { useAdminReviews } from "../hooks/useAdminReviews";
 
 interface ProductRegistryProps {
   products: Product[];
@@ -28,6 +29,18 @@ export function ProductRegistry({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [stockFilter, setStockFilter] = useState<string>("ALL");
+
+  const { reviews } = useAdminReviews();
+
+  const getProductRatingStats = (productId: string) => {
+    const productReviews = reviews.filter((r) => r.productId === productId && r.status === "approved");
+    if (productReviews.length === 0) return null;
+    const avg = productReviews.reduce((sum, r) => sum + r.rating, 0) / productReviews.length;
+    return {
+      average: parseFloat(avg.toFixed(1)),
+      count: productReviews.length,
+    };
+  };
 
   // Filter products based on search query and dropdown selections
   const filteredProducts = products.filter((product) => {
@@ -105,7 +118,7 @@ export function ProductRegistry({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search catalog by title, brand, or slug..."
-              className="w-full bg-[#F9F8F4] border border-charcoal/10 pl-9 pr-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-charcoal focus:outline-none focus:border-burgundy rounded-sm transition-colors"
+              className="w-full bg-[#F9F8F4] border border-charcoal/10 pl-9 pr-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-charcoal focus:outline-none focus:border-burgundy rounded-xl transition-colors"
             />
           </div>
 
@@ -113,7 +126,13 @@ export function ProductRegistry({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-[145px] shrink-0 bg-[#F9F8F4] border border-charcoal/10 pl-2.5 pr-6 py-2.5 text-[10px] font-bold uppercase tracking-normal text-charcoal focus:outline-none focus:border-burgundy rounded-sm transition-colors"
+            style={{
+              backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231c1917' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E")`,
+              backgroundPosition: "right 18px center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "11px",
+            }}
+            className="w-full sm:w-[170px] shrink-0 bg-[#F9F8F4] border border-charcoal/10 pl-3.5 pr-10 py-2.5 text-[10px] font-bold uppercase tracking-normal text-charcoal focus:outline-none focus:border-burgundy rounded-xl transition-colors cursor-pointer appearance-none"
           >
             <option value="ALL">All Visibilities</option>
             <option value="PUBLISHED">Published</option>
@@ -125,7 +144,13 @@ export function ProductRegistry({
           <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value)}
-            className="w-full sm:w-[145px] shrink-0 bg-[#F9F8F4] border border-charcoal/10 pl-2.5 pr-6 py-2.5 text-[10px] font-bold uppercase tracking-normal text-charcoal focus:outline-none focus:border-burgundy rounded-sm transition-colors"
+            style={{
+              backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%231c1917' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E")`,
+              backgroundPosition: "right 18px center",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "11px",
+            }}
+            className="w-full sm:w-[170px] shrink-0 bg-[#F9F8F4] border border-charcoal/10 pl-3.5 pr-10 py-2.5 text-[10px] font-bold uppercase tracking-normal text-charcoal focus:outline-none focus:border-burgundy rounded-xl transition-colors cursor-pointer appearance-none"
           >
             <option value="ALL">All Stock Levels</option>
             <option value="IN_STOCK">In Stock</option>
@@ -139,33 +164,32 @@ export function ProductRegistry({
           <button
             onClick={onRefresh}
             title="Refresh database catalog list"
-            className="border border-charcoal/10 hover:border-charcoal/20 bg-[#F9F8F4] p-3 text-charcoal hover:bg-charcoal/5 rounded-sm transition-colors flex items-center justify-center"
+            className="border border-charcoal/10 hover:border-charcoal/20 bg-[#F9F8F4] p-3 text-charcoal hover:bg-charcoal/5 rounded-xl transition-colors flex items-center justify-center"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={onAddNew}
-            className="bg-charcoal hover:bg-burgundy text-cream px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] shadow-md hover:shadow-lg transition-all duration-500 rounded-sm flex items-center gap-2 whitespace-nowrap"
+            className="bg-charcoal hover:bg-burgundy text-cream px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] shadow-md hover:shadow-lg transition-all duration-500 rounded-xl flex items-center gap-2 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Commission Product</span>
           </button>
         </div>
       </div>
-
       {/* Main Catalog luxury registry grid */}
       <div className="bg-white border border-charcoal/5 rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-charcoal/5 bg-[#EBE6D9]/10">
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Thumbnail</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Product Name</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Brand</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Retail Price</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Visibility</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Stock Health</th>
-                <th className="py-4 px-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50 text-right">Actions</th>
+              <tr className="border-b border-charcoal/5 bg-[#EBE6D9]/40">
+                <th className="py-4 pl-6 pr-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Thumbnail</th>
+                <th className="py-4 pl-4 pr-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Product Name</th>
+                <th className="py-4 px-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Brand</th>
+                <th className="py-4 px-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Retail Price</th>
+                <th className="py-4 px-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Visibility</th>
+                <th className="py-4 px-4 text-[9px] font-bold uppercase tracking-widest text-charcoal/50">Stock Health</th>
+                <th className="py-4 pl-4 pr-6 text-[9px] font-bold uppercase tracking-widest text-charcoal/50 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-charcoal/5">
@@ -187,10 +211,10 @@ export function ProductRegistry({
                     : imageKitUrl("profile.jpg");
                   
                   return (
-                    <tr key={product.id || product.slug} className="hover:bg-[#F9F8F4]/30 transition-colors group">
+                    <tr key={product.id || product.slug} className="hover:bg-[#F9F8F4]/60 transition-colors group">
                       
                       {/* Image Thumbnail with fine luxury border ring */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 pl-6 pr-4">
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-charcoal/10 bg-[#F5F1E8] shadow-sm flex items-center justify-center p-0.5 group-hover:scale-105 transition-transform duration-300">
                           <img
                             src={thumbnail}
@@ -204,24 +228,40 @@ export function ProductRegistry({
                       </td>
 
                       {/* Title & Slug */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 pl-4 pr-4">
                         <div className="font-serif text-[13px] text-charcoal font-medium group-hover:text-burgundy transition-colors">
                           {product.title}
                         </div>
-                        <div className="text-[10px] text-charcoal/40 font-mono mt-0.5">
-                          /{product.slug}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-charcoal/40 font-mono">
+                            /{product.slug}
+                          </span>
+                          {(() => {
+                            const stats = getProductRatingStats(product.id || "");
+                            if (!stats) return null;
+                            return (
+                              <>
+                                <span className="text-charcoal/20">|</span>
+                                <span className="flex items-center gap-0.5 text-[#E6B342] text-[10px] font-bold">
+                                  <span>★</span>
+                                  <span className="text-charcoal/70">{stats.average}</span>
+                                  <span className="text-charcoal/45 font-normal">({stats.count})</span>
+                                </span>
+                              </>
+                            );
+                          })()}
                         </div>
                       </td>
 
                       {/* Brand */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-charcoal/70 bg-charcoal/[0.03] px-2.5 py-1 rounded-sm border border-charcoal/5">
-                          {product.brand || "Tasheen"}
+                          {product.brand || "Slipperze"}
                         </span>
                       </td>
 
                       {/* Pricing Display */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-[12px] font-bold text-charcoal">
                             {product.price ? `${product.currency === "EUR" ? "€" : "US$"}${product.price.toFixed(2)}` : "—"}
@@ -235,21 +275,21 @@ export function ProductRegistry({
                       </td>
 
                       {/* Status Visibility tag */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4">
                         <span className={`text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border ${getStatusBadgeStyles(product.status)}`}>
                           {product.status}
                         </span>
                       </td>
 
                       {/* Stock summary */}
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-4">
                         <div className="flex items-center">
                           <span className={stockSummary.color}>{stockSummary.label}</span>
                         </div>
                       </td>
 
                       {/* Inline Hover Action Items */}
-                      <td className="py-4 px-6 text-right">
+                      <td className="py-4 pl-4 pr-6 text-right">
                         <div className="flex gap-1.5 justify-end">
                           <Link
                             href={`/products/${product.id}/variants`}
@@ -300,7 +340,7 @@ export function ProductRegistry({
         {filteredProducts.length > 0 && (
           <div className="px-6 py-4 border-t border-charcoal/5 bg-[#EBE6D9]/5 flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-charcoal/40">
             <span>Showing {filteredProducts.length} premium products</span>
-            <span>Tasheen E-Commerce Registry v1.0</span>
+            <span>Slipperze E-Commerce Registry v1.0</span>
           </div>
         )}
       </div>

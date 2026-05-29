@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@tasheen/ui";
 
@@ -13,10 +14,14 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Keep the latest `onClose` in a ref so the keydown effect below does
-  // not re-bind every render. Parents typically pass an inline arrow
-  // function for `onClose`, which previously made the listener tear
-  // down/reattach on every parent render while the modal was open.
+  // not re-bind every render.
   const onCloseRef = React.useRef(onClose);
   React.useEffect(() => {
     onCloseRef.current = onClose;
@@ -44,20 +49,17 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
   }, [isOpen]);
 
   if (!isOpen) return null;
+  if (!mounted) return null;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
-      {/* Backdrop — solid charcoal at 75% instead of bg-charcoal/60 + blur.
-          backdrop-filter forces a permanent full-viewport GPU layer that
-          gets recomposited every scroll frame; dropping it keeps the form
-          scroll smooth. */}
+      {/* Backdrop — solid charcoal at 75% instead of bg-charcoal/60 + blur. */}
       <div
         className="fixed inset-0 bg-charcoal/75 animate-in fade-in duration-500"
         onClick={onClose}
       />
 
-      {/* Modal box — capped at 90vh with internal scrolling so the scrollbar
-          sits on the form's right edge, not the viewport edge. */}
+      {/* Modal box — capped at 90vh with internal scrolling */}
       <div
         className={cn(
           "relative w-full max-w-2xl bg-white shadow-2xl rounded-sm animate-in zoom-in-95 fade-in duration-300 flex flex-col max-h-[90vh]",
@@ -78,6 +80,7 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

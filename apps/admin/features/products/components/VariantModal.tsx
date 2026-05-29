@@ -74,7 +74,7 @@ export function VariantModal({
   if (!isOpen || !isMounted) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/40 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/60 backdrop-blur-xs animate-in fade-in duration-300">
       {/* Backdrop */}
       <div className="absolute inset-0" onClick={onClose} />
 
@@ -176,7 +176,7 @@ export function VariantModal({
             <button
               type="submit"
               disabled={isSaving || !sku.trim()}
-              className="flex items-center gap-2 px-6 py-2.5 bg-burgundy text-white text-xs font-bold tracking-widest uppercase rounded-full hover:bg-charcoal transition-colors shadow-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 bg-charcoal text-white text-xs font-bold tracking-widest uppercase rounded-full hover:bg-burgundy transition-colors shadow-sm disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {isSaving ? "Saving..." : "Save Variant"}
