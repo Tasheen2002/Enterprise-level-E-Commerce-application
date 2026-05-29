@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { config } from "./config";
 
 /**
- * Builds Next.js Metadata objects with the canonical Tasheen defaults
+ * Builds Next.js Metadata objects with the canonical Slipperze defaults
  * (title template, OG tags, locale). Pages override only what differs.
  */
 export interface PageSeo {
@@ -15,7 +15,7 @@ export interface PageSeo {
 
 export function buildMetadata(seo: PageSeo): Metadata {
   const title = seo.title;
-  const description = seo.description ?? "Footwear, refined. Tasheen.";
+  const description = seo.description ?? "Footwear, refined. Slipperze.";
   const url = seo.path ? `${config.appUrl}${seo.path}` : config.appUrl;
   const image = seo.image ?? `${config.appUrl}/og-default.jpg`;
 

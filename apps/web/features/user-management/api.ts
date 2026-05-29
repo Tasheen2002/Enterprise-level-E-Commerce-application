@@ -13,7 +13,7 @@ import type {
   ChangeEmailRequest,
   DeleteAccountRequest,
 } from "@tasheen/validation/auth";
-import type { AuthResult, LoginResponse, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken, BackupCodesResult, Setup2FAResult } from "./types";
+import type { AuthResult, LoginResponse, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken, BackupCodesResult, Setup2FAResult, Wishlist } from "./types";
 
 // ─── Endpoints ──────────────────────────────────────────────────────────────
 
@@ -361,3 +361,41 @@ export async function uploadToImageKit(
 
   return (await response.json()) as ImageKitUploadResult;
 }
+
+// --- Wishlists Curation ---
+
+export async function getUserWishlists(userId: string): Promise<{ items: Wishlist[]; total: number }> {
+  return request<{ items: Wishlist[]; total: number }>(`/engagement/users/${userId}/wishlists`, {
+    method: "GET",
+  });
+}
+
+export async function createWishlist(input: {
+  name?: string;
+  isPublic?: boolean;
+  description?: string;
+  isDefault?: boolean;
+  guestToken?: string;
+}): Promise<Wishlist> {
+  return request<Wishlist>("/engagement/wishlists", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateWishlist(
+  id: string,
+  input: { name?: string; description?: string; isPublic?: boolean },
+): Promise<{ action: string }> {
+  return request<{ action: string }>(`/engagement/wishlists/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteWishlist(id: string): Promise<void> {
+  await request<void>(`/engagement/wishlists/${id}`, {
+    method: "DELETE",
+  });
+}
+
