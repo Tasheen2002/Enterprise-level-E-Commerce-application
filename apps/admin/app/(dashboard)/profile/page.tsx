@@ -159,7 +159,7 @@ export default function ProfilePage() {
       <div>
         <h1 className="text-4xl font-serif text-charcoal mb-2">Member Profile</h1>
         <p className="text-[10px] font-bold text-charcoal/40 uppercase tracking-[0.3em]">
-          Manage your identity within the Tasheen ecosystem
+          Manage your identity within the Slipperze ecosystem
         </p>
       </div>
 
@@ -286,7 +286,7 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="border border-charcoal/20 text-charcoal px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-all duration-300 rounded-sm flex items-center gap-2"
+                    className="border border-charcoal/20 text-charcoal px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-all duration-300 rounded-xl flex items-center gap-2"
                   >
                     <X className="w-3.5 h-3.5" />
                     Cancel
@@ -294,7 +294,7 @@ export default function ProfilePage() {
                   <button
                     type="submit"
                     disabled={isSaving}
-                    className="bg-charcoal text-cream px-10 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-sm shadow-lg shadow-charcoal/10 flex items-center gap-2 disabled:opacity-50"
+                    className="bg-charcoal text-cream px-10 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-xl shadow-lg shadow-charcoal/10 flex items-center gap-2 disabled:opacity-50"
                   >
                     <Save className="w-3.5 h-3.5" />
                     {isSaving ? "Saving..." : "Save Changes"}
@@ -304,7 +304,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="bg-charcoal text-cream px-10 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-sm shadow-lg shadow-charcoal/10 flex items-center gap-2"
+                  className="bg-charcoal text-cream px-10 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-xl shadow-lg shadow-charcoal/10 flex items-center gap-2"
                 >
                   <Edit className="w-3.5 h-3.5" />
                   Edit Profile

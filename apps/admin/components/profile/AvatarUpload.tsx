@@ -161,14 +161,14 @@ export function AvatarUpload({ profile, setProfile }: AvatarUploadProps) {
                 setIsCropping(false);
                 setPreviewUrl(null);
               }}
-              className="flex-1 text-[10px] uppercase tracking-[0.2em] font-bold py-3 border border-charcoal/20 hover:bg-charcoal/5 transition-colors rounded-sm"
+              className="flex-1 text-[10px] uppercase tracking-[0.2em] font-bold py-3 border border-charcoal/20 hover:bg-charcoal/5 transition-colors rounded-xl"
             >
               Cancel
             </button>
             <button
               onClick={handleApplyCrop}
               disabled={isUploading}
-              className="flex-1 text-[10px] uppercase tracking-[0.2em] font-bold py-3 bg-charcoal text-cream hover:bg-burgundy transition-colors rounded-sm shadow-md shadow-charcoal/10 disabled:opacity-50"
+              className="flex-1 text-[10px] uppercase tracking-[0.2em] font-bold py-3 bg-charcoal text-cream hover:bg-burgundy transition-colors rounded-xl shadow-md shadow-charcoal/10 disabled:opacity-50"
             >
               {isUploading ? "Uploading..." : "Apply & Crop"}
             </button>
