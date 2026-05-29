@@ -70,7 +70,7 @@ export function ConfirmModal({
       />
       
       {/* Modal Content */}
-      <div className="relative w-full max-w-md bg-white rounded-sm shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-6">
           <div className="flex items-start gap-4">
             <div className={`shrink-0 w-10 h-10 rounded-full ${styles.iconBg} flex items-center justify-center`}>
@@ -102,7 +102,7 @@ export function ConfirmModal({
           <button
             onClick={handleConfirm}
             disabled={isSubmitting}
-            className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-sm shadow-lg shadow-black/5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
+            className={`px-6 py-2 text-[10px] uppercase tracking-widest font-bold rounded-full shadow-lg shadow-black/5 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${styles.button}`}
           >
             {isSubmitting ? "Processing..." : confirmLabel}
           </button>

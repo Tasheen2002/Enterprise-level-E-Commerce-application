@@ -263,7 +263,7 @@ export function SecuritySection() {
                 <button
                   type="submit"
                   disabled={isChangingPassword}
-                  className="bg-charcoal text-cream px-10 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-sm shadow-lg shadow-charcoal/10 flex items-center gap-2"
+                  className="bg-charcoal text-cream px-10 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-xl shadow-lg shadow-charcoal/10 flex items-center gap-2"
                 >
                   <Key className="w-3.5 h-3.5" />
                   {isChangingPassword ? "Updating..." : "Update Password"}
@@ -301,13 +301,13 @@ export function SecuritySection() {
                   <div className="flex gap-2 self-start sm:self-center">
                     <button
                       onClick={() => setTwoFAStep('regenerate')}
-                      className="border border-charcoal/20 text-charcoal px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] hover:border-charcoal hover:bg-charcoal/5 transition-all rounded-sm flex items-center gap-1.5"
+                      className="border border-charcoal/20 text-charcoal px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] hover:border-charcoal hover:bg-charcoal/5 transition-all rounded-xl flex items-center gap-1.5"
                     >
                       <RefreshCcw className="w-3 h-3" /> New Codes
                     </button>
                     <button
                       onClick={() => setTwoFAStep('disable')}
-                      className="border border-burgundy/20 text-burgundy/70 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] hover:border-burgundy hover:text-burgundy transition-all rounded-sm"
+                      className="border border-burgundy/20 text-burgundy/70 px-5 py-3 text-[10px] font-bold uppercase tracking-[0.15em] hover:border-burgundy hover:text-burgundy transition-all rounded-xl"
                     >
                       Disable
                     </button>
@@ -316,7 +316,7 @@ export function SecuritySection() {
                   <button
                     onClick={handleSetup2FA}
                     disabled={is2FALoading}
-                    className="self-start sm:self-center border border-charcoal/20 text-charcoal px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal hover:text-cream transition-all rounded-sm"
+                    className="self-start sm:self-center border border-charcoal/20 text-charcoal px-6 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal hover:text-cream transition-all rounded-xl"
                   >
                     {is2FALoading ? "Setting up..." : "Enable 2FA"}
                   </button>
@@ -352,20 +352,20 @@ export function SecuritySection() {
                     value={totpCode}
                     onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="000000"
-                    className="w-full max-w-[200px] bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-center text-lg font-mono font-bold text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-sm tracking-[0.5em]"
+                    className="w-full max-w-[200px] bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-center text-lg font-mono font-bold text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-xl tracking-[0.5em]"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setTwoFAStep('idle'); setQrCodeUrl(null); setTotpCode(''); }}
-                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-sm"
+                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-xl"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleEnable2FA}
                     disabled={is2FALoading || totpCode.length !== 6}
-                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-sm disabled:opacity-50"
+                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-xl disabled:opacity-50"
                   >
                     {is2FALoading ? "Verifying..." : "Verify & Enable"}
                   </button>
@@ -394,13 +394,13 @@ export function SecuritySection() {
                 <div className="flex gap-3">
                   <button
                     onClick={copyBackupCodes}
-                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-sm flex items-center justify-center gap-2"
+                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-xl flex items-center justify-center gap-2"
                   >
                     <Copy className="w-3 h-3" /> Copy All
                   </button>
                   <button
                     onClick={() => { setTwoFAStep('idle'); setBackupCodes([]); }}
-                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-sm"
+                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-xl"
                   >
                     I've Saved Them
                   </button>
@@ -426,20 +426,20 @@ export function SecuritySection() {
                     value={disablePassword}
                     onChange={(e) => setDisablePassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-sm"
+                    className="w-full bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-xl"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setTwoFAStep('idle'); setDisablePassword(''); }}
-                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-sm"
+                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-xl"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDisable2FA}
                     disabled={is2FALoading || !disablePassword}
-                    className="flex-1 bg-burgundy text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-red-800 transition-colors rounded-sm disabled:opacity-50"
+                    className="flex-1 bg-burgundy text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-red-800 transition-colors rounded-xl disabled:opacity-50"
                   >
                     {is2FALoading ? "Disabling..." : "Disable 2FA"}
                   </button>
@@ -465,20 +465,20 @@ export function SecuritySection() {
                     value={regeneratePassword}
                     onChange={(e) => setRegeneratePassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-sm"
+                    className="w-full bg-[#F9F8F4] border border-charcoal/10 px-4 py-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-xl"
                   />
                 </div>
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setTwoFAStep('idle'); setRegeneratePassword(''); }}
-                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-sm"
+                    className="flex-1 border border-charcoal/20 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-xl"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleRegenerateBackupCodes}
                     disabled={is2FALoading || !regeneratePassword}
-                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-sm disabled:opacity-50"
+                    className="flex-1 bg-charcoal text-cream py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-colors rounded-xl disabled:opacity-50"
                   >
                     {is2FALoading ? "Generating..." : "Generate New Codes"}
                   </button>

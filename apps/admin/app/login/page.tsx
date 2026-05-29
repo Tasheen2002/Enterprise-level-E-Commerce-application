@@ -114,7 +114,7 @@ function LoginForm() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-[#EBE6D9] border border-[#333]/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 rounded-sm">
+        <div className="bg-[#EBE6D9] border border-[#333]/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 rounded-xl">
           
           {!pendingToken ? (
             <>
@@ -124,7 +124,7 @@ function LoginForm() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-sm">
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-xl">
                     {error}
                   </div>
                 )}
@@ -142,8 +142,8 @@ function LoginForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm placeholder:text-[#333]/20"
-                    placeholder="concierge@tasheen.com"
+                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20"
+                    placeholder="concierge@slipperze.com"
                   />
                 </div>
 
@@ -161,7 +161,7 @@ function LoginForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm placeholder:text-[#333]/20 pr-12"
+                      className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 pr-12"
                       placeholder="••••••••"
                     />
                     <button
@@ -181,7 +181,7 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10"
+                  className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10 rounded-xl"
                 >
                   {isLoading ? "Verifying..." : "Enter Atelier"}
                 </button>
@@ -202,7 +202,7 @@ function LoginForm() {
 
               <form onSubmit={handle2FAVerify} className="space-y-6">
                 {error && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-sm">
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-xl">
                     {error}
                   </div>
                 )}
@@ -223,7 +223,7 @@ function LoginForm() {
                     onChange={(e) => setTotpCode(e.target.value)}
                     required
                     maxLength={20}
-                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-center text-lg font-mono font-bold text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm placeholder:text-[#333]/20 tracking-[0.3em]"
+                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-center text-lg font-mono font-bold text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 tracking-[0.3em]"
                     placeholder="123456"
                     autoFocus
                   />
@@ -235,7 +235,7 @@ function LoginForm() {
                 <button
                   type="submit"
                   disabled={isVerifying2FA || !totpCode}
-                  className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10"
+                  className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10 rounded-xl"
                 >
                   {isVerifying2FA ? "Verifying..." : "Verify & Continue"}
                 </button>
