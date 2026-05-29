@@ -7,6 +7,7 @@ import { Heart } from "lucide-react";
 import { Product } from "../types";
 import { cn } from "@tasheen/ui";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useProductReviews } from "../hooks/useProductReviews";
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,11 @@ export function ProductCard({ product }: ProductCardProps) {
   
   const [showSizePicker, setShowSizePicker] = useState(false);
   const { addToWishlist, isLoading } = useWishlist();
+  const { reviews, total: reviewsCount } = useProductReviews(product.id);
+
+  const averageRating = reviews.length > 0
+    ? parseFloat((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1))
+    : 0;
 
   const hasLongSizes = product.sizes.some(size => size.value.length > 2);
   const gridColsClass = hasLongSizes
@@ -165,6 +171,23 @@ export function ProductCard({ product }: ProductCardProps) {
               {product.name}
             </Link>
           </h3>
+          {reviewsCount > 0 && (
+            <div className="flex items-center space-x-1.5 mt-0.5">
+              <div className="flex text-gold text-[10px]">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <span key={i} className={i < Math.round(averageRating) ? "text-[#E6B342]" : "text-stone-200"}>
+                    ★
+                  </span>
+                ))}
+              </div>
+              <span className="text-[9.5px] font-bold text-charcoal/80 tracking-wide">
+                {averageRating.toFixed(1)}
+              </span>
+              <span className="text-[9px] text-stone-400 font-normal">
+                ({reviewsCount})
+              </span>
+            </div>
+          )}
           <p className="text-[11px] text-stone-400 tracking-wide">
             {product.color}
           </p>

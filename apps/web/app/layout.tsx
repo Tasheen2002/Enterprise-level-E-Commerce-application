@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
-import "@/styles/globals.css";
+import "../styles/globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
@@ -26,9 +26,9 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = buildMetadata({
-  title: "Tasheen — Footwear, refined.",
+  title: "Slipperze — Footwear, refined.",
   description:
-    "The everyday made remarkable. Discover Tasheen — premium leather footwear with editorial soul.",
+    "The everyday made remarkable. Discover Slipperze — premium leather footwear with editorial soul.",
 });
 
 const TOAST_OPTIONS = {
