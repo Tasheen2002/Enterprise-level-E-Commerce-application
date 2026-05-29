@@ -591,6 +591,7 @@ import {
   GetProductReviewHandler,
   GetProductReviewsHandler,
   GetUserReviewsHandler,
+  GetAllReviewsHandler,
   SubscribeNewsletterHandler,
   UnsubscribeNewsletterHandler,
   GetNewsletterSubscriptionHandler,
@@ -1559,6 +1560,7 @@ export class Container {
       new GetProductReviewHandler(productReviewService),
       new GetProductReviewsHandler(productReviewService),
       new GetUserReviewsHandler(productReviewService),
+      new GetAllReviewsHandler(productReviewService),
     );
     const newsletterController = new NewsletterController(
       new SubscribeNewsletterHandler(newsletterService),
