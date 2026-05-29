@@ -152,3 +152,16 @@ export interface PaymentMethodRequest {
   isDefault?: boolean;
   providerRef?: string;
 }
+
+export interface Wishlist {
+  id: string;
+  userId?: string;
+  guestToken?: string;
+  name: string;
+  description?: string;
+  isPublic: boolean;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+

@@ -41,3 +41,25 @@ export interface CategoryPageData {
   gender: 'women' | 'men';
   subCategories: SubCategory[];
 }
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  title?: string | null;
+  body?: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'FLAGGED';
+  createdAt: string;
+  updatedAt: string;
+  reviewerName?: string;
+}
+
+export interface CreateProductReviewPayload {
+  productId: string;
+  userId: string;
+  rating: number;
+  title?: string;
+  body?: string;
+}
+
