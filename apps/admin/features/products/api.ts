@@ -1,5 +1,5 @@
 import { api, unwrap } from "../../lib/api-client";
-import { Category, Product, Variant } from "./types";
+import { Category, Product, Variant, Review } from "./types";
 
 export const productsApi = {
   /**
@@ -47,7 +47,7 @@ export const productsApi = {
         id: p.id,
         title: p.title,
         slug: p.slug,
-        brand: p.brand || "Tasheen",
+        brand: p.brand || "Slipperze",
         shortDesc: p.shortDesc || "",
         longDescHtml: p.longDescHtml || "",
         status: p.status ? (p.status.toUpperCase() as any) : "DRAFT",
@@ -84,7 +84,7 @@ export const productsApi = {
         id: p.id,
         title: p.title || "",
         slug: p.slug || "",
-        brand: p.brand || "Tasheen",
+        brand: p.brand || "Slipperze",
         shortDesc: p.shortDesc || "",
         longDescHtml: p.longDescHtml || "",
         status: p.status ? (p.status.toUpperCase() as any) : "DRAFT",
@@ -241,6 +241,37 @@ export const productsApi = {
     }) as any;
     if (res.error) {
       throw new Error((res.error as any).message || "Failed to delete variant");
+    }
+  },
+
+  /**
+   * Fetch reviews (filterable by status)
+   */
+  async getReviews(status?: string): Promise<Review[]> {
+    const res = await (api as any).GET("/api/v1/engagement/reviews", {
+      params: {
+        query: {
+          limit: 100,
+          status: status || undefined,
+        }
+      }
+    });
+    if (res.data?.success && res.data.data?.items) {
+      return res.data.data.items as Review[];
+    }
+    return [];
+  },
+
+  /**
+   * Update review moderation status
+   */
+  async updateReviewStatus(reviewId: string, status: "approved" | "rejected" | "flagged"): Promise<void> {
+    const res = await (api as any).PATCH("/api/v1/engagement/reviews/{reviewId}/status", {
+      params: { path: { reviewId } },
+      body: { status }
+    });
+    if (res.error) {
+      throw new Error((res.error as any).message || "Failed to update review status");
     }
   }
 };
