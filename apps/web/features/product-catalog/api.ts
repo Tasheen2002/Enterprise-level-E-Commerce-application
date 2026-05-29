@@ -1,5 +1,5 @@
-import type { SubCategory, Product } from "./types";
-export type { SubCategory, Product };
+import type { SubCategory, Product, ProductReview, CreateProductReviewPayload } from "./types";
+export type { SubCategory, Product, ProductReview, CreateProductReviewPayload };
 import { imageKitUrl } from "../../lib/imagekit";
 
 interface DbProduct {
@@ -266,6 +266,9 @@ export async function getSubCategories(category: string): Promise<SubCategory[]>
   return Promise.resolve([]);
 }
 
+// Memory cache for physical product variants to resolve the N+1 network request waterfall
+const productVariantsCache = new Map<string, { sizes: any[]; variants?: any[] }>();
+
 /**
  * Fetches products for a given category.
  */
@@ -298,11 +301,19 @@ export async function getProducts(categorySlug: string): Promise<Product[]> {
       // Fetch variants for each product to get real sizes
       const productsWithSizes = await Promise.all(
         products.map(async (product: Product) => {
+          const cached = productVariantsCache.get(product.id);
+          if (cached) {
+            product.sizes = cached.sizes;
+            product.variants = cached.variants;
+            return product;
+          }
           try {
             const variantsRes = await api.GET<ApiVariantsResponse>(`/api/v1/products/${product.id}/variants`);
             if (variantsRes.data && variantsRes.data.items) {
-              product.sizes = mapVariantsToSizes(variantsRes.data.items);
+              const sizes = mapVariantsToSizes(variantsRes.data.items);
+              product.sizes = sizes;
               product.variants = variantsRes.data.items;
+              productVariantsCache.set(product.id, { sizes, variants: variantsRes.data.items });
             }
           } catch (e) {
             console.warn(`Failed to fetch variants for product ${product.id}`, e);
@@ -333,14 +344,22 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
         const product = mapDbProduct(dbProd);
 
         // Fetch real variants to get real available sizes
-        try {
-          const variantsRes = await api.GET<ApiVariantsResponse>(`/api/v1/products/${product.id}/variants`);
-          if (variantsRes.data && variantsRes.data.items) {
-            product.sizes = mapVariantsToSizes(variantsRes.data.items);
-            product.variants = variantsRes.data.items;
+        const cached = productVariantsCache.get(product.id);
+        if (cached) {
+          product.sizes = cached.sizes;
+          product.variants = cached.variants;
+        } else {
+          try {
+            const variantsRes = await api.GET<ApiVariantsResponse>(`/api/v1/products/${product.id}/variants`);
+            if (variantsRes.data && variantsRes.data.items) {
+              const sizes = mapVariantsToSizes(variantsRes.data.items);
+              product.sizes = sizes;
+              product.variants = variantsRes.data.items;
+              productVariantsCache.set(product.id, { sizes, variants: variantsRes.data.items });
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch variants for product ${product.id}`, e);
           }
-        } catch (e) {
-          console.warn(`Failed to fetch variants for product ${product.id}`, e);
         }
 
         return product;
@@ -433,10 +452,19 @@ export async function searchProducts(
       // Fetch variants for each product to get real sizes
       const productsWithSizes = await Promise.all(
         products.map(async (product: Product) => {
+          const cached = productVariantsCache.get(product.id);
+          if (cached) {
+            product.sizes = cached.sizes;
+            product.variants = cached.variants;
+            return product;
+          }
           try {
             const variantsRes = await api.GET<ApiVariantsResponse>(`/api/v1/products/${product.id}/variants`);
             if (variantsRes.data && variantsRes.data.items) {
-              product.sizes = mapVariantsToSizes(variantsRes.data.items);
+              const sizes = mapVariantsToSizes(variantsRes.data.items);
+              product.sizes = sizes;
+              product.variants = variantsRes.data.items;
+              productVariantsCache.set(product.id, { sizes, variants: variantsRes.data.items });
             }
           } catch (e) {
             console.warn(`Failed to fetch variants for product ${product.id}`, e);
@@ -514,5 +542,45 @@ export async function getSearchFilters(
   }
   return [];
 }
+
+/**
+ * Fetch approved product reviews from backend.
+ */
+export async function getProductReviews(
+  productId: string,
+  limit = 20,
+  offset = 0
+): Promise<{ items: ProductReview[]; total: number }> {
+  try {
+    const res = await api.GET<{ items: ProductReview[]; total: number }>(
+      `/api/v1/engagement/products/${productId}/reviews?limit=${limit}&offset=${offset}`
+    );
+    if (res.data) {
+      return res.data;
+    }
+  } catch (err) {
+    console.warn("Failed to get product reviews", err);
+  }
+  return { items: [], total: 0 };
+}
+
+/**
+ * Submit a product review.
+ */
+export async function createProductReview(
+  payload: CreateProductReviewPayload
+): Promise<ProductReview> {
+  const res = await api.POST<ProductReview>("/api/v1/engagement/reviews", {
+    body: payload,
+  });
+  if (res.error) {
+    throw res.error;
+  }
+  if (!res.data) {
+    throw new Error("No data returned from review creation");
+  }
+  return res.data;
+}
+
 
 
