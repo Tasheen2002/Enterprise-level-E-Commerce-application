@@ -53,6 +53,26 @@ export async function productReviewRoutes(
     }
   });
 
+  // GET /engagement/reviews — List all reviews (admin only)
+  fastify.get(
+    "/engagement/reviews",
+    {
+      preValidation: [validateQuery(paginationQuerySchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
+      schema: {
+        description: "Get all product reviews with filters (admin only)",
+        summary: "List All Reviews",
+        tags: ["Engagement - Reviews"],
+        security: [{ bearerAuth: [] }],
+        querystring: paginationQueryJson,
+        response: {
+          200: successResponse(paginatedResponse(productReviewResponseSchema)),
+        },
+      },
+    },
+    (request, reply) => controller.getAllReviews(request as AuthenticatedRequest, reply),
+  );
+
   // GET /engagement/reviews/:reviewId — Get product review (public)
   fastify.get(
     "/engagement/reviews/:reviewId",

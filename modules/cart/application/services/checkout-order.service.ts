@@ -220,7 +220,7 @@ export class CheckoutOrderService {
       userId: checkout.cartOwnerId?.getValue(),
       guestToken: checkout.guestToken?.getValue(),
       checkoutId: dto.checkoutId,
-      paymentIntentId: dto.paymentIntentId,
+      paymentIntentId: paymentIntent.intentId,
       currency: checkout.currency.getValue(),
       totals,
       items: orderItems,

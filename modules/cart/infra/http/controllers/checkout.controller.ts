@@ -37,7 +37,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       const result = await this.getCheckoutHandler.handle({ checkoutId, userId, guestToken });
@@ -54,7 +54,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
@@ -77,7 +77,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const body = request.body;
 
       if (!userId && !guestToken) {
@@ -102,7 +102,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
@@ -122,7 +122,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
       const body = request.body;
 
@@ -150,7 +150,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {

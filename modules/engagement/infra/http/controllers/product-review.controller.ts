@@ -8,6 +8,7 @@ import {
   GetProductReviewHandler,
   GetProductReviewsHandler,
   GetUserReviewsHandler,
+  GetAllReviewsHandler,
 } from "../../../application";
 import {
   CreateProductReviewBody,
@@ -26,9 +27,23 @@ export class ProductReviewController {
     private readonly getProductReviewHandler: GetProductReviewHandler,
     private readonly getProductReviewsHandler: GetProductReviewsHandler,
     private readonly getUserReviewsHandler: GetUserReviewsHandler,
+    private readonly getAllReviewsHandler: GetAllReviewsHandler,
   ) {}
 
   // ── Reads (queries) ────────────────────────────────────────────────
+
+  async getAllReviews(
+    request: AuthenticatedRequest<{ Querystring: PaginationQuery & { status?: string } }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { limit, offset, status } = request.query;
+      const result = await this.getAllReviewsHandler.handle({ limit, offset, status });
+      return ResponseHelper.ok(reply, "Product reviews retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
 
   async getProductReviews(
     request: AuthenticatedRequest<{ Params: ProductIdParams; Querystring: PaginationQuery }>,

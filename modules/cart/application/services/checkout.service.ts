@@ -73,6 +73,16 @@ export class CheckoutService {
       }
     }
 
+    // Check if there is already a pending checkout session for this cart that hasn't expired
+    const existingCheckout = await this.checkoutRepository.findByCartId(cartId);
+    if (existingCheckout && !existingCheckout.isExpired) {
+      // If the total amount and currency match, we can reuse it!
+      // This solves the React 18 strict double-mount issue elegantly.
+      if (existingCheckout.totalAmount === totalAmount && existingCheckout.currency.getValue() === currency) {
+        return Checkout.toDTO(existingCheckout);
+      }
+    }
+
     const checkoutData: CreateCheckoutData = {
       cartId: dto.cartId,
       userId: dto.userId,

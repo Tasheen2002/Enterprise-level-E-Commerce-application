@@ -19,12 +19,20 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       select: { intentId: true, status: true },
     });
 
-    // Fallback to intentId for backward compatibility
-    if (!pi) {
-      pi = await this.prisma.paymentIntent.findUnique({
-        where: { intentId: paymentIntentId },
-        select: { intentId: true, status: true },
-      });
+    // Fallback to intentId or clientSecret
+    if (!pi && paymentIntentId) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(paymentIntentId);
+      if (isUuid) {
+        pi = await this.prisma.paymentIntent.findUnique({
+          where: { intentId: paymentIntentId },
+          select: { intentId: true, status: true },
+        });
+      } else {
+        pi = await this.prisma.paymentIntent.findFirst({
+          where: { clientSecret: paymentIntentId },
+          select: { intentId: true, status: true },
+        });
+      }
     }
 
     return pi;

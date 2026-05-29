@@ -16,6 +16,7 @@ export const stripeIntentResultSchema = {
   properties: {
     clientSecret: { type: "string" },
     intentId: { type: "string", format: "uuid" },
+    stripeIntentId: { type: "string" },
     amount: { type: "number" },
     currency: { type: "string" },
     status: { type: "string" },
