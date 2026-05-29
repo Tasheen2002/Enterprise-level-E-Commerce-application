@@ -9,7 +9,7 @@ export default function AdminDashboardPage() {
       <div className="space-y-4">
         <h1 className="text-6xl font-serif text-charcoal">Dashboard Overview</h1>
         <p className="text-[10px] font-bold text-charcoal/60 uppercase tracking-[0.3em] max-w-2xl leading-relaxed">
-          Monitor your store&apos;s performance, track active orders, and manage customer interactions across the Tasheen boutique ecosystem in real-time.
+          Monitor your store&apos;s performance, track active orders, and manage customer interactions across the Slipperze boutique ecosystem in real-time.
         </p>
         <div className="flex items-center gap-5 pt-2">
           <p className="text-[9px] font-bold text-charcoal/50 uppercase tracking-[0.4em]">Operational Status: <span className="text-burgundy">Active</span></p>
