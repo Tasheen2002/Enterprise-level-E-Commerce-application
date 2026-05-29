@@ -346,7 +346,7 @@ export function CartView() {
             <button
               onClick={() => {
                 toast.success("Navigating securely to Slipperze checkout portal...");
-                window.location.href = "/account/payment-methods"; // redirecting to secure payment config
+                window.location.href = "/checkout"; // redirecting to secure checkout portal
               }}
               className="w-full h-14 bg-charcoal hover:bg-stone-700 text-cream hover:text-white uppercase tracking-[0.3em] hover:tracking-[0.4em] text-[11px] font-bold rounded-none shadow-lg transition-all duration-500 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
             >
