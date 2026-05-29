@@ -80,8 +80,12 @@ export function CreatePODrawer({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-charcoal/20">
-      <div className="bg-white rounded-xl shadow-2xl w-[680px] max-h-[90vh] overflow-hidden border border-charcoal/10 flex flex-col justify-between text-charcoal">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-charcoal/60 transition-opacity animate-in fade-in duration-300"
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-xl shadow-2xl w-[680px] max-h-[90vh] overflow-hidden border border-charcoal/10 flex flex-col justify-between text-charcoal">
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="px-6 py-4 border-b border-charcoal/10 flex items-center justify-between bg-charcoal/[0.02]">
             <h3 className="font-serif text-base font-bold text-charcoal">Draft Purchase Order</h3>
