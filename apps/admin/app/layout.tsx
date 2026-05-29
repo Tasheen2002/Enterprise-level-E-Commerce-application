@@ -37,8 +37,8 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tasheen — Admin Console",
-  description: "Tasheen staff and operations console.",
+  title: "Slipperze — Admin Console",
+  description: "Slipperze staff and operations console.",
 };
 
 export default function RootLayout({

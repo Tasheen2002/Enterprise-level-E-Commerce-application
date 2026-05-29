@@ -5,8 +5,10 @@ import { Search, Filter } from "lucide-react";
 import { useAdminCustomers } from "../../../features/customers/hooks/useAdminCustomers";
 import { CustomerRegistryTable } from "../../../features/customers/components/CustomerRegistryTable";
 import { CustomerInfoCards } from "../../../features/customers/components/CustomerInfoCards";
+import { CustomerWishlistModal } from "../../../features/customers/components/CustomerWishlistModal";
 import { useModal } from "@/providers/ModalProvider";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { UserListItem } from "../../../features/customers/types";
 
 export default function CustomersPage() {
   const {
@@ -27,6 +29,7 @@ export default function CustomersPage() {
   } = useAdminCustomers();
 
   const { openModal, closeModal } = useModal();
+  const [wishlistTargetCustomer, setWishlistTargetCustomer] = useState<UserListItem | null>(null);
 
   const handleUpdateStatus = (id: string, currentStatus: string) => {
     const newStatus = currentStatus === "active" ? "blocked" : "active";
@@ -80,7 +83,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      <div className="bg-[#EBE6D9]/50 border border-charcoal/5 p-6 rounded-sm flex flex-wrap gap-6 items-center">
+      <div className="bg-[#EBE6D9]/50 border border-charcoal/5 p-6 rounded-xl flex flex-wrap gap-6 items-center">
         <div className="relative flex-1 min-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal/30" strokeWidth={1.5} />
           <input
@@ -88,7 +91,7 @@ export default function CustomersPage() {
             placeholder="Search by name or email..."
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            className="w-full bg-white/60 border border-charcoal/10 pl-10 pr-4 py-2.5 text-[11px] focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm"
+            className="w-full bg-white/60 border border-charcoal/10 pl-10 pr-4 py-2.5 text-[11px] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl"
           />
         </div>
         <div className="flex gap-4">
@@ -125,9 +128,16 @@ export default function CustomersPage() {
         onPageChange={setPage}
         onUpdateStatus={handleUpdateStatus}
         onDelete={handleDeleteUser}
+        onViewWishlist={(user) => setWishlistTargetCustomer(user)}
       />
 
       <CustomerInfoCards />
+
+      <CustomerWishlistModal
+        isOpen={!!wishlistTargetCustomer}
+        customer={wishlistTargetCustomer}
+        onClose={() => setWishlistTargetCustomer(null)}
+      />
     </div>
   );
 }
