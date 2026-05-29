@@ -6,7 +6,7 @@ import { AuthHero } from "@/features/user-management/components/AuthHero";
 
 export const metadata = buildMetadata({
   title: "Forgot Password",
-  description: "Reset your Tasheen account password.",
+  description: "Reset your Slipperze account password.",
   path: "/forgot-password",
 });
 

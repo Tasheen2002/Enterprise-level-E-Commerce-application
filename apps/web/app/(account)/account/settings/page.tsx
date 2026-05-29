@@ -9,7 +9,7 @@ export const metadata = buildMetadata({
 
 export default function SettingsPage() {
   return (
-    <div className="flex-1 p-8 lg:p-16">
+    <div className="flex-1 p-8 lg:px-16 lg:pb-16 lg:pt-24">
       <SecuritySettings />
     </div>
   );

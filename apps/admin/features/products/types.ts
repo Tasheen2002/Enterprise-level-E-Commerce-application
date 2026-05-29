@@ -33,3 +33,17 @@ export interface Variant {
   allowPreorder: boolean;
   createdAt: string;
 }
+
+export interface Review {
+  id: string;
+  productId: string;
+  userId: string;
+  rating: number;
+  status: "pending" | "approved" | "rejected" | "flagged";
+  title?: string;
+  body?: string;
+  createdAt: string;
+  updatedAt: string;
+  reviewerName?: string;
+}
+

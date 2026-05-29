@@ -8,7 +8,7 @@
  */
 export function AccountSkeleton() {
   return (
-    <div className="flex-1 p-5 sm:p-8 lg:p-20 space-y-10 sm:space-y-16 animate-pulse">
+    <div className="flex-1 p-5 sm:p-8 lg:px-16 lg:pb-16 lg:pt-24 space-y-10 sm:space-y-12 animate-pulse">
       <div className="flex flex-col lg:flex-row items-center gap-6 sm:gap-10 lg:gap-12">
         <div className="h-32 w-32 sm:h-40 sm:w-40 lg:h-48 lg:w-48 rounded-full bg-stone-100 ring-1 ring-sand/30" />
         <div className="space-y-3 flex-1 w-full">

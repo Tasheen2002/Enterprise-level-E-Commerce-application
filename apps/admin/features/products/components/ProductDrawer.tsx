@@ -27,7 +27,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
   const [formData, setFormData] = useState<Product>({
     title: "",
     slug: "",
-    brand: "Tasheen",
+    brand: "Slipperze",
     shortDesc: "",
     longDescHtml: "",
     status: "DRAFT",
@@ -57,7 +57,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
     if (product) {
       setFormData({
         ...product,
-        brand: product.brand || "Tasheen",
+        brand: product.brand || "Slipperze",
         categoryIds: product.categoryIds || [],
         images: product.images || [],
       });
@@ -65,7 +65,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
       setFormData({
         title: "",
         slug: "",
-        brand: "Tasheen",
+        brand: "Slipperze",
         shortDesc: "",
         longDescHtml: "",
         status: "DRAFT",
@@ -215,7 +215,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                       type="text"
                       value={formData.brand}
                       onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                      placeholder="Tasheen"
+                      placeholder="Slipperze"
                       className="w-full bg-[#F9F8F4] border-0 border-b border-charcoal/10 pl-3 pr-3 py-2.5 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors"
                     />
                   </div>
@@ -244,7 +244,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                     onChange={(e) => setFormData({ ...formData, shortDesc: e.target.value })}
                     placeholder="Brief high-level description for catalog grid tooltips..."
                     rows={2}
-                    className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors resize-none rounded-sm"
+                    className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors resize-none rounded-lg"
                   />
                 </div>
 
@@ -255,7 +255,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                     onChange={(e) => setFormData({ ...formData, longDescHtml: e.target.value })}
                     placeholder="Full product editorial story, craftsmanship details, sizing guidance..."
                     rows={4}
-                    className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-sm"
+                    className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-lg"
                   />
                 </div>
               </div>
@@ -328,13 +328,13 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                     <Link
                       href={`/products/${formData.id}/variants`}
                       onClick={onClose}
-                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-burgundy hover:bg-burgundy/90 text-cream text-[10px] font-bold uppercase tracking-wider rounded-sm transition-colors shadow-sm whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-charcoal hover:bg-burgundy text-cream text-[10px] font-bold uppercase tracking-wider rounded-full transition-all duration-500 shadow-sm whitespace-nowrap"
                     >
                       <Layers className="w-3.5 h-3.5" />
                       Manage Variants
                     </Link>
                   ) : (
-                    <span className="text-[10px] font-bold text-burgundy bg-burgundy/5 border border-burgundy/10 px-3 py-2 rounded-sm text-center">
+                    <span className="text-[10px] font-bold text-burgundy bg-burgundy/5 border border-burgundy/10 px-3 py-2 rounded-full text-center">
                       Save product first to commission variants
                     </span>
                   )}
@@ -350,7 +350,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                       key={status}
                       type="button"
                       onClick={() => setFormData({ ...formData, status })}
-                      className={`py-3 text-[10px] font-bold uppercase tracking-widest border transition-all rounded-sm ${
+                      className={`py-3 text-[10px] font-bold uppercase tracking-widest border transition-all rounded-full ${
                         formData.status === status
                           ? "bg-charcoal text-cream border-charcoal"
                           : "border-charcoal/10 text-charcoal/60 hover:border-charcoal/30 hover:bg-charcoal/[0.02]"
@@ -375,7 +375,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                           alt={`Product media ${idx + 1}`} 
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute top-2 left-2 bg-charcoal/80 text-cream text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-sm">
+                        <div className="absolute top-2 left-2 bg-charcoal/80 text-cream text-[8px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full">
                           {idx === 0 ? "Primary" : idx === 1 ? "Hover" : `Detail ${idx - 1}`}
                         </div>
                         <button
@@ -454,7 +454,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                               toast.error("Please enter a valid URL");
                             }
                           }}
-                          className="bg-charcoal text-cream px-4 py-2 text-[9px] font-bold uppercase tracking-widest hover:bg-burgundy transition-colors rounded-sm shadow-sm"
+                          className="bg-charcoal text-cream px-4 py-2 text-[9px] font-bold uppercase tracking-widest hover:bg-burgundy transition-colors rounded-full shadow-sm"
                         >
                           Add URL
                         </button>
@@ -464,7 +464,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                     {/* Local File Upload */}
                     <div className="space-y-1.5">
                       <label className="text-[9px] uppercase tracking-widest text-charcoal/50 font-bold block">Local File Upload</label>
-                      <label className="flex items-center justify-center gap-2 border border-dashed border-charcoal/20 hover:border-burgundy/30 bg-[#F9F8F4] py-2 px-3 rounded-sm cursor-pointer hover:bg-charcoal/[0.01] transition-all">
+                      <label className="flex items-center justify-center gap-2 border border-dashed border-charcoal/20 hover:border-burgundy/30 bg-[#F9F8F4] py-2 px-3 rounded-full cursor-pointer hover:bg-charcoal/[0.01] transition-all">
                         <ImageIcon className="w-3.5 h-3.5 text-charcoal/40" />
                         <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal/60">Choose Image File</span>
                         <input
@@ -508,7 +508,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
 
                 <div className="border border-charcoal/5 p-5 rounded-xl bg-slate-50 font-sans space-y-1.5 shadow-inner">
                   <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                    <span>https://tasheen.com</span>
+                    <span>https://slipperze.com</span>
                     <span>›</span>
                     <span>catalog</span>
                     <span>›</span>
@@ -518,7 +518,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                     {formData.seoTitle || formData.title || "Product Title - Premium E-Commerce Store"}
                   </h4>
                   <p className="text-[12px] text-slate-600 leading-relaxed max-w-[500px]">
-                    {formData.seoDescription || formData.shortDesc || "Discover the premium artisanal boutique shoes collection. Carefully hand-crafted and detailed with luxury leather. Shop online at Tasheen."}
+                    {formData.seoDescription || formData.shortDesc || "Discover the premium artisanal boutique shoes collection. Carefully hand-crafted and detailed with luxury leather. Shop online at Slipperze."}
                   </p>
                 </div>
               </div>
@@ -540,7 +540,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                       maxLength={60}
                       value={formData.seoTitle}
                       onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })}
-                      placeholder="e.g. Premium Piper Sandals - Tasheen"
+                      placeholder="e.g. Premium Piper Sandals - Slipperze"
                       className="w-full bg-[#F9F8F4] border-0 border-b border-charcoal/10 pl-3 pr-3 py-2.5 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors"
                     />
                   </div>
@@ -556,7 +556,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
                       onChange={(e) => setFormData({ ...formData, seoDescription: e.target.value })}
                       placeholder="e.g. Shop the elegant hand-detailed Piper Sandals in Mocha Dots. Free international shipping on premium leather goods."
                       rows={3}
-                      className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-sm"
+                      className="w-full bg-[#F9F8F4] border border-charcoal/10 p-3 text-[12px] font-medium text-charcoal focus:outline-none focus:border-burgundy transition-colors rounded-lg"
                     />
                   </div>
                 </div>
@@ -576,7 +576,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
             <button
               type="button"
               onClick={onClose}
-              className="border border-charcoal/20 px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-sm"
+              className="border border-charcoal/20 px-6 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-charcoal/5 transition-colors rounded-full"
             >
               Cancel
             </button>
@@ -584,7 +584,7 @@ export function ProductDrawer({ isOpen, onClose, product, onSave, categories }: 
               type="button"
               onClick={handleSubmit}
               disabled={isSaving}
-              className="bg-charcoal text-cream px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-sm shadow-md flex items-center gap-2 disabled:opacity-50"
+              className="bg-charcoal text-cream px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-burgundy transition-all duration-500 rounded-full shadow-md flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5" />
               {isSaving ? "Saving..." : "Save Product"}

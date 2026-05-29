@@ -3,7 +3,7 @@ import { AccountDashboard } from "@/features/user-management/components/AccountD
 
 export const metadata = buildMetadata({
   title: "My Account",
-  description: "Manage your Tasheen profile, orders, and artisanal preferences.",
+  description: "Manage your Slipperze profile, orders, and artisanal preferences.",
   path: "/account",
 });
 
