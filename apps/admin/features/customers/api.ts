@@ -70,4 +70,83 @@ export const customersApi = {
       throw error;
     }
   },
+
+  /**
+   * Fetch a customer's wishlists
+   */
+  async getCustomerWishlists(userId: string): Promise<any[]> {
+    const res = await api.GET("/api/v1/engagement/users/{userId}/wishlists" as any, {
+      params: { path: { userId } }
+    } as any) as any;
+    if (res.data?.success && res.data.data?.items) {
+      return res.data.data.items;
+    }
+    return [];
+  },
+
+  /**
+   * Fetch items inside a wishlist
+   */
+  async getWishlistItems(wishlistId: string): Promise<any[]> {
+    const res = await api.GET("/api/v1/engagement/wishlists/{wishlistId}/items" as any, {
+      params: { path: { wishlistId } }
+    } as any) as any;
+    if (res.data?.success && res.data.data?.items) {
+      return res.data.data.items;
+    }
+    return [];
+  },
+
+  /**
+   * Fetch variant details
+   */
+  async getVariant(variantId: string): Promise<any> {
+    const res = await api.GET("/api/v1/variants/{variantId}" as any, {
+      params: { path: { variantId } }
+    } as any) as any;
+    if (res.data?.success && res.data.data) {
+      return res.data.data;
+    }
+    return null;
+  },
+
+  /**
+   * Fetch product details
+   */
+  async getProduct(productId: string): Promise<any> {
+    const res = await api.GET("/api/v1/products/{productId}" as any, {
+      params: { path: { productId } }
+    } as any) as any;
+    if (res.data?.success && res.data.data) {
+      return res.data.data;
+    }
+    return null;
+  },
+
+  /**
+   * Fetch variant media assets
+   */
+  async getVariantMedia(variantId: string): Promise<any[]> {
+    const res = await api.GET("/api/v1/variants/{variantId}/media" as any, {
+      params: { path: { variantId } }
+    } as any) as any;
+    if (res.data?.success && res.data.data?.mediaAssets) {
+      return res.data.data.mediaAssets;
+    }
+    return [];
+  },
+
+  /**
+   * Fetch total available stock for a variant
+   */
+  async getVariantStock(variantId: string): Promise<number> {
+    const res = await api.GET("/api/v1/stocks/{variantId}/total" as any, {
+      params: { path: { variantId } }
+    } as any) as any;
+    if (res.data?.success && typeof res.data.data?.total === "number") {
+      return res.data.data.total;
+    }
+    return 0;
+  }
 };
+
