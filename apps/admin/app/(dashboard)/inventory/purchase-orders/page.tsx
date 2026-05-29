@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Supplier, PurchaseOrder } from "../../../../features/inventory/types";
-import { inventoryApi } from "../../../../features/inventory/api";
+import React, { useState } from "react";
+import { useAdminPurchaseOrders } from "../../../../features/inventory/hooks/useAdminPurchaseOrders";
 import { SupplierTab } from "../../../../features/inventory/components/SupplierTab";
 import { PurchaseOrderTab } from "../../../../features/inventory/components/PurchaseOrderTab";
 import { CreatePODrawer } from "../../../../features/inventory/components/CreatePODrawer";
@@ -11,77 +10,22 @@ import { toast } from "sonner";
 
 export default function PurchaseOrdersPage() {
   const [activeTab, setActiveTab] = useState<"pos" | "suppliers">("pos");
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [productVariants, setProductVariants] = useState<any[]>([]);
-  const [variantMap, setVariantMap] = useState<Record<string, { sku: string; size: string; productName: string }>>({});
-  
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    suppliers,
+    purchaseOrders,
+    locations,
+    productVariants,
+    variantMap,
+    loading,
+    refetch,
+  } = useAdminPurchaseOrders();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Drawer toggles
   const [isCreatingPO, setIsCreatingPO] = useState(false);
   const [selectedSupplierIdForNewPO, setSelectedSupplierIdForNewPO] = useState("");
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const [supList, poList, locList, prodList] = await Promise.all([
-        inventoryApi.getSuppliers(),
-        inventoryApi.getPurchaseOrders(),
-        inventoryApi.getLocations(),
-        inventoryApi.getProducts()
-      ]);
-
-      setSuppliers(supList);
-      setPurchaseOrders(poList);
-      setLocations(locList);
-
-      if (prodList && prodList.length > 0) {
-        const newMap: Record<string, { sku: string; size: string; productName: string }> = {};
-        const variantsList: any[] = [];
-
-        // Fetch variants in chunks of 5
-        const chunkSize = 5;
-        for (let i = 0; i < prodList.length; i += chunkSize) {
-          const chunk = prodList.slice(i, i + chunkSize);
-          await Promise.all(chunk.map(async (prod) => {
-            try {
-              const variants = await inventoryApi.getProductVariants(prod.id!);
-              if (variants) {
-                variants.forEach((v: any) => {
-                  const entry = {
-                    variantId: v.variantId || v.id,
-                    sku: v.sku,
-                    size: v.size || "",
-                    productName: prod.title || "",
-                  };
-                  newMap[v.variantId || v.id] = entry;
-                  variantsList.push({ ...v, productName: prod.title });
-                });
-              }
-            } catch (err) {
-              console.error(`Failed to fetch variants for product ${prod.id}`, err);
-            }
-          }));
-        }
-
-        setVariantMap(newMap);
-        setProductVariants(variantsList);
-      }
-    } catch (err) {
-      console.error("Error loading B2B data", err);
-      toast.error("Failed to load supply chain metrics");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const handlePlaceOrderFromSupplier = (supplierId: string) => {
     setSelectedSupplierIdForNewPO(supplierId);
@@ -103,12 +47,12 @@ export default function PurchaseOrdersPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={fetchData}
+            onClick={refetch}
             className="flex items-center justify-center p-2 text-charcoal/40 hover:text-charcoal border border-charcoal/10 rounded-full hover:bg-charcoal/5 transition-all"
             title="Refresh"
-            disabled={isLoading}
+            disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           
           {activeTab === "pos" && (
@@ -185,7 +129,7 @@ export default function PurchaseOrdersPage() {
             )}
           </div>
 
-          {isLoading ? (
+          {loading ? (
             <div className="text-center py-20 text-charcoal/40 flex flex-col items-center gap-3">
               <RefreshCw className="w-6 h-6 animate-spin text-burgundy" />
               <p className="text-xs font-bold uppercase tracking-widest">Loading supply chain metrics...</p>
@@ -198,12 +142,12 @@ export default function PurchaseOrdersPage() {
               variantMap={variantMap}
               searchQuery={searchQuery}
               statusFilter={statusFilter}
-              onRefresh={fetchData}
+              onRefresh={refetch}
             />
           ) : (
             <SupplierTab
               suppliers={suppliers}
-              onRefresh={fetchData}
+              onRefresh={refetch}
               onPlaceOrder={handlePlaceOrderFromSupplier}
             />
           )}
@@ -218,7 +162,7 @@ export default function PurchaseOrdersPage() {
           variantMap={variantMap}
           initialSupplierId={selectedSupplierIdForNewPO}
           onClose={() => setIsCreatingPO(false)}
-          onRefresh={fetchData}
+          onRefresh={refetch}
         />
       )}
     </div>
