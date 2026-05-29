@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   // Keep workspace packages transpiled by Next so internal `@tasheen/*` source
   // files compile through the same toolchain.
   transpilePackages: [
