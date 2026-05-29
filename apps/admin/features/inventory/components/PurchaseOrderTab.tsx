@@ -155,8 +155,12 @@ export function PurchaseOrderTab({
 
       {/* VIEW PO DETAILS DRAWER */}
       {selectedPO && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-charcoal/20">
-          <div className="bg-white w-[640px] h-screen shadow-2xl border-l border-charcoal/10 flex flex-col justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-end">
+          <div
+            className="absolute inset-0 bg-charcoal/60 transition-opacity animate-in fade-in duration-300"
+            onClick={() => setSelectedPO(null)}
+          />
+          <div className="relative bg-white w-[640px] h-screen shadow-2xl border-l border-charcoal/10 flex flex-col justify-between">
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Header */}
               <div className="px-8 py-6 border-b border-charcoal/10 flex items-center justify-between bg-charcoal/[0.02]">

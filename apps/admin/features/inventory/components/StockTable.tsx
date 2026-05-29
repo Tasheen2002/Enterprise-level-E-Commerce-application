@@ -58,10 +58,10 @@ export function StockTable({
   });
 
   return (
-    <div className="bg-white border border-charcoal/10 rounded-xl overflow-hidden shadow-sm">
+    <div className="bg-white border border-charcoal/5 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-left border-collapse">
         <thead>
-          <tr className="bg-charcoal/[0.02] border-b border-charcoal/10 text-[10px] font-bold text-charcoal/50 uppercase tracking-widest">
+          <tr className="bg-[#EBE6D9]/40 border-b border-charcoal/5 text-[10px] font-bold text-charcoal/50 uppercase tracking-widest">
             <th className="py-4 px-6 font-medium">Variant</th>
             <th className="py-4 px-6 font-medium">Location</th>
             <th className="py-4 px-6 font-medium text-right">Available</th>
@@ -91,7 +91,7 @@ export function StockTable({
               const location = locations.find(loc => (loc.locationId || loc.id) === stock.locationId);
 
               return (
-                <tr key={`${stock.variantId}-${stock.locationId}`} className="hover:bg-charcoal/[0.01] transition-colors">
+                <tr key={`${stock.variantId}-${stock.locationId}`} className="hover:bg-[#F9F8F4]/60 transition-colors">
                   <td className="py-4 px-6 text-charcoal font-medium">
                     {variant ? (
                       <div>

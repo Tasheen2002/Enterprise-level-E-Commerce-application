@@ -61,8 +61,12 @@ export function ReceiveStockModal({
   const pendingItems = poItems.filter(item => !item.isFullyReceived);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-charcoal/30">
-      <div className="bg-white rounded-xl shadow-2xl w-[480px] overflow-hidden border border-charcoal/10">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-charcoal/60 transition-opacity animate-in fade-in duration-300"
+        onClick={onClose}
+      />
+      <div className="relative bg-white rounded-xl shadow-2xl w-[480px] overflow-hidden border border-charcoal/10">
         <div className="px-6 py-4 border-b border-charcoal/10 bg-charcoal/[0.02]">
           <h3 className="font-bold text-charcoal font-serif text-sm">Fulfill Incoming Shipment Count</h3>
         </div>
@@ -116,7 +120,7 @@ export function ReceiveStockModal({
                             [item.variantId]: isNaN(val) ? 0 : Math.min(val, item.remainingQty)
                           }));
                         }}
-                        className="w-16 text-center py-1 bg-stone-50 border border-charcoal/10 rounded focus:outline-none focus:border-burgundy font-bold text-xs"
+                        className="w-16 text-center py-1 bg-stone-50 border border-charcoal/10 rounded-lg focus:outline-none focus:border-burgundy font-bold text-xs"
                       />
                     </div>
                   );

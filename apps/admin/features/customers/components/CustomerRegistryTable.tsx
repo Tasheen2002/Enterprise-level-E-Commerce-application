@@ -7,6 +7,7 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 
 interface CustomerRegistryTableProps {
@@ -17,6 +18,7 @@ interface CustomerRegistryTableProps {
   onPageChange: (newPage: number) => void;
   onUpdateStatus: (id: string, currentStatus: string) => void;
   onDelete: (id: string) => void;
+  onViewWishlist?: (user: UserListItem) => void;
 }
 
 export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
@@ -27,6 +29,7 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
   onPageChange,
   onUpdateStatus,
   onDelete,
+  onViewWishlist,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -42,10 +45,10 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
   };
 
   return (
-    <div className="bg-[#EBE6D9] border border-charcoal/5 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-white border border-charcoal/5 rounded-2xl overflow-hidden shadow-sm">
       <table className="w-full text-left">
         <thead>
-          <tr className="bg-charcoal/[0.03] border-b border-charcoal/5">
+          <tr className="bg-[#EBE6D9]/40 border-b border-charcoal/5">
             <th className="px-8 py-5 text-[9px] uppercase tracking-widest text-charcoal/65 font-bold">
               Member
             </th>
@@ -139,12 +142,21 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
                   })}
                 </td>
                 <td className="px-8 py-4 text-right">
-                  <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity duration-300">
+                    {onViewWishlist && (
+                      <button
+                        onClick={() => onViewWishlist(user)}
+                        className="p-2 text-charcoal/40 hover:text-[#C5A059] transition-colors"
+                        title="Audit Curations"
+                      >
+                        <Heart className="w-4 h-4 text-[#C5A059] fill-[#C5A059]" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onUpdateStatus(user.id, user.status)}
                       className={`p-2 transition-colors ${
                         user.status === "active"
-                          ? "text-charcoal/20 hover:text-red-500"
+                          ? "text-charcoal/40 hover:text-red-500"
                           : "text-green-500 hover:text-green-600"
                       }`}
                       title={user.status === "active" ? "Block User" : "Activate User"}
@@ -157,7 +169,7 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
                     </button>
                     <button
                       onClick={() => onDelete(user.id)}
-                      className="p-2 text-charcoal/20 hover:text-red-600 transition-colors"
+                      className="p-2 text-charcoal/40 hover:text-red-600 transition-colors"
                       title="Delete User"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -172,7 +184,7 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
 
       {/* Pagination */}
       {!isLoading && totalPages > 1 && (
-        <div className="px-8 py-4 bg-charcoal/[0.03] border-t border-charcoal/5 flex justify-between items-center">
+        <div className="px-8 py-4 bg-[#EBE6D9]/20 border-t border-charcoal/5 flex justify-between items-center">
           <p className="text-[10px] text-charcoal/40 uppercase tracking-widest">
             Showing page {page} of {totalPages}
           </p>
@@ -180,14 +192,14 @@ export const CustomerRegistryTable: React.FC<CustomerRegistryTableProps> = ({
             <button
               onClick={() => onPageChange(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="p-2 border border-charcoal/10 rounded-sm hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              className="p-2 border border-charcoal/10 rounded-xl hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
-              className="p-2 border border-charcoal/10 rounded-sm hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              className="p-2 border border-charcoal/10 rounded-xl hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
