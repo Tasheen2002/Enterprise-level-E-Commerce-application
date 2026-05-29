@@ -5,6 +5,7 @@ import { StripeWebhookController } from "../controllers/stripe-webhook.controlle
 import {
   RolePermissions,
   authenticate,
+  optionalAuth,
   createRateLimiter,
   RateLimitPresets,
   userOrIpKeyGenerator,
@@ -38,11 +39,11 @@ export async function registerWebhookRoutes(
     }
   });
 
-  // POST /payments/stripe/create-intent — authenticated
+  // POST /payments/stripe/create-intent — authenticated/guest
   fastify.post(
     "/payments/stripe/create-intent",
     {
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createStripeIntentSchema)],
+      preHandler: [optionalAuth, validateBody(createStripeIntentSchema)],
       schema: {
         description: "Create a Stripe PaymentIntent. Returns client_secret for the frontend to complete payment with Stripe.js.",
         tags: ["Stripe"],

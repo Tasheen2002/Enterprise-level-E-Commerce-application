@@ -35,7 +35,8 @@ export const intentIdParamsSchema = z.object({
 });
 
 export const createStripeIntentSchema = z.object({
-  orderId: z.uuid(),
+  orderId: z.uuid().optional(),
+  checkoutId: z.uuid().optional(),
   amount: z.number().positive(),
   currency: z.string().length(3).optional(),
   idempotencyKey: z.string().optional(),

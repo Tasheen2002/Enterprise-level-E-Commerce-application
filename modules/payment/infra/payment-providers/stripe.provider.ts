@@ -50,6 +50,7 @@ export class StripeProvider {
         {
           amount: Math.round(params.amount * 100), // convert to cents
           currency: params.currency || this.currency,
+          payment_method_types: ["card"],
           metadata: {
             orderId: params.orderId,
             intentId: params.intentId,

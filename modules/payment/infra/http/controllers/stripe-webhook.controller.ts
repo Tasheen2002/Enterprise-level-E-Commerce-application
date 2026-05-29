@@ -26,23 +26,24 @@ export class StripeWebhookController {
     reply: FastifyReply,
   ) {
     try {
-      const { orderId, amount, currency, idempotencyKey } = req.body;
+      const { orderId, checkoutId, amount, currency, idempotencyKey } = req.body;
 
       const paymentIntent = await this.paymentService.createPaymentIntent({
         orderId,
+        checkoutId,
         provider: "stripe",
         amount,
         currency: currency || "usd",
         idempotencyKey,
-        userId: req.user.userId,
+        userId: req.user?.userId,
       });
 
       const stripeResult = await this.stripeProvider.createPaymentIntent({
         amount,
         currency: currency || "usd",
-        orderId,
+        orderId: orderId || checkoutId || "",
         intentId: paymentIntent.id,
-        customerEmail: req.user.email,
+        customerEmail: req.user?.email,
         idempotencyKey,
       });
 

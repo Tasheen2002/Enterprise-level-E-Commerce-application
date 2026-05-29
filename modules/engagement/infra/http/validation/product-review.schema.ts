@@ -54,6 +54,7 @@ export const productReviewResponseSchema = {
     status: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
+    reviewerName: { type: "string" },
   },
 } as const;
 
