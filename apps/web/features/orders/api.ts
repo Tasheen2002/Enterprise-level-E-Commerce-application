@@ -117,3 +117,17 @@ export async function listUserOrders(params?: ListOrdersParams): Promise<ListOrd
 
   return api.get<ListOrdersResult>(`/orders?${queryParams.toString()}`);
 }
+
+export interface CalculateCheckoutTaxRequest {
+  shippingAddress: AddressSnapshot;
+}
+
+export interface CalculateCheckoutTaxResponse {
+  tax: number;
+  shipping: number;
+  total: number;
+}
+
+export async function calculateCheckoutTax(checkoutId: string, input: CalculateCheckoutTaxRequest): Promise<CalculateCheckoutTaxResponse> {
+  return api.post<CalculateCheckoutTaxResponse>(`/checkout/${checkoutId}/calculate-tax`, input, getHeaders());
+}
