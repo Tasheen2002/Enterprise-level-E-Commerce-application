@@ -2458,7 +2458,7 @@ export interface paths {
                             message: string;
                             data: {
                                 /** Format: uuid */
-                                userId?: string;
+                                id?: string;
                                 status?: string;
                             };
                         };
@@ -2517,7 +2517,7 @@ export interface paths {
                             message: string;
                             data: {
                                 /** Format: uuid */
-                                userId?: string;
+                                id?: string;
                                 role?: string;
                             };
                         };
@@ -2575,7 +2575,7 @@ export interface paths {
                             message: string;
                             data: {
                                 /** Format: uuid */
-                                userId?: string;
+                                id?: string;
                                 emailVerified?: boolean;
                             };
                         };
@@ -2658,7 +2658,7 @@ export interface paths {
                         /** Format: email */
                         email: string;
                         /** @enum {string} */
-                        role: "ADMIN" | "INVENTORY_STAFF" | "CUSTOMER_SERVICE" | "ANALYST";
+                        role: "ADMIN" | "INVENTORY_STAFF" | "CUSTOMER_SERVICE" | "ANALYST" | "VENDOR";
                     };
                 };
             };
@@ -2891,6 +2891,8 @@ export interface paths {
                                     createdAt?: string;
                                     /** Format: date-time */
                                     updatedAt?: string;
+                                    images?: string[];
+                                    categoryIds?: string[];
                                 }[];
                                 total?: number;
                                 limit?: number;
@@ -2918,6 +2920,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         title: string;
+                        slug?: string;
                         brand?: string;
                         shortDesc?: string;
                         longDescHtml?: string;
@@ -2937,6 +2940,7 @@ export interface paths {
                         currency?: string;
                         categoryIds?: string[];
                         tags?: string[];
+                        images?: string[];
                     };
                 };
             };
@@ -2977,6 +2981,8 @@ export interface paths {
                                 createdAt?: string;
                                 /** Format: date-time */
                                 updatedAt?: string;
+                                images?: string[];
+                                categoryIds?: string[];
                             };
                         };
                     };
@@ -3047,6 +3053,8 @@ export interface paths {
                                 createdAt?: string;
                                 /** Format: date-time */
                                 updatedAt?: string;
+                                images?: string[];
+                                categoryIds?: string[];
                             };
                         };
                     };
@@ -3119,6 +3127,8 @@ export interface paths {
                                 createdAt?: string;
                                 /** Format: date-time */
                                 updatedAt?: string;
+                                images?: string[];
+                                categoryIds?: string[];
                             };
                         };
                     };
@@ -3170,6 +3180,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         title?: string;
+                        slug?: string;
                         brand?: string;
                         shortDesc?: string;
                         longDescHtml?: string;
@@ -3186,6 +3197,7 @@ export interface paths {
                         currency?: string;
                         categoryIds?: string[];
                         tags?: string[];
+                        images?: string[];
                     };
                 };
             };
@@ -3226,6 +3238,8 @@ export interface paths {
                                 createdAt?: string;
                                 /** Format: date-time */
                                 updatedAt?: string;
+                                images?: string[];
+                                categoryIds?: string[];
                             };
                         };
                     };
@@ -5384,19 +5398,7 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    q: string;
-                    page: number;
-                    limit: number;
-                    category?: string;
-                    brand?: string;
-                    minPrice?: number;
-                    maxPrice?: number;
-                    status?: "draft" | "published" | "scheduled";
-                    tags?: string[];
-                    sortBy: "relevance" | "price" | "title" | "createdAt";
-                    sortOrder: "asc" | "desc";
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -5440,6 +5442,8 @@ export interface paths {
                                     createdAt?: string;
                                     /** Format: date-time */
                                     updatedAt?: string;
+                                    images?: string[];
+                                    categoryIds?: string[];
                                 }[];
                                 total?: number;
                                 limit?: number;
@@ -5473,11 +5477,7 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    q: string;
-                    limit: number;
-                    type: "products" | "categories" | "brands" | "all";
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -5497,12 +5497,17 @@ export interface paths {
                             statusCode: 200;
                             message: string;
                             data: {
-                                /** @enum {string} */
-                                type?: "product" | "category" | "brand";
-                                value?: string;
-                                label?: string;
-                                count?: number | null;
-                            }[];
+                                suggestions: {
+                                    /** @enum {string} */
+                                    type?: "product" | "category" | "brand";
+                                    value?: string;
+                                    label?: string;
+                                    count?: number | null;
+                                }[];
+                                query: string;
+                                type: string;
+                                limit: number;
+                            };
                         };
                     };
                 };
@@ -5578,10 +5583,7 @@ export interface paths {
          */
         get: {
             parameters: {
-                query?: {
-                    q?: string;
-                    category?: string;
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -10759,18 +10761,31 @@ export interface paths {
                             statusCode: 201;
                             message: string;
                             data: {
-                                /** Format: uuid */
-                                poId?: string;
-                                /** Format: uuid */
-                                supplierId?: string;
-                                /** @enum {string} */
-                                status?: "draft" | "sent" | "part_received" | "received" | "cancelled";
-                                /** Format: date-time */
-                                eta?: string | null;
-                                /** Format: date-time */
-                                createdAt?: string;
-                                /** Format: date-time */
-                                updatedAt?: string;
+                                purchaseOrder?: {
+                                    /** Format: uuid */
+                                    poId?: string;
+                                    /** Format: uuid */
+                                    supplierId?: string;
+                                    /** @enum {string} */
+                                    status?: "draft" | "sent" | "part_received" | "received" | "cancelled";
+                                    /** Format: date-time */
+                                    eta?: string | null;
+                                    /** Format: date-time */
+                                    createdAt?: string;
+                                    /** Format: date-time */
+                                    updatedAt?: string;
+                                };
+                                items?: {
+                                    /** Format: uuid */
+                                    poId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    orderedQty?: number;
+                                    receivedQty?: number;
+                                    remainingQty?: number;
+                                    isFullyReceived?: boolean;
+                                    isPartiallyReceived?: boolean;
+                                }[];
                             };
                         };
                     };
@@ -15202,6 +15217,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/orders/dashboard/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Dashboard Metrics
+         * @description Get administrative dashboard overview metrics (Staff/Admin only)
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                totalRevenue: number;
+                                revenueTrend: string;
+                                activeOrders: number;
+                                ordersTrend: string;
+                                newCustomers: number;
+                                customersTrend: string;
+                                conversionRate: number;
+                                conversionTrend: string;
+                                monthlyRevenue: number[];
+                                ordersToday: number;
+                                avgOrderValue: number;
+                                itemsShipped: number;
+                                bestSeller?: {
+                                    /** Format: uuid */
+                                    productId: string;
+                                    title: string;
+                                    units: number;
+                                    revenue: number;
+                                    image?: string | null;
+                                } | null;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/orders/track": {
         parameters: {
             query?: never;
@@ -19291,7 +19373,9 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** Format: uuid */
-                        orderId: string;
+                        orderId?: string;
+                        /** Format: uuid */
+                        checkoutId?: string;
                         amount: number;
                         currency?: string;
                         idempotencyKey?: string;
@@ -19315,6 +19399,7 @@ export interface paths {
                                 clientSecret?: string;
                                 /** Format: uuid */
                                 intentId?: string;
+                                stripeIntentId?: string;
                                 amount?: number;
                                 currency?: string;
                                 status?: string;
@@ -20567,6 +20652,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/engagement/wishlists/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Wishlist
+         * @description Transfer guest wishlist items to the authenticated user's default wishlist
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        guestWishlistId: string;
+                        guestToken: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                /** Format: uuid */
+                                userId?: string;
+                                guestToken?: string;
+                                name?: string;
+                                description?: string;
+                                isPublic?: boolean;
+                                isDefault?: boolean;
+                                /** Format: date-time */
+                                createdAt?: string;
+                                /** Format: date-time */
+                                updatedAt?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/engagement/reminders/{reminderId}": {
         parameters: {
             query?: never;
@@ -21620,6 +21773,135 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/engagement/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List All Reviews
+         * @description Get all product reviews with filters (admin only)
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                items: {
+                                    /** Format: uuid */
+                                    id?: string;
+                                    /** Format: uuid */
+                                    productId?: string;
+                                    /** Format: uuid */
+                                    userId?: string;
+                                    rating?: number;
+                                    title?: string;
+                                    body?: string;
+                                    status?: string;
+                                    /** Format: date-time */
+                                    createdAt?: string;
+                                    /** Format: date-time */
+                                    updatedAt?: string;
+                                    reviewerName?: string;
+                                }[];
+                                total: number;
+                                limit: number;
+                                offset: number;
+                                hasMore: boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create Product Review
+         * @description Create a new product review
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        productId: string;
+                        /** Format: uuid */
+                        userId: string;
+                        rating: number;
+                        title?: string;
+                        body?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 201;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                /** Format: uuid */
+                                productId?: string;
+                                /** Format: uuid */
+                                userId?: string;
+                                rating?: number;
+                                title?: string;
+                                body?: string;
+                                status?: string;
+                                /** Format: date-time */
+                                createdAt?: string;
+                                /** Format: date-time */
+                                updatedAt?: string;
+                                reviewerName?: string;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/engagement/reviews/{reviewId}": {
         parameters: {
             query?: never;
@@ -21669,6 +21951,7 @@ export interface paths {
                                 createdAt?: string;
                                 /** Format: date-time */
                                 updatedAt?: string;
+                                reviewerName?: string;
                             };
                         };
                     };
@@ -21759,6 +22042,7 @@ export interface paths {
                                     createdAt?: string;
                                     /** Format: date-time */
                                     updatedAt?: string;
+                                    reviewerName?: string;
                                 }[];
                                 total: number;
                                 limit: number;
@@ -21831,6 +22115,7 @@ export interface paths {
                                     createdAt?: string;
                                     /** Format: date-time */
                                     updatedAt?: string;
+                                    reviewerName?: string;
                                 }[];
                                 total: number;
                                 limit: number;
@@ -21844,79 +22129,6 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/engagement/reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Product Review
-         * @description Create a new product review
-         */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** Format: uuid */
-                        productId: string;
-                        /** Format: uuid */
-                        userId: string;
-                        rating: number;
-                        title?: string;
-                        body?: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Default Response */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            /** @enum {boolean} */
-                            success: true;
-                            /** @enum {number} */
-                            statusCode: 201;
-                            message: string;
-                            data: {
-                                /** Format: uuid */
-                                id?: string;
-                                /** Format: uuid */
-                                productId?: string;
-                                /** Format: uuid */
-                                userId?: string;
-                                rating?: number;
-                                title?: string;
-                                body?: string;
-                                status?: string;
-                                /** Format: date-time */
-                                createdAt?: string;
-                                /** Format: date-time */
-                                updatedAt?: string;
-                            };
-                        };
-                    };
-                };
-            };
-        };
         delete?: never;
         options?: never;
         head?: never;
