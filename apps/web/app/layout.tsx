@@ -11,6 +11,7 @@ import { buildMetadata } from "@/lib/seo";
 import { Toaster } from "sonner";
 import { CookieConsentBanner } from "@/components/legal/CookieConsentBanner";
 import { NewsletterModal } from "@/components/marketing/NewsletterModal";
+import { TabLoader } from "@/components/ui/TabLoader";
 
 const serif = Cormorant_Garamond({
   subsets: ["latin"],
@@ -78,6 +79,7 @@ export default function RootLayout({
       </head>
 
       <body suppressHydrationWarning>
+        <TabLoader />
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>

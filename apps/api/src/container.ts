@@ -362,6 +362,7 @@ import {
   CompleteCheckoutHandler,
   CancelCheckoutHandler,
   CompleteCheckoutWithOrderHandler,
+  CalculateCheckoutTaxHandler,
   GetCartHandler,
   GetActiveCartByUserHandler,
   GetActiveCartByGuestTokenHandler,
@@ -419,6 +420,7 @@ import {
   OrderEventController,
   PreorderController,
   BackorderController,
+  AdminNotificationController,
 } from "../../../modules/order-management/infra/http/controllers";
 import {
   CreateOrderHandler,
@@ -431,6 +433,7 @@ import {
   GetOrderHandler,
   ListOrdersHandler,
   TrackOrderHandler,
+  GetDashboardMetricsHandler,
   SetOrderAddressesHandler,
   UpdateBillingAddressHandler,
   UpdateShippingAddressHandler,
@@ -1230,6 +1233,7 @@ export class Container {
       new CompleteCheckoutWithOrderHandler(checkoutOrderService),
       new GetCheckoutHandler(checkoutService),
       new GetOrderByCheckoutHandler(checkoutOrderService),
+      new CalculateCheckoutTaxHandler(checkoutRepository, cartRepository),
     );
 
     this.services.set("cartManagementService", cartManagementService);
@@ -1323,6 +1327,8 @@ export class Container {
       new CancelOrderHandler(orderManagementService),
       new DeleteOrderHandler(orderManagementService),
       new TrackOrderHandler(orderManagementService),
+      new GetDashboardMetricsHandler(prisma),
+      prisma,
     );
     const orderAddressController = new OrderAddressController(
       new SetOrderAddressesHandler(orderManagementService),
@@ -1370,6 +1376,7 @@ export class Container {
       new GetBackorderHandler(backorderManagementService),
       new ListBackordersHandler(backorderManagementService),
     );
+    const adminNotificationController = new AdminNotificationController(prisma);
 
     this.services.set("orderController", orderController);
     this.services.set("orderAddressController", orderAddressController);
@@ -1379,6 +1386,7 @@ export class Container {
     this.services.set("orderEventController", orderEventController);
     this.services.set("preorderController", preorderController);
     this.services.set("backorderController", backorderController);
+    this.services.set("adminNotificationController", adminNotificationController);
 
     // ============================================================
     // Payment Module
@@ -1642,6 +1650,7 @@ export class Container {
       orderEventController: this.get<OrderEventController>("orderEventController"),
       preorderController: this.get<PreorderController>("preorderController"),
       backorderController: this.get<BackorderController>("backorderController"),
+      adminNotificationController: this.get<AdminNotificationController>("adminNotificationController"),
     };
   }
 
