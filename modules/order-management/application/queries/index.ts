@@ -14,3 +14,5 @@ export { ListBackordersQuery, ListBackordersHandler } from "./list-backorders.qu
 export { GetPreorderQuery, GetPreorderHandler } from "./get-preorder.query";
 export { ListPreordersQuery, ListPreordersHandler } from "./list-preorders.query";
 export { TrackOrderQuery, TrackOrderHandler, TrackOrderResult } from "./track-order.query";
+export { GetDashboardMetricsQuery, GetDashboardMetricsHandler, DashboardMetricsResult } from "./get-dashboard-metrics.query";
+

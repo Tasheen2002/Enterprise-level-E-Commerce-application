@@ -30,6 +30,7 @@ import {
   orderResponseSchema,
   trackOrderResponseSchema,
   paginatedOrdersResponseSchema,
+  dashboardMetricsResponseSchema,
 } from "../validation/order.schema";
 
 // Per-user buckets for authenticated writes; per-IP fallback for guest writes
@@ -49,6 +50,7 @@ const trackOrderRateLimiter = createRateLimiter({
 
 // Pre-compute JSON Schemas from Zod (single source of truth — no drift).
 const orderIdParamsJson = toJsonSchema(orderIdParamsSchema);
+
 const orderNumberParamsJson = toJsonSchema(orderNumberParamsSchema);
 const trackOrderQueryJson = toJsonSchema(trackOrderQuerySchema);
 const listOrdersQueryJson = toJsonSchema(listOrdersQuerySchema);
@@ -67,6 +69,28 @@ export async function registerOrderRoutes(
   });
 
   // ── Reads ──
+
+  // Get administrative dashboard metrics (Staff/Admin only)
+  fastify.get(
+    "/orders/dashboard/metrics",
+    {
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      schema: {
+        description: "Get administrative dashboard overview metrics (Staff/Admin only)",
+        tags: ["Orders"],
+        summary: "Get Dashboard Metrics",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: successResponse(dashboardMetricsResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      orderController.getDashboardMetrics(
+        request as AuthenticatedRequest,
+        reply,
+      ),
+  );
 
   // Track order (public — guest tracking via orderNumber+contact or trackingNumber)
   fastify.get(
@@ -319,5 +343,4 @@ export async function registerOrderRoutes(
     },
     (request, reply) =>
       orderController.deleteOrder(request as AuthenticatedRequest, reply),
-  );
-}
+  );}

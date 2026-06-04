@@ -17,6 +17,7 @@ export const orderIdParamsSchema = z.object({
   orderId: z.uuid(),
 });
 
+
 export const orderNumberParamsSchema = z.object({
   orderNumber: z.string().min(1),
 });
@@ -190,3 +191,53 @@ export const paginatedOrdersResponseSchema = {
     hasMore: { type: "boolean" },
   },
 } as const;
+
+// Administrative dashboard metrics overview response schema.
+export const dashboardMetricsResponseSchema = {
+  type: "object",
+  required: [
+    "totalRevenue",
+    "revenueTrend",
+    "activeOrders",
+    "ordersTrend",
+    "newCustomers",
+    "customersTrend",
+    "conversionRate",
+    "conversionTrend",
+    "monthlyRevenue",
+    "ordersToday",
+    "avgOrderValue",
+    "itemsShipped",
+  ],
+  properties: {
+    totalRevenue: { type: "number" },
+    revenueTrend: { type: "string" },
+    activeOrders: { type: "number" },
+    ordersTrend: { type: "string" },
+    newCustomers: { type: "number" },
+    customersTrend: { type: "string" },
+    conversionRate: { type: "number" },
+    conversionTrend: { type: "string" },
+    monthlyRevenue: {
+      type: "array",
+      items: { type: "number" },
+    },
+    ordersToday: { type: "number" },
+    avgOrderValue: { type: "number" },
+    itemsShipped: { type: "number" },
+    bestSeller: {
+      type: "object",
+      nullable: true,
+      required: ["productId", "title", "units", "revenue"],
+      properties: {
+        productId: { type: "string", format: "uuid" },
+        title: { type: "string" },
+        units: { type: "number" },
+        revenue: { type: "number" },
+        image: { type: "string", nullable: true },
+      },
+    },
+  },
+} as const;
+
+
