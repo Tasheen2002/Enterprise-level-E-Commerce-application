@@ -11,7 +11,7 @@ export class GetProductReviewsHandler implements IQueryHandler<GetProductReviews
   constructor(private readonly productReviewService: ProductReviewService) {}
 
   async handle(query: GetProductReviewsQuery): Promise<PaginatedReviewResult> {
-    return this.productReviewService.getReviewsByProduct(
+    return this.productReviewService.getApprovedReviewsByProduct(
       query.productId,
       {
         limit: query.limit,

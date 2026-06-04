@@ -72,7 +72,7 @@ function SetupAccountForm() {
     return (
       <div className="min-h-screen bg-[#F5F1E8] flex items-center justify-center p-6">
         <div className="w-full max-w-[440px] text-center">
-          <div className="bg-[#EBE6D9] border border-[#333]/5 p-12 rounded-sm shadow-xl">
+          <div className="bg-[#EBE6D9] border border-[#333]/5 p-12 rounded-xl shadow-xl">
             <div className="w-16 h-16 bg-[#C5A059]/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <svg className="w-8 h-8 text-[#C5A059]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -103,14 +103,14 @@ function SetupAccountForm() {
         </div>
 
         {/* Setup Card */}
-        <div className="bg-[#EBE6D9] border border-[#333]/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 rounded-sm">
+        <div className="bg-[#EBE6D9] border border-[#333]/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-10 rounded-xl">
           <p className="text-xs text-[#333]/60 mb-8 text-center leading-relaxed">
             Welcome to the Slipperze team. Please finalize your administrative profile below to gain access to the Atelier.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-sm">
+              <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-4 rounded-xl">
                 {error}
               </div>
             )}
@@ -122,7 +122,7 @@ function SetupAccountForm() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm"
+                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl"
                   placeholder="Artisan"
                 />
               </div>
@@ -132,7 +132,7 @@ function SetupAccountForm() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm"
+                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl"
                   placeholder="Master"
                 />
               </div>
@@ -146,7 +146,7 @@ function SetupAccountForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm placeholder:text-[#333]/20 pr-10"
+                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 pr-10"
                   placeholder="Minimum 8 characters"
                 />
                 <button
@@ -167,7 +167,7 @@ function SetupAccountForm() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm placeholder:text-[#333]/20 pr-10"
+                  className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 pr-10"
                   placeholder="Repeat key"
                 />
                 <button
@@ -183,7 +183,7 @@ function SetupAccountForm() {
             <button
               type="submit"
               disabled={isLoading || !token}
-              className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10"
+              className="w-full bg-[#333] text-white py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-lg shadow-[#333]/10 rounded-xl"
             >
               {isLoading ? "Commissioning..." : "Finalize Profile"}
             </button>

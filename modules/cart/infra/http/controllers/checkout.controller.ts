@@ -6,6 +6,7 @@ import {
   CompleteCheckoutWithOrderHandler,
   GetCheckoutHandler,
   GetOrderByCheckoutHandler,
+  CalculateCheckoutTaxHandler,
 } from "../../../application";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
@@ -14,6 +15,7 @@ import {
   InitializeCheckoutBody,
   CompleteCheckoutBody,
   CompleteCheckoutWithOrderBody,
+  CalculateCheckoutTaxBody,
 } from "../validation/checkout.schema";
 
 // Import middleware for type augmentations (request.guestToken)
@@ -27,6 +29,7 @@ export class CheckoutController {
     private readonly completeCheckoutWithOrderHandler: CompleteCheckoutWithOrderHandler,
     private readonly getCheckoutHandler: GetCheckoutHandler,
     private readonly getOrderByCheckoutHandler: GetOrderByCheckoutHandler,
+    private readonly calculateCheckoutTaxHandler: CalculateCheckoutTaxHandler,
   ) {}
 
   // ── Reads (queries) ────────────────────────────────────────────────
@@ -37,7 +40,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       const result = await this.getCheckoutHandler.handle({ checkoutId, userId, guestToken });
@@ -54,7 +57,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
@@ -77,7 +80,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const body = request.body;
 
       if (!userId && !guestToken) {
@@ -102,7 +105,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
@@ -122,7 +125,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
       const body = request.body;
 
@@ -150,7 +153,7 @@ export class CheckoutController {
   ) {
     try {
       const userId = request.user?.userId;
-      const guestToken = request.guestToken;
+      const guestToken = userId ? undefined : request.guestToken;
       const { checkoutId } = request.params;
 
       if (!userId && !guestToken) {
@@ -159,6 +162,24 @@ export class CheckoutController {
 
       const result = await this.cancelCheckoutHandler.handle({ checkoutId, userId, guestToken });
       return ResponseHelper.fromCommand(reply, result, "Checkout cancelled");
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
+  async calculateTax(
+    request: AuthenticatedRequest<{ Params: CheckoutIdParams; Body: CalculateCheckoutTaxBody }>,
+    reply: FastifyReply,
+  ) {
+    try {
+      const { checkoutId } = request.params;
+      const { shippingAddress } = request.body;
+
+      const result = await this.calculateCheckoutTaxHandler.handle({
+        checkoutId,
+        shippingAddress,
+      });
+      return ResponseHelper.fromCommand(reply, result, "Checkout tax and shipping cost calculated successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
     }

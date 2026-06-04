@@ -11,7 +11,14 @@ export default function RootLoading() {
           Slipperze
         </p>
         <div className="flex justify-center">
-          <div className="h-px w-24 bg-gradient-to-r from-transparent via-gold to-transparent animate-pulse" />
+          <div className="relative w-12 h-12">
+            {/* Outer brand circle track */}
+            <div className="absolute inset-0 rounded-full border border-stone-200/40" />
+            {/* Primary gold spinner with editorial ease */}
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-gold animate-[spin_1.4s_cubic-bezier(0.22,1,0.36,1)_infinite]" />
+            {/* Inner secondary gold-deep spinner in reverse direction */}
+            <div className="absolute inset-2 rounded-full border border-transparent border-b-gold-deep/60 animate-[spin_0.9s_linear_infinite_reverse]" />
+          </div>
         </div>
         <p className="text-[9px] uppercase tracking-[0.4em] text-stone-400 font-bold">
           Preparing your experience

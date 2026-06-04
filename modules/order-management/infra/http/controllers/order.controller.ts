@@ -1,4 +1,5 @@
 import { FastifyReply } from "fastify";
+import { PrismaClient } from "@prisma/client";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import { hasRole, STAFF_ROLES } from "@/api/src/shared/middleware";
@@ -13,6 +14,7 @@ import {
   GetOrderHandler,
   ListOrdersHandler,
   TrackOrderHandler,
+  GetDashboardMetricsHandler,
 } from "../../../application";
 import {
   OrderIdParams,
@@ -36,9 +38,24 @@ export class OrderController {
     private readonly cancelOrderHandler: CancelOrderHandler,
     private readonly deleteOrderHandler: DeleteOrderHandler,
     private readonly trackOrderHandler: TrackOrderHandler,
+    private readonly getDashboardMetricsHandler: GetDashboardMetricsHandler,
+    private readonly prisma: PrismaClient,
   ) {}
 
   // ── Reads ──
+
+  async getDashboardMetrics(
+    request: AuthenticatedRequest,
+    reply: FastifyReply,
+  ) {
+    try {
+      const result = await this.getDashboardMetricsHandler.handle({});
+      return ResponseHelper.ok(reply, "Dashboard metrics retrieved successfully", result);
+    } catch (error: unknown) {
+      return ResponseHelper.error(reply, error);
+    }
+  }
+
 
   async trackOrder(
     request: AuthenticatedRequest<{ Querystring: TrackOrderQuery }>,

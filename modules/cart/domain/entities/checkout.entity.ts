@@ -292,6 +292,12 @@ export class Checkout extends AggregateRoot {
   }
 
   // Business methods
+  updateTotalAmount(totalAmount: number): void {
+    Checkout.validateTotalAmount(totalAmount);
+    this.props.totalAmount = totalAmount;
+    this.props.updatedAt = new Date();
+  }
+
   markAsCompleted(completedAt: Date = new Date()): void {
     if (this.props.status.isCompleted()) {
       throw new InvalidCheckoutStateError("Checkout is already completed");

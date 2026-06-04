@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@tasheen/ui";
-import { SearchDialog } from "../../features/catalog/components/SearchDialog";
+import { SearchDialog } from "../../features/product-catalog/components/SearchDialog";
 
 interface HeaderSearchButtonProps {
   isTransparent: boolean;

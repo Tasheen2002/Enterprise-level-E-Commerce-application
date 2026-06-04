@@ -2,7 +2,7 @@
   "name": "tasheen-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Tasheen — enterprise-level e-commerce monorepo (backend + storefront + admin).",
+  "description": "Slipperze — enterprise-level e-commerce monorepo (backend + storefront + admin).",
   "type": "commonjs",
   "workspaces": [
     "apps/*",
@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "dev:api": "npx tsx watch apps/api/src/index.ts",
+    "start:api": "npx tsx apps/api/src/index.ts",
     "dev:web": "turbo run dev --filter=@tasheen/web",
     "dev:admin": "turbo run dev --filter=@tasheen/admin",
     "dev": "turbo run dev --parallel",
@@ -42,7 +43,7 @@
     "@types/uuid": "^10.0.0",
     "prisma": "^6.16.1",
     "tsx": "^4.21.0",
-    "turbo": "^2.3.3",
+    "turbo": "^2.9.16",
     "typescript": "^5.9.3",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.5"

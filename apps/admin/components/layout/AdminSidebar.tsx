@@ -15,6 +15,7 @@ import {
   Settings,
   Users,
   Shield,
+  MessageSquare,
 } from "lucide-react";
 
 const NAV_GROUPS = [
@@ -28,6 +29,7 @@ const NAV_GROUPS = [
       { title: "Products", href: "/products", icon: Package },
       { title: "Categories", href: "/categories", icon: Layers },
       { title: "Tags", href: "/tags", icon: Tag },
+      { title: "Reviews", href: "/products/reviews", icon: MessageSquare },
     ],
   },
   {
@@ -68,7 +70,7 @@ export function AdminSidebar() {
       <div className="pt-10 pb-12 px-8 flex-shrink-0">
         <Link href="/" className="group block">
           <h2 className="text-[13px] font-serif tracking-[0.25em] uppercase text-charcoal mb-1">
-            Tasheen Admin
+            Slipperze Admin
           </h2>
           <p className="text-[9px] font-bold tracking-[0.4em] uppercase text-charcoal/60 leading-none">
             Artisanal Excellence
@@ -85,7 +87,12 @@ export function AdminSidebar() {
             </h3>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/" &&
+                    item.href !== "/inventory" &&
+                    pathname?.startsWith(item.href) &&
+                    !(item.href === "/products" && pathname?.startsWith("/products/reviews")));
                 return (
                   <li key={item.title} className="relative">
                     {isActive && (

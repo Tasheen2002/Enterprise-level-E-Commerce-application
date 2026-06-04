@@ -6,7 +6,7 @@ import { buildMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildMetadata({
   title: "Cookie Policy",
   description:
-    "How Tasheen uses cookies on the storefront — what each category does and how to change your choices.",
+    "How Slipperze uses cookies on the storefront — what each category does and how to change your choices.",
   path: "/legal/cookies",
 });
 
@@ -35,7 +35,7 @@ export default function CookiePolicyPage() {
         <section className="space-y-4 text-sm text-stone-600 leading-relaxed">
           <p>
             This page explains the cookies and similar technologies used on
-            tasheen.com, why we use them, and how you can change your
+            slipperze.com, why we use them, and how you can change your
             choices at any time.
           </p>
           <p>
@@ -72,20 +72,20 @@ export default function CookiePolicyPage() {
             <ul className="text-sm text-stone-600 list-disc pl-5 space-y-1">
               <li>
                 <code className="text-xs bg-stone-50 px-1.5 py-0.5 rounded">
-                  tasheen.access_token
+                  slipperze.access_token
                 </code>{" "}
                 — keeps you signed in. httpOnly, expires after 24 hours.
               </li>
               <li>
                 <code className="text-xs bg-stone-50 px-1.5 py-0.5 rounded">
-                  tasheen.refresh_token
+                  slipperze.refresh_token
                 </code>{" "}
                 — issues fresh access tokens so you don&apos;t have to
                 sign in repeatedly. httpOnly, expires after 30 days.
               </li>
               <li>
                 <code className="text-xs bg-stone-50 px-1.5 py-0.5 rounded">
-                  tasheen.cookie_consent
+                  slipperze.cookie_consent
                 </code>{" "}
                 — stored in localStorage (not technically a cookie). Records
                 your choice on this page so we don&apos;t ask again.
@@ -136,10 +136,10 @@ export default function CookiePolicyPage() {
           <p className="text-sm text-stone-600 leading-relaxed">
             Write to us at{" "}
             <a
-              href="mailto:privacy@tasheen.com"
+              href="mailto:privacy@slipperze.com"
               className="underline underline-offset-2 hover:text-charcoal"
             >
-              privacy@tasheen.com
+              privacy@slipperze.com
             </a>{" "}
             — we usually reply within two business days. See also our{" "}
             <Link

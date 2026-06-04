@@ -58,7 +58,29 @@ export class PaymentService {
     }
   }
 
+  private activeCreates: Map<string, Promise<PaymentIntentDTO>> = new Map();
+
   async createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentDTO> {
+    if (params.checkoutId) {
+      const active = this.activeCreates.get(params.checkoutId);
+      if (active) return active;
+    }
+
+    const promise = this.doCreatePaymentIntent(params);
+
+    if (params.checkoutId) {
+      this.activeCreates.set(params.checkoutId, promise);
+      promise.finally(() => {
+        if (params.checkoutId) {
+          this.activeCreates.delete(params.checkoutId);
+        }
+      });
+    }
+
+    return promise;
+  }
+
+  private async doCreatePaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentDTO> {
     if (params.orderId && params.userId) {
       await this.assertOrderOwnership(params.orderId, params.userId);
     }
@@ -79,7 +101,19 @@ export class PaymentService {
       metadata: params.metadata,
     });
 
-    await this.paymentIntentRepository.save(intent);
+    try {
+      await this.paymentIntentRepository.save(intent);
+    } catch (error: unknown) {
+      if (params.checkoutId) {
+        const existing = await this.paymentIntentRepository.findByCheckoutId(params.checkoutId);
+        if (existing) return PaymentIntent.toDTO(existing);
+      }
+      if (params.idempotencyKey) {
+        const existing = await this.paymentIntentRepository.findByIdempotencyKey(params.idempotencyKey);
+        if (existing) return PaymentIntent.toDTO(existing);
+      }
+      throw error;
+    }
     return PaymentIntent.toDTO(intent);
   }
 

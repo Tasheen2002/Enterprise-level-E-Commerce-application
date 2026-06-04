@@ -7,7 +7,7 @@ export interface GetTotalAvailableStockQuery extends IQuery {
 
 export interface TotalAvailableStockResult {
   readonly variantId: string;
-  readonly totalAvailable: number;
+  readonly total: number;
 }
 
 export class GetTotalAvailableStockHandler implements IQueryHandler<
@@ -17,7 +17,7 @@ export class GetTotalAvailableStockHandler implements IQueryHandler<
   constructor(private readonly stockService: StockManagementService) {}
 
   async handle(query: GetTotalAvailableStockQuery): Promise<TotalAvailableStockResult> {
-    const totalAvailable = await this.stockService.getTotalAvailableStock(query.variantId);
-    return { variantId: query.variantId, totalAvailable };
+    const total = await this.stockService.getTotalAvailableStock(query.variantId);
+    return { variantId: query.variantId, total };
   }
 }

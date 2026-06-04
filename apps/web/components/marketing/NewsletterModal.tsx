@@ -169,7 +169,7 @@ export function NewsletterModal() {
         <div className="hidden md:block w-1/2 relative min-h-[450px]">
           <Image
             src={imageKitUrl("lifestyle-newsletter.jpg")}
-            alt="Tasheen premium footwear curation"
+            alt="Slipperze premium footwear curation"
             fill
             sizes="50vw"
             loading="lazy"

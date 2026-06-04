@@ -45,3 +45,7 @@ export type { GetUserReviewsQuery } from "./get-user-reviews.query";
 
 export { GetNewsletterSubscriptionHandler } from "./get-newsletter-subscription.query";
 export type { GetNewsletterSubscriptionQuery } from "./get-newsletter-subscription.query";
+
+export { GetAllReviewsHandler } from "./get-all-reviews.query";
+export type { GetAllReviewsQuery } from "./get-all-reviews.query";
+

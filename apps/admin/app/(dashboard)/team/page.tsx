@@ -124,19 +124,19 @@ export default function TeamPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         {/* Invite Form */}
         <div className="lg:col-span-1">
-          <div className="bg-[#EBE6D9] border border-charcoal/5 p-8 rounded-sm sticky top-10">
+          <div className="bg-[#EBE6D9] border border-charcoal/5 p-8 rounded-xl sticky top-10">
             <h2 className="text-[10px] uppercase tracking-[0.4em] font-bold text-charcoal/80 mb-6 flex items-center gap-2">
               <UserPlus className="w-3 h-3" /> Commission New Access
             </h2>
 
             <form onSubmit={handleInvite} className="space-y-6">
               {error && (
-                <div className="text-[10px] bg-red-50 text-red-600 p-3 border border-red-100 rounded-sm">
+                <div className="text-[10px] bg-red-50 text-red-600 p-3 border border-red-100 rounded-xl">
                   {error}
                 </div>
               )}
               {success && (
-                <div className="text-[10px] bg-green-50 text-green-600 p-3 border border-green-100 rounded-sm">
+                <div className="text-[10px] bg-green-50 text-green-600 p-3 border border-green-100 rounded-xl">
                   {success}
                 </div>
               )}
@@ -153,7 +153,7 @@ export default function TeamPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="artisan@tasheen.com"
-                    className="w-full bg-white/40 border border-charcoal/10 pl-10 pr-4 py-3 text-[11px] focus:outline-none focus:border-[#C5A059] transition-colors rounded-sm"
+                    className="w-full bg-white/40 border border-charcoal/10 pl-10 pr-4 py-3 text-[11px] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl"
                   />
                 </div>
               </div>
@@ -167,7 +167,7 @@ export default function TeamPage() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-white/40 border border-charcoal/10 pl-10 pr-4 py-3 text-[11px] focus:outline-none focus:border-[#C5A059] appearance-none transition-colors rounded-sm"
+                    className="w-full bg-white/40 border border-charcoal/10 pl-10 pr-4 py-3 text-[11px] focus:outline-none focus:border-[#C5A059] appearance-none transition-colors rounded-xl"
                   >
                     <option value="ADMIN">Atelier Admin</option>
                     <option value="INVENTORY_STAFF">Inventory Manager</option>
@@ -180,7 +180,7 @@ export default function TeamPage() {
               <button
                 type="submit"
                 disabled={isInviting}
-                className="w-full bg-charcoal text-[#F5F1E8] py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50"
+                className="w-full bg-charcoal text-[#F5F1E8] py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#1a1a1a] transition-all disabled:opacity-50 rounded-xl"
               >
                 {isInviting ? "Sending..." : "Send Invitation"}
               </button>
@@ -190,7 +190,7 @@ export default function TeamPage() {
 
         {/* Invitations List */}
         <div className="lg:col-span-2">
-          <div className="bg-white border border-charcoal/5 rounded-sm overflow-hidden">
+          <div className="bg-white border border-charcoal/5 rounded-2xl shadow-sm overflow-hidden">
             <div className="px-8 py-6 border-b border-charcoal/5 flex justify-between items-center">
               <h2 className="text-[10px] uppercase tracking-[0.4em] font-bold text-charcoal/80">
                 Pending Invitations
@@ -203,7 +203,7 @@ export default function TeamPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-[#F9F8F4] border-b border-charcoal/5">
+                  <tr className="bg-[#EBE6D9]/40 border-b border-charcoal/5">
                     <th className="px-8 py-4 text-[9px] uppercase tracking-widest text-charcoal/40 font-bold">Email</th>
                     <th className="px-4 py-4 text-[9px] uppercase tracking-widest text-charcoal/40 font-bold">Role</th>
                     <th className="px-4 py-4 text-[9px] uppercase tracking-widest text-charcoal/40 font-bold">Expires</th>
@@ -257,7 +257,7 @@ export default function TeamPage() {
             </div>
           </div>
 
-          <div className="mt-8 p-6 bg-[#EBE6D9]/30 border border-charcoal/5 rounded-sm">
+          <div className="mt-8 p-6 bg-[#EBE6D9]/30 border border-charcoal/5 rounded-xl">
             <h3 className="text-[10px] uppercase tracking-[0.2em] font-bold text-charcoal/60 mb-2 flex items-center gap-2">
               <CheckCircle className="w-3 h-3 text-[#C5A059]" /> Secure Onboarding
             </h3>

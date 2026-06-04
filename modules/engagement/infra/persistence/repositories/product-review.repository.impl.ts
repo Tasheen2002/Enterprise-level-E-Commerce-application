@@ -40,7 +40,11 @@ export class ProductReviewRepositoryImpl
     super(prisma, eventBus);
   }
 
-  private toEntity(row: ProductReviewDatabaseRow): ProductReview {
+  private toEntity(row: any): ProductReview {
+    const reviewerName = row.users?.firstName
+      ? `${row.users.firstName} ${row.users.lastName ? row.users.lastName[0] + "." : ""}`.trim()
+      : undefined;
+
     return ProductReview.fromPersistence({
       id: ReviewId.fromString(row.id),
       productId: row.productId,
@@ -51,6 +55,7 @@ export class ProductReviewRepositoryImpl
       status: ReviewStatus.fromString(row.status),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      reviewerName,
     });
   }
 
@@ -87,9 +92,10 @@ export class ProductReviewRepositoryImpl
   async findById(reviewId: ReviewId): Promise<ProductReview | null> {
     const record = await this.prisma.productReview.findUnique({
       where: { id: reviewId.getValue() },
+      include: { users: true },
     });
 
-    return record ? this.toEntity(record as ProductReviewDatabaseRow) : null;
+    return record ? this.toEntity(record) : null;
   }
 
   async findByProductId(
@@ -111,12 +117,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -143,12 +150,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -175,12 +183,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -203,12 +212,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count(),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -251,12 +261,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -283,12 +294,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -314,12 +326,13 @@ export class ProductReviewRepositoryImpl
         take: limit,
         skip: offset,
         orderBy: { [sortBy]: sortOrder },
+        include: { users: true },
       }),
       this.prisma.productReview.count({ where }),
     ]);
 
     return {
-      items: records.map((record) => this.toEntity(record as ProductReviewDatabaseRow)),
+      items: records.map((record) => this.toEntity(record)),
       total,
       limit,
       offset,
@@ -333,9 +346,10 @@ export class ProductReviewRepositoryImpl
   ): Promise<ProductReview | null> {
     const record = await this.prisma.productReview.findFirst({
       where: { userId, productId },
+      include: { users: true },
     });
 
-    return record ? this.toEntity(record as ProductReviewDatabaseRow) : null;
+    return record ? this.toEntity(record) : null;
   }
 
   async findRecentByProductId(

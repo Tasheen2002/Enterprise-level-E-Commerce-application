@@ -35,12 +35,17 @@ export const completeCheckoutWithOrderSchema = z.object({
   billingAddress: addressSchema.optional(),
 });
 
+export const calculateCheckoutTaxSchema = z.object({
+  shippingAddress: addressSchema,
+});
+
 // ── Inferred Types ────────────────────────────────────────────────────────────
 
 export type CheckoutIdParams = z.infer<typeof checkoutIdParamsSchema>;
 export type InitializeCheckoutBody = z.infer<typeof initializeCheckoutSchema>;
 export type CompleteCheckoutBody = z.infer<typeof completeCheckoutSchema>;
 export type CompleteCheckoutWithOrderBody = z.infer<typeof completeCheckoutWithOrderSchema>;
+export type CalculateCheckoutTaxBody = z.infer<typeof calculateCheckoutTaxSchema>;
 
 // ── JSON Schema for Swagger docs ──────────────────────────────────────────────
 
@@ -66,5 +71,14 @@ export const checkoutOrderResponseSchema = {
     currency: { type: "string" },
     status: { type: "string" },
     createdAt: { type: "string", format: "date-time" },
+  },
+} as const;
+
+export const calculateCheckoutTaxResponseSchema = {
+  type: "object",
+  properties: {
+    tax: { type: "number" },
+    shipping: { type: "number" },
+    total: { type: "number" },
   },
 } as const;

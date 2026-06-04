@@ -6,3 +6,4 @@ export * from "./order-event.controller";
 export * from "./order-status-history.controller";
 export * from "./preorder.controller";
 export * from "./backorder.controller";
+export * from "./admin-notification.controller";

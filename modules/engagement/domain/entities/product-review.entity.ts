@@ -65,6 +65,7 @@ export interface ReviewProps {
   body?: string;
   createdAt: Date;
   updatedAt: Date;
+  reviewerName?: string;
 }
 
 // ============================================================================
@@ -80,6 +81,7 @@ export interface ReviewDTO {
   body?: string;
   createdAt: string;
   updatedAt: string;
+  reviewerName?: string;
 }
 
 // ============================================================================
@@ -264,6 +266,7 @@ export class ProductReview extends AggregateRoot {
       body: entity.props.body,
       createdAt: entity.props.createdAt.toISOString(),
       updatedAt: entity.props.updatedAt.toISOString(),
+      reviewerName: entity.props.reviewerName,
     };
   }
 }

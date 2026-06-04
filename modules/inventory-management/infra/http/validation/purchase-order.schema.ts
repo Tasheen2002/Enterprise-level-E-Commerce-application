@@ -102,3 +102,11 @@ export const purchaseOrderItemResponseSchema = {
     isPartiallyReceived: { type: "boolean" },
   },
 } as const;
+
+export const purchaseOrderWithItemsResponseSchema = {
+  type: "object",
+  properties: {
+    purchaseOrder: purchaseOrderResponseSchema,
+    items: { type: "array", items: purchaseOrderItemResponseSchema },
+  },
+} as const;

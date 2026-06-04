@@ -1,3 +1,9 @@
+import { PrismaClient } from "@prisma/client";
+
+interface RepositoryWithPrisma {
+  readonly prisma: PrismaClient;
+}
+
 import {
   IOrderRepository,
   OrderQueryOptions,
@@ -209,6 +215,43 @@ export class OrderManagementService {
       changedBy: "system",
     });
     await this.orderRepository.saveWithStatusHistory(order, statusHistory);
+ 
+    // Create Admin In-App Notifications without over-engineering
+    try {
+      const prismaClient = (this.orderRepository as unknown as RepositoryWithPrisma).prisma;
+
+      // 1. New Order Commissioned Notification
+      await prismaClient.adminNotification.create({
+        data: {
+          type: "ORDER_CREATED",
+          title: "New Boutique Order Commissioned",
+          message: `Order #${order.orderNumber.getValue()} placed for a total of $${order.totals.total.toFixed(2)}.`,
+          targetUrl: `/orders/${order.id.getValue()}`,
+        },
+      });
+
+      // 2. Low Stock Alerts
+      params.items.forEach((itemData, i) => {
+        const stock = stocks[i];
+        const remaining = (stock?.getStockLevel().getAvailable() || 0) - itemData.quantity;
+        if (stock && remaining >= 0 && remaining <= 3) {
+          const product = products[i];
+          const variant = variants[i];
+          const sizeStr = variant?.getSize() ? ` (Size: ${variant.getSize()})` : "";
+          
+          prismaClient.adminNotification.create({
+            data: {
+              type: "LOW_STOCK",
+              title: `Low Stock: ${product?.getTitle() || "Item"}${sizeStr}`,
+              message: `Only ${remaining} units remaining in boutique inventory. Consider restocking.`,
+              targetUrl: `/products/${product?.getId().getValue()}/variants`,
+            },
+          }).catch((err: unknown) => console.error("Failed to create low stock notification:", err));
+        }
+      });
+    } catch (err) {
+      console.error("Failed to create admin notifications:", err);
+    }
 
     try {
       await Promise.all(
