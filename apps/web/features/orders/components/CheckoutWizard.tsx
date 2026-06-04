@@ -12,7 +12,7 @@ import { imageKitUrl } from "@/lib/imagekit";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripe";
 import { ShieldCheck } from "lucide-react";
-import { initializeCheckout, createStripePaymentIntent, completeCheckoutWithOrder } from "../api";
+import { initializeCheckout, createStripePaymentIntent, completeCheckoutWithOrder, calculateCheckoutTax } from "../api";
 
 const addressSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100),
@@ -35,6 +35,22 @@ export function CheckoutWizard() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [billingSameAsShipping, setBillingSameAsShipping] = useState(true);
   const [giftItems, setGiftItems] = useState<Record<string, { isGift: boolean; giftMessage: string }>>({});
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+
+  // Calculate pricing summary using local states to allow backend Stripe Tax updates
+  const subtotal = cart?.summary?.subtotal ?? 0;
+  const [shippingCost, setShippingCost] = useState(subtotal > 150 ? 0 : 15);
+  const [tax, setTax] = useState(parseFloat((subtotal * 0.08).toFixed(2)));
+  const [total, setTotal] = useState(subtotal + shippingCost + tax);
+  const [calculatingTax, setCalculatingTax] = useState(false);
+
+  useEffect(() => {
+    const defaultShipping = subtotal > 150 ? 0 : 15;
+    const defaultTax = parseFloat((subtotal * 0.08).toFixed(2));
+    setShippingCost(defaultShipping);
+    setTax(defaultTax);
+    setTotal(subtotal + defaultShipping + defaultTax);
+  }, [subtotal]);
 
   const shippingForm = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
@@ -95,22 +111,53 @@ export function CheckoutWizard() {
     );
   }
 
-  // Calculate pricing summary
-  const subtotal = cart.summary.subtotal;
-  const shippingCost = subtotal > 150 ? 0 : 15; // Sri Lanka / US delivery configuration
-  const tax = parseFloat((subtotal * 0.08).toFixed(2)); // 8% sales tax simulation
-  const total = subtotal + shippingCost + tax;
+  const handleCalculateTaxAndGoToStep3 = async () => {
+    setCalculatingTax(true);
+    try {
+      const session = await initializeCheckout({ cartId: cart.cartId });
+      setCheckoutId(session.checkoutId);
 
-  const onShippingSubmit = shippingForm.handleSubmit(() => {
-    if (billingSameAsShipping) {
+      const shippingVals = shippingForm.getValues();
+      const cleanShippingAddress = {
+        firstName: shippingVals.firstName,
+        lastName: shippingVals.lastName,
+        addressLine1: shippingVals.addressLine1,
+        addressLine2: shippingVals.addressLine2 || undefined,
+        city: shippingVals.city,
+        state: shippingVals.state,
+        postalCode: shippingVals.postalCode,
+        country: shippingVals.country,
+        phone: shippingVals.phone || undefined,
+      };
+
+      const result = await calculateCheckoutTax(session.checkoutId, {
+        shippingAddress: cleanShippingAddress,
+      });
+
+      setTax(result.tax);
+      setShippingCost(result.shipping);
+      setTotal(result.total);
       setStep(3);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Tax calculation error, using fallback estimated tax:", msg);
+      toast.error("Failed to compute precise tax. Using estimated figures.");
+      setStep(3);
+    } finally {
+      setCalculatingTax(false);
+    }
+  };
+
+  const onShippingSubmit = shippingForm.handleSubmit(async () => {
+    if (billingSameAsShipping) {
+      await handleCalculateTaxAndGoToStep3();
     } else {
       setStep(2);
     }
   });
 
-  const onBillingSubmit = billingForm.handleSubmit(() => {
-    setStep(3);
+  const onBillingSubmit = billingForm.handleSubmit(async () => {
+    await handleCalculateTaxAndGoToStep3();
   });
 
   const toggleGift = (variantId: string) => {
@@ -555,6 +602,7 @@ export function CheckoutWizard() {
 
             <StripePaymentForm
               cart={cart}
+              checkoutId={checkoutId}
               shippingAddress={shippingForm.getValues()}
               billingAddress={billingSameAsShipping ? shippingForm.getValues() : billingForm.getValues()}
               clearCart={clearCart}
@@ -623,9 +671,10 @@ const CARD_ELEMENT_OPTIONS = {
 };
 
 interface StripePaymentFormProps {
-  cart: any;
-  shippingAddress: any;
-  billingAddress: any;
+  cart: { cartId: string };
+  checkoutId: string | null;
+  shippingAddress: AddressValues;
+  billingAddress: AddressValues;
   clearCart: () => Promise<boolean>;
   onBack: () => void;
   total: number;
@@ -633,6 +682,7 @@ interface StripePaymentFormProps {
 
 export function StripePaymentForm({
   cart,
+  checkoutId,
   shippingAddress,
   billingAddress,
   clearCart,
@@ -643,6 +693,7 @@ export function StripePaymentForm({
     <Elements stripe={getStripe()}>
       <StripePaymentFormInner
         cart={cart}
+        checkoutId={checkoutId}
         shippingAddress={shippingAddress}
         billingAddress={billingAddress}
         clearCart={clearCart}
@@ -655,6 +706,7 @@ export function StripePaymentForm({
 
 function StripePaymentFormInner({
   cart,
+  checkoutId,
   shippingAddress,
   billingAddress,
   clearCart,
@@ -665,7 +717,6 @@ function StripePaymentFormInner({
   const elements = useElements();
   const router = useRouter();
 
-  const [checkoutId, setCheckoutId] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripeIntentId, setStripeIntentId] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
@@ -674,29 +725,26 @@ function StripePaymentFormInner({
 
   useEffect(() => {
     async function initSession() {
+      if (!checkoutId) return;
       try {
-        // 1. Initialize Checkout Session
-        const session = await initializeCheckout({ cartId: cart.cartId });
-        setCheckoutId(session.checkoutId);
-
-        // 2. Create Stripe PaymentIntent
+        // Create Stripe PaymentIntent
         const intent = await createStripePaymentIntent({
-          checkoutId: session.checkoutId,
-          amount: session.totalAmount,
-          currency: session.currency,
+          checkoutId,
+          amount: total,
         });
 
         setClientSecret(intent.clientSecret);
         setStripeIntentId(intent.stripeIntentId);
-      } catch (err: any) {
-        console.error("Failed to initialize payment session:", err);
-        setInitError(err.message || "Failed to initialize secure payment session. Please try again.");
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("Failed to initialize payment session:", msg);
+        setInitError(msg || "Failed to initialize secure payment session. Please try again.");
         toast.error("Stripe initialization failed.");
       }
     }
 
     initSession();
-  }, [cart.cartId]);
+  }, [checkoutId, total]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -789,10 +837,11 @@ function StripePaymentFormInner({
       toast.success("Order placed successfully!");
       await clearCart();
       router.push(`/checkout/confirmation?orderNumber=${result.orderNo}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("Order finalization failure:", err);
-      setPaymentError(err.message || "Failed to finalize order on server.");
-      toast.error(err.message || "Checkout completion failed.");
+      setPaymentError(msg || "Failed to finalize order on server.");
+      toast.error(msg || "Checkout completion failed.");
     } finally {
       setSubmitting(false);
     }
