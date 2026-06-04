@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { ModalProvider } from "@/providers/ModalProvider";
 import { Toaster } from "sonner";
+import { TabLoader } from "@/components/ui/TabLoader";
 
 const TOAST_OPTIONS = {
   style: {
@@ -39,6 +40,9 @@ const sans = Inter({
 export const metadata: Metadata = {
   title: "Slipperze — Admin Console",
   description: "Slipperze staff and operations console.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -53,6 +57,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
+        <TabLoader />
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider>
