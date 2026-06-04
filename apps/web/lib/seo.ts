@@ -24,6 +24,9 @@ export function buildMetadata(seo: PageSeo): Metadata {
     description,
     metadataBase: new URL(config.appUrl),
     alternates: { canonical: url },
+    icons: {
+      icon: "/favicon.svg",
+    },
     openGraph: {
       title,
       description,
