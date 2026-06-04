@@ -200,3 +200,40 @@ export function useAdminNotifyBackorder(orderItemId: string) {
     },
   });
 }
+
+export function useAdminDashboardMetrics() {
+  return useQuery({
+    queryKey: ["admin-dashboard-metrics"],
+    queryFn: () => ordersApi.getDashboardMetrics(),
+    refetchInterval: 30000, // Poll every 30 seconds for real-time overview updates
+  });
+}
+
+export function useAdminNotifications() {
+  return useQuery({
+    queryKey: ["admin-notifications"],
+    queryFn: () => ordersApi.getNotifications(),
+    refetchInterval: 5000, // Poll every 5 seconds for responsive, non-overengineered updates
+  });
+}
+
+export function useAdminMarkNotificationRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => ordersApi.markNotificationRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+    },
+  });
+}
+
+export function useAdminMarkAllNotificationsRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => ordersApi.markAllNotificationsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+    },
+  });
+}
+
