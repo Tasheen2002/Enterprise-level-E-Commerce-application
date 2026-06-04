@@ -22,6 +22,8 @@ import {
   initializeCheckoutSchema,
   completeCheckoutSchema,
   completeCheckoutWithOrderSchema,
+  calculateCheckoutTaxSchema,
+  calculateCheckoutTaxResponseSchema,
   checkoutResponseSchema,
   checkoutOrderResponseSchema,
 } from "../validation/checkout.schema";
@@ -31,6 +33,7 @@ const checkoutIdParamsJson = toJsonSchema(checkoutIdParamsSchema);
 const initializeCheckoutBodyJson = toJsonSchema(initializeCheckoutSchema);
 const completeCheckoutBodyJson = toJsonSchema(completeCheckoutSchema);
 const completeCheckoutWithOrderBodyJson = toJsonSchema(completeCheckoutWithOrderSchema);
+const calculateCheckoutTaxBodyJson = toJsonSchema(calculateCheckoutTaxSchema);
 
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
@@ -175,5 +178,27 @@ export async function checkoutRoutes(
     },
     (request, reply) =>
       checkoutController.getOrderByCheckoutId(request as AuthenticatedRequest, reply),
+  );
+
+  // POST /checkout/:checkoutId/calculate-tax — Calculate tax and shipping
+  fastify.post(
+    "/checkout/:checkoutId/calculate-tax",
+    {
+      preValidation: [validateParams(checkoutIdParamsSchema)],
+      preHandler: [validateBody(calculateCheckoutTaxSchema), optionalAuth, extractGuestToken, requireCartAuth],
+      schema: {
+        description: "Calculate tax and shipping cost based on shipping address.",
+        tags: ["Checkout"],
+        summary: "Calculate Checkout Tax & Shipping",
+        security: [{ bearerAuth: [] }],
+        params: checkoutIdParamsJson,
+        body: calculateCheckoutTaxBodyJson,
+        response: {
+          200: successResponse(calculateCheckoutTaxResponseSchema),
+        },
+      },
+    },
+    (request, reply) =>
+      checkoutController.calculateTax(request as AuthenticatedRequest, reply),
   );
 }

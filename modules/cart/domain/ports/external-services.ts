@@ -77,7 +77,7 @@ export interface ProductSnapshotData {
   price: number;
   imageUrl?: string;
   weight?: number;
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 export interface IProductSnapshotFactory {

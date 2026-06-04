@@ -40,6 +40,7 @@ export class CheckoutRepositoryImpl
       update: {
         cartId: data.cartId,
         status: data.status as CheckoutStatusEnum,
+        totalAmount: data.totalAmount,
         completedAt: data.completedAt || null,
         updatedAt: data.updatedAt,
       },
