@@ -33,6 +33,46 @@ export const ordersApi = {
   },
 
   /**
+   * Fetch administrative dashboard overview metrics
+   */
+  async getDashboardMetrics(): Promise<any> {
+    const res = await (api as any).GET("/api/v1/orders/dashboard/metrics");
+    if (res.error) throw res.error;
+    return unwrap(res.data!);
+  },
+
+  /**
+   * Fetch recent administrative notifications
+   */
+  async getNotifications(): Promise<any> {
+    const res = await (api as any).GET("/api/v1/notifications");
+    if (res.error) throw res.error;
+    return unwrap(res.data!);
+  },
+
+  /**
+   * Mark a specific notification as read
+   */
+  async markNotificationRead(id: string): Promise<any> {
+    const res = await (api as any).PATCH("/api/v1/notifications/{id}/read", {
+      params: {
+        path: { id }
+      }
+    });
+    if (res.error) throw res.error;
+    return unwrap(res.data!);
+  },
+
+  /**
+   * Mark all notifications as read
+   */
+  async markAllNotificationsRead(): Promise<any> {
+    const res = await (api as any).POST("/api/v1/notifications/read-all");
+    if (res.error) throw res.error;
+    return unwrap(res.data!);
+  },
+
+  /**
    * Fetch a single order by its ID
    */
   async getOrder(orderId: string): Promise<any> {
