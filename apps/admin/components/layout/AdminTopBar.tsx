@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Bell, User, LogOut } from "lucide-react";
+import { Search, User, LogOut } from "lucide-react";
 import { clearAuthToken } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/providers/AuthProvider";
+import { NotificationPopover } from "./NotificationPopover";
 
 export function AdminTopBar() {
   const router = useRouter();
@@ -31,10 +32,7 @@ export function AdminTopBar() {
         </div>
 
       <div className="flex items-center gap-5">
-        <button className="p-2 text-charcoal/30 hover:text-charcoal transition-colors duration-300 relative group">
-          <Bell className="w-[18px] h-[18px]" strokeWidth={1.2} />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-burgundy rounded-full"></span>
-        </button>
+        <NotificationPopover />
 
         <div className="flex items-center gap-6">
           <Link href="/profile" className="flex items-center gap-3 text-[11px] text-charcoal/60 group hover:opacity-80 transition-all">
