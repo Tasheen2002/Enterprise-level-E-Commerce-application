@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import Stripe from "stripe";
 import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
 import { ICartRepository } from "../../domain/repositories/cart.repository";
 import { IReservationRepository } from "../../domain/repositories/reservation.repository";
@@ -53,6 +54,8 @@ interface CompleteCheckoutWithOrderDto {
 export type OrderResult = CheckoutOrderResult;
 
 export class CheckoutOrderService {
+  private readonly stripe: Stripe;
+
   constructor(
     private readonly completionPort: ICheckoutCompletionPort,
     private readonly checkoutRepository: ICheckoutRepository,
@@ -63,7 +66,11 @@ export class CheckoutOrderService {
     private readonly productVariantRepository: IExternalProductVariantRepository,
     private readonly snapshotFactory: IProductSnapshotFactory,
     private readonly config: { defaultStockLocation?: string },
-  ) {}
+  ) {
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+      apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
+    });
+  }
 
   async completeCheckoutWithOrder(
     dto: CompleteCheckoutWithOrderDto,
@@ -136,15 +143,65 @@ export class CheckoutOrderService {
 
     const cartSnapshot = cart.toSnapshot();
     const subtotal = cart.subtotal;
-    const total = checkout.totalAmount;
     const cartItemTotal = cart.total;
-    const shipping = total - cartItemTotal;
+    const discount = subtotal - cartItemTotal;
+
+    // Calculate shipping cost matching the storefront logic
+    const shipping = subtotal > 150 ? 0 : 15;
+
+    // Calculate sales tax dynamically using Stripe Tax API, matching calculation logic in calculate-checkout-tax.command.ts
+    let tax = 0;
+
+    if (dto.shippingAddress && dto.shippingAddress.country) {
+      try {
+        const lineItems = (cartSnapshot.items || []).map((item, idx) => ({
+          amount: Math.round(Number(item.unitPriceSnapshot) * 100), // in cents
+          reference: `L${idx}`,
+          quantity: item.quantity,
+          tax_code: "txcd_30011000", // Standard clothing/footwear tax category
+        }));
+
+        const calculation = await this.stripe.tax.calculations.create({
+          currency: checkout.currency.getValue().toLowerCase(),
+          line_items: lineItems,
+          customer_details: {
+            address: {
+              line1: dto.shippingAddress.addressLine1,
+              line2: dto.shippingAddress.addressLine2 || undefined,
+              city: dto.shippingAddress.city,
+              state: dto.shippingAddress.state || undefined,
+              postal_code: dto.shippingAddress.postalCode || undefined,
+              country: dto.shippingAddress.country,
+            },
+            address_source: "shipping",
+          },
+          shipping_cost: shipping > 0 ? { amount: shipping * 100 } : undefined,
+        });
+
+        tax = calculation.tax_amount_exclusive / 100;
+        if (tax === 0) {
+          console.log("Stripe Tax API returned 0 during order completion. Falling back to 8% simulation.");
+          tax = parseFloat((subtotal * 0.08).toFixed(2));
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("Stripe Tax API failed during order completion, falling back to 8% simulation:", msg);
+        // Fallback: 8% sales tax simulation
+        tax = parseFloat((subtotal * 0.08).toFixed(2));
+      }
+    } else {
+      // Fallback: 8% sales tax simulation
+      tax = parseFloat((subtotal * 0.08).toFixed(2));
+    }
+
+    // The final total settled
+    const total = subtotal + shipping + tax - discount;
 
     const totals = {
       subtotal,
-      tax: 0,
+      tax,
       shipping,
-      discount: subtotal - cartItemTotal,
+      discount,
       total,
     };
 

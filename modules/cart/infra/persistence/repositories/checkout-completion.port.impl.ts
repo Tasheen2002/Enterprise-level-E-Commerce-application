@@ -1,4 +1,18 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+
+interface ExtendedPrismaTransaction {
+  adminNotification: {
+    create(args: {
+      data: {
+        type: string;
+        title: string;
+        message: string;
+        targetUrl: string;
+      };
+    }): Promise<unknown>;
+  };
+}
+
 import {
   ICheckoutCompletionPort,
   PaymentIntentInfo,
@@ -178,6 +192,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         where: { id: data.checkoutId },
         data: {
           status: "completed",
+          totalAmount: data.totals.total,
           completedAt: new Date(),
           updatedAt: new Date(),
         },
@@ -233,6 +248,69 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           } as unknown as Prisma.InputJsonValue,
         },
       });
+
+      // Create Admin In-App Notifications
+      try {
+        // 1. New Order Commissioned Notification
+        await (tx as unknown as ExtendedPrismaTransaction).adminNotification.create({
+          data: {
+            type: "ORDER_CREATED",
+            title: "New Boutique Order Commissioned",
+            message: `Order #${order.orderNo} placed for a total of $${Number(data.totals.total).toFixed(2)}.`,
+            targetUrl: `/orders/${order.id}`,
+          },
+        });
+
+        // 2. Low Stock Alerts
+        for (const item of data.stockAdjustments) {
+          const stock = await tx.inventoryStock.findUnique({
+            where: {
+              variantId_locationId: {
+                variantId: item.variantId,
+                locationId: item.warehouseId,
+              },
+            },
+            include: {
+              variant: {
+                include: {
+                  product: true,
+                },
+              },
+            },
+          });
+
+          if (stock) {
+            const quantitySubtracted = Math.abs(item.quantity);
+            const remaining = (stock.onHand - stock.reserved) - quantitySubtracted;
+
+            if (remaining >= 0 && remaining <= 3) {
+              const productTitle = stock.variant.product?.title || "Item";
+              const sizeStr = stock.variant.size ? ` (Size: ${stock.variant.size})` : "";
+              
+              await (tx as unknown as ExtendedPrismaTransaction).adminNotification.create({
+                data: {
+                  type: "LOW_STOCK",
+                  title: `Low Stock: ${productTitle}${sizeStr}`,
+                  message: `Only ${remaining} units remaining in boutique inventory. Consider restocking.`,
+                  targetUrl: `/products/${stock.variant.productId}/variants`,
+                },
+              });
+            }
+          }
+        }
+      } catch (err: unknown) {
+        console.error("Failed to create admin notification:", err);
+        try {
+          const fs = require("fs");
+          const path = require("path");
+          const logPath = path.join(__dirname, "../../../../../checkout-notification-error.log");
+          const errMessage = err instanceof Error ? err.message : String(err);
+          const errStack = err instanceof Error ? err.stack : "";
+          fs.appendFileSync(logPath, `${new Date().toISOString()} - Failed to create admin notification: ${errMessage}\n${errStack}\n\n`);
+        } catch (logErr) {
+          console.error("Failed to write checkout notification error to file:", logErr);
+        }
+      }
 
       // 10. Clear cart items
       await tx.cartItem.deleteMany({
