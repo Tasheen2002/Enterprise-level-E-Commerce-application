@@ -59,4 +59,5 @@ export interface IOrderRepository {
   // Existence checks
   exists(orderId: OrderId): Promise<boolean>;
   existsByOrderNumber(orderNumber: OrderNumber): Promise<boolean>;
+  getDashboardMetrics(): Promise<unknown>;
 }

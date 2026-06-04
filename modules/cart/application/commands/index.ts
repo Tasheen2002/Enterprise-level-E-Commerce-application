@@ -22,3 +22,4 @@ export { InitializeCheckoutCommand, InitializeCheckoutHandler } from "./initiali
 export { CompleteCheckoutCommand, CompleteCheckoutHandler } from "./complete-checkout.command";
 export { CancelCheckoutCommand, CancelCheckoutHandler } from "./cancel-checkout.command";
 export { CompleteCheckoutWithOrderCommand, CompleteCheckoutWithOrderHandler } from "./complete-checkout-with-order.command";
+export { CalculateCheckoutTaxCommand, CalculateCheckoutTaxHandler } from "./calculate-checkout-tax.command";
