@@ -23,6 +23,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
     readonly postalCode?: string;
     readonly country: string;
     readonly phone?: string;
+    readonly email?: string;
   };
   readonly billingAddress?: {
     readonly firstName: string;
@@ -34,6 +35,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
     readonly postalCode?: string;
     readonly country: string;
     readonly phone?: string;
+    readonly email?: string;
   };
 }
 
