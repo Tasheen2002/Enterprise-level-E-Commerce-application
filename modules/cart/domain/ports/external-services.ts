@@ -179,6 +179,7 @@ export interface CheckoutOrderResult {
 export interface PaymentIntentInfo {
   intentId: string;
   status: string;
+  amount: number;
 }
 
 /**
@@ -199,6 +200,9 @@ export interface ICheckoutCompletionPort {
 
   /** Get the email stored on the cart (not exposed via domain entity). */
   getCartEmail(cartId: string): Promise<string | null>;
+
+  /** Get the email stored on the user account (if authenticated). */
+  getUserEmail(userId: string): Promise<string | null>;
 
   /** Find an order by checkoutId for a specific user/guest. */
   findOrderByCheckoutId(

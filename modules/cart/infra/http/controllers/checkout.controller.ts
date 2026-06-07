@@ -129,6 +129,8 @@ export class CheckoutController {
       const { checkoutId } = request.params;
       const body = request.body;
 
+      console.log("COMPLETE WITH ORDER REQUEST BODY:", JSON.stringify(body, null, 2));
+
       if (!userId && !guestToken) {
         return ResponseHelper.unauthorized(reply, "Authentication required");
       }
