@@ -162,6 +162,7 @@ export class OrderController {
       const result = await this.updateOrderStatusHandler.handle({
         orderId: request.params.orderId,
         status: request.body.status,
+        changedBy: request.user.email,
       });
       return ResponseHelper.fromCommand(reply, result, "Order status updated successfully");
     } catch (error: unknown) {
@@ -189,7 +190,10 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.markOrderPaidHandler.handle({ orderId: request.params.orderId });
+      const result = await this.markOrderPaidHandler.handle({
+        orderId: request.params.orderId,
+        changedBy: request.user.email,
+      });
       return ResponseHelper.fromCommand(reply, result, "Order marked as paid successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -201,7 +205,10 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.markOrderFulfilledHandler.handle({ orderId: request.params.orderId });
+      const result = await this.markOrderFulfilledHandler.handle({
+        orderId: request.params.orderId,
+        changedBy: request.user.email,
+      });
       return ResponseHelper.fromCommand(reply, result, "Order marked as fulfilled successfully");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

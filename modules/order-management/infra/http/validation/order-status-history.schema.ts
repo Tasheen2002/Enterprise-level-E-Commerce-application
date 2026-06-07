@@ -19,19 +19,21 @@ export const orderStatusHistoryParamsSchema = z.object({
 // route boundary instead of being silently clamped.
 export const getStatusHistoryQuerySchema = z.object({
   limit: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE),
+    )
     .optional()
-    .default(String(DEFAULT_PAGE_SIZE))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE)),
+    .default(DEFAULT_PAGE_SIZE)
+    .optional(),
   offset: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_OFFSET),
+    )
     .optional()
-    .default(String(MIN_OFFSET))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_OFFSET)),
+    .default(MIN_OFFSET)
+    .optional(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────

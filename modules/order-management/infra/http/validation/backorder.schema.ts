@@ -19,22 +19,24 @@ export const backorderParamsSchema = z.object({
 // clamped (better client feedback than "limit was changed to 100").
 export const listBackordersQuerySchema = z.object({
   limit: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE),
+    )
     .optional()
-    .default(String(DEFAULT_PAGE_SIZE))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE)),
+    .default(DEFAULT_PAGE_SIZE)
+    .optional(),
   offset: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_OFFSET),
+    )
     .optional()
-    .default(String(MIN_OFFSET))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_OFFSET)),
-  sortBy: z.enum(["promisedEta", "notifiedAt"]).optional().default("promisedEta"),
-  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
-  filterType: z.enum(["all", "notified", "unnotified", "overdue"]).optional().default("all"),
+    .default(MIN_OFFSET)
+    .optional(),
+  sortBy: z.enum(["promisedEta", "notifiedAt"]).optional().default("promisedEta").optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc").optional(),
+  filterType: z.enum(["all", "notified", "unnotified", "overdue"]).optional().default("all").optional(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────

@@ -10,6 +10,9 @@ import {
 } from "../../../domain/constants/order-management.constants";
 import { OrderStatusValue } from "../../../domain/value-objects/order-status.vo";
 import { OrderSourceValue } from "../../../domain/value-objects/order-source.vo";
+import { orderItemResponseSchema } from "./order-item.schema";
+import { orderAddressResponseSchema, addressResponseShape } from "./order-address.schema";
+import { shipmentResponseSchema } from "./order-shipment.schema";
 
 // ── Params Schemas ────────────────────────────────────────────────────────────
 
@@ -43,27 +46,29 @@ export const trackOrderQuerySchema = z
 // clamped (better client feedback than "limit was changed to 100").
 export const listOrdersQuerySchema = z.object({
   limit: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE),
+    )
     .optional()
-    .default(String(DEFAULT_PAGE_SIZE))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE)),
+    .default(DEFAULT_PAGE_SIZE)
+    .optional(),
   offset: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_OFFSET),
+    )
     .optional()
-    .default(String(MIN_OFFSET))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_OFFSET)),
+    .default(MIN_OFFSET)
+    .optional(),
   // Staff-only — non-staff requesters always see only their own orders
   // regardless of what's passed; the service forces userId server-side.
   userId: z.uuid().optional(),
   status: z.string().optional(),
   startDate: z.iso.datetime().transform((v) => new Date(v)).optional(),
   endDate: z.iso.datetime().transform((v) => new Date(v)).optional(),
-  sortBy: z.enum(["createdAt", "updatedAt", "orderNumber"]).optional().default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+  sortBy: z.enum(["createdAt", "updatedAt", "orderNumber"]).optional().default("createdAt").optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc").optional(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────
@@ -139,11 +144,11 @@ export const trackOrderResponseSchema = {
     orderId: { type: "string", format: "uuid" },
     orderNumber: { type: "string" },
     status: { type: "string" },
-    items: { type: "array", items: { type: "object", additionalProperties: true } },
+    items: { type: "array", items: orderItemResponseSchema },
     totals: { type: "object", additionalProperties: true },
-    shipments: { type: "array", items: { type: "object", additionalProperties: true } },
-    billingAddress: { type: "object", additionalProperties: true },
-    shippingAddress: { type: "object", additionalProperties: true },
+    shipments: { type: "array", items: shipmentResponseSchema },
+    billingAddress: addressResponseShape,
+    shippingAddress: addressResponseShape,
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
   },
@@ -161,9 +166,9 @@ export const orderResponseSchema = {
     status: { type: "string" },
     source: { type: "string" },
     currency: { type: "string" },
-    items: { type: "array", items: { type: "object", additionalProperties: true } },
-    address: { type: "object", additionalProperties: true },
-    shipments: { type: "array", items: { type: "object", additionalProperties: true } },
+    items: { type: "array", items: orderItemResponseSchema },
+    address: orderAddressResponseSchema,
+    shipments: { type: "array", items: shipmentResponseSchema },
     totals: {
       type: "object",
       properties: {
