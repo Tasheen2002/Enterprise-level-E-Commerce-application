@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/hooks/useCart";
+import { api } from "@/lib/api-client";
 import { imageKitUrl } from "@/lib/imagekit";
 import {
   ShoppingBag,
@@ -25,6 +26,63 @@ export function CartView() {
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discountAmount: number } | null>(null);
+
+  const subtotal = cart?.summary.subtotal || 0;
+  const items = cart?.items || [];
+
+  // Load initially applied promo code from localStorage
+  useEffect(() => {
+    const storedCode = localStorage.getItem("applied_promo_code");
+    if (storedCode) {
+      setAppliedPromo({
+        code: storedCode,
+        discountAmount: 0,
+      });
+      setPromoCode(storedCode);
+    }
+  }, []);
+
+  // Recalculate discount reactively when subtotal changes
+  useEffect(() => {
+    if (!appliedPromo) {
+      localStorage.removeItem("applied_promo_code");
+      return;
+    }
+
+    const recalculatePromo = async () => {
+      try {
+        const productIds = items
+          .map((item) => item.product?.productId)
+          .filter((id): id is string => !!id);
+
+        const result = await api.post<{ valid: boolean; discountAmount: number; error?: string }>(
+          "/promotions/apply",
+          {
+            promoCode: appliedPromo.code,
+            orderAmount: subtotal,
+            products: productIds,
+          }
+        );
+
+        if (result.valid) {
+          setAppliedPromo({
+            code: appliedPromo.code,
+            discountAmount: result.discountAmount,
+          });
+          localStorage.setItem("applied_promo_code", appliedPromo.code);
+        } else {
+          setAppliedPromo(null);
+          localStorage.removeItem("applied_promo_code");
+          toast.error("Promo code is no longer valid for this selection.");
+        }
+      } catch (err) {
+        console.error("Failed to recalculate promo code discount:", err);
+      }
+    };
+
+    recalculatePromo();
+  }, [subtotal, appliedPromo?.code, items]);
 
   const handleQuantityChange = async (item: CartItem, newQty: number) => {
     if (newQty < 1) {
@@ -55,19 +113,45 @@ export function CartView() {
     }
   };
 
-  const handlePromoApply = (e: React.FormEvent) => {
+  const handlePromoApply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoCode.trim()) return;
     setIsApplyingPromo(true);
-    setTimeout(() => {
+    try {
+      const productIds = items
+        .map((item) => item.product?.productId)
+        .filter((id): id is string => !!id);
+
+      const result = await api.post<{ valid: boolean; discountAmount: number; error?: string }>(
+        "/promotions/apply",
+        {
+          promoCode: promoCode.trim().toUpperCase(),
+          orderAmount: subtotal,
+          products: productIds,
+        }
+      );
+
+      if (result.valid) {
+        setAppliedPromo({
+          code: promoCode.trim().toUpperCase(),
+          discountAmount: result.discountAmount,
+        });
+        localStorage.setItem("applied_promo_code", promoCode.trim().toUpperCase());
+        toast.success(`Promo code "${promoCode.toUpperCase()}" applied successfully!`);
+      } else {
+        localStorage.removeItem("applied_promo_code");
+        toast.error(result.error || "Invalid or expired promo code.");
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error("Failed to apply promo code.");
+    } finally {
       setIsApplyingPromo(false);
-      toast.info(`Promo code "${promoCode.toUpperCase()}" is currently undergoing authorization.`);
-    }, 800);
+    }
   };
 
   // Luxury shipping progress parameters
   const shippingThreshold = 200;
-  const subtotal = cart?.summary.subtotal || 0;
   const isFreeShipping = subtotal >= shippingThreshold;
   const remainingForFreeShipping = shippingThreshold - subtotal;
   const shippingProgressPercentage = Math.min((subtotal / shippingThreshold) * 100, 100);
@@ -82,8 +166,6 @@ export function CartView() {
       </div>
     );
   }
-
-  const items = cart?.items || [];
 
   if (items.length === 0) {
     return (
@@ -295,10 +377,10 @@ export function CartView() {
               <span>Sales Tax</span>
               <span className="text-stone-400">Calculated at Checkout</span>
             </div>
-            {cart?.summary.totalDiscount && cart.summary.totalDiscount > 0 ? (
+            {(cart?.summary.totalDiscount && cart.summary.totalDiscount > 0) || (appliedPromo && appliedPromo.discountAmount > 0) ? (
               <div className="flex justify-between items-center text-gold">
-                <span>Promotional Discount</span>
-                <span>-${cart.summary.totalDiscount.toFixed(2)}</span>
+                <span>Promotional Discount {appliedPromo ? `(${appliedPromo.code})` : ""}</span>
+                <span>-${(cart?.summary.totalDiscount || (appliedPromo ? appliedPromo.discountAmount : 0)).toFixed(2)}</span>
               </div>
             ) : null}
           </div>
@@ -331,14 +413,27 @@ export function CartView() {
             </div>
           </form>
 
-          {/* Absolute Order Total */}
           <div className="flex justify-between items-baseline py-4 border-b border-sand/10">
             <span className="font-serif text-lg text-charcoal tracking-wide italic">
               Estimated Total
             </span>
-            <span className="text-2xl font-bold text-charcoal tracking-tighter">
-              ${(cart?.summary.total || 0).toFixed(2)}
-            </span>
+            <div className="flex items-baseline gap-2">
+              {appliedPromo && appliedPromo.discountAmount > 0 && (
+                <span className="text-stone-400 line-through text-sm font-normal">
+                  ${(
+                    (cart?.summary.subtotal || 0) +
+                    (isFreeShipping ? 0 : (cart?.summary.shippingAmount || 15))
+                  ).toFixed(2)}
+                </span>
+              )}
+              <span className="text-2xl font-bold text-charcoal tracking-tighter">
+                ${(
+                  (cart?.summary.subtotal || 0) +
+                  (isFreeShipping ? 0 : (cart?.summary.shippingAmount || 15)) -
+                  (appliedPromo ? appliedPromo.discountAmount : 0)
+                ).toFixed(2)}
+              </span>
+            </div>
           </div>
 
           {/* Checkout CTA */}
