@@ -1518,7 +1518,12 @@ enum CheckoutStatusEnum {
 
 enum OrderStatusEnum {
   created
+  pending
+  confirmed
   paid
+  processing
+  shipped
+  delivered
   fulfilled
   partially_returned
   refunded
