@@ -5,6 +5,7 @@ import { OrderDTO } from "../../domain/entities/order.entity";
 export interface UpdateOrderStatusCommand extends ICommand {
   readonly orderId: string;
   readonly status: string;
+  readonly changedBy?: string;
 }
 
 export class UpdateOrderStatusHandler implements ICommandHandler<
@@ -14,7 +15,7 @@ export class UpdateOrderStatusHandler implements ICommandHandler<
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(command: UpdateOrderStatusCommand): Promise<CommandResult<OrderDTO>> {
-    const order = await this.orderService.updateOrderStatus(command.orderId, command.status);
+    const order = await this.orderService.updateOrderStatus(command.orderId, command.status, command.changedBy);
     return CommandResult.success(order);
   }
 }

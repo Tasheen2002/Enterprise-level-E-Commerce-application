@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { FedExShippingService } from "../../infra/shipping/fedex-shipping.service";
 
 interface RepositoryWithPrisma {
   readonly prisma: PrismaClient;
@@ -22,7 +23,7 @@ import { Order, OrderDTO } from "../../domain/entities/order.entity";
 import { OrderId } from "../../domain/value-objects/order-id.vo";
 import { ShipmentId } from "../../domain/value-objects/shipment-id.vo";
 import { OrderNumber } from "../../domain/value-objects/order-number.vo";
-import { OrderStatus } from "../../domain/value-objects/order-status.vo";
+import { OrderStatus, OrderStatusValue } from "../../domain/value-objects/order-status.vo";
 import { Currency } from "../../../../packages/core/src/domain/value-objects/currency.vo";
 import { OrderSource } from "../../domain/value-objects/order-source.vo";
 import {
@@ -121,6 +122,7 @@ export class OrderManagementService {
     // from `process.env` at call time) so this service is testable without
     // env stubbing and so config is bound once at container boot.
     private readonly defaultWarehouseId: string,
+    private readonly fedexShippingService?: FedExShippingService,
   ) {}
 
   // ─── Order Lifecycle ───────────────────────────────────────────────────────
@@ -330,8 +332,19 @@ export class OrderManagementService {
   ): Promise<OrderDTO> {
     const order = await this.requireOrder(id);
     this.assertCanAccessOrder(order, requestingUserId, isStaff);
+    const previousStatus = order.status;
     order.cancel();
     await this.orderRepository.save(order);
+
+    if (previousStatus.getValue() !== order.status.getValue()) {
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: order.status,
+        changedBy: isStaff ? "staff" : "customer",
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
 
     
     const defaultLocationId = this.getDefaultWarehouseId();
@@ -352,25 +365,61 @@ export class OrderManagementService {
     return Order.toDTO(order);
   }
 
-  async markOrderAsPaid(id: string): Promise<OrderDTO> {
+  async markOrderAsPaid(id: string, changedBy: string = "system"): Promise<OrderDTO> {
     const order = await this.requireOrder(id);
+    const previousStatus = order.status;
     order.markAsPaid();
     await this.orderRepository.save(order);
+
+    if (previousStatus.getValue() !== order.status.getValue()) {
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: order.status,
+        changedBy,
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
+
     return Order.toDTO(order);
   }
 
-  async markOrderAsFulfilled(id: string): Promise<OrderDTO> {
+  async markOrderAsFulfilled(id: string, changedBy: string = "system"): Promise<OrderDTO> {
     const order = await this.requireOrder(id);
+    const previousStatus = order.status;
     order.markAsFulfilled();
     await this.orderRepository.save(order);
+
+    if (previousStatus.getValue() !== order.status.getValue()) {
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: order.status,
+        changedBy,
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
+
     return Order.toDTO(order);
   }
 
 
-  async updateOrderStatus(orderId: string, status: string): Promise<OrderDTO> {
+  async updateOrderStatus(orderId: string, status: string, changedBy: string = "staff"): Promise<OrderDTO> {
     const order = await this.requireOrder(orderId);
-    order.updateStatus(OrderStatus.fromString(status));
-    await this.orderRepository.save(order);
+    const previousStatus = order.status;
+    const newStatus = OrderStatus.fromString(status);
+    if (previousStatus.getValue() !== newStatus.getValue()) {
+      order.updateStatus(newStatus);
+      await this.orderRepository.save(order);
+
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: newStatus,
+        changedBy,
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
     return Order.toDTO(order);
   }
 
@@ -573,9 +622,26 @@ export class OrderManagementService {
       pickupLocationId: data.pickupLocationId,
     });
 
+    const previousStatus = order.status;
     // Goes through the aggregate to enforce the paid/fulfilled guard
     order.createShipment(shipment);
+
+    if (previousStatus.getValue() !== OrderStatusValue.PROCESSING) {
+      order.updateStatus(OrderStatus.PROCESSING);
+    }
+
     await this.orderRepository.save(order);
+
+    if (previousStatus.getValue() !== order.status.getValue()) {
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: order.status,
+        changedBy: "system",
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
+
     return OrderShipment.toDTO(shipment);
   }
 
@@ -590,8 +656,42 @@ export class OrderManagementService {
       data.orderId,
       data.shipmentId,
     );
-    shipment.markAsShipped(data.carrier, data.service, data.trackingNumber);
+
+    let finalTrackingNumber = data.trackingNumber;
+    let finalCarrier = data.carrier;
+    let finalService = data.service;
+
+    if (data.carrier.toUpperCase().includes("FEDEX") && this.fedexShippingService) {
+      try {
+        const order = await this.requireOrder(data.orderId);
+        const fedexResult = await this.fedexShippingService.createShipment(order, data.service);
+        finalTrackingNumber = fedexResult.trackingNumber;
+        finalCarrier = "FedEx";
+      } catch (error: any) {
+        console.error("FedEx Sandbox shipment creation failed:", error);
+        throw new Error(`FedEx integration error: ${error.message}`);
+      }
+    }
+
+    shipment.markAsShipped(finalCarrier, finalService, finalTrackingNumber);
     await this.orderShipmentRepository.save(shipment);
+
+    // Transition parent order status to SHIPPED
+    const order = await this.requireOrder(data.orderId);
+    const previousStatus = order.status;
+    if (previousStatus.getValue() !== OrderStatusValue.SHIPPED) {
+      order.updateStatus(OrderStatus.SHIPPED);
+      await this.orderRepository.save(order);
+
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: OrderStatus.SHIPPED,
+        changedBy: "system",
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
+
     return OrderShipment.toDTO(shipment);
   }
 
@@ -606,6 +706,23 @@ export class OrderManagementService {
     );
     shipment.markAsDelivered(data.deliveredAt);
     await this.orderShipmentRepository.save(shipment);
+
+    // Transition parent order status to DELIVERED
+    const order = await this.requireOrder(data.orderId);
+    const previousStatus = order.status;
+    if (previousStatus.getValue() !== OrderStatusValue.DELIVERED) {
+      order.updateStatus(OrderStatus.DELIVERED);
+      await this.orderRepository.save(order);
+
+      const history = OrderStatusHistory.create({
+        orderId: order.id.getValue(),
+        fromStatus: previousStatus,
+        toStatus: OrderStatus.DELIVERED,
+        changedBy: "system",
+      });
+      await this.orderStatusHistoryRepository.save(history);
+    }
+
     return OrderShipment.toDTO(shipment);
   }
 

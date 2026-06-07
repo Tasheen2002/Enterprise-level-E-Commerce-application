@@ -4,6 +4,7 @@ import { OrderDTO } from "../../domain/entities/order.entity";
 
 export interface MarkOrderFulfilledCommand extends ICommand {
   readonly orderId: string;
+   readonly changedBy?: string;
 }
 
 export class MarkOrderFulfilledHandler implements ICommandHandler<
@@ -13,7 +14,7 @@ export class MarkOrderFulfilledHandler implements ICommandHandler<
   constructor(private readonly orderService: OrderManagementService) {}
 
   async handle(command: MarkOrderFulfilledCommand): Promise<CommandResult<OrderDTO>> {
-    const order = await this.orderService.markOrderAsFulfilled(command.orderId);
+    const order = await this.orderService.markOrderAsFulfilled(command.orderId, command.changedBy);
     return CommandResult.success(order);
   }
 }

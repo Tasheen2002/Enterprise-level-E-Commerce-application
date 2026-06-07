@@ -29,21 +29,23 @@ export const orderEventParamsSchema = z.object({
 export const listOrderEventsQuerySchema = z.object({
   eventType: z.string().min(1).max(EVENT_TYPE_MAX_LENGTH).optional(),
   limit: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE),
+    )
     .optional()
-    .default(String(DEFAULT_PAGE_SIZE))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE)),
+    .default(DEFAULT_PAGE_SIZE)
+    .optional(),
   offset: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_OFFSET),
+    )
     .optional()
-    .default(String(MIN_OFFSET))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_OFFSET)),
-  sortBy: z.enum(["createdAt", "eventId"]).optional().default("createdAt"),
-  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
+    .default(MIN_OFFSET)
+    .optional(),
+  sortBy: z.enum(["createdAt", "eventId"]).optional().default("createdAt").optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc").optional(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────

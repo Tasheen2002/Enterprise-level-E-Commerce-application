@@ -18,22 +18,24 @@ export const preorderParamsSchema = z.object({
 // are rejected at the route boundary instead of being silently clamped.
 export const listPreordersQuerySchema = z.object({
   limit: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE),
+    )
     .optional()
-    .default(String(DEFAULT_PAGE_SIZE))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE)),
+    .default(DEFAULT_PAGE_SIZE)
+    .optional(),
   offset: z
-    .string()
-    .regex(/^\d+$/)
+    .preprocess(
+      (val) => (typeof val === "string" ? Number(val) : val),
+      z.number().int().min(MIN_OFFSET),
+    )
     .optional()
-    .default(String(MIN_OFFSET))
-    .transform(Number)
-    .pipe(z.number().int().min(MIN_OFFSET)),
-  sortBy: z.enum(["releaseDate", "notifiedAt"]).optional().default("releaseDate"),
-  sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
-  filterType: z.enum(["all", "notified", "unnotified", "released"]).optional().default("all"),
+    .default(MIN_OFFSET)
+    .optional(),
+  sortBy: z.enum(["releaseDate", "notifiedAt"]).optional().default("releaseDate").optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("asc").optional(),
+  filterType: z.enum(["all", "notified", "unnotified", "released"]).optional().default("all").optional(),
 });
 
 // ── Body Schemas ──────────────────────────────────────────────────────────────

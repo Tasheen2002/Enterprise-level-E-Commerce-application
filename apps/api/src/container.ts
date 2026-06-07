@@ -404,6 +404,7 @@ import { OrderManagementService } from "../../../modules/order-management/applic
 import { OrderEventService } from "../../../modules/order-management/application/services/order-event.service";
 import { BackorderManagementService } from "../../../modules/order-management/application/services/backorder-management.service";
 import { PreorderManagementService } from "../../../modules/order-management/application/services/preorder-management.service";
+import { FedExShippingService } from "../../../modules/order-management/infra/shipping/fedex-shipping.service";
 import {
   IExternalVariantService,
   IExternalProductService,
@@ -1303,6 +1304,13 @@ export class Container {
     };
 
     const orderEventService = new OrderEventService(orderEventRepository);
+    const fedexShippingService = new FedExShippingService({
+      apiKey: process.env.FEDEX_API_KEY ?? "l747befc81f4f94ab285631a2148503751",
+      secretKey: process.env.FEDEX_SECRET_KEY ?? "512d30a91889472fb4d3335c06b96f03",
+      accountNumber: process.env.FEDEX_ACCOUNT_NUMBER ?? "740561073",
+      baseUrl: process.env.FEDEX_URL ?? "https://apis-sandbox.fedex.com",
+    });
+
     const orderManagementService = new OrderManagementService(
       orderRepository,
       orderAddressRepository,
@@ -1312,6 +1320,7 @@ export class Container {
       externalProductService,
       externalStockService,
       process.env.DEFAULT_STOCK_LOCATION ?? "",
+      fedexShippingService,
     );
     const backorderManagementService = new BackorderManagementService(backorderRepository);
     const preorderManagementService = new PreorderManagementService(preorderRepository);
@@ -1524,7 +1533,11 @@ export class Container {
     const notificationService = new NotificationService(notificationRepository);
     const appointmentService = new AppointmentService(appointmentRepository);
     const productReviewService = new ProductReviewService(productReviewRepository);
-    const newsletterService = new NewsletterService(newsletterSubscriptionRepository);
+    const newsletterService = new NewsletterService(
+      newsletterSubscriptionRepository,
+      prisma,
+      emailService,
+    );
 
     const wishlistController = new WishlistController(
       new CreateWishlistHandler(wishlistManagementService),
@@ -1581,6 +1594,7 @@ export class Container {
     this.services.set("notificationController", notificationController);
     this.services.set("appointmentController", appointmentController);
     this.services.set("productReviewController", productReviewController);
+    this.services.set("newsletterService", newsletterService);
     this.services.set("newsletterController", newsletterController);
   }
 
@@ -1687,6 +1701,7 @@ export class Container {
       notificationController: this.get<NotificationController>("notificationController"),
       appointmentController: this.get<AppointmentController>("appointmentController"),
       productReviewController: this.get<ProductReviewController>("productReviewController"),
+      newsletterService: this.get<NewsletterService>("newsletterService"),
       newsletterController: this.get<NewsletterController>("newsletterController"),
     };
   }
