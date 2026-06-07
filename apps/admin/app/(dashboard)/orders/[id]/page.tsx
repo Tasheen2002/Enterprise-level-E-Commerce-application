@@ -37,9 +37,9 @@ export default function OrderDetailsPage() {
   const markFulfilledMutation = useAdminMarkOrderFulfilled(id);
   const cancelMutation = useAdminCancelOrder(id);
   const createShipmentMutation = useAdminCreateShipment(id);
-  const markShippedMutation = useAdminMarkShipmentShipped(id, "");
-  const markDeliveredMutation = useAdminMarkShipmentDelivered(id, "");
-  const updateTrackingMutation = useAdminUpdateShipmentTracking(id, "");
+  const markShippedMutation = useAdminMarkShipmentShipped(id);
+  const markDeliveredMutation = useAdminMarkShipmentDelivered(id);
+  const updateTrackingMutation = useAdminUpdateShipmentTracking(id);
 
   const handleRefreshAll = () => {
     refetchOrder();
@@ -136,7 +136,6 @@ export default function OrderDetailsPage() {
         onCancel={() => cancelMutation.mutateAsync()}
       />
 
-      {/* Shipment Panel details */}
       <ShipmentPanel
         orderId={order.id || ""}
         shipments={(order as any).shipments || []}
@@ -144,20 +143,25 @@ export default function OrderDetailsPage() {
         onCreateShipment={(body) => createShipmentMutation.mutateAsync(body)}
         onMarkShipped={(shipmentId, body) =>
           markShippedMutation.mutateAsync({
-            carrier: body.carrier,
-            service: body.service,
-            trackingNumber: body.trackingNumber,
-          } as any, {
+            shipmentId,
+            body: {
+              carrier: body.carrier,
+              service: body.service,
+              trackingNumber: body.trackingNumber,
+            },
+          }, {
             onSuccess: () => {
-              // Re-bind dynamic path to include current shipmentId in mock hooks
               refetchOrder();
             }
           })
         }
         onMarkDelivered={(shipmentId, body) =>
           markDeliveredMutation.mutateAsync({
-            deliveredAt: body?.deliveredAt,
-          } as any, {
+            shipmentId,
+            body: {
+              deliveredAt: body?.deliveredAt,
+            },
+          }, {
             onSuccess: () => {
               refetchOrder();
             }
@@ -165,10 +169,13 @@ export default function OrderDetailsPage() {
         }
         onUpdateTracking={(shipmentId, body) =>
           updateTrackingMutation.mutateAsync({
-            trackingNumber: body.trackingNumber,
-            carrier: body.carrier,
-            service: body.service,
-          } as any, {
+            shipmentId,
+            body: {
+              trackingNumber: body.trackingNumber,
+              carrier: body.carrier,
+              service: body.service,
+            },
+          }, {
             onSuccess: () => {
               refetchOrder();
             }

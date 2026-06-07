@@ -60,15 +60,17 @@ export function OrderTracking() {
     ];
 
     let activeIdx = 0;
-    if (normalized === "paid" || normalized === "confirmed") activeIdx = 1;
+    if (normalized === "created" || normalized === "pending") activeIdx = 0;
+    else if (normalized === "paid" || normalized === "confirmed") activeIdx = 1;
     else if (normalized === "processing") activeIdx = 2;
     else if (normalized === "shipped") activeIdx = 3;
-    else if (normalized === "delivered" || normalized === "fulfilled") activeIdx = 4;
+    else if (normalized === "delivered" || normalized === "fulfilled" || normalized === "partially_returned") activeIdx = 4;
+    else activeIdx = -1; // cancelled, refunded
 
     return steps.map((step, idx) => ({
       ...step,
-      isCompleted: idx < activeIdx,
-      isActive: idx === activeIdx,
+      isCompleted: activeIdx !== -1 && idx < activeIdx,
+      isActive: activeIdx !== -1 && idx === activeIdx,
     }));
   };
 
@@ -168,9 +170,30 @@ export function OrderTracking() {
         <div className="space-y-12 animate-fadeIn">
           {/* visual stepper progress timeline */}
           <div className="space-y-6">
-            <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-850 block mb-6">
+            <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-850 block">
               Fulfillment Journey
             </h3>
+
+            {/* Status Alert Banner for Terminal/Alternative States */}
+            {(result.status.toLowerCase() === "cancelled" || 
+              result.status.toLowerCase() === "refunded" || 
+              result.status.toLowerCase() === "partially_returned") && (
+              <div className={cn(
+                "p-4 border text-xs leading-relaxed font-light",
+                result.status.toLowerCase() === "cancelled" && "bg-red-50/50 border-red-200/50 text-red-800",
+                result.status.toLowerCase() === "refunded" && "bg-red-55/40 border-red-200/50 text-red-800",
+                result.status.toLowerCase() === "partially_returned" && "bg-orange-50/50 border-orange-200/50 text-orange-800"
+              )}>
+                <span className="font-bold uppercase tracking-wider block text-[10px] mb-1">
+                  {result.status.toLowerCase() === "cancelled" && "Order Cancelled"}
+                  {result.status.toLowerCase() === "refunded" && "Order Refunded"}
+                  {result.status.toLowerCase() === "partially_returned" && "Order Partially Returned"}
+                </span>
+                {result.status.toLowerCase() === "cancelled" && "This order has been cancelled and is no longer being processed."}
+                {result.status.toLowerCase() === "refunded" && "A full refund has been successfully issued for this transaction."}
+                {result.status.toLowerCase() === "partially_returned" && "One or more boutique items in this order have been returned."}
+              </div>
+            )}
 
             {/* Stepper timeline */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">

@@ -107,6 +107,7 @@ function ConfirmationContent() {
   const subtotal = order.totals.subtotal;
   const shipping = order.totals.shipping;
   const tax = order.totals.tax;
+  const discount = order.totals.discount;
   const total = order.totals.total;
 
   return (
@@ -116,7 +117,7 @@ function ConfirmationContent() {
 
       {/* Celebratory message */}
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-light text-stone-850 uppercase tracking-[0.2em]">
+        <h1 className="text-3xl font-light text-stone-855 uppercase tracking-[0.2em]">
           Acknowledgment Confirmed
         </h1>
         <p className="text-[11px] text-stone-400 uppercase tracking-widest max-w-md mx-auto leading-relaxed">
@@ -143,7 +144,9 @@ function ConfirmationContent() {
               })}
             </p>
           </div>
-        </div>        {/* Deliver address snapshot */}
+        </div>
+
+        {/* Deliver address snapshot */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-stone-200">
           <div>
             <span className="text-[8px] uppercase tracking-widest font-bold text-stone-400">Recipient Details</span>
@@ -209,6 +212,12 @@ function ConfirmationContent() {
                 {shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}
               </span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-xs text-gold font-bold">
+                <span>Promotional Discount</span>
+                <span>-${discount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span className="text-stone-500 font-light">Estimated Sales Tax</span>
               <span className="text-stone-855 font-medium">${tax.toFixed(2)}</span>
@@ -216,7 +225,7 @@ function ConfirmationContent() {
             <div className="h-[1px] bg-stone-200 my-2" />
             <div className="flex justify-between text-sm">
               <span className="text-stone-800 uppercase tracking-widest font-bold">Paid Total</span>
-              <span className="text-stone-850 font-bold text-md">${total.toFixed(2)}</span>
+              <span className="text-stone-855 font-bold text-md">${total.toFixed(2)}</span>
             </div>
           </div>
         </div>

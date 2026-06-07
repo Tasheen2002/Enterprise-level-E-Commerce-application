@@ -80,6 +80,8 @@ export function OrderList({ orders, isLoading, onRefresh }: OrderListProps) {
       case "CANCELLED":
       case "REFUNDED":
         return "bg-red-50 text-red-700 border border-red-200/50";
+      case "PARTIALLY_RETURNED":
+        return "bg-orange-50 text-orange-700 border border-orange-200/50";
       default:
         return "bg-stone-50 text-stone-700 border border-stone-200/50";
     }
@@ -116,10 +118,14 @@ export function OrderList({ orders, isLoading, onRefresh }: OrderListProps) {
             <option value="ALL">All Statuses</option>
             <option value="CREATED">Created</option>
             <option value="PENDING">Pending</option>
+            <option value="CONFIRMED">Confirmed</option>
             <option value="PAID">Paid</option>
             <option value="PROCESSING">Processing</option>
             <option value="SHIPPED">Shipped</option>
             <option value="DELIVERED">Delivered</option>
+            <option value="FULFILLED">Fulfilled (Legacy)</option>
+            <option value="PARTIALLY_RETURNED">Partially Returned</option>
+            <option value="REFUNDED">Refunded</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
 
@@ -148,18 +154,18 @@ export function OrderList({ orders, isLoading, onRefresh }: OrderListProps) {
       </div>
 
       {/* Orders Table Container */}
-      <div className="bg-white border border-charcoal/5 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full border-collapse text-left">
+      <div className="bg-white border border-charcoal/5 rounded-2xl shadow-sm overflow-x-auto">
+        <table className="w-full border-collapse text-left min-w-[1000px]">
           <thead>
             <tr className="border-b border-sand/20 bg-[#EBE6D9]/40">
-              <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60">Order Number</th>
+              <th className="pl-8 pr-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60">Order Number</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60">Purchaser ID</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60">Date Placed</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60">Sales Channel</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60 text-center">Creations</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60 text-right">Totals</th>
               <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60 text-center">Fulfillment Status</th>
-              <th className="px-6 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60 text-right">Actions</th>
+              <th className="pl-6 pr-8 py-4 text-[9px] uppercase font-bold tracking-widest text-slate-muted/60 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-sand/10">
@@ -181,7 +187,7 @@ export function OrderList({ orders, isLoading, onRefresh }: OrderListProps) {
             ) : (
               filteredOrders.map((order) => (
                 <tr key={order.id} className="hover:bg-[#F9F8F4]/60 transition-colors duration-250">
-                  <td className="px-6 py-4">
+                  <td className="pl-8 pr-6 py-4">
                     <Link
                       href={`/orders/${order.id}`}
                       className="text-xs font-mono font-bold text-charcoal hover:text-gold transition-colors block"
@@ -230,7 +236,7 @@ export function OrderList({ orders, isLoading, onRefresh }: OrderListProps) {
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="pl-6 pr-8 py-4 text-right">
                     <Link
                       href={`/orders/${order.id}`}
                       className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-widest font-bold text-gold hover:text-charcoal transition-colors group"

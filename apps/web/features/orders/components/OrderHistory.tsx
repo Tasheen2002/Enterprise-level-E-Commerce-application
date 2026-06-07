@@ -9,9 +9,9 @@ import type { Order } from "../types";
 
 const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="space-y-1 w-full">
-    <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 block">
+    <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 flex items-end h-8 pb-1">
       {label}
-    </span>
+    </div>
     <div className="w-full bg-[#FAF8F5] border border-[#F2EDE2]/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-stone-850 font-medium flex items-center min-h-[38px] leading-normal shadow-sm">
       {value}
     </div>
@@ -51,10 +51,10 @@ export function OrderHistory() {
   const filteredOrders = orders.filter((o) => {
     const status = o.status.toLowerCase();
     if (filter === "all") return true;
-    if (filter === "completed") return status === "delivered" || status === "fulfilled";
+    if (filter === "completed") return status === "delivered" || status === "fulfilled" || status === "partially_returned";
     if (filter === "cancelled") return status === "cancelled" || status === "refunded";
     // Active orders are anything not completed or cancelled
-    return status !== "delivered" && status !== "fulfilled" && status !== "cancelled" && status !== "refunded";
+    return status !== "delivered" && status !== "fulfilled" && status !== "partially_returned" && status !== "cancelled" && status !== "refunded";
   });
 
   const getStatusStyle = (status: string) => {
@@ -65,6 +65,8 @@ export function OrderHistory() {
     if (s === "processing") return "bg-indigo-50 text-indigo-700 border border-indigo-100";
     if (s === "shipped") return "bg-purple-50 text-purple-700 border border-purple-100";
     if (s === "delivered" || s === "fulfilled") return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+    if (s === "cancelled" || s === "refunded") return "bg-red-50 text-red-700 border border-red-100";
+    if (s === "partially_returned") return "bg-orange-50 text-orange-700 border border-orange-100";
     return "bg-stone-100 text-stone-600 border border-stone-200";
   };
 
@@ -310,17 +312,32 @@ export function OrderHistory() {
                       <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C2D19] block border-b border-stone-100/60 pb-1 mb-3">
                         Financial Summary
                       </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className={cn(
+                        "grid gap-3",
+                        selectedOrder.totals.discount > 0
+                          ? "grid-cols-2 sm:grid-cols-5"
+                          : "grid-cols-2 sm:grid-cols-4"
+                      )}>
                         <DetailField label="Subtotal" value={`$${selectedOrder.totals.subtotal.toFixed(2)}`} />
                         <DetailField
                           label="Delivery"
                           value={selectedOrder.totals.shipping === 0 ? "FREE" : `$${selectedOrder.totals.shipping.toFixed(2)}`}
                         />
                         <DetailField label="Tax" value={`$${selectedOrder.totals.tax.toFixed(2)}`} />
+                        {selectedOrder.totals.discount > 0 && (
+                          <div className="space-y-1 w-full animate-fadeIn">
+                            <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-red-500 flex items-end h-8 pb-1">
+                              Promotion Applied
+                            </div>
+                            <div className="w-full bg-[#FAF8F5] border border-red-100/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-red-600 font-bold flex items-center min-h-[38px] leading-normal shadow-sm">
+                              -${selectedOrder.totals.discount.toFixed(2)}
+                            </div>
+                          </div>
+                        )}
                         <div className="space-y-1 w-full">
-                          <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 block">
+                          <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 flex items-end h-8 pb-1">
                             Acquisition Total
-                          </span>
+                          </div>
                           <div className="w-full bg-[#FAF8F5] border border-[#8C2D19]/25 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-[#8C2D19] font-bold flex items-center min-h-[38px] shadow-sm leading-normal">
                             ${selectedOrder.totals.total.toFixed(2)}
                           </div>

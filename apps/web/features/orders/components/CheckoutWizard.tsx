@@ -12,6 +12,7 @@ import { imageKitUrl } from "@/lib/imagekit";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripe";
 import { ShieldCheck } from "lucide-react";
+import { api } from "@/lib/api-client";
 import { initializeCheckout, createStripePaymentIntent, completeCheckoutWithOrder, calculateCheckoutTax } from "../api";
 
 const addressSchema = z.object({
@@ -41,16 +42,48 @@ export function CheckoutWizard() {
   const subtotal = cart?.summary?.subtotal ?? 0;
   const [shippingCost, setShippingCost] = useState(subtotal > 150 ? 0 : 15);
   const [tax, setTax] = useState(parseFloat((subtotal * 0.08).toFixed(2)));
+  const [discount, setDiscount] = useState(0);
+  const [promoCode, setPromoCode] = useState<string | null>(null);
   const [total, setTotal] = useState(subtotal + shippingCost + tax);
   const [calculatingTax, setCalculatingTax] = useState(false);
+
+  useEffect(() => {
+    const checkPromo = async () => {
+      const storedCode = localStorage.getItem("applied_promo_code");
+      if (!storedCode || !cart) return;
+      try {
+        const productIds = cart.items
+          .map((item) => item.product?.productId)
+          .filter((id): id is string => !!id);
+
+        const result = await api.post<{ valid: boolean; discountAmount: number }>(
+          "/promotions/apply",
+          {
+            promoCode: storedCode,
+            orderAmount: subtotal,
+            products: productIds,
+          }
+        );
+
+        if (result.valid) {
+          setDiscount(result.discountAmount);
+          setPromoCode(storedCode);
+        }
+      } catch (err) {
+        console.error("Failed to apply promo code on checkout:", err);
+      }
+    };
+
+    checkPromo();
+  }, [subtotal, cart]);
 
   useEffect(() => {
     const defaultShipping = subtotal > 150 ? 0 : 15;
     const defaultTax = parseFloat((subtotal * 0.08).toFixed(2));
     setShippingCost(defaultShipping);
     setTax(defaultTax);
-    setTotal(subtotal + defaultShipping + defaultTax);
-  }, [subtotal]);
+    setTotal(subtotal + defaultShipping + defaultTax - discount);
+  }, [subtotal, discount]);
 
   const shippingForm = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
@@ -128,6 +161,7 @@ export function CheckoutWizard() {
         postalCode: shippingVals.postalCode,
         country: shippingVals.country,
         phone: shippingVals.phone || undefined,
+        email: shippingVals.email || undefined,
       };
 
       const result = await calculateCheckoutTax(session.checkoutId, {
@@ -136,7 +170,7 @@ export function CheckoutWizard() {
 
       setTax(result.tax);
       setShippingCost(result.shipping);
-      setTotal(result.total);
+      setTotal(result.total - discount);
       setStep(3);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -630,6 +664,12 @@ export function CheckoutWizard() {
                 {shippingCost === 0 ? <span className="text-stone-600 uppercase tracking-widest text-[9px] font-bold">FREE</span> : `$${shippingCost.toFixed(2)}`}
               </span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-xs text-gold font-bold">
+                <span>Promotional Discount {promoCode ? `(${promoCode})` : ""}</span>
+                <span>-${discount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span className="text-stone-700 font-medium">Estimated Sales Tax</span>
               <span className="text-stone-850 font-bold">${tax.toFixed(2)}</span>
@@ -637,7 +677,14 @@ export function CheckoutWizard() {
             <div className="h-[1px] bg-stone-200 w-full" />
             <div className="flex justify-between text-sm">
               <span className="text-stone-800 uppercase tracking-wider font-bold">Total Estimated</span>
-              <span className="text-stone-850 font-bold text-md">${total.toFixed(2)}</span>
+              <div className="flex items-center gap-2">
+                {discount > 0 && (
+                  <span className="text-stone-400 line-through text-xs font-light">
+                    ${(total + discount).toFixed(2)}
+                  </span>
+                )}
+                <span className="text-stone-850 font-bold text-md">${total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
@@ -802,7 +849,7 @@ function StripePaymentFormInner({
         return;
       }
 
-      // 2. Map addresses perfectly matching backend schema (strip email/extra fields)
+      // 2. Map addresses perfectly matching backend schema (including email)
       const cleanShippingAddress = {
         firstName: shippingAddress.firstName,
         lastName: shippingAddress.lastName,
@@ -813,6 +860,7 @@ function StripePaymentFormInner({
         postalCode: shippingAddress.postalCode,
         country: shippingAddress.country,
         phone: shippingAddress.phone || undefined,
+        email: shippingAddress.email || undefined,
       };
 
       const cleanBillingAddress = {
@@ -825,6 +873,7 @@ function StripePaymentFormInner({
         postalCode: billingAddress.postalCode,
         country: billingAddress.country,
         phone: billingAddress.phone || undefined,
+        email: billingAddress.email || undefined,
       };
 
       // 3. Complete Checkout & Create Order on Backend
@@ -835,6 +884,7 @@ function StripePaymentFormInner({
       });
 
       toast.success("Order placed successfully!");
+      localStorage.removeItem("applied_promo_code");
       await clearCart();
       router.push(`/checkout/confirmation?orderNumber=${result.orderNo}`);
     } catch (err: unknown) {
