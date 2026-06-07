@@ -111,11 +111,16 @@ export function useAdminCreateShipment(orderId: string) {
   });
 }
 
-export function useAdminMarkShipmentShipped(orderId: string, shipmentId: string) {
+export function useAdminMarkShipmentShipped(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof ordersApi.markShipmentShipped>[2]) =>
-      ordersApi.markShipmentShipped(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body: Parameters<typeof ordersApi.markShipmentShipped>[2];
+    }) => ordersApi.markShipmentShipped(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
@@ -123,11 +128,16 @@ export function useAdminMarkShipmentShipped(orderId: string, shipmentId: string)
   });
 }
 
-export function useAdminMarkShipmentDelivered(orderId: string, shipmentId: string) {
+export function useAdminMarkShipmentDelivered(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body?: Parameters<typeof ordersApi.markShipmentDelivered>[2]) =>
-      ordersApi.markShipmentDelivered(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body?: Parameters<typeof ordersApi.markShipmentDelivered>[2];
+    }) => ordersApi.markShipmentDelivered(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
@@ -135,11 +145,16 @@ export function useAdminMarkShipmentDelivered(orderId: string, shipmentId: strin
   });
 }
 
-export function useAdminUpdateShipmentTracking(orderId: string, shipmentId: string) {
+export function useAdminUpdateShipmentTracking(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof ordersApi.updateShipmentTracking>[2]) =>
-      ordersApi.updateShipmentTracking(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body: Parameters<typeof ordersApi.updateShipmentTracking>[2];
+    }) => ordersApi.updateShipmentTracking(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
