@@ -27,6 +27,7 @@ const addressSchema = z.object({
   postalCode: z.string().optional(),
   country: z.string().min(1),
   phone: z.string().optional(),
+  email: z.string().email().optional(),
 });
 
 export const completeCheckoutWithOrderSchema = z.object({
