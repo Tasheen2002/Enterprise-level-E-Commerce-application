@@ -17,6 +17,10 @@ export interface Variant {
   sku: string;
   size: string | null;
   color: string | null;
+  allowPreorder?: boolean;
+  allowBackorder?: boolean;
+  restockEta?: string | null;
+  inventory?: number;
 }
 
 export interface Product {

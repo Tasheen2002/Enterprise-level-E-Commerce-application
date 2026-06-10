@@ -12,7 +12,7 @@ const DetailField = ({ label, value }: { label: string; value: React.ReactNode }
     <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 flex items-end h-8 pb-1">
       {label}
     </div>
-    <div className="w-full bg-[#FAF8F5] border border-[#F2EDE2]/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-stone-850 font-medium flex items-center min-h-[38px] leading-normal shadow-sm">
+    <div className="w-full bg-[#FAF8F5] border border-[#F2EDE2]/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-stone-800 font-medium flex items-center min-h-[38px] leading-normal shadow-sm">
       {value}
     </div>
   </div>
@@ -94,7 +94,7 @@ export function OrderHistory() {
             onClick={() => setFilter(tab)}
             className={cn(
               "pb-3 text-[10px] uppercase font-bold tracking-[0.2em] transition-all relative",
-              filter === tab ? "text-stone-850 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
+              filter === tab ? "text-stone-800 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
             )}
           >
             {tab}
@@ -129,7 +129,7 @@ export function OrderHistory() {
               </div>
 
               <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-6 border-t sm:border-t-0 pt-4 sm:pt-0 border-stone-200">
-                <span className="text-xs font-bold text-stone-850">${order.totals.total.toFixed(2)}</span>
+                <span className="text-xs font-bold text-stone-800">${order.totals.total.toFixed(2)}</span>
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -163,7 +163,7 @@ export function OrderHistory() {
                 <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-red-600 block">
                   Security Reversal Confirmation
                 </span>
-                <h4 className="font-serif text-2xl text-stone-850 tracking-tight italic">
+                <h4 className="font-serif text-2xl text-stone-800 tracking-tight italic">
                   Are you absolutely sure you want to cancel?
                 </h4>
                 <p className="text-xs text-stone-500 font-light max-w-md mx-auto leading-relaxed">
@@ -287,7 +287,7 @@ export function OrderHistory() {
                             className="border border-[#F2EDE2]/60 rounded-xl p-3.5 bg-[#FAF8F5] flex justify-between items-center hover:bg-stone-50 transition-all duration-150 shadow-sm"
                           >
                             <div className="min-w-0 space-y-1">
-                              <h5 className="font-semibold text-stone-850 uppercase tracking-wide text-xs sm:text-[13px] truncate">
+                              <h5 className="font-semibold text-stone-800 uppercase tracking-wide text-xs sm:text-[13px] truncate">
                                 {item.productSnapshot.name}
                               </h5>
                               <p className="text-[8px] text-stone-400 uppercase tracking-widest font-bold">
@@ -298,7 +298,7 @@ export function OrderHistory() {
                               <span className="text-[10px] text-stone-400 block font-light">
                                 {item.quantity} x ${item.productSnapshot.price.toFixed(2)}
                               </span>
-                              <span className="font-bold text-stone-850 text-xs sm:text-[13px]">
+                              <span className="font-bold text-stone-800 text-xs sm:text-[13px]">
                                 ${(item.productSnapshot.price * item.quantity).toFixed(2)}
                               </span>
                             </div>
@@ -358,9 +358,9 @@ export function OrderHistory() {
                       <DetailField
                         label="Delivery Tracking"
                         value={
-                          selectedOrder.shipments?.[0]?.trackingNo ? (
-                            <span className="font-mono text-xs sm:text-[13px] text-stone-850">
-                              {selectedOrder.shipments[0].trackingNo}
+                          (selectedOrder.shipments?.[0]?.trackingNumber || selectedOrder.shipments?.[0]?.trackingNo) ? (
+                            <span className="font-mono text-xs sm:text-[13px] text-stone-800">
+                              {selectedOrder.shipments[0].trackingNumber || selectedOrder.shipments[0].trackingNo}
                             </span>
                           ) : (
                             <span className="text-stone-400 text-xs sm:text-[13px] italic">
@@ -415,7 +415,7 @@ export function OrderHistory() {
                                 <span
                                   className={cn(
                                     "text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-center block w-full truncate",
-                                    isDone ? "text-stone-850 font-bold" : "text-stone-350"
+                                    isDone ? "text-stone-800 font-bold" : "text-stone-350"
                                   )}
                                 >
                                   {step}
@@ -441,7 +441,7 @@ export function OrderHistory() {
                   <button
                     type="button"
                     onClick={() => setIsCancelConfirmOpen(true)}
-                    className="rounded-full bg-stone-900 hover:bg-stone-850 text-white px-5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                    className="rounded-full bg-stone-900 hover:bg-stone-800 text-white px-5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
                   >
                     Cancel Order
                   </button>
