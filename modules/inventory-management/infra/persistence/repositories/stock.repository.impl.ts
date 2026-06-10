@@ -302,6 +302,14 @@ export class StockRepositoryImpl
     return (result._sum.onHand ?? 0) - (result._sum.reserved ?? 0);
   }
 
+  async checkVariantPreorderOrBackorderAllowed(variantId: string): Promise<boolean> {
+    const variant = await this.prisma.productVariant.findUnique({
+      where: { id: variantId },
+      select: { allowPreorder: true, allowBackorder: true },
+    });
+    return !!(variant?.allowPreorder || variant?.allowBackorder);
+  }
+
   async exists(stockId: StockId): Promise<boolean> {
     const { variantId, locationId } = stockId.getValue();
     const count = await this.prisma.inventoryStock.count({

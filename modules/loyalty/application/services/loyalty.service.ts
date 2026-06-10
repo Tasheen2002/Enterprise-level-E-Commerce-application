@@ -108,7 +108,14 @@ export class LoyaltyService {
     return transaction;
   }
 
-  async earnPointsFromPurchase(userId: string, orderTotal: number, orderId: string): Promise<LoyaltyTransactionDTO> {
+  async earnPointsFromPurchase(userId: string, orderTotal: number, orderId: string): Promise<LoyaltyTransactionDTO | null> {
+    // Check if points for this order have already been earned to prevent double earning
+    const existing = await this.getLoyaltyTransactionsByOrderId(orderId);
+    const hasEarned = existing.some((t) => t.type === LoyaltyTransactionType.EARN);
+    if (hasEarned) {
+      return null;
+    }
+
     const points = Math.floor(orderTotal * LOYALTY_POINTS_PER_DOLLAR);
     return this.earnPoints({
       userId,
