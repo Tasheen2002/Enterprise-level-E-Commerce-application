@@ -94,7 +94,7 @@ export function CookiePreferencesModal({
             it&apos;s used. You can change these choices at any time from the
             footer. Read our{" "}
             <Link
-              href="/legal/cookies"
+              href="/legal/privacy"
               className="underline underline-offset-2 hover:text-charcoal"
             >
               cookie policy
