@@ -22,6 +22,8 @@ export const applyPromotionSchema = z.object({
   currency: z.string().length(3).optional(),
   products: z.array(z.string()).optional(),
   categories: z.array(z.string()).optional(),
+  userId: z.uuid().optional(),
+  email: z.string().email().optional(),
 });
 
 export const recordPromotionUsageSchema = z.object({
