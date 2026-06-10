@@ -12,6 +12,8 @@ export interface ApplyPromotionCommand extends ICommand {
   readonly currency?: string;
   readonly products?: string[];
   readonly categories?: string[];
+  readonly userId?: string;
+  readonly email?: string;
 }
 
 export class ApplyPromotionHandler implements ICommandHandler<
@@ -28,6 +30,8 @@ export class ApplyPromotionHandler implements ICommandHandler<
       currency: command.currency,
       products: command.products,
       categories: command.categories,
+      userId: command.userId,
+      email: command.email,
     });
 
     if (!result.valid) {

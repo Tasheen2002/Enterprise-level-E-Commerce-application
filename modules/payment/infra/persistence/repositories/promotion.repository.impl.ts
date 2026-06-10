@@ -127,6 +127,45 @@ export class PromotionRepositoryImpl
     return count > 0;
   }
 
+  async hasPriorOrders(userId?: string, email?: string): Promise<boolean> {
+    if (!userId && !email) return false;
+
+    const count = await this.prisma.order.count({
+      where: {
+        OR: [
+          ...(userId ? [{ userId }] : []),
+          ...(email
+            ? [
+                {
+                  addresses: {
+                    OR: [
+                      {
+                        shippingSnapshot: {
+                          path: ["email"],
+                          equals: email,
+                        },
+                      },
+                      {
+                        billingSnapshot: {
+                          path: ["email"],
+                          equals: email,
+                        },
+                      },
+                    ],
+                  },
+                },
+              ]
+            : []),
+        ],
+        status: {
+          not: "cancelled",
+        },
+      },
+    });
+
+    return count > 0;
+  }
+
   private toDomain(record: Prisma.PromotionGetPayload<Record<string, never>>): Promotion {
     return Promotion.fromPersistence({
       id: PromotionId.fromString(record.promoId),
