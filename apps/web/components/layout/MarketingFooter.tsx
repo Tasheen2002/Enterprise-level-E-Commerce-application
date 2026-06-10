@@ -48,29 +48,17 @@ const FOOTER_COLUMNS = [
   {
     heading: "The House",
     links: [
-      { label: "About Us", href: "/about" },
-      { label: "Our Heritage", href: "/artisanship" },
-      { label: "Sustainability", href: "/sustainability" },
-      { label: "Journal", href: "/journal" },
+      { label: "The Brand", href: "/about" },
       { label: "Retailers", href: "/retailers" },
+      { label: "Journal", href: "/journal" },
     ],
   },
   {
     heading: "Client Care",
     links: [
-      { label: "Contact", href: "/contact" },
-      { label: "Delivery & Returns", href: "/delivery-returns" },
-      { label: "Size Guide", href: "/size-guide" },
-      { label: "Care Instructions", href: "/care" },
-      { label: "FAQ", href: "/faq" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { label: "Terms of Service", href: "/legal/terms" },
-      { label: "Privacy Policy", href: "/legal/privacy" },
-      { label: "Cookie Policy", href: "/legal/cookies" },
+      { label: "Legal mentions", href: "/legal/privacy" },
+      { label: "Terms of sale", href: "/legal/terms" },
+      { label: "Delivery and Returns", href: "/delivery-returns" },
       { label: "Sitemap", href: "/sitemap" },
     ],
   },
@@ -136,7 +124,7 @@ export function MarketingFooter() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 py-10 lg:py-12">
             {/* Link Columns */}
             {FOOTER_COLUMNS.map((col) => (
-              <div key={col.heading} className="lg:col-span-2 space-y-4">
+              <div key={col.heading} className="lg:col-span-3 space-y-4">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-charcoal">
                   {col.heading}
                 </h4>
