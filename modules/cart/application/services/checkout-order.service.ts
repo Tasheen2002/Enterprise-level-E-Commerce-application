@@ -21,12 +21,14 @@ import {
   InvalidCartStateError,
   DomainValidationError,
 } from "../../domain/errors/cart.errors";
+import { LoyaltyService } from "../../../loyalty/application/services/loyalty.service";
 
 interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
   paymentIntentId: string;
   userId?: string;
   guestToken?: string;
+  promoCode?: string;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -68,6 +70,7 @@ export class CheckoutOrderService {
     private readonly productVariantRepository: IExternalProductVariantRepository,
     private readonly snapshotFactory: IProductSnapshotFactory,
     private readonly config: { defaultStockLocation?: string },
+    private readonly loyaltyService?: LoyaltyService,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
       apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
@@ -311,6 +314,7 @@ export class CheckoutOrderService {
       },
       email: resolvedEmail,
       cartId: checkout.cartId.getValue(),
+      promoCode: dto.promoCode,
       stockAdjustments: (cartSnapshot.items || []).map((item) => ({
         variantId: item.variantId,
         warehouseId,
@@ -333,6 +337,19 @@ export class CheckoutOrderService {
 
     // Clean up reservations
     await this.reservationRepository.deleteByCartId(checkout.cartId);
+
+    // Award loyalty points for authenticated user checkout
+    if (checkout.cartOwnerId && this.loyaltyService) {
+      try {
+        await this.loyaltyService.earnPointsFromPurchase(
+          checkout.cartOwnerId.getValue(),
+          totals.total,
+          result.orderId,
+        );
+      } catch (err: unknown) {
+        console.error("Failed to earn loyalty points from checkout purchase:", err);
+      }
+    }
 
     return result;
   }
