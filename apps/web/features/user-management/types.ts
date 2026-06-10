@@ -165,3 +165,35 @@ export interface Wishlist {
   updatedAt: string;
 }
 
+export interface LoyaltyAccount {
+  id: string;
+  userId: string;
+  currentBalance: number;
+  totalPointsEarned: number;
+  totalPointsRedeemed: number;
+  lifetimePoints: number;
+  tier: string;
+  tierMultiplier: number;
+  nextTier: string | null;
+  pointsToNextTier: number | null;
+  joinedAt: string;
+  lastActivityAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LoyaltyTransaction {
+  id: string;
+  accountId: string;
+  type: string;
+  points: number;
+  reason: string;
+  description: string | null;
+  referenceId: string | null;
+  orderId: string | null;
+  createdBy: string | null;
+  expiresAt: string | null;
+  balanceAfter: number;
+  createdAt: string;
+}
+
