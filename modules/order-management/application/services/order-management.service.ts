@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { FedExShippingService } from "../../infra/shipping/fedex-shipping.service";
+import { LoyaltyService } from "../../../loyalty/application/services/loyalty.service";
 
 interface RepositoryWithPrisma {
   readonly prisma: PrismaClient;
@@ -123,6 +124,7 @@ export class OrderManagementService {
     // env stubbing and so config is bound once at container boot.
     private readonly defaultWarehouseId: string,
     private readonly fedexShippingService?: FedExShippingService,
+    private readonly loyaltyService?: LoyaltyService,
   ) {}
 
   // ─── Order Lifecycle ───────────────────────────────────────────────────────
@@ -379,6 +381,20 @@ export class OrderManagementService {
         changedBy,
       });
       await this.orderStatusHistoryRepository.save(history);
+
+      if (order.userId && this.loyaltyService) {
+        try {
+          const totalsObj = order.totals.getValue() as { total?: number };
+          const totalVal = Number(totalsObj.total || 0);
+          await this.loyaltyService.earnPointsFromPurchase(
+            order.userId,
+            totalVal,
+            order.id.getValue(),
+          );
+        } catch (err: unknown) {
+          console.error("Failed to earn loyalty points from manual order pay transition:", err);
+        }
+      }
     }
 
     return Order.toDTO(order);
@@ -419,6 +435,20 @@ export class OrderManagementService {
         changedBy,
       });
       await this.orderStatusHistoryRepository.save(history);
+
+      if (newStatus.isPaid() && order.userId && this.loyaltyService) {
+        try {
+          const totalsObj = order.totals.getValue() as { total?: number };
+          const totalVal = Number(totalsObj.total || 0);
+          await this.loyaltyService.earnPointsFromPurchase(
+            order.userId,
+            totalVal,
+            order.id.getValue(),
+          );
+        } catch (err: unknown) {
+          console.error("Failed to earn loyalty points from status update to paid:", err);
+        }
+      }
     }
     return Order.toDTO(order);
   }
