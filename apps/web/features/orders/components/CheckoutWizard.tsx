@@ -11,9 +11,11 @@ import { toast } from "sonner";
 import { imageKitUrl } from "@/lib/imagekit";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getStripe } from "@/lib/stripe";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Coins } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { initializeCheckout, createStripePaymentIntent, completeCheckoutWithOrder, calculateCheckoutTax } from "../api";
+import { useCurrentIdentity } from "../../user-management/hooks/useCurrentIdentity";
+import { useLoyaltyAccount, useRedeemLoyaltyPoints } from "../../user-management/hooks/useLoyalty";
 
 const addressSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100),
@@ -38,13 +40,19 @@ export function CheckoutWizard() {
   const [giftItems, setGiftItems] = useState<Record<string, { isGift: boolean; giftMessage: string }>>({});
   const [checkoutId, setCheckoutId] = useState<string | null>(null);
 
+  // Loyalty Details
+  const { data: identity } = useCurrentIdentity();
+  const { data: loyalty } = useLoyaltyAccount();
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+
   // Calculate pricing summary using local states to allow backend Stripe Tax updates
   const subtotal = cart?.summary?.subtotal ?? 0;
   const [shippingCost, setShippingCost] = useState(subtotal > 150 ? 0 : 15);
   const [tax, setTax] = useState(parseFloat((subtotal * 0.08).toFixed(2)));
   const [discount, setDiscount] = useState(0);
   const [promoCode, setPromoCode] = useState<string | null>(null);
-  const [total, setTotal] = useState(subtotal + shippingCost + tax);
+  const total = subtotal + shippingCost + tax - discount - loyaltyDiscount;
   const [calculatingTax, setCalculatingTax] = useState(false);
 
   useEffect(() => {
@@ -56,34 +64,45 @@ export function CheckoutWizard() {
           .map((item) => item.product?.productId)
           .filter((id): id is string => !!id);
 
-        const result = await api.post<{ valid: boolean; discountAmount: number }>(
+        const shippingVals = shippingForm.getValues();
+        const result = await api.post<{ valid: boolean; discountAmount: number; error?: string }>(
           "/promotions/apply",
           {
             promoCode: storedCode,
             orderAmount: subtotal,
             products: productIds,
+            userId: identity?.userId || undefined,
+            email: identity?.email || shippingVals.email || undefined,
           }
         );
 
         if (result.valid) {
           setDiscount(result.discountAmount);
           setPromoCode(storedCode);
+        } else {
+          setDiscount(0);
+          setPromoCode(null);
+          localStorage.removeItem("applied_promo_code");
         }
       } catch (err) {
-        console.error("Failed to apply promo code on checkout:", err);
+        console.warn("Failed to apply promo code on checkout:", err);
+        setDiscount(0);
+        setPromoCode(null);
+        localStorage.removeItem("applied_promo_code");
       }
     };
 
     checkPromo();
-  }, [subtotal, cart]);
+  }, [subtotal, cart, identity]);
 
   useEffect(() => {
-    const defaultShipping = subtotal > 150 ? 0 : 15;
-    const defaultTax = parseFloat((subtotal * 0.08).toFixed(2));
-    setShippingCost(defaultShipping);
-    setTax(defaultTax);
-    setTotal(subtotal + defaultShipping + defaultTax - discount);
-  }, [subtotal, discount]);
+    if (step < 3) {
+      const defaultShipping = subtotal > 150 ? 0 : 15;
+      const defaultTax = parseFloat((subtotal * 0.08).toFixed(2));
+      setShippingCost(defaultShipping);
+      setTax(defaultTax);
+    }
+  }, [subtotal, step]);
 
   const shippingForm = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
@@ -164,13 +183,49 @@ export function CheckoutWizard() {
         email: shippingVals.email || undefined,
       };
 
+      // Re-validate promotion code if applied
+      const storedCode = localStorage.getItem("applied_promo_code");
+      if (storedCode) {
+        const productIds = cart.items
+          .map((item) => item.product?.productId)
+          .filter((id): id is string => !!id);
+
+        try {
+          const promoResult = await api.post<{ valid: boolean; discountAmount: number; error?: string }>(
+            "/promotions/apply",
+            {
+              promoCode: storedCode,
+              orderAmount: subtotal,
+              products: productIds,
+              userId: identity?.userId || undefined,
+              email: identity?.email || shippingVals.email || undefined,
+            }
+          );
+
+          if (promoResult.valid) {
+            setDiscount(promoResult.discountAmount);
+            setPromoCode(storedCode);
+          } else {
+            setDiscount(0);
+            setPromoCode(null);
+            localStorage.removeItem("applied_promo_code");
+            toast.error(promoResult.error || "Promo code is no longer valid for this checkout.");
+          }
+        } catch (promoErr: unknown) {
+          setDiscount(0);
+          setPromoCode(null);
+          localStorage.removeItem("applied_promo_code");
+          const msg = promoErr instanceof Error ? promoErr.message : "Promo code is no longer valid for this checkout.";
+          toast.error(msg);
+        }
+      }
+
       const result = await calculateCheckoutTax(session.checkoutId, {
         shippingAddress: cleanShippingAddress,
       });
 
       setTax(result.tax);
       setShippingCost(result.shipping);
-      setTotal(result.total - discount);
       setStep(3);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -561,8 +616,17 @@ export function CheckoutWizard() {
                       <h4 className="text-[11px] font-medium text-stone-800 uppercase tracking-wider truncate">
                         {item.product?.title}
                       </h4>
-                      <p className="text-[9px] text-stone-600 uppercase tracking-widest font-bold mt-1">
-                        Size: {item.variant?.size || "One Size"} | Color: {item.variant?.color || "N/A"}
+                      <p className="text-[9px] text-stone-600 uppercase tracking-widest font-bold mt-1 flex flex-wrap items-center gap-2">
+                        <span>Size: {item.variant?.size || "One Size"} | Color: {item.variant?.color || "N/A"}</span>
+                        {item.variant && (item.variant.inventory ?? 0) <= 0 && (
+                          <>
+                            {item.variant.allowPreorder ? (
+                              <span className="px-1.5 py-0.5 bg-ivory text-gold text-[8px] font-bold border border-sand/30 tracking-widest">Pre-order</span>
+                            ) : item.variant.allowBackorder ? (
+                              <span className="px-1.5 py-0.5 bg-ivory text-gold text-[8px] font-bold border border-sand/30 tracking-widest">Back-order</span>
+                            ) : null}
+                          </>
+                        )}
                       </p>
                       <p className="text-[10px] text-stone-700 mt-1">
                         {item.quantity} x ${item.unitPrice.toFixed(2)}
@@ -606,6 +670,69 @@ export function CheckoutWizard() {
               ))}
             </div>
 
+            {/* Loyalty Points Redemption Box */}
+            {identity && loyalty && loyalty.currentBalance > 0 && (
+              <div className="p-5 bg-ivory border border-sand/30 space-y-4 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-gold animate-pulse" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-charcoal">Slipperze Loyalty Rewards</span>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-stone-600 bg-sand/10 px-2.5 py-1">
+                    {loyalty.currentBalance.toLocaleString()} pts available
+                  </span>
+                </div>
+
+                <p className="text-[10px] text-stone-500 font-light leading-relaxed">
+                  You have <strong>{loyalty.currentBalance.toLocaleString()}</strong> reward points (worth <strong>${(loyalty.currentBalance / 100).toFixed(2)}</strong>). You can apply them as a discount on this bespoke purchase.
+                </p>
+
+                <div className="flex items-center gap-4 pt-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={Math.min(loyalty.currentBalance, Math.floor((subtotal - discount + shippingCost + tax) * 100))}
+                    value={pointsToRedeem || ""}
+                    onChange={(e) => {
+                      const maxVal = Math.min(
+                        loyalty.currentBalance,
+                        Math.floor((subtotal - discount + shippingCost + tax) * 100)
+                      );
+                      const val = Math.min(
+                        maxVal,
+                        Math.max(0, parseInt(e.target.value) || 0)
+                      );
+                      setPointsToRedeem(val);
+                      setLoyaltyDiscount(parseFloat((val / 100).toFixed(2)));
+                    }}
+                    placeholder="Points to redeem (e.g. 500)"
+                    className="flex-1 text-xs p-3 border border-stone-200 focus:outline-none focus:border-stone-850 bg-white"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      const maxPossiblePoints = Math.min(
+                        loyalty.currentBalance,
+                        Math.floor((subtotal - discount + shippingCost + tax) * 100)
+                      );
+                      setPointsToRedeem(maxPossiblePoints);
+                      setLoyaltyDiscount(parseFloat((maxPossiblePoints / 100).toFixed(2)));
+                    }}
+                    className="uppercase tracking-[0.1em] text-[9px] font-bold h-10 px-4 rounded-none border border-stone-200"
+                  >
+                    Apply Max
+                  </Button>
+                </div>
+
+                {loyaltyDiscount > 0 && (
+                  <p className="text-[10px] text-emerald-700 font-medium">
+                    ✓ Applied ${loyaltyDiscount.toFixed(2)} discount using {pointsToRedeem.toLocaleString()} points.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Delivery address details summary */}
             <div className="p-4 bg-stone-50 border border-stone-100 rounded-none grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -642,6 +769,8 @@ export function CheckoutWizard() {
               clearCart={clearCart}
               onBack={() => setStep(billingSameAsShipping ? 1 : 2)}
               total={total}
+              pointsToRedeem={pointsToRedeem}
+              promoCode={promoCode}
             />
           </div>
         )}
@@ -670,6 +799,12 @@ export function CheckoutWizard() {
                 <span>-${discount.toFixed(2)}</span>
               </div>
             )}
+            {loyaltyDiscount > 0 && (
+              <div className="flex justify-between text-xs text-gold font-bold">
+                <span>Loyalty Points Discount</span>
+                <span>-${loyaltyDiscount.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-xs">
               <span className="text-stone-700 font-medium">Estimated Sales Tax</span>
               <span className="text-stone-850 font-bold">${tax.toFixed(2)}</span>
@@ -678,9 +813,9 @@ export function CheckoutWizard() {
             <div className="flex justify-between text-sm">
               <span className="text-stone-800 uppercase tracking-wider font-bold">Total Estimated</span>
               <div className="flex items-center gap-2">
-                {discount > 0 && (
+                {(discount > 0 || loyaltyDiscount > 0) && (
                   <span className="text-stone-400 line-through text-xs font-light">
-                    ${(total + discount).toFixed(2)}
+                    ${(total + discount + loyaltyDiscount).toFixed(2)}
                   </span>
                 )}
                 <span className="text-stone-850 font-bold text-md">${total.toFixed(2)}</span>
@@ -725,6 +860,8 @@ interface StripePaymentFormProps {
   clearCart: () => Promise<boolean>;
   onBack: () => void;
   total: number;
+  pointsToRedeem?: number;
+  promoCode?: string | null;
 }
 
 export function StripePaymentForm({
@@ -735,6 +872,8 @@ export function StripePaymentForm({
   clearCart,
   onBack,
   total,
+  pointsToRedeem = 0,
+  promoCode,
 }: StripePaymentFormProps) {
   return (
     <Elements stripe={getStripe()}>
@@ -746,6 +885,8 @@ export function StripePaymentForm({
         clearCart={clearCart}
         onBack={onBack}
         total={total}
+        pointsToRedeem={pointsToRedeem}
+        promoCode={promoCode}
       />
     </Elements>
   );
@@ -759,38 +900,60 @@ function StripePaymentFormInner({
   clearCart,
   onBack,
   total,
+  pointsToRedeem = 0,
+  promoCode,
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const router = useRouter();
+
+  const { data: identity } = useCurrentIdentity();
+  const { mutateAsync: redeemPoints } = useRedeemLoyaltyPoints();
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripeIntentId, setStripeIntentId] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [updatingSession, setUpdatingSession] = useState(false);
 
   useEffect(() => {
-    async function initSession() {
-      if (!checkoutId) return;
+    if (!checkoutId) return;
+    setUpdatingSession(true);
+
+    let active = true;
+    const timer = setTimeout(async () => {
       try {
+        setInitError(null);
+
         // Create Stripe PaymentIntent
         const intent = await createStripePaymentIntent({
           checkoutId,
           amount: total,
         });
 
-        setClientSecret(intent.clientSecret);
-        setStripeIntentId(intent.stripeIntentId);
+        if (active) {
+          setClientSecret(intent.clientSecret);
+          setStripeIntentId(intent.stripeIntentId);
+        }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error("Failed to initialize payment session:", msg);
-        setInitError(msg || "Failed to initialize secure payment session. Please try again.");
-        toast.error("Stripe initialization failed.");
+        if (active) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("Failed to initialize payment session:", msg);
+          setInitError(msg || "Failed to initialize secure payment session. Please try again.");
+          toast.error("Stripe initialization failed.");
+        }
+      } finally {
+        if (active) {
+          setUpdatingSession(false);
+        }
       }
-    }
+    }, 500); // 500ms debounce
 
-    initSession();
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [checkoutId, total]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -802,7 +965,7 @@ function StripePaymentFormInner({
       return;
     }
 
-    if (!clientSecret || !checkoutId || !stripeIntentId) {
+    if (!clientSecret || !checkoutId || !stripeIntentId || updatingSession) {
       setPaymentError("Payment session is not fully initialized. Please wait a moment.");
       return;
     }
@@ -881,7 +1044,22 @@ function StripePaymentFormInner({
         paymentIntentId: stripeIntentId,
         shippingAddress: cleanShippingAddress,
         billingAddress: cleanBillingAddress,
+        promoCode: promoCode || undefined,
       });
+
+      // 4. Deduct loyalty points if used
+      if (pointsToRedeem && pointsToRedeem > 0 && identity?.userId) {
+        try {
+          await redeemPoints({
+            userId: identity.userId,
+            points: pointsToRedeem,
+            orderId: result.orderId,
+            reason: `Redeemed ${pointsToRedeem} points at checkout for order #${result.orderNo}`,
+          });
+        } catch (err: unknown) {
+          console.error("Failed to deduct loyalty points:", err);
+        }
+      }
 
       toast.success("Order placed successfully!");
       localStorage.removeItem("applied_promo_code");
@@ -948,11 +1126,11 @@ function StripePaymentFormInner({
           type="submit"
           variant="primary"
           className="flex-[2] h-14 uppercase tracking-[0.2em] text-[10px] font-bold rounded-none"
-          disabled={submitting || isLoading || !stripe}
+          disabled={submitting || isLoading || updatingSession || !stripe}
           isLoading={submitting}
           onClick={handleSubmit}
         >
-          Confirm & Pay ${total.toFixed(2)}
+          {updatingSession ? "Updating Payment..." : `Confirm & Pay $${total.toFixed(2)}`}
         </Button>
       </div>
     </div>
