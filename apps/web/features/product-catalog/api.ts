@@ -136,6 +136,10 @@ interface ApiVariant {
   sku: string;
   size: string | null;
   color: string | null;
+  allowPreorder?: boolean;
+  allowBackorder?: boolean;
+  restockEta?: string | null;
+  inventory?: number;
 }
 
 interface ApiVariantsResponse {
