@@ -386,7 +386,7 @@ import { CheckoutController } from "../../../modules/cart/infra/http/controllers
 // ============================================================
 // Admin — Imports (SettingsService used by Cart)
 // ============================================================
-import { SettingsService } from "../../../modules/admin/application/services/settings.service";
+import { SettingsServiceImpl } from "../../../modules/cart/infra/persistence/repositories/settings.service.impl";
 
 // ============================================================
 // Order Management — Imports
@@ -1117,7 +1117,7 @@ export class Container {
     const cartRepository = new CartRepositoryImpl(prisma, eventBus);
     const checkoutRepository = new CheckoutRepositoryImpl(prisma, eventBus);
     const checkoutCompletionPort = new CheckoutCompletionPortImpl(prisma);
-    const settingsService = new SettingsService();
+    const settingsService = new SettingsServiceImpl();
 
     // Cross-module port adapters: bridge inventory & product-catalog into cart's external port interfaces
     const stockServiceAdapter: IExternalStockService = {
