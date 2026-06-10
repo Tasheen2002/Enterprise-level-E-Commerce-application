@@ -241,6 +241,12 @@ export class PaymentIntent extends AggregateRoot {
     this.props.updatedAt = new Date();
   }
 
+  updateAmount(amount: number): void {
+    const currency = this.props.amount.getCurrency();
+    this.props.amount = Money.fromAmount(amount, currency);
+    this.props.updatedAt = new Date();
+  }
+
   equals(other: PaymentIntent): boolean {
     return this.props.id.equals(other.props.id);
   }
