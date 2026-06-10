@@ -21,12 +21,14 @@ import {
   InvalidCartStateError,
   DomainValidationError,
 } from "../../domain/errors/cart.errors";
+import { LoyaltyService } from "../../../loyalty/application/services/loyalty.service";
 
 interface CompleteCheckoutWithOrderDto {
   checkoutId: string;
   paymentIntentId: string;
   userId?: string;
   guestToken?: string;
+  promoCode?: string;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -37,6 +39,7 @@ interface CompleteCheckoutWithOrderDto {
     postalCode?: string;
     country: string;
     phone?: string;
+    email?: string;
   };
   billingAddress?: {
     firstName: string;
@@ -48,6 +51,7 @@ interface CompleteCheckoutWithOrderDto {
     postalCode?: string;
     country: string;
     phone?: string;
+    email?: string;
   };
 }
 
@@ -66,6 +70,7 @@ export class CheckoutOrderService {
     private readonly productVariantRepository: IExternalProductVariantRepository,
     private readonly snapshotFactory: IProductSnapshotFactory,
     private readonly config: { defaultStockLocation?: string },
+    private readonly loyaltyService?: LoyaltyService,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
       apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
@@ -144,7 +149,7 @@ export class CheckoutOrderService {
     const cartSnapshot = cart.toSnapshot();
     const subtotal = cart.subtotal;
     const cartItemTotal = cart.total;
-    const discount = subtotal - cartItemTotal;
+    let discount = subtotal - cartItemTotal;
 
     // Calculate shipping cost matching the storefront logic
     const shipping = subtotal > 150 ? 0 : 15;
@@ -194,8 +199,11 @@ export class CheckoutOrderService {
       tax = parseFloat((subtotal * 0.08).toFixed(2));
     }
 
-    // The final total settled
-    const total = subtotal + shipping + tax - discount;
+    // The final total settled is the actual amount paid via the PaymentIntent
+    const total = paymentIntent.amount;
+
+    // Calculate discount based on the final paid total (subtotal + shipping + tax - paidTotal)
+    discount = Math.max(0, parseFloat((subtotal + shipping + tax - total).toFixed(2)));
 
     const totals = {
       subtotal,
@@ -270,6 +278,21 @@ export class CheckoutOrderService {
       checkout.cartId.getValue(),
     );
 
+    // Get user email from profile if authenticated
+    let userEmail: string | null = null;
+    if (checkout.cartOwnerId) {
+      userEmail = await this.completionPort.getUserEmail(
+        checkout.cartOwnerId.getValue(),
+      );
+    }
+
+    const resolvedEmail =
+      dto.shippingAddress.email ||
+      dto.billingAddress?.email ||
+      cartEmail ||
+      userEmail ||
+      undefined;
+
     // ---- Phase 5: Atomic persistence via port ----
 
     const result = await this.completionPort.persistCheckoutOrder({
@@ -281,13 +304,17 @@ export class CheckoutOrderService {
       currency: checkout.currency.getValue(),
       totals,
       items: orderItems,
-      shippingAddress: { ...dto.shippingAddress, email: cartEmail },
+      shippingAddress: {
+        ...dto.shippingAddress,
+        email: resolvedEmail,
+      },
       billingAddress: {
         ...(dto.billingAddress || dto.shippingAddress),
-        email: cartEmail,
+        email: resolvedEmail,
       },
-      email: cartEmail ?? undefined,
+      email: resolvedEmail,
       cartId: checkout.cartId.getValue(),
+      promoCode: dto.promoCode,
       stockAdjustments: (cartSnapshot.items || []).map((item) => ({
         variantId: item.variantId,
         warehouseId,
@@ -310,6 +337,19 @@ export class CheckoutOrderService {
 
     // Clean up reservations
     await this.reservationRepository.deleteByCartId(checkout.cartId);
+
+    // Award loyalty points for authenticated user checkout
+    if (checkout.cartOwnerId && this.loyaltyService) {
+      try {
+        await this.loyaltyService.earnPointsFromPurchase(
+          checkout.cartOwnerId.getValue(),
+          totals.total,
+          result.orderId,
+        );
+      } catch (err: unknown) {
+        console.error("Failed to earn loyalty points from checkout purchase:", err);
+      }
+    }
 
     return result;
   }

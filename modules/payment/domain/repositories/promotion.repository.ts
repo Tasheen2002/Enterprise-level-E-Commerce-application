@@ -21,6 +21,7 @@ export interface IPromotionRepository {
   findWithFilters(filters: PromotionFilters, options?: PromotionQueryOptions): Promise<PaginatedResult<Promotion>>;
   count(filters?: PromotionFilters): Promise<number>;
   exists(id: PromotionId): Promise<boolean>;
+  hasPriorOrders(userId?: string, email?: string): Promise<boolean>;
 }
 
 export interface PromotionQueryOptions extends PaginationOptions {

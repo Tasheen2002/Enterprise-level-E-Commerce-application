@@ -9,10 +9,10 @@ import type { Order } from "../types";
 
 const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <div className="space-y-1 w-full">
-    <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 block">
+    <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 flex items-end h-8 pb-1">
       {label}
-    </span>
-    <div className="w-full bg-[#FAF8F5] border border-[#F2EDE2]/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-stone-850 font-medium flex items-center min-h-[38px] leading-normal shadow-sm">
+    </div>
+    <div className="w-full bg-[#FAF8F5] border border-[#F2EDE2]/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-stone-800 font-medium flex items-center min-h-[38px] leading-normal shadow-sm">
       {value}
     </div>
   </div>
@@ -51,10 +51,10 @@ export function OrderHistory() {
   const filteredOrders = orders.filter((o) => {
     const status = o.status.toLowerCase();
     if (filter === "all") return true;
-    if (filter === "completed") return status === "delivered" || status === "fulfilled";
+    if (filter === "completed") return status === "delivered" || status === "fulfilled" || status === "partially_returned";
     if (filter === "cancelled") return status === "cancelled" || status === "refunded";
     // Active orders are anything not completed or cancelled
-    return status !== "delivered" && status !== "fulfilled" && status !== "cancelled" && status !== "refunded";
+    return status !== "delivered" && status !== "fulfilled" && status !== "partially_returned" && status !== "cancelled" && status !== "refunded";
   });
 
   const getStatusStyle = (status: string) => {
@@ -65,6 +65,8 @@ export function OrderHistory() {
     if (s === "processing") return "bg-indigo-50 text-indigo-700 border border-indigo-100";
     if (s === "shipped") return "bg-purple-50 text-purple-700 border border-purple-100";
     if (s === "delivered" || s === "fulfilled") return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+    if (s === "cancelled" || s === "refunded") return "bg-red-50 text-red-700 border border-red-100";
+    if (s === "partially_returned") return "bg-orange-50 text-orange-700 border border-orange-100";
     return "bg-stone-100 text-stone-600 border border-stone-200";
   };
 
@@ -92,7 +94,7 @@ export function OrderHistory() {
             onClick={() => setFilter(tab)}
             className={cn(
               "pb-3 text-[10px] uppercase font-bold tracking-[0.2em] transition-all relative",
-              filter === tab ? "text-stone-850 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
+              filter === tab ? "text-stone-800 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
             )}
           >
             {tab}
@@ -127,7 +129,7 @@ export function OrderHistory() {
               </div>
 
               <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-6 border-t sm:border-t-0 pt-4 sm:pt-0 border-stone-200">
-                <span className="text-xs font-bold text-stone-850">${order.totals.total.toFixed(2)}</span>
+                <span className="text-xs font-bold text-stone-800">${order.totals.total.toFixed(2)}</span>
                 <Button
                   variant="ghost"
                   onClick={() => {
@@ -161,7 +163,7 @@ export function OrderHistory() {
                 <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-red-600 block">
                   Security Reversal Confirmation
                 </span>
-                <h4 className="font-serif text-2xl text-stone-850 tracking-tight italic">
+                <h4 className="font-serif text-2xl text-stone-800 tracking-tight italic">
                   Are you absolutely sure you want to cancel?
                 </h4>
                 <p className="text-xs text-stone-500 font-light max-w-md mx-auto leading-relaxed">
@@ -285,7 +287,7 @@ export function OrderHistory() {
                             className="border border-[#F2EDE2]/60 rounded-xl p-3.5 bg-[#FAF8F5] flex justify-between items-center hover:bg-stone-50 transition-all duration-150 shadow-sm"
                           >
                             <div className="min-w-0 space-y-1">
-                              <h5 className="font-semibold text-stone-850 uppercase tracking-wide text-xs sm:text-[13px] truncate">
+                              <h5 className="font-semibold text-stone-800 uppercase tracking-wide text-xs sm:text-[13px] truncate">
                                 {item.productSnapshot.name}
                               </h5>
                               <p className="text-[8px] text-stone-400 uppercase tracking-widest font-bold">
@@ -296,7 +298,7 @@ export function OrderHistory() {
                               <span className="text-[10px] text-stone-400 block font-light">
                                 {item.quantity} x ${item.productSnapshot.price.toFixed(2)}
                               </span>
-                              <span className="font-bold text-stone-850 text-xs sm:text-[13px]">
+                              <span className="font-bold text-stone-800 text-xs sm:text-[13px]">
                                 ${(item.productSnapshot.price * item.quantity).toFixed(2)}
                               </span>
                             </div>
@@ -310,17 +312,32 @@ export function OrderHistory() {
                       <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C2D19] block border-b border-stone-100/60 pb-1 mb-3">
                         Financial Summary
                       </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div className={cn(
+                        "grid gap-3",
+                        selectedOrder.totals.discount > 0
+                          ? "grid-cols-2 sm:grid-cols-5"
+                          : "grid-cols-2 sm:grid-cols-4"
+                      )}>
                         <DetailField label="Subtotal" value={`$${selectedOrder.totals.subtotal.toFixed(2)}`} />
                         <DetailField
                           label="Delivery"
                           value={selectedOrder.totals.shipping === 0 ? "FREE" : `$${selectedOrder.totals.shipping.toFixed(2)}`}
                         />
                         <DetailField label="Tax" value={`$${selectedOrder.totals.tax.toFixed(2)}`} />
+                        {selectedOrder.totals.discount > 0 && (
+                          <div className="space-y-1 w-full animate-fadeIn">
+                            <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-red-500 flex items-end h-8 pb-1">
+                              Promotion Applied
+                            </div>
+                            <div className="w-full bg-[#FAF8F5] border border-red-100/60 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-red-600 font-bold flex items-center min-h-[38px] leading-normal shadow-sm">
+                              -${selectedOrder.totals.discount.toFixed(2)}
+                            </div>
+                          </div>
+                        )}
                         <div className="space-y-1 w-full">
-                          <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 block">
+                          <div className="text-[9px] uppercase tracking-[0.15em] font-bold text-stone-400 flex items-end h-8 pb-1">
                             Acquisition Total
-                          </span>
+                          </div>
                           <div className="w-full bg-[#FAF8F5] border border-[#8C2D19]/25 rounded-lg px-4 py-2.5 text-xs sm:text-[13px] text-[#8C2D19] font-bold flex items-center min-h-[38px] shadow-sm leading-normal">
                             ${selectedOrder.totals.total.toFixed(2)}
                           </div>
@@ -341,9 +358,9 @@ export function OrderHistory() {
                       <DetailField
                         label="Delivery Tracking"
                         value={
-                          selectedOrder.shipments?.[0]?.trackingNo ? (
-                            <span className="font-mono text-xs sm:text-[13px] text-stone-850">
-                              {selectedOrder.shipments[0].trackingNo}
+                          (selectedOrder.shipments?.[0]?.trackingNumber || selectedOrder.shipments?.[0]?.trackingNo) ? (
+                            <span className="font-mono text-xs sm:text-[13px] text-stone-800">
+                              {selectedOrder.shipments[0].trackingNumber || selectedOrder.shipments[0].trackingNo}
                             </span>
                           ) : (
                             <span className="text-stone-400 text-xs sm:text-[13px] italic">
@@ -398,7 +415,7 @@ export function OrderHistory() {
                                 <span
                                   className={cn(
                                     "text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-center block w-full truncate",
-                                    isDone ? "text-stone-850 font-bold" : "text-stone-350"
+                                    isDone ? "text-stone-800 font-bold" : "text-stone-350"
                                   )}
                                 >
                                   {step}
@@ -424,7 +441,7 @@ export function OrderHistory() {
                   <button
                     type="button"
                     onClick={() => setIsCancelConfirmOpen(true)}
-                    className="rounded-full bg-stone-900 hover:bg-stone-850 text-white px-5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                    className="rounded-full bg-stone-900 hover:bg-stone-800 text-white px-5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
                   >
                     Cancel Order
                   </button>

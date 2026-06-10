@@ -189,7 +189,7 @@ export class GetDashboardMetricsHandler implements IQueryHandler<GetDashboardMet
     const shippedItemsSum = await this.prisma.orderItem.aggregate({
       where: {
         order: {
-          status: { in: ["fulfilled"] }
+          status: { in: ["shipped", "delivered", "fulfilled"] }
         }
       },
       _sum: {

@@ -87,7 +87,13 @@ export class PaymentService {
 
     if (params.checkoutId) {
       const existing = await this.paymentIntentRepository.findByCheckoutId(params.checkoutId);
-      if (existing) return PaymentIntent.toDTO(existing);
+      if (existing) {
+        if (existing.amount.getAmount() !== params.amount) {
+          existing.updateAmount(params.amount);
+          await this.paymentIntentRepository.save(existing);
+        }
+        return PaymentIntent.toDTO(existing);
+      }
     }
 
     const intent = PaymentIntent.create({

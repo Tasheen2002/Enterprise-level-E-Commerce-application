@@ -5,6 +5,10 @@ export interface ExternalVariantData {
   getSize(): string | null;
   getColor(): string | null;
   getWeightG(): number | null;
+  getAllowPreorder(): boolean;
+  getAllowBackorder(): boolean;
+  getRestockEta(): Date | null;
+  getInventory(): number;
 }
 
 export interface IExternalProductVariantRepository {
@@ -127,6 +131,7 @@ export interface PersistCheckoutOrderData {
   billingAddress: Record<string, unknown>;
   email?: string;
   cartId: string;
+  promoCode?: string;
   stockAdjustments: Array<{
     variantId: string;
     warehouseId: string;
@@ -179,6 +184,7 @@ export interface CheckoutOrderResult {
 export interface PaymentIntentInfo {
   intentId: string;
   status: string;
+  amount: number;
 }
 
 /**
@@ -199,6 +205,9 @@ export interface ICheckoutCompletionPort {
 
   /** Get the email stored on the cart (not exposed via domain entity). */
   getCartEmail(cartId: string): Promise<string | null>;
+
+  /** Get the email stored on the user account (if authenticated). */
+  getUserEmail(userId: string): Promise<string | null>;
 
   /** Find an order by checkoutId for a specific user/guest. */
   findOrderByCheckoutId(

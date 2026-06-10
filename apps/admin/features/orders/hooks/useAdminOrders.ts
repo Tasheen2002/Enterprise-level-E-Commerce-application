@@ -111,11 +111,16 @@ export function useAdminCreateShipment(orderId: string) {
   });
 }
 
-export function useAdminMarkShipmentShipped(orderId: string, shipmentId: string) {
+export function useAdminMarkShipmentShipped(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof ordersApi.markShipmentShipped>[2]) =>
-      ordersApi.markShipmentShipped(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body: Parameters<typeof ordersApi.markShipmentShipped>[2];
+    }) => ordersApi.markShipmentShipped(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
@@ -123,11 +128,16 @@ export function useAdminMarkShipmentShipped(orderId: string, shipmentId: string)
   });
 }
 
-export function useAdminMarkShipmentDelivered(orderId: string, shipmentId: string) {
+export function useAdminMarkShipmentDelivered(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body?: Parameters<typeof ordersApi.markShipmentDelivered>[2]) =>
-      ordersApi.markShipmentDelivered(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body?: Parameters<typeof ordersApi.markShipmentDelivered>[2];
+    }) => ordersApi.markShipmentDelivered(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
@@ -135,11 +145,16 @@ export function useAdminMarkShipmentDelivered(orderId: string, shipmentId: strin
   });
 }
 
-export function useAdminUpdateShipmentTracking(orderId: string, shipmentId: string) {
+export function useAdminUpdateShipmentTracking(orderId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: Parameters<typeof ordersApi.updateShipmentTracking>[2]) =>
-      ordersApi.updateShipmentTracking(orderId, shipmentId, body),
+    mutationFn: ({
+      shipmentId,
+      body,
+    }: {
+      shipmentId: string;
+      body: Parameters<typeof ordersApi.updateShipmentTracking>[2];
+    }) => ordersApi.updateShipmentTracking(orderId, shipmentId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-order", orderId] });
       queryClient.invalidateQueries({ queryKey: ["admin-order-events", orderId] });
@@ -161,40 +176,42 @@ export function useAdminBackorders(query?: Parameters<typeof ordersApi.getBackor
   });
 }
 
-export function useAdminUpdatePreorderDate(orderItemId: string) {
+export function useAdminUpdatePreorderDate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (releaseDate: Date) => ordersApi.updatePreorderReleaseDate(orderItemId, releaseDate),
+    mutationFn: ({ orderItemId, releaseDate }: { orderItemId: string; releaseDate: Date }) =>
+      ordersApi.updatePreorderReleaseDate(orderItemId, releaseDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-preorders"] });
     },
   });
 }
 
-export function useAdminUpdateBackorderEta(orderItemId: string) {
+export function useAdminUpdateBackorderEta() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (promisedEta: Date) => ordersApi.updateBackorderEta(orderItemId, promisedEta),
+    mutationFn: ({ orderItemId, promisedEta }: { orderItemId: string; promisedEta: Date }) =>
+      ordersApi.updateBackorderEta(orderItemId, promisedEta),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backorders"] });
     },
   });
 }
 
-export function useAdminNotifyPreorder(orderItemId: string) {
+export function useAdminNotifyPreorder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => ordersApi.notifyPreorder(orderItemId),
+    mutationFn: (orderItemId: string) => ordersApi.notifyPreorder(orderItemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-preorders"] });
     },
   });
 }
 
-export function useAdminNotifyBackorder(orderItemId: string) {
+export function useAdminNotifyBackorder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => ordersApi.notifyBackorder(orderItemId),
+    mutationFn: (orderItemId: string) => ordersApi.notifyBackorder(orderItemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backorders"] });
     },

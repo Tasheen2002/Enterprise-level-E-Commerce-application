@@ -92,6 +92,7 @@ export const variantResponseSchema = {
     allowBackorder: { type: "boolean" },
     allowPreorder: { type: "boolean" },
     restockEta: { type: "string", format: "date-time", nullable: true },
+    inventory: { type: "integer" },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
   },

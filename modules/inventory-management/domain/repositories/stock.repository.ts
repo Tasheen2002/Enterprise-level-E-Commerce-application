@@ -18,6 +18,7 @@ export interface IStockRepository {
   findLowStockItems(): Promise<Stock[]>;
   findOutOfStockItems(): Promise<Stock[]>;
   getTotalAvailableStock(variantId: VariantId): Promise<number>;
+  checkVariantPreorderOrBackorderAllowed(variantId: string): Promise<boolean>;
   exists(stockId: StockId): Promise<boolean>;
   getStats(): Promise<StockStats>;
 }

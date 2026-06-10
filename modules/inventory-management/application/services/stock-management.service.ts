@@ -63,23 +63,34 @@ export class StockManagementService {
       throw new StockNotFoundError(`${variantId} at ${locationId}`);
     }
 
+    let actualDelta = quantityDelta;
     if (quantityDelta > 0) {
       stock.addStock(quantityDelta);
     } else {
-      stock.removeStock(Math.abs(quantityDelta));
+      let deductQty = Math.abs(quantityDelta);
+      const isAllowed = await this.stockRepository.checkVariantPreorderOrBackorderAllowed(variantId);
+      if (deductQty > stock.stockLevel.available && isAllowed) {
+        deductQty = Math.max(0, stock.stockLevel.available);
+      }
+      actualDelta = -deductQty;
+      if (deductQty > 0) {
+        stock.removeStock(deductQty);
+      }
     }
 
     await this.stockRepository.save(stock);
 
-    const transaction = InventoryTransaction.create({
-      variantId,
-      locationId,
-      qtyDelta: quantityDelta,
-      reason,
-      referenceId,
-    });
+    if (actualDelta !== 0) {
+      const transaction = InventoryTransaction.create({
+        variantId,
+        locationId,
+        qtyDelta: actualDelta,
+        reason,
+        referenceId,
+      });
 
-    await this.transactionRepository.save(transaction);
+      await this.transactionRepository.save(transaction);
+    }
 
     return Stock.toDTO(stock);
   }

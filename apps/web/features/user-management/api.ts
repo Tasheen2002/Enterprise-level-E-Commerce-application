@@ -13,7 +13,7 @@ import type {
   ChangeEmailRequest,
   DeleteAccountRequest,
 } from "@tasheen/validation/auth";
-import type { AuthResult, LoginResponse, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken, BackupCodesResult, Setup2FAResult, Wishlist } from "./types";
+import type { AuthResult, LoginResponse, UserIdentity, RefreshTokenResult, UserProfile, Address, AddressRequest, PaymentMethod, PaymentMethodRequest, AvatarUploadToken, BackupCodesResult, Setup2FAResult, Wishlist, LoyaltyAccount, LoyaltyTransaction } from "./types";
 
 // ─── Endpoints ──────────────────────────────────────────────────────────────
 
@@ -396,6 +396,36 @@ export async function updateWishlist(
 export async function deleteWishlist(id: string): Promise<void> {
   await request<void>(`/engagement/wishlists/${id}`, {
     method: "DELETE",
+  });
+}
+
+// --- Loyalty Points System ---
+
+export async function getLoyaltyAccount(userId: string): Promise<LoyaltyAccount> {
+  return request<LoyaltyAccount>(`/loyalty/account?userId=${encodeURIComponent(userId)}`, {
+    method: "GET",
+  });
+}
+
+export async function getLoyaltyTransactions(accountId?: string, orderId?: string): Promise<LoyaltyTransaction[]> {
+  const params = new URLSearchParams();
+  if (accountId) params.append("accountId", accountId);
+  if (orderId) params.append("orderId", orderId);
+  const query = params.toString();
+  return request<LoyaltyTransaction[]>(`/loyalty/transactions${query ? `?${query}` : ""}`, {
+    method: "GET",
+  });
+}
+
+export async function redeemLoyaltyPoints(input: {
+  userId: string;
+  points: number;
+  orderId?: string;
+  reason?: string;
+}): Promise<LoyaltyTransaction> {
+  return request<LoyaltyTransaction>("/loyalty/points/redeem", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

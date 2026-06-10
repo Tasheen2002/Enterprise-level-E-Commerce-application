@@ -6,10 +6,10 @@ import { Button, Input, FormField, cn } from "@tasheen/ui";
 import { toast } from "sonner";
 
 interface OrderShipment {
-  id: string;
+  shipmentId: string;
   carrier?: string;
   service?: string;
-  trackingNo?: string;
+  trackingNumber?: string;
   shippedAt?: string;
   deliveredAt?: string;
 }
@@ -22,6 +22,26 @@ interface ShipmentPanelProps {
   onMarkShipped: (shipmentId: string, body: { carrier: string; service: string; trackingNumber: string }) => Promise<any>;
   onMarkDelivered: (shipmentId: string, body?: { deliveredAt?: Date }) => Promise<any>;
   onUpdateTracking: (shipmentId: string, body: { trackingNumber: string; carrier?: string; service?: string }) => Promise<any>;
+}
+
+function generateMockTrackingNumber(carrier: string = "FedEx"): string {
+  const c = carrier.toUpperCase();
+  if (c.includes("DHL")) {
+    return Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join("");
+  }
+  if (c.includes("USPS")) {
+    const suffix = Array.from({ length: 20 }, () => Math.floor(Math.random() * 10)).join("");
+    return `94${suffix}`;
+  }
+  if (c.includes("FEDEX")) {
+    return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join("");
+  }
+  if (c.includes("UPS")) {
+    const alphanumeric = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const body = Array.from({ length: 16 }, () => alphanumeric[Math.floor(Math.random() * alphanumeric.length)]).join("");
+    return `1Z${body}`;
+  }
+  return Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join("");
 }
 
 export function ShipmentPanel({
@@ -38,8 +58,8 @@ export function ShipmentPanel({
   const [isUpdateOpen, setIsUpdateOpen] = useState<string | null>(null);
 
   // Form states
-  const [carrier, setCarrier] = useState("DHL");
-  const [service, setService] = useState("Express");
+  const [carrier, setCarrier] = useState("FedEx");
+  const [service, setService] = useState("Ground");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,9 +67,9 @@ export function ShipmentPanel({
     setIsSubmitting(true);
     try {
       await onCreateShipment({
-        carrier: "DHL",
-        service: "Express",
-        trackingNumber: "PENDING_DISPATCH",
+        carrier: "FedEx",
+        service: "Ground",
+        trackingNumber: generateMockTrackingNumber("FedEx"),
       });
       toast.success("Shipment package created successfully.");
       setIsCreateOpen(false);
@@ -159,7 +179,7 @@ export function ShipmentPanel({
 
             return (
               <div
-                key={s.id}
+                key={s.shipmentId}
                 className="p-5 border border-sand/20 bg-ivory/10 hover:border-sand/40 transition-colors space-y-4"
               >
                 {/* Header */}
@@ -183,15 +203,25 @@ export function ShipmentPanel({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs text-charcoal">
                   <div>
                     <span className="text-[8px] uppercase tracking-widest font-bold text-slate-muted/50">Carrier Provider</span>
-                    <p className="font-semibold uppercase tracking-wider mt-1">{s.carrier || "DHL"}</p>
+                    <p className="font-semibold uppercase tracking-wider mt-1">{s.carrier || "FedEx"}</p>
                   </div>
                   <div>
                     <span className="text-[8px] uppercase tracking-widest font-bold text-slate-muted/50">Service Class</span>
-                    <p className="font-semibold uppercase tracking-wider mt-1">{s.service || "Express"}</p>
+                    <p className="font-semibold uppercase tracking-wider mt-1">{s.service || "Ground"}</p>
                   </div>
                   <div>
                     <span className="text-[8px] uppercase tracking-widest font-bold text-slate-muted/50">Tracking Code</span>
-                    <p className="font-mono font-bold mt-1 tracking-wider break-words">{s.trackingNo || "Pending Assign"}</p>
+                    <p className="font-mono font-bold mt-1 tracking-wider break-words">{s.trackingNumber || "Pending Assign"}</p>
+                    {isShipped && s.carrier?.toUpperCase().includes("FEDEX") && s.trackingNumber && (
+                      <a
+                        href={`/labels/${s.trackingNumber}.pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[9px] text-gold hover:text-gold/80 hover:underline uppercase tracking-wider font-bold mt-1.5 inline-block"
+                      >
+                        View Shipping Label
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -219,10 +249,10 @@ export function ShipmentPanel({
                     <Button
                       variant="primary"
                       onClick={() => {
-                        setCarrier(s.carrier || "DHL");
-                        setService(s.service || "Express");
-                        setTrackingNumber("");
-                        setIsShipOpen(s.id);
+                        setCarrier(s.carrier || "FedEx");
+                        setService(s.service || "Ground");
+                        setTrackingNumber(s.trackingNumber && s.trackingNumber !== "PENDING_DISPATCH" ? s.trackingNumber : generateMockTrackingNumber(s.carrier || "FedEx"));
+                        setIsShipOpen(s.shipmentId);
                       }}
                       className="h-9 px-4 text-[9px] uppercase tracking-widest font-bold rounded-none"
                     >
@@ -234,10 +264,10 @@ export function ShipmentPanel({
                       <Button
                         variant="ghost"
                         onClick={() => {
-                          setCarrier(s.carrier || "DHL");
-                          setService(s.service || "Express");
-                          setTrackingNumber(s.trackingNo || "");
-                          setIsUpdateOpen(s.id);
+                          setCarrier(s.carrier || "FedEx");
+                          setService(s.service || "Ground");
+                          setTrackingNumber(s.trackingNumber || "");
+                          setIsUpdateOpen(s.shipmentId);
                         }}
                         className="h-9 px-3 text-[9px] uppercase tracking-widest font-bold rounded-none flex items-center gap-1.5"
                       >
@@ -246,7 +276,7 @@ export function ShipmentPanel({
                       </Button>
                       <Button
                         variant="primary"
-                        onClick={() => handleMarkDelivered(s.id)}
+                        onClick={() => handleMarkDelivered(s.shipmentId)}
                         className="h-9 px-4 text-[9px] uppercase tracking-widest font-bold rounded-none"
                       >
                         Mark Delivered
@@ -256,7 +286,7 @@ export function ShipmentPanel({
                 </div>
 
                 {/* Step Modal: Mark Shipped */}
-                {isShipOpen === s.id && (
+                {isShipOpen === s.shipmentId && (
                   <div className="p-4 bg-white border border-sand/35 space-y-4 shadow-inner mt-4 animate-fadeIn">
                     <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-charcoal border-b border-sand/10 pb-2">
                       Carrier Dispatch Credentials
@@ -299,7 +329,7 @@ export function ShipmentPanel({
                       </Button>
                       <Button
                         variant="primary"
-                        onClick={() => handleMarkShipped(s.id)}
+                        onClick={() => handleMarkShipped(s.shipmentId)}
                         className="h-9 text-[9px] uppercase tracking-widest font-bold rounded-none"
                         disabled={isSubmitting}
                         isLoading={isSubmitting}
@@ -311,7 +341,7 @@ export function ShipmentPanel({
                 )}
 
                 {/* Step Modal: Correct Tracking */}
-                {isUpdateOpen === s.id && (
+                {isUpdateOpen === s.shipmentId && (
                   <div className="p-4 bg-white border border-sand/35 space-y-4 shadow-inner mt-4 animate-fadeIn">
                     <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-charcoal border-b border-sand/10 pb-2">
                       Correct Dispatch Tracking
@@ -353,7 +383,7 @@ export function ShipmentPanel({
                       </Button>
                       <Button
                         variant="primary"
-                        onClick={() => handleUpdateTracking(s.id)}
+                        onClick={() => handleUpdateTracking(s.shipmentId)}
                         className="h-9 text-[9px] uppercase tracking-widest font-bold rounded-none"
                         disabled={isSubmitting}
                         isLoading={isSubmitting}

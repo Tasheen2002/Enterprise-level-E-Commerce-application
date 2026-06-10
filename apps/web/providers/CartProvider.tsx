@@ -39,6 +39,10 @@ export interface CartVariant {
   size?: string;
   color?: string;
   sku: string;
+  allowPreorder?: boolean;
+  allowBackorder?: boolean;
+  restockEta?: string | null;
+  inventory?: number;
 }
 
 export interface AppliedPromo {

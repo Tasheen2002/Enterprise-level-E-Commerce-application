@@ -14,6 +14,9 @@ const AvatarUploadForm = dynamic(() => import("./AvatarUploadForm").then(m => ({
 });
 import { useCurrentIdentity } from "../hooks/useCurrentIdentity";
 import { useUserProfile } from "../hooks/useUserProfile";
+import { useLoyaltyAccount } from "../hooks/useLoyalty";
+import { useUserOrders } from "@/features/orders/hooks/useOrders";
+import { useWishlist } from "@/hooks/useWishlist";
 import {
   Package,
   Heart,
@@ -35,8 +38,11 @@ export function AccountDashboard() {
   // we know the user is authenticated.
   const { data: identity, isLoading: identityLoading } = useCurrentIdentity();
   const { data: profile, isLoading: profileLoading } = useUserProfile();
+  const { data: loyalty, isLoading: loyaltyLoading } = useLoyaltyAccount();
+  const { data: ordersResult, isLoading: ordersLoading } = useUserOrders();
+  const { wishlistItems, isLoading: wishlistLoading } = useWishlist();
 
-  const isLoading = identityLoading || profileLoading;
+  const isLoading = identityLoading || profileLoading || loyaltyLoading || ordersLoading || wishlistLoading;
 
   // Only show the spinner on the genuine first load. Cached data should
   // render immediately so navigation back to the dashboard doesn't flash.
@@ -66,10 +72,10 @@ export function AccountDashboard() {
       month: 'long',
       year: 'numeric'
     }) : "Recently",
-    tier: "VIP MEMBER",
-    activeOrders: 2, // TODO: Fetch from orders API
-    wishlistItems: 14, // TODO: Fetch from wishlist API
-    rewardPoints: "4,250" // TODO: Fetch from loyalty API
+    tier: loyalty?.tier ? loyalty.tier.replace(/_/g, " ") : "STYLE LOVER",
+    activeOrders: ordersResult?.items?.filter(o => o.status !== "DELIVERED" && o.status !== "CANCELLED").length ?? 0,
+    wishlistItems: wishlistItems?.length ?? 0,
+    rewardPoints: loyalty?.currentBalance !== undefined ? loyalty.currentBalance.toLocaleString() : "0"
   };
 
   return (

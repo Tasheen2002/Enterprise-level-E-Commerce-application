@@ -60,15 +60,17 @@ export function OrderTracking() {
     ];
 
     let activeIdx = 0;
-    if (normalized === "paid" || normalized === "confirmed") activeIdx = 1;
+    if (normalized === "created" || normalized === "pending") activeIdx = 0;
+    else if (normalized === "paid" || normalized === "confirmed") activeIdx = 1;
     else if (normalized === "processing") activeIdx = 2;
     else if (normalized === "shipped") activeIdx = 3;
-    else if (normalized === "delivered" || normalized === "fulfilled") activeIdx = 4;
+    else if (normalized === "delivered" || normalized === "fulfilled" || normalized === "partially_returned") activeIdx = 5;
+    else activeIdx = -1; // cancelled, refunded
 
     return steps.map((step, idx) => ({
       ...step,
-      isCompleted: idx < activeIdx,
-      isActive: idx === activeIdx,
+      isCompleted: activeIdx !== -1 && idx < activeIdx,
+      isActive: activeIdx !== -1 && idx === activeIdx,
     }));
   };
 
@@ -84,7 +86,7 @@ export function OrderTracking() {
             }}
             className={cn(
               "flex-1 pb-3 text-[10px] uppercase font-bold tracking-[0.2em] transition-all",
-              tab === "order" ? "text-stone-850 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
+              tab === "order" ? "text-stone-800 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
             )}
           >
             Order Details
@@ -96,7 +98,7 @@ export function OrderTracking() {
             }}
             className={cn(
               "flex-1 pb-3 text-[10px] uppercase font-bold tracking-[0.2em] transition-all",
-              tab === "tracking" ? "text-stone-850 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
+              tab === "tracking" ? "text-stone-800 border-b-2 border-stone-800" : "text-stone-400 border-b border-transparent"
             )}
           >
             Tracking Number
@@ -168,19 +170,40 @@ export function OrderTracking() {
         <div className="space-y-12 animate-fadeIn">
           {/* visual stepper progress timeline */}
           <div className="space-y-6">
-            <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-850 block mb-6">
+            <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-800 block">
               Fulfillment Journey
             </h3>
+
+            {/* Status Alert Banner for Terminal/Alternative States */}
+            {(result.status.toLowerCase() === "cancelled" || 
+              result.status.toLowerCase() === "refunded" || 
+              result.status.toLowerCase() === "partially_returned") && (
+              <div className={cn(
+                "p-4 border text-xs leading-relaxed font-light",
+                result.status.toLowerCase() === "cancelled" && "bg-red-50/50 border-red-200/50 text-red-800",
+                result.status.toLowerCase() === "refunded" && "bg-red-55/40 border-red-200/50 text-red-800",
+                result.status.toLowerCase() === "partially_returned" && "bg-orange-50/50 border-orange-200/50 text-orange-800"
+              )}>
+                <span className="font-bold uppercase tracking-wider block text-[10px] mb-1">
+                  {result.status.toLowerCase() === "cancelled" && "Order Cancelled"}
+                  {result.status.toLowerCase() === "refunded" && "Order Refunded"}
+                  {result.status.toLowerCase() === "partially_returned" && "Order Partially Returned"}
+                </span>
+                {result.status.toLowerCase() === "cancelled" && "This order has been cancelled and is no longer being processed."}
+                {result.status.toLowerCase() === "refunded" && "A full refund has been successfully issued for this transaction."}
+                {result.status.toLowerCase() === "partially_returned" && "One or more boutique items in this order have been returned."}
+              </div>
+            )}
 
             {/* Stepper timeline */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
               {getStatusSteps(result.status).map((step, idx) => (
-                <div key={step.id} className="relative flex flex-row md:flex-col items-start gap-4 md:gap-0">
+                <div key={step.id || `step-${idx}`} className="relative flex flex-row md:flex-col items-start gap-4 md:gap-0">
                   {/* Step bubble */}
                   <div className="flex items-center md:mb-3">
                     <div className={cn(
                       "h-8 w-8 rounded-none border flex items-center justify-center text-[10px] font-bold tracking-widest transition-all duration-500",
-                      step.isActive ? "bg-stone-850 text-white border-stone-850 shadow-sm" : "",
+                      step.isActive ? "bg-stone-800 text-white border-stone-800 shadow-sm" : "",
                       step.isCompleted ? "bg-stone-200 text-stone-700 border-stone-250" : "",
                       !step.isActive && !step.isCompleted ? "bg-transparent text-stone-300 border-stone-200" : ""
                     )}>
@@ -197,7 +220,7 @@ export function OrderTracking() {
                   <div>
                     <h4 className={cn(
                       "text-[10px] uppercase font-bold tracking-wider",
-                      step.isActive ? "text-stone-855" : "text-stone-500"
+                      step.isActive ? "text-stone-800" : "text-stone-500"
                     )}>
                       {step.label}
                     </h4>
@@ -213,11 +236,11 @@ export function OrderTracking() {
           {/* Shipment specifications (if active) */}
           {result.shipments && result.shipments.length > 0 && (
             <div className="p-6 bg-stone-50 border border-stone-150 space-y-4">
-              <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-850 border-b border-stone-200 pb-3">
+              <h3 className="text-[10px] uppercase font-bold tracking-[0.25em] text-stone-800 border-b border-stone-200 pb-3">
                 Shipping Carrier Dispatch Details
               </h3>
-              {result.shipments.map((s) => (
-                <div key={s.id} className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
+              {result.shipments.map((s, idx) => (
+                <div key={s.shipmentId || s.id || `shipment-${idx}`} className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
                   <div>
                     <span className="text-[8px] uppercase tracking-widest font-bold text-stone-400">Carrier Provider</span>
                     <p className="text-stone-800 font-medium mt-1 uppercase tracking-wider">{s.carrier || "Standard Courier"}</p>
@@ -228,7 +251,7 @@ export function OrderTracking() {
                   </div>
                   <div>
                     <span className="text-[8px] uppercase tracking-widest font-bold text-stone-400">Tracking Code</span>
-                    <p className="text-stone-850 font-mono font-bold mt-1 tracking-wider">{s.trackingNo || "Pending Shipment"}</p>
+                    <p className="text-stone-800 font-mono font-bold mt-1 tracking-wider">{s.trackingNumber || s.trackingNo || "Pending Shipment"}</p>
                   </div>
                 </div>
               ))}
@@ -256,10 +279,10 @@ export function OrderTracking() {
 
             {/* items */}
             <div className="space-y-4">
-              {result.items.map((item) => (
-                <div key={item.orderItemId || item.variantId} className="flex justify-between items-center gap-4 text-xs">
+              {result.items.map((item, idx) => (
+                <div key={item.orderItemId || item.id || item.variantId || `item-${idx}`} className="flex justify-between items-center gap-4 text-xs">
                   <div className="min-w-0">
-                    <h5 className="font-medium text-stone-850 uppercase tracking-wide truncate">
+                    <h5 className="font-medium text-stone-800 uppercase tracking-wide truncate">
                       {item.productSnapshot.name}
                     </h5>
                     <p className="text-[9px] text-stone-400 uppercase tracking-widest font-bold mt-0.5">
@@ -291,7 +314,7 @@ export function OrderTracking() {
                   <span>${result.totals.tax.toFixed(2)}</span>
                 </div>
                 <div className="h-[1px] bg-stone-200 my-2" />
-                <div className="flex justify-between font-bold text-stone-850">
+                <div className="flex justify-between font-bold text-stone-800">
                   <span className="uppercase tracking-wider">Acquisition Total</span>
                   <span>${result.totals.total.toFixed(2)}</span>
                 </div>

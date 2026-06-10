@@ -36,10 +36,12 @@ export interface OrderAddress {
 
 export interface OrderShipment {
   id: string;
+  shipmentId?: string;
   orderId: string;
   carrier?: string;
   service?: string;
   trackingNo?: string;
+  trackingNumber?: string;
   giftReceipt: boolean;
   pickupLocationId?: string;
   shippedAt?: string;

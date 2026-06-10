@@ -41,7 +41,7 @@ export type UpdateShippingAddressBody = z.infer<typeof updateShippingAddressSche
 // Response shape mirrors AddressSnapshotData. Optional fields stay required: false
 // in JSON terms (omitted from `required`), matching Zod's `.optional()` semantics
 // (field may be absent, not present-but-null).
-const addressResponseShape = {
+export const addressResponseShape = {
   type: "object",
   properties: {
     firstName: { type: "string" },

@@ -14,12 +14,14 @@ import {
   LogOut,
   ArrowLeft,
   ChevronDown,
+  Coins,
 } from "lucide-react";
 import { useLogout } from "../hooks/useLogout";
 
 const navItems = [
   { label: "Dashboard", href: "/account", icon: LayoutDashboard },
   { label: "Order History", href: "/account/orders", icon: History },
+  { label: "Loyalty & Rewards", href: "/account/loyalty", icon: Coins },
   { label: "Address Book", href: "/account/addresses", icon: BookUser },
   { label: "Payment Methods", href: "/account/payment-methods", icon: CreditCard },
   { label: "Security & Settings", href: "/account/settings", icon: ShieldCheck },
@@ -67,7 +69,7 @@ export function AccountSidebar() {
   const CurrentIcon = currentItem.icon;
 
   return (
-    <aside className="w-full lg:w-72 flex flex-col bg-cream lg:border-r border-sand/20 lg:sticky lg:top-0 lg:h-screen overflow-y-auto overflow-x-hidden z-30">
+    <aside className="w-full lg:w-72 flex flex-col bg-cream lg:border-r border-sand/20 lg:sticky lg:top-0 lg:h-screen overflow-y-auto overflow-x-hidden z-30 ts-scrollbar">
 
 
       {/* ─── Desktop: sticky sidebar ─── */}

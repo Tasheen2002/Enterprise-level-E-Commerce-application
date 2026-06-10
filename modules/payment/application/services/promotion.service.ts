@@ -29,6 +29,8 @@ interface ApplyPromotionParams {
   currency?: string;
   products?: string[];
   categories?: string[];
+  userId?: string;
+  email?: string;
 }
 
 interface RecordPromotionUsageParams {
@@ -76,6 +78,17 @@ export class PromotionService {
         error: "Promotion is not currently valid",
         promotion: Promotion.toDTO(promotion),
       };
+    }
+
+    if (params.promoCode.toUpperCase().startsWith("WELCOME-")) {
+      const hasPrior = await this.promotionRepo.hasPriorOrders(params.userId, params.email);
+      if (hasPrior) {
+        return {
+          valid: false,
+          error: "Welcome promotion is only valid for your first order",
+          promotion: Promotion.toDTO(promotion),
+        };
+      }
     }
 
     if (promotion.usageLimit !== null) {

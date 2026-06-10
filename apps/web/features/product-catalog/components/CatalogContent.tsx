@@ -31,7 +31,7 @@ const WOMEN_CONTENT = {
 };
 
 const MEN_CONTENT = {
-  hero: imageKitUrl("men-hero.png", { v: "v2" }),
+  hero: imageKitUrl("men-hero.png", { v: "1781001260" }),
   subVisit: [
     { label: "Collection", href: "#" },
     { label: "Outlet", href: "#" },

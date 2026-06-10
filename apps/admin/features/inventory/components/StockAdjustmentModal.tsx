@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 interface StockAdjustmentModalProps {
   adjustTarget: Partial<Stock> | null;
+  initialDelta?: number;
   locations: any[];
   variantMap: Record<string, { sku: string; size: string; productName: string }>;
   onClose: () => void;
@@ -14,12 +15,16 @@ interface StockAdjustmentModalProps {
 
 export function StockAdjustmentModal({
   adjustTarget,
+  initialDelta = 1,
   locations,
   variantMap,
   onClose,
   onRefresh
 }: StockAdjustmentModalProps) {
-  const [delta, setDelta] = useState(0);
+  const isRowSpecific = !!adjustTarget?.variantId;
+  const isReduceMode = isRowSpecific && initialDelta < 0;
+
+  const [delta, setDelta] = useState(Math.abs(initialDelta));
   const [reason, setReason] = useState<"return" | "adjustment" | "po" | "order" | "damage" | "theft">("adjustment");
   
   // Dynamic pickers for empty adjust target
@@ -35,10 +40,11 @@ export function StockAdjustmentModal({
       inventoryApi.getProducts().then(prods => {
         setProducts(prods);
       });
+      setDelta(0);
     } else {
-      setDelta(1); // Set default delta to +1 for row-specific additions
+      setDelta(Math.abs(initialDelta));
     }
-  }, [adjustTarget]);
+  }, [adjustTarget, initialDelta]);
 
   useEffect(() => {
     if (selectedProductId) {
@@ -80,14 +86,16 @@ export function StockAdjustmentModal({
       return;
     }
 
+    const finalDelta = isReduceMode ? -Math.abs(delta) : isRowSpecific ? Math.abs(delta) : delta;
+
     try {
       try {
         // Attempt to adjust quantity delta
-        await inventoryApi.adjustStock(finalVariantId, finalLocationId, delta, reason);
+        await inventoryApi.adjustStock(finalVariantId, finalLocationId, finalDelta, reason);
       } catch (err: any) {
         // Fallback to direct initial addition if stock record does not exist
         if (err.message?.includes("not found") || err.message?.includes("404")) {
-          await inventoryApi.addStock(finalVariantId, finalLocationId, delta, reason);
+          await inventoryApi.addStock(finalVariantId, finalLocationId, finalDelta, reason);
         } else {
           throw err;
         }
@@ -101,7 +109,6 @@ export function StockAdjustmentModal({
     }
   };
 
-  const isRowSpecific = !!adjustTarget?.variantId;
   const rowVariant = isRowSpecific ? variantMap[adjustTarget!.variantId!] : null;
 
   return (
@@ -112,7 +119,9 @@ export function StockAdjustmentModal({
       />
       <div className="relative bg-white rounded-xl shadow-lg w-[400px] overflow-hidden border border-charcoal/10">
         <div className="px-6 py-4 border-b border-charcoal/10 bg-charcoal/[0.02]">
-          <h3 className="font-bold text-charcoal">Adjust Stock Quantity</h3>
+          <h3 className="font-bold text-charcoal">
+            {isReduceMode ? "Reduce Stock" : isRowSpecific ? "Add Stock" : "Adjust Stock"}
+          </h3>
         </div>
         
         <div className="p-6 space-y-4 text-charcoal">
@@ -190,13 +199,22 @@ export function StockAdjustmentModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[11px] font-bold text-charcoal/60 uppercase tracking-widest mb-1.5">Delta (+/-) *</label>
+              <label className="block text-[11px] font-bold text-charcoal/60 uppercase tracking-widest mb-1.5">
+                {isReduceMode ? "Quantity to Reduce *" : isRowSpecific ? "Quantity to Add *" : "Delta (+/-) *"}
+              </label>
               <input
                 type="number"
                 value={delta}
                 onChange={(e) => setDelta(parseInt(e.target.value, 10) || 0)}
                 className="w-full px-3 py-2 bg-[#FAF9F6] border border-charcoal/10 rounded-lg focus:outline-none focus:border-burgundy font-bold text-xs text-charcoal"
               />
+              {isRowSpecific && (
+                <p className="text-[9px] text-stone-400 mt-1 uppercase font-semibold tracking-wider">
+                  {isReduceMode 
+                    ? `Subtracts ${Math.abs(delta)} units`
+                    : `Adds ${Math.abs(delta)} units`}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-[11px] font-bold text-charcoal/60 uppercase tracking-widest mb-1.5">Reason *</label>

@@ -30,7 +30,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
     // Try by checkoutId first (common during checkout flow)
     let pi = await this.prisma.paymentIntent.findUnique({
       where: { checkoutId },
-      select: { intentId: true, status: true },
+      select: { intentId: true, status: true, amount: true },
     });
 
     // Fallback to intentId or clientSecret
@@ -39,17 +39,23 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       if (isUuid) {
         pi = await this.prisma.paymentIntent.findUnique({
           where: { intentId: paymentIntentId },
-          select: { intentId: true, status: true },
+          select: { intentId: true, status: true, amount: true },
         });
       } else {
         pi = await this.prisma.paymentIntent.findFirst({
           where: { clientSecret: paymentIntentId },
-          select: { intentId: true, status: true },
+          select: { intentId: true, status: true, amount: true },
         });
       }
     }
 
-    return pi;
+    if (!pi) return null;
+
+    return {
+      intentId: pi.intentId,
+      status: pi.status,
+      amount: Number(pi.amount),
+    };
   }
 
   async findExistingOrder(
@@ -82,6 +88,14 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       select: { email: true },
     });
     return cart?.email ?? null;
+  }
+
+  async getUserEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    return user?.email ?? null;
   }
 
   async findOrderByCheckoutId(
@@ -141,6 +155,23 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         },
       });
 
+      // 1.5 Create promotion usage if coupon was applied
+      if (data.promoCode) {
+        const promotion = await tx.promotion.findUnique({
+          where: { code: data.promoCode },
+        });
+        if (promotion) {
+          await tx.promotionUsage.create({
+            data: {
+              promoId: promotion.promoId,
+              orderId: order.id,
+              discountAmount: new Prisma.Decimal(data.totals.discount || 0),
+              currency: data.currency,
+            },
+          });
+        }
+      }
+
       // 2. Create order items
       const orderItems = [];
       for (const item of data.items) {
@@ -155,14 +186,65 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           },
         });
         orderItems.push(orderItem);
+
+        // Preorder/Backorder registry insertion
+        const variant = await tx.productVariant.findUnique({
+          where: { id: item.variantId },
+          include: { inventoryStocks: true },
+        });
+        if (variant) {
+          const totalInventory =
+            variant.inventoryStocks?.reduce(
+              (sum, stock) => sum + (stock.onHand - stock.reserved),
+              0
+            ) || 0;
+          if (totalInventory < item.qty) {
+            if (variant.allowPreorder) {
+              await tx.preorder.create({
+                data: {
+                  orderItemId: orderItem.id,
+                  releaseDate: variant.restockEta,
+                },
+              });
+            } else if (variant.allowBackorder) {
+              await tx.backorder.create({
+                data: {
+                  orderItemId: orderItem.id,
+                  promisedEta: variant.restockEta,
+                },
+              });
+            }
+          }
+        }
       }
 
       // 3. Create order address
+      let resolvedEmail = data.email || (data.shippingAddress as any).email || (data.billingAddress as any).email;
+      if (!resolvedEmail && data.userId) {
+        const user = await tx.user.findUnique({
+          where: { id: data.userId },
+          select: { email: true },
+        });
+        if (user) {
+          resolvedEmail = user.email;
+        }
+      }
+
+      const shippingSnapshot = {
+        ...(data.shippingAddress as Record<string, unknown>),
+        ...(resolvedEmail ? { email: resolvedEmail } : {}),
+      };
+
+      const billingSnapshot = {
+        ...(data.billingAddress as Record<string, unknown>),
+        ...(resolvedEmail ? { email: resolvedEmail } : {}),
+      };
+
       await tx.orderAddress.create({
         data: {
           orderId: order.id,
-          shippingSnapshot: data.shippingAddress as unknown as Prisma.InputJsonValue,
-          billingSnapshot: data.billingAddress as unknown as Prisma.InputJsonValue,
+          shippingSnapshot: shippingSnapshot as unknown as Prisma.InputJsonValue,
+          billingSnapshot: billingSnapshot as unknown as Prisma.InputJsonValue,
         },
       });
 

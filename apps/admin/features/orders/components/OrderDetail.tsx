@@ -118,6 +118,8 @@ export function OrderDetail({
       case "CANCELLED":
       case "REFUNDED":
         return "bg-red-50 text-red-700 border border-red-200/50";
+      case "PARTIALLY_RETURNED":
+        return "bg-orange-50 text-orange-700 border border-orange-200/50";
       default:
         return "bg-stone-50 text-stone-700 border border-stone-200/50";
     }
@@ -418,7 +420,7 @@ export function OrderDetail({
               <Button
                 variant="ghost"
                 onClick={() => handleAction(onCancel, "Order cancelled successfully.")}
-                className="w-full h-12 uppercase tracking-widest text-[9px] font-bold text-red-600 hover:bg-red-50 hover:border-red-200 rounded-none transition-all"
+                className="w-full h-12 uppercase tracking-widest text-[9px] font-bold text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 rounded-none transition-all"
                 disabled={isSubmitting}
               >
                 Cancel Order Request
@@ -457,6 +459,7 @@ export function OrderDetail({
                 <option value="delivered">DELIVERED</option>
                 <option value="cancelled">CANCELLED</option>
                 <option value="refunded">REFUNDED</option>
+                <option value="partially_returned">PARTIALLY RETURNED</option>
               </select>
             </div>
           </div>

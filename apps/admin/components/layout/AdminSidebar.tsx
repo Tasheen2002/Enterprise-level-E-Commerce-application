@@ -1,5 +1,6 @@
 "use client";
 
+// Checked: Clock icon is correctly imported from lucide-react below
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,6 +17,7 @@ import {
   Users,
   Shield,
   MessageSquare,
+  Clock,
 } from "lucide-react";
 
 const NAV_GROUPS = [
@@ -36,6 +38,7 @@ const NAV_GROUPS = [
     title: "Sales",
     items: [
       { title: "Orders", href: "/orders", icon: ShoppingCart },
+      { title: "Allocations", href: "/preorders-backorders", icon: Clock },
       { title: "Customers", href: "/customers", icon: Users },
     ],
   },
@@ -65,7 +68,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-[280px] flex-shrink-0 bg-[#F5F1E8] text-charcoal flex flex-col h-screen sticky top-0 overflow-y-auto no-scrollbar">
+    <aside className="w-[280px] flex-shrink-0 bg-[#F5F1E8] text-charcoal flex flex-col h-screen sticky top-0 overflow-y-auto ts-scrollbar">
       {/* Brand */}
       <div className="pt-10 pb-12 px-8 flex-shrink-0">
         <Link href="/" className="group block">
@@ -118,7 +121,7 @@ export function AdminSidebar() {
       </nav>
 
       {/* Settings */}
-      <div className="p-6 flex-shrink-0">
+      <div className="px-4 py-6 flex-shrink-0">
         <Link
           href="/settings"
           className="flex items-center gap-3 px-4 py-3 text-[11px] text-charcoal/70 hover:text-charcoal uppercase tracking-[0.2em] transition-colors"

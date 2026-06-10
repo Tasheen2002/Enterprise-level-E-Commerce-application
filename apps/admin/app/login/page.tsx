@@ -108,7 +108,7 @@ function LoginForm() {
           <h1 className="font-serif italic text-4xl text-[#333] mb-2 tracking-tight">
             Atelier Boutique
           </h1>
-          <p className="text-[10px] uppercase tracking-[0.3em] text-[#333]/60 font-bold">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#333]/80 font-bold">
             Administrative Suite
           </p>
         </div>
@@ -132,7 +132,7 @@ function LoginForm() {
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="email" 
-                    className="text-[10px] uppercase tracking-wider text-[#333]/60 font-bold block"
+                    className="text-[10px] uppercase tracking-wider text-[#333]/80 font-bold block"
                   >
                     Atelier Email
                   </label>
@@ -142,7 +142,7 @@ function LoginForm() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20"
+                    className="w-full bg-white/50 border border-[#333]/15 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/45"
                     placeholder="concierge@slipperze.com"
                   />
                 </div>
@@ -150,7 +150,7 @@ function LoginForm() {
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="password" 
-                    className="text-[10px] uppercase tracking-wider text-[#333]/60 font-bold block"
+                    className="text-[10px] uppercase tracking-wider text-[#333]/80 font-bold block"
                   >
                     Security Key
                   </label>
@@ -161,13 +161,13 @@ function LoginForm() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 pr-12"
+                      className="w-full bg-white/50 border border-[#333]/15 px-4 py-3 text-sm font-medium text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/45 pr-12"
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#333]/30 hover:text-[#333] transition-colors"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#333]/55 hover:text-[#333] transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff size={16} strokeWidth={1.5} />
@@ -210,7 +210,7 @@ function LoginForm() {
                 <div className="space-y-1.5">
                   <label 
                     htmlFor="totp-code" 
-                    className="text-[10px] uppercase tracking-wider text-[#333]/60 font-bold block"
+                    className="text-[10px] uppercase tracking-wider text-[#333]/80 font-bold block"
                   >
                     Authentication Code
                   </label>
@@ -223,11 +223,11 @@ function LoginForm() {
                     onChange={(e) => setTotpCode(e.target.value)}
                     required
                     maxLength={20}
-                    className="w-full bg-white/50 border border-[#333]/10 px-4 py-3 text-center text-lg font-mono font-bold text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/20 tracking-[0.3em]"
+                    className="w-full bg-white/50 border border-[#333]/15 px-4 py-3 text-center text-lg font-mono font-bold text-[#1c1917] focus:outline-none focus:border-[#C5A059] transition-colors rounded-xl placeholder:text-[#333]/45 tracking-[0.3em]"
                     placeholder="123456"
                     autoFocus
                   />
-                  <p className="text-[9px] text-[#333]/40 italic mt-1">
+                  <p className="text-[9px] text-[#333]/60 italic mt-1">
                     6-digit code or backup code (XXXX-XXXX)
                   </p>
                 </div>
@@ -243,7 +243,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={handleBack}
-                  className="w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#333]/40 hover:text-[#333] transition-colors py-2"
+                  className="w-full flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#333]/60 hover:text-[#333] transition-colors py-2"
                 >
                   <ArrowLeft className="w-3 h-3" />
                   Use a different account
@@ -253,14 +253,14 @@ function LoginForm() {
           )}
 
           <div className="mt-8 pt-8 border-t border-[#333]/5 text-center">
-            <p className="text-[10px] text-[#333]/40 italic">
+            <p className="text-[10px] text-[#333]/60 italic">
               Heritage Portfolio Access — Encrypted
             </p>
           </div>
         </div>
 
         {/* Footer info */}
-        <div className="mt-12 text-center text-[10px] text-[#333]/40 tracking-widest uppercase">
+        <div className="mt-12 text-center text-[10px] text-[#333]/60 tracking-widest uppercase">
           &copy; 2024 Tasheen Boutique. All rights reserved.
         </div>
       </div>

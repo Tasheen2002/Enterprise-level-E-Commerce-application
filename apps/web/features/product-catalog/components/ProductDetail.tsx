@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
@@ -154,9 +154,33 @@ export function ProductDetail({ slug }: { slug: string }) {
     }
     
     return product.variants.some(
-      v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === sizeValue
+      v =>
+        v.color?.toLowerCase() === selectedColor.toLowerCase() &&
+        v.size === sizeValue &&
+        ((v.inventory ?? 0) > 0 || v.allowPreorder || v.allowBackorder)
     );
   }, [product, selectedColor]);
+
+  const selectedVariant = useMemo(() => {
+    if (!product || !selectedSize) return null;
+    return product.variants?.find(
+      v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === selectedSize
+    ) || null;
+  }, [product, selectedColor, selectedSize]);
+
+  const getButtonText = () => {
+    if (isAdding) return "Adding to Bag...";
+    if (!selectedSize) return "Select Size";
+    
+    if (selectedVariant) {
+      const inventory = selectedVariant.inventory ?? 0;
+      if (inventory <= 0) {
+        if (selectedVariant.allowPreorder) return "Pre-order";
+        if (selectedVariant.allowBackorder) return "Back-order";
+      }
+    }
+    return "Add to Cart";
+  };
 
   // Safe size reset if change of finish results in selected size sold out
   useEffect(() => {
@@ -461,6 +485,21 @@ export function ProductDetail({ slug }: { slug: string }) {
               <span className="h-1.5 w-1.5 rounded-full bg-stone-300" /> Notify me when back in stock
             </p>
           </div>
+
+          {selectedVariant && (selectedVariant.inventory ?? 0) <= 0 && selectedVariant.restockEta && (
+            <div className="mt-3 p-3 bg-ivory/30 border border-sand/10 text-[10px] text-stone-500 uppercase tracking-widest leading-relaxed">
+              <span className="font-bold text-charcoal">
+                {selectedVariant.allowPreorder ? "Pre-order expected release: " : "Back-order expected arrival: "}
+              </span>
+              <span>
+                {new Date(selectedVariant.restockEta).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Sizing Advice */}
@@ -486,7 +525,7 @@ export function ProductDetail({ slug }: { slug: string }) {
             disabled={isAdding}
             className="w-full h-14 bg-charcoal hover:bg-stone-700 text-cream hover:text-white uppercase tracking-[0.3em] hover:tracking-[0.4em] text-[11px] font-bold rounded-none shadow-lg transition-all duration-500 active:scale-[0.98]"
           >
-            {isAdding ? "Adding to Bag..." : "Add to Cart"}
+            {getButtonText()}
           </Button>
 
           {/* Trust Markers */}

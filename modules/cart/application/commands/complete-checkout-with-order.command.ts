@@ -13,6 +13,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
   readonly paymentIntentId: string;
   readonly userId?: string;
   readonly guestToken?: string;
+  readonly promoCode?: string;
   readonly shippingAddress: {
     readonly firstName: string;
     readonly lastName: string;
@@ -23,6 +24,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
     readonly postalCode?: string;
     readonly country: string;
     readonly phone?: string;
+    readonly email?: string;
   };
   readonly billingAddress?: {
     readonly firstName: string;
@@ -34,6 +36,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
     readonly postalCode?: string;
     readonly country: string;
     readonly phone?: string;
+    readonly email?: string;
   };
 }
 
@@ -53,6 +56,7 @@ export class CompleteCheckoutWithOrderHandler implements ICommandHandler<
       guestToken: command.guestToken,
       shippingAddress: command.shippingAddress,
       billingAddress: command.billingAddress,
+      promoCode: command.promoCode,
     });
     return CommandResult.success<OrderResult>(result);
   }
