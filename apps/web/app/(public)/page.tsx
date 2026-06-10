@@ -21,7 +21,7 @@ export default function HomePage() {
           className="relative group h-[55vh] lg:h-full w-full overflow-hidden flex items-center justify-center"
         >
           <Image
-            src={imageKitUrl("hero-women.png")}
+            src={imageKitUrl("hero-women.png", { v: "1780998037117" })}
             alt="Women's Collection"
             fill
             priority

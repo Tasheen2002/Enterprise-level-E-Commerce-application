@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCart, type CartItem } from "@/hooks/useCart";
 import { api } from "@/lib/api-client";
 import { imageKitUrl } from "@/lib/imagekit";
+import { useCurrentIdentity } from "../../user-management/hooks/useCurrentIdentity";
 import {
   ShoppingBag,
   Trash2,
@@ -22,6 +23,7 @@ import { cn } from "@tasheen/ui";
 
 export function CartView() {
   const { cart, isLoading, updateQuantity, removeFromCart } = useCart();
+  const { data: identity } = useCurrentIdentity();
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [removingItemId, setRemovingItemId] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
@@ -62,6 +64,8 @@ export function CartView() {
             promoCode: appliedPromo.code,
             orderAmount: subtotal,
             products: productIds,
+            userId: identity?.userId || undefined,
+            email: identity?.email || undefined,
           }
         );
 
@@ -77,7 +81,7 @@ export function CartView() {
           toast.error("Promo code is no longer valid for this selection.");
         }
       } catch (err) {
-        console.error("Failed to recalculate promo code discount:", err);
+        console.warn("Failed to recalculate promo code discount:", err);
       }
     };
 
@@ -128,6 +132,8 @@ export function CartView() {
           promoCode: promoCode.trim().toUpperCase(),
           orderAmount: subtotal,
           products: productIds,
+          userId: identity?.userId || undefined,
+          email: identity?.email || undefined,
         }
       );
 
@@ -143,8 +149,9 @@ export function CartView() {
         toast.error(result.error || "Invalid or expired promo code.");
       }
     } catch (err: unknown) {
-      console.error(err);
-      toast.error("Failed to apply promo code.");
+      console.warn(err);
+      const msg = err instanceof Error ? err.message : "Failed to apply promo code.";
+      toast.error(msg);
     } finally {
       setIsApplyingPromo(false);
     }
@@ -276,6 +283,16 @@ export function CartView() {
                       <span className="text-gold">Size: {item.variant?.size}</span>
                       <span className="h-1 w-1 bg-stone-300 rounded-full" />
                       <span className="text-stone-500">SKU: {item.variant?.sku.slice(0, 8)}...</span>
+                      {item.variant && (item.variant.inventory ?? 0) <= 0 && (
+                        <>
+                          <span className="h-1 w-1 bg-stone-300 rounded-full" />
+                          {item.variant.allowPreorder ? (
+                            <span className="px-2 py-0.5 bg-ivory text-gold text-[9px] font-bold border border-sand/30 tracking-widest">Pre-order</span>
+                          ) : item.variant.allowBackorder ? (
+                            <span className="px-2 py-0.5 bg-ivory text-gold text-[9px] font-bold border border-sand/30 tracking-widest">Back-order</span>
+                          ) : null}
+                        </>
+                      )}
                     </div>
                   </div>
 

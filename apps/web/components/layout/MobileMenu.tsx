@@ -24,7 +24,7 @@ const GENDER_TILES = [
   {
     label: "Women",
     href: "/catalog?gender=women",
-    img: imageKitUrl("hero-women.png"),
+    img: imageKitUrl("hero-women.png", { v: "1780998037117" }),
   },
   {
     label: "Men",
