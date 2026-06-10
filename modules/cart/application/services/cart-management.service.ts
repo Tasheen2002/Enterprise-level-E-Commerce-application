@@ -120,6 +120,10 @@ interface CartItemDto {
     size: string | null;
     color: string | null;
     sku: string;
+    allowPreorder: boolean;
+    allowBackorder: boolean;
+    restockEta: Date | null;
+    inventory: number;
   };
 }
 
@@ -847,6 +851,10 @@ export class CartManagementService {
           size: variant.getSize(),
           color: variant.getColor(),
           sku: variant.getSku().getValue(),
+          allowPreorder: variant.getAllowPreorder(),
+          allowBackorder: variant.getAllowBackorder(),
+          restockEta: variant.getRestockEta(),
+          inventory: variant.getInventory(),
         };
 
         const productId = variant.getProductId().getValue();

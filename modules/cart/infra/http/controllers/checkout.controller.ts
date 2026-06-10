@@ -142,6 +142,7 @@ export class CheckoutController {
         guestToken,
         shippingAddress: body.shippingAddress,
         billingAddress: body.billingAddress,
+        promoCode: body.promoCode,
       });
       return ResponseHelper.fromCommand(reply, result, "Order created successfully from checkout");
     } catch (error: unknown) {

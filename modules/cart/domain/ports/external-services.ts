@@ -5,6 +5,10 @@ export interface ExternalVariantData {
   getSize(): string | null;
   getColor(): string | null;
   getWeightG(): number | null;
+  getAllowPreorder(): boolean;
+  getAllowBackorder(): boolean;
+  getRestockEta(): Date | null;
+  getInventory(): number;
 }
 
 export interface IExternalProductVariantRepository {
@@ -127,6 +131,7 @@ export interface PersistCheckoutOrderData {
   billingAddress: Record<string, unknown>;
   email?: string;
   cartId: string;
+  promoCode?: string;
   stockAdjustments: Array<{
     variantId: string;
     warehouseId: string;
