@@ -14,7 +14,9 @@ import { SKU } from "../../../domain/value-objects/sku.vo";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 
-type ProductVariantRow = Prisma.ProductVariantGetPayload<object>;
+type ProductVariantRow = Prisma.ProductVariantGetPayload<{
+  include: { inventoryStocks: true };
+}>;
 
 export class ProductVariantRepositoryImpl
   extends PrismaRepository<ProductVariant>
@@ -25,7 +27,7 @@ export class ProductVariantRepositoryImpl
   }
 
   private toDomain(row: ProductVariantRow): ProductVariant {
-    return ProductVariant.fromPersistence({
+    const variant = ProductVariant.fromPersistence({
       id: VariantId.fromString(row.id),
       productId: ProductId.fromString(row.productId),
       sku: SKU.fromString(row.sku),
@@ -41,6 +43,15 @@ export class ProductVariantRepositoryImpl
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     });
+
+    const totalInventory =
+      row.inventoryStocks?.reduce(
+        (sum, stock) => sum + (stock.onHand - stock.reserved),
+        0
+      ) || 0;
+    (variant as any)._inventory = totalInventory;
+
+    return variant;
   }
 
   async save(variant: ProductVariant): Promise<void> {
@@ -76,6 +87,7 @@ export class ProductVariantRepositoryImpl
   async findById(id: VariantId): Promise<ProductVariant | null> {
     const variantData = await this.prisma.productVariant.findUnique({
       where: { id: id.getValue() },
+      include: { inventoryStocks: true },
     });
 
     if (!variantData) {
@@ -89,6 +101,7 @@ export class ProductVariantRepositoryImpl
     if (ids.length === 0) return [];
     const rows = await this.prisma.productVariant.findMany({
       where: { id: { in: ids.map((id) => id.getValue()) } },
+      include: { inventoryStocks: true },
     });
     return rows.map((r) => this.toDomain(r));
   }
@@ -96,6 +109,7 @@ export class ProductVariantRepositoryImpl
   async findBySku(sku: SKU): Promise<ProductVariant | null> {
     const variantData = await this.prisma.productVariant.findUnique({
       where: { sku: sku.getValue() },
+      include: { inventoryStocks: true },
     });
 
     if (!variantData) {
@@ -108,6 +122,7 @@ export class ProductVariantRepositoryImpl
   async findByProductId(productId: ProductId): Promise<ProductVariant[]> {
     const variants = await this.prisma.productVariant.findMany({
       where: { productId: productId.getValue() },
+      include: { inventoryStocks: true },
       orderBy: { createdAt: "desc" },
     });
 
@@ -125,6 +140,7 @@ export class ProductVariantRepositoryImpl
     const variants = await this.prisma.productVariant.findMany({
       take: limit,
       skip: offset,
+      include: { inventoryStocks: true },
       orderBy: { [sortBy]: sortOrder },
     });
 
@@ -146,6 +162,7 @@ export class ProductVariantRepositoryImpl
       where: { size },
       take: limit,
       skip: offset,
+      include: { inventoryStocks: true },
       orderBy: { [sortBy]: sortOrder },
     });
 
@@ -167,6 +184,7 @@ export class ProductVariantRepositoryImpl
       where: { color },
       take: limit,
       skip: offset,
+      include: { inventoryStocks: true },
       orderBy: { [sortBy]: sortOrder },
     });
 
@@ -176,6 +194,7 @@ export class ProductVariantRepositoryImpl
   async findAvailableForBackorder(): Promise<ProductVariant[]> {
     const variants = await this.prisma.productVariant.findMany({
       where: { allowBackorder: true },
+      include: { inventoryStocks: true },
       orderBy: { createdAt: "desc" },
     });
 
@@ -185,6 +204,7 @@ export class ProductVariantRepositoryImpl
   async findAvailableForPreorder(): Promise<ProductVariant[]> {
     const variants = await this.prisma.productVariant.findMany({
       where: { allowPreorder: true },
+      include: { inventoryStocks: true },
       orderBy: { createdAt: "desc" },
     });
 
