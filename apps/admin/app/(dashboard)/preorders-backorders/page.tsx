@@ -19,10 +19,10 @@ export default function PreordersBackordersPage() {
   const backorders = backordersResult?.items ?? [];
 
   // Mutations
-  const updatePreorderDateMutation = useAdminUpdatePreorderDate("");
-  const updateBackorderEtaMutation = useAdminUpdateBackorderEta("");
-  const notifyPreorderMutation = useAdminNotifyPreorder("");
-  const notifyBackorderMutation = useAdminNotifyBackorder("");
+  const updatePreorderDateMutation = useAdminUpdatePreorderDate();
+  const updateBackorderEtaMutation = useAdminUpdateBackorderEta();
+  const notifyPreorderMutation = useAdminNotifyPreorder();
+  const notifyBackorderMutation = useAdminNotifyBackorder();
 
   const handleRefresh = () => {
     refetchPreorders();
@@ -52,28 +52,28 @@ export default function PreordersBackordersPage() {
         isLoadingBackorders={isLoadingBackorders}
         onRefresh={handleRefresh}
         onUpdatePreorderDate={(orderItemId, date) =>
-          updatePreorderDateMutation.mutateAsync(date, {
+          updatePreorderDateMutation.mutateAsync({ orderItemId, releaseDate: date }, {
             onSuccess: () => {
               refetchPreorders();
             }
           })
         }
         onUpdateBackorderEta={(orderItemId, date) =>
-          updateBackorderEtaMutation.mutateAsync(date, {
+          updateBackorderEtaMutation.mutateAsync({ orderItemId, promisedEta: date }, {
             onSuccess: () => {
               refetchBackorders();
             }
           })
         }
         onNotifyPreorder={(orderItemId) =>
-          notifyPreorderMutation.mutateAsync(undefined, {
+          notifyPreorderMutation.mutateAsync(orderItemId, {
             onSuccess: () => {
               refetchPreorders();
             }
           })
         }
         onNotifyBackorder={(orderItemId) =>
-          notifyBackorderMutation.mutateAsync(undefined, {
+          notifyBackorderMutation.mutateAsync(orderItemId, {
             onSuccess: () => {
               refetchBackorders();
             }

@@ -16,14 +16,16 @@ export default function InventoryPage() {
   // Modal / Drawer Toggles
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [adjustTarget, setAdjustTarget] = useState<Partial<Stock> | null>(null);
+  const [initialDelta, setInitialDelta] = useState(1);
   
   const [isCreatingLocation, setIsCreatingLocation] = useState(false);
   
   const [isEditingThreshold, setIsEditingThreshold] = useState(false);
   const [thresholdTarget, setThresholdTarget] = useState<Stock | null>(null);
 
-  const handleAdjustTrigger = (stock: Stock, _delta: number) => {
+  const handleAdjustTrigger = (stock: Stock, delta: number) => {
     setAdjustTarget(stock);
+    setInitialDelta(delta);
     setIsAdjusting(true);
   };
 
@@ -119,6 +121,7 @@ export default function InventoryPage() {
       {isAdjusting && (
         <StockAdjustmentModal
           adjustTarget={adjustTarget}
+          initialDelta={initialDelta}
           locations={locations}
           variantMap={variantMap}
           onClose={() => setIsAdjusting(false)}
