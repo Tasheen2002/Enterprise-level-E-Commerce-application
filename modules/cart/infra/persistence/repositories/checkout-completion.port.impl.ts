@@ -155,6 +155,23 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         },
       });
 
+      // 1.5 Create promotion usage if coupon was applied
+      if (data.promoCode) {
+        const promotion = await tx.promotion.findUnique({
+          where: { code: data.promoCode },
+        });
+        if (promotion) {
+          await tx.promotionUsage.create({
+            data: {
+              promoId: promotion.promoId,
+              orderId: order.id,
+              discountAmount: new Prisma.Decimal(data.totals.discount || 0),
+              currency: data.currency,
+            },
+          });
+        }
+      }
+
       // 2. Create order items
       const orderItems = [];
       for (const item of data.items) {
@@ -169,6 +186,36 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           },
         });
         orderItems.push(orderItem);
+
+        // Preorder/Backorder registry insertion
+        const variant = await tx.productVariant.findUnique({
+          where: { id: item.variantId },
+          include: { inventoryStocks: true },
+        });
+        if (variant) {
+          const totalInventory =
+            variant.inventoryStocks?.reduce(
+              (sum, stock) => sum + (stock.onHand - stock.reserved),
+              0
+            ) || 0;
+          if (totalInventory < item.qty) {
+            if (variant.allowPreorder) {
+              await tx.preorder.create({
+                data: {
+                  orderItemId: orderItem.id,
+                  releaseDate: variant.restockEta,
+                },
+              });
+            } else if (variant.allowBackorder) {
+              await tx.backorder.create({
+                data: {
+                  orderItemId: orderItem.id,
+                  promisedEta: variant.restockEta,
+                },
+              });
+            }
+          }
+        }
       }
 
       // 3. Create order address

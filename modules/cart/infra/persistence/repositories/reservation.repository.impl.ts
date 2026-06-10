@@ -201,8 +201,16 @@ export class ReservationRepositoryImpl
     const activeReserved = await this.getActiveReservedQuantity(variantId);
     const actualInventory = await this.getVariantInventory(variantId.getValue());
 
-    const availableForReservation = Math.max(0, actualInventory - activeReserved);
-    const available = availableForReservation >= requestedQuantity;
+    const variant = await this.prisma.productVariant.findUnique({
+      where: { id: variantId.getValue() },
+      select: { allowPreorder: true, allowBackorder: true },
+    });
+    const bypassAllowed = !!(variant?.allowPreorder || variant?.allowBackorder);
+
+    const availableForReservation = bypassAllowed
+      ? Math.max(requestedQuantity, actualInventory - activeReserved)
+      : Math.max(0, actualInventory - activeReserved);
+    const available = availableForReservation >= requestedQuantity || bypassAllowed;
 
     return {
       available,
