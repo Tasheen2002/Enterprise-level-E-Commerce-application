@@ -176,40 +176,42 @@ export function useAdminBackorders(query?: Parameters<typeof ordersApi.getBackor
   });
 }
 
-export function useAdminUpdatePreorderDate(orderItemId: string) {
+export function useAdminUpdatePreorderDate() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (releaseDate: Date) => ordersApi.updatePreorderReleaseDate(orderItemId, releaseDate),
+    mutationFn: ({ orderItemId, releaseDate }: { orderItemId: string; releaseDate: Date }) =>
+      ordersApi.updatePreorderReleaseDate(orderItemId, releaseDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-preorders"] });
     },
   });
 }
 
-export function useAdminUpdateBackorderEta(orderItemId: string) {
+export function useAdminUpdateBackorderEta() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (promisedEta: Date) => ordersApi.updateBackorderEta(orderItemId, promisedEta),
+    mutationFn: ({ orderItemId, promisedEta }: { orderItemId: string; promisedEta: Date }) =>
+      ordersApi.updateBackorderEta(orderItemId, promisedEta),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backorders"] });
     },
   });
 }
 
-export function useAdminNotifyPreorder(orderItemId: string) {
+export function useAdminNotifyPreorder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => ordersApi.notifyPreorder(orderItemId),
+    mutationFn: (orderItemId: string) => ordersApi.notifyPreorder(orderItemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-preorders"] });
     },
   });
 }
 
-export function useAdminNotifyBackorder(orderItemId: string) {
+export function useAdminNotifyBackorder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => ordersApi.notifyBackorder(orderItemId),
+    mutationFn: (orderItemId: string) => ordersApi.notifyBackorder(orderItemId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-backorders"] });
     },
