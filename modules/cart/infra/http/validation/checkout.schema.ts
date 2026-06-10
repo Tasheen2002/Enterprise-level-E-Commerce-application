@@ -34,6 +34,7 @@ export const completeCheckoutWithOrderSchema = z.object({
   paymentIntentId: z.string().min(1),
   shippingAddress: addressSchema,
   billingAddress: addressSchema.optional(),
+  promoCode: z.string().optional(),
 });
 
 export const calculateCheckoutTaxSchema = z.object({
