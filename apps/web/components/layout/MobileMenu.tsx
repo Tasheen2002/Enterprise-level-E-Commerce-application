@@ -63,10 +63,9 @@ const NAV_SECTIONS: NavSection[] = [
   {
     title: "The House",
     links: [
-      { label: "Our Heritage", href: "/artisanship" },
-      { label: "Bespoke", href: "/bespoke" },
+      { label: "The Brand", href: "/about" },
+      { label: "Retailers", href: "/retailers" },
       { label: "Journal", href: "/journal" },
-      { label: "Sustainability", href: "/sustainability" },
     ],
   },
 ];
@@ -86,7 +85,6 @@ const ACCOUNT_LINKS = [
 const SUPPORT_LINKS = [
   { label: "Contact Us", href: "/contact", Icon: Phone },
   { label: "Delivery & Returns", href: "/delivery-returns", Icon: MapPin },
-  { label: "FAQ / Help", href: "/faq", Icon: HelpCircle },
 ] as const;
 
 /**

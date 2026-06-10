@@ -11,8 +11,6 @@ import { HeaderSearchButton } from "./HeaderSearchButton";
 const NAV_ITEMS = [
   { label: "Collection", href: "/catalog" },
   { label: "New In", href: "/catalog?sort=newest" },
-  { label: "Artisanship", href: "/artisanship" },
-  { label: "Bespoke", href: "/bespoke" },
   { label: "Journal", href: "/journal" },
 ] as const;
 

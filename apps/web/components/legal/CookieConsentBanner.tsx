@@ -45,7 +45,7 @@ export function CookieConsentBanner() {
                     the boutique is used. You can accept all, reject
                     non-essential, or pick categories. Learn more in our{" "}
                     <Link
-                      href="/legal/cookies"
+                      href="/legal/privacy"
                       className="underline underline-offset-2 hover:text-charcoal"
                     >
                       cookie policy
