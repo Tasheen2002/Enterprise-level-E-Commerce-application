@@ -60,6 +60,7 @@ export interface ProductVariantDTO {
   allowBackorder: boolean;
   allowPreorder: boolean;
   restockEta: string | null;
+  inventory?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -246,6 +247,7 @@ export class ProductVariant extends AggregateRoot {
       allowBackorder: entity.props.allowBackorder,
       allowPreorder: entity.props.allowPreorder,
       restockEta: entity.props.restockEta?.toISOString() ?? null,
+      inventory: (entity as any)._inventory,
       createdAt: entity.props.createdAt.toISOString(),
       updatedAt: entity.props.updatedAt.toISOString(),
     };
