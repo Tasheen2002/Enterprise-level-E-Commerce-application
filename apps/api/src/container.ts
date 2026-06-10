@@ -654,6 +654,31 @@ export class Container {
     const eventBus = new InMemoryEventBus();
 
     // ============================================================
+    // Loyalty Module (Moved up so it can be injected into Order and Cart)
+    // ============================================================
+    const loyaltyAccountRepository = new LoyaltyAccountRepositoryImpl(prisma, eventBus);
+    const loyaltyProgramRepository = new LoyaltyProgramRepositoryImpl(prisma, eventBus);
+    const loyaltyTransactionRepository = new LoyaltyTransactionRepositoryImpl(prisma, eventBus);
+
+    const loyaltyService = new LoyaltyService(loyaltyAccountRepository, loyaltyTransactionRepository);
+    const loyaltyProgramService = new LoyaltyProgramService(loyaltyProgramRepository);
+
+    const loyaltyController = new LoyaltyController(
+      new CreateLoyaltyProgramHandler(loyaltyProgramService),
+      new GetLoyaltyProgramsHandler(loyaltyProgramService),
+      new GetLoyaltyAccountHandler(loyaltyService),
+      new AwardLoyaltyPointsHandler(loyaltyService),
+      new RedeemLoyaltyPointsHandler(loyaltyService),
+      new AdjustLoyaltyPointsHandler(loyaltyService),
+      new GetLoyaltyTransactionsHandler(loyaltyService),
+    );
+
+    this.services.set("loyaltyService", loyaltyService);
+    this.services.set("loyaltyProgramService", loyaltyProgramService);
+    this.services.set("loyaltyController", loyaltyController);
+
+
+    // ============================================================
     // User Management Module
     // ============================================================
 
@@ -1117,6 +1142,10 @@ export class Container {
             getSize: () => dto.size,
             getColor: () => dto.color,
             getWeightG: () => dto.weightG,
+            getAllowPreorder: () => dto.allowPreorder,
+            getAllowBackorder: () => dto.allowBackorder,
+            getRestockEta: () => dto.restockEta ? new Date(dto.restockEta) : null,
+            getInventory: () => dto.inventory ?? 0,
           };
         } catch {
           return null;
@@ -1188,6 +1217,7 @@ export class Container {
       externalProductVariantRepository,
       { create: (data) => ProductSnapshot.create(data) } satisfies IProductSnapshotFactory,
       { defaultStockLocation: process.env.DEFAULT_STOCK_LOCATION },
+      loyaltyService,
     );
 
     const cartController = new CartController(
@@ -1321,6 +1351,7 @@ export class Container {
       externalStockService,
       process.env.DEFAULT_STOCK_LOCATION ?? "",
       fedexShippingService,
+      loyaltyService,
     );
     const backorderManagementService = new BackorderManagementService(backorderRepository);
     const preorderManagementService = new PreorderManagementService(preorderRepository);
@@ -1488,30 +1519,6 @@ export class Container {
     this.services.set("stripeController", stripeController);
     this.services.set("stripeCardSetupController", stripeCardSetupController);
 
-    // ============================================================
-    // Loyalty Module
-    // ============================================================
-
-    const loyaltyAccountRepository = new LoyaltyAccountRepositoryImpl(prisma, eventBus);
-    const loyaltyProgramRepository = new LoyaltyProgramRepositoryImpl(prisma, eventBus);
-    const loyaltyTransactionRepository = new LoyaltyTransactionRepositoryImpl(prisma, eventBus);
-
-    const loyaltyService = new LoyaltyService(loyaltyAccountRepository, loyaltyTransactionRepository);
-    const loyaltyProgramService = new LoyaltyProgramService(loyaltyProgramRepository);
-
-    const loyaltyController = new LoyaltyController(
-      new CreateLoyaltyProgramHandler(loyaltyProgramService),
-      new GetLoyaltyProgramsHandler(loyaltyProgramService),
-      new GetLoyaltyAccountHandler(loyaltyService),
-      new AwardLoyaltyPointsHandler(loyaltyService),
-      new RedeemLoyaltyPointsHandler(loyaltyService),
-      new AdjustLoyaltyPointsHandler(loyaltyService),
-      new GetLoyaltyTransactionsHandler(loyaltyService),
-    );
-
-    this.services.set("loyaltyService", loyaltyService);
-    this.services.set("loyaltyProgramService", loyaltyProgramService);
-    this.services.set("loyaltyController", loyaltyController);
 
     // ============================================================
     // Engagement Module
