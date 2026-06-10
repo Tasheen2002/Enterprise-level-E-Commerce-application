@@ -14,11 +14,11 @@
     scroll-behavior: smooth;
     /* Modern, GPU-friendly scrollbar width */
     scrollbar-width: thin;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.2) transparent;
   }
 
   body {
     min-height: 100vh;
-    @apply ts-scrollbar;
   }
 
   h1,
@@ -55,32 +55,33 @@
   }
 
   /* Sleek Editorial Scrollbar — ultra-thin, auto-fading */
-  .ts-scrollbar {
+  .ts-scrollbar,
+  html {
     scrollbar-width: thin;
-    scrollbar-color: rgb(var(--ts-charcoal) / 0.12) transparent;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.2) transparent;
   }
 
-  .ts-scrollbar::-webkit-scrollbar {
-    width: 3px;
-    height: 3px;
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
   }
 
-  .ts-scrollbar::-webkit-scrollbar-track {
+  ::-webkit-scrollbar-track {
     background: transparent;
     margin: 4px 0;
   }
 
-  .ts-scrollbar::-webkit-scrollbar-thumb {
-    background: rgb(var(--ts-charcoal) / 0.1);
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--ts-charcoal) / 0.2);
     border-radius: 99px;
   }
 
-  .ts-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--ts-gold) / 0.4);
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ts-charcoal) / 0.35);
   }
 
-  .ts-scrollbar::-webkit-scrollbar-thumb:active {
-    background: rgb(var(--ts-gold) / 0.6);
+  ::-webkit-scrollbar-thumb:active {
+    background: rgb(var(--ts-charcoal) / 0.5);
   }
 
   /* Bolder variant — used inside modals/dialogs where the scroll affordance
