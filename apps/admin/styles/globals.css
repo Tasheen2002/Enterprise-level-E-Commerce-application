@@ -12,25 +12,9 @@
     background-color: rgb(var(--ts-cream));
     color: rgb(var(--ts-charcoal));
     scroll-behavior: smooth;
-  }
-
-  /* Custom Editorial Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: rgb(var(--ts-cream));
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: rgb(var(--ts-sand));
-    border-radius: 0;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--ts-charcoal) / 0.2);
+    /* Modern, GPU-friendly scrollbar width */
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.15) transparent;
   }
 
   body {
@@ -78,6 +62,36 @@
   .no-scrollbar {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
+  }
+
+  /* Sleek Editorial Scrollbar — ultra-thin, auto-fading */
+  .ts-scrollbar,
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--ts-charcoal) / 0.15) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 4px 0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--ts-charcoal) / 0.15);
+    border-radius: 99px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ts-charcoal) / 0.3);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: rgb(var(--ts-charcoal) / 0.45);
   }
 
   /* Custom Sonner Toast Styles to match the screenshot */
