@@ -48,6 +48,7 @@ export interface CompleteCheckoutWithOrderRequest {
   paymentIntentId: string;
   shippingAddress: AddressSnapshot;
   billingAddress?: AddressSnapshot;
+  promoCode?: string;
 }
 
 export interface CompleteCheckoutWithOrderResponse {
