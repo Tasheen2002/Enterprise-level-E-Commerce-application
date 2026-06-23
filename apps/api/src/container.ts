@@ -1,5 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Category } from "@prisma/client";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
+import { DomainEvent } from "../../../packages/core/src/domain/events/domain-event";
+import { ReminderStatusValue } from "../../../modules/engagement/domain/value-objects/reminder-status.vo";
 
 // ============================================================
 // User Management — Imports
@@ -1595,6 +1597,126 @@ export class Container {
       new UnsubscribeNewsletterHandler(newsletterService),
       new GetNewsletterSubscriptionHandler(newsletterService),
     );
+
+    // ============================================================
+    // Restock Alerts Listener
+    // ============================================================
+    eventBus.subscribe("stock.added", {
+      eventType: "stock.added",
+      handle: async (event: DomainEvent) => {
+        try {
+          const payload = event.getPayload();
+          const variantId = payload.variantId as string;
+          const quantity = payload.quantity as number;
+
+          if (quantity <= 0) return;
+
+          // Fetch pending reminders for this variant
+          const pendingResult = await reminderRepository.findWithFilters({
+            variantId,
+            status: ReminderStatusValue.PENDING,
+          });
+
+          const reminders = pendingResult.items;
+          if (reminders.length === 0) return;
+
+          // Fetch variant and product details with categories
+          const variant = await prisma.productVariant.findUnique({
+            where: { id: variantId },
+            include: {
+              product: {
+                include: {
+                  categories: {
+                    include: {
+                      category: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!variant || !variant.product) return;
+
+          const productName = variant.product.title || "Bespoke Selection";
+          const size = variant.size || "Default";
+          const color = variant.color || "Default";
+          const sku = variant.sku;
+
+          // Dynamically construct product details page URL based on its categories
+          let productHref = `http://localhost:3000/catalog/women/heeled-sandals/${variant.product.slug}`;
+          if (variant.product.categories && variant.product.categories.length > 0) {
+            for (const pc of variant.product.categories) {
+              const chain: Category[] = [];
+              let currentCat: Category | null = pc.category;
+              let depth = 0;
+              while (currentCat && depth < 10) {
+                chain.push(currentCat);
+                if (currentCat.parentId) {
+                  currentCat = await prisma.category.findUnique({
+                    where: { id: currentCat.parentId },
+                  });
+                } else {
+                  currentCat = null;
+                }
+                depth++;
+              }
+              if (chain.length > 0) {
+                const root = chain[chain.length - 1];
+                const leaf = chain[0];
+                if (root && leaf) {
+                  const gender = root.parentId === null ? root.slug : "women";
+                  const category = leaf.slug;
+                  if (leaf.id === root.id) {
+                    productHref = `http://localhost:3000/catalog/${gender}/${gender}/${variant.product.slug}`;
+                  } else {
+                    productHref = `http://localhost:3000/catalog/${gender}/${category}/${variant.product.slug}`;
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
+          for (const reminder of reminders) {
+            try {
+              let recipientContact: string | null = null;
+              if (reminder.userId) {
+                const user = await prisma.user.findUnique({
+                  where: { id: reminder.userId },
+                  select: { email: true, phone: true },
+                });
+                if (user) {
+                  recipientContact = reminder.channel.getValue() === "email" ? user.email : user.phone;
+                }
+              }
+
+              if (!recipientContact) {
+                console.warn(`[RESTOCK ALERT WORKER] No contact info found for reminder ID ${reminder.id.getValue()} (userId: ${reminder.userId})`);
+                // Mark it as sent anyway to avoid infinite retry loops
+                reminder.markAsSent();
+                await reminderRepository.save(reminder);
+                continue;
+              }
+
+              if (reminder.channel.getValue() === "email") {
+                console.log(`[EMAIL ALERT] Sending simulated restock email to ${recipientContact} for SKU ${sku} (${productName}). Link: ${productHref}`);
+              } else {
+                console.log(`[SMS/WHATSAPP ALERT] Sending simulated restock message to ${recipientContact} via ${reminder.channel.getValue()} for SKU ${sku}`);
+              }
+
+              // Update status to SENT
+              reminder.markAsSent();
+              await reminderRepository.save(reminder);
+            } catch (err) {
+              console.error(`[RESTOCK ALERT WORKER] Failed to process reminder for ID ${reminder.id.getValue()}:`, err);
+            }
+          }
+        } catch (err) {
+          console.error("[RESTOCK ALERT WORKER] Error processing StockAddedEvent:", err);
+        }
+      }
+    });
 
     this.services.set("wishlistController", wishlistController);
     this.services.set("reminderController", reminderController);

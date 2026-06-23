@@ -26,6 +26,7 @@ import { api } from "@/lib/api-client";
 import { imageKitUrl } from "@/lib/imagekit";
 import { useProductReviews } from "../hooks/useProductReviews";
 import { WriteReviewModal } from "./WriteReviewModal";
+import { RestockAlertModal } from "./RestockAlertModal";
 import { useCurrentIdentity } from "@/features/user-management/hooks/useCurrentIdentity";
 import { useUserProfile } from "@/features/user-management/hooks/useUserProfile";
 import { useAuth } from "@/providers/AuthProvider";
@@ -64,6 +65,7 @@ export function ProductDetail({ slug }: { slug: string }) {
   const { data: profile } = useUserProfile();
   const { isAuthenticated } = useAuth();
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
 
   // Advanced Interactive Features states
   const [selectedCurrency, setSelectedCurrency] = useState<"EUR" | "USD" | "SGD">("EUR");
@@ -161,6 +163,15 @@ export function ProductDetail({ slug }: { slug: string }) {
     );
   }, [product, selectedColor]);
 
+  // Check if variant combination exists at all in the catalog
+  const hasVariant = useCallback((sizeValue: string) => {
+    if (!product) return false;
+    if (!product.variants || product.variants.length === 0) return true;
+    return product.variants.some(
+      v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === sizeValue
+    );
+  }, [product, selectedColor]);
+
   const selectedVariant = useMemo(() => {
     if (!product || !selectedSize) return null;
     return product.variants?.find(
@@ -168,9 +179,22 @@ export function ProductDetail({ slug }: { slug: string }) {
     ) || null;
   }, [product, selectedColor, selectedSize]);
 
+  // Compute if the currently selected size/finish is out of stock (and doesn't allow preorder/backorder)
+  const isSelectedOutOfStock = useMemo(() => {
+    if (!selectedSize) return false;
+    if (!selectedVariant) return true;
+    const inventory = selectedVariant.inventory ?? 0;
+    const isPreorderOrBackorder = selectedVariant.allowPreorder || selectedVariant.allowBackorder;
+    return inventory <= 0 && !isPreorderOrBackorder;
+  }, [selectedSize, selectedVariant]);
+
   const getButtonText = () => {
     if (isAdding) return "Adding to Bag...";
     if (!selectedSize) return "Select Size";
+    
+    if (isSelectedOutOfStock) {
+      return "Notify Me When Available";
+    }
     
     if (selectedVariant) {
       const inventory = selectedVariant.inventory ?? 0;
@@ -182,12 +206,12 @@ export function ProductDetail({ slug }: { slug: string }) {
     return "Add to Cart";
   };
 
-  // Safe size reset if change of finish results in selected size sold out
+  // Safe size reset if change of finish results in selected size variant not existing
   useEffect(() => {
-    if (selectedSize && !isSizeAvailable(selectedSize)) {
+    if (selectedSize && !hasVariant(selectedSize)) {
       setSelectedSize(null);
     }
-  }, [selectedColor, selectedSize, isSizeAvailable]);
+  }, [selectedColor, selectedSize, hasVariant]);
 
   // Determine if footwear or leather goods for size guide matrix conversions
   const isFootwear = product 
@@ -242,12 +266,17 @@ export function ProductDetail({ slug }: { slug: string }) {
       return;
     }
 
+    if (isSelectedOutOfStock) {
+      setIsRestockModalOpen(true);
+      return;
+    }
+
     const activeVariant = product.variants?.find(
       v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === selectedSize
     );
 
     if (!activeVariant) {
-      toast.error("This size and finish combination is currently unavailable.");
+      setIsRestockModalOpen(true);
       return;
     }
 
@@ -460,18 +489,23 @@ export function ProductDetail({ slug }: { slug: string }) {
           <div className={cn("grid grid-cols-4 gap-1.5 transition-transform duration-300", shakeSizeGrid && "animate-shake")}>
             {product.sizes.map((size) => {
               const available = isSizeAvailable(size.value);
+              const exists = hasVariant(size.value);
               return (
                 <button
                   key={size.value}
-                  disabled={!available}
+                  disabled={!exists}
                   onClick={() => setSelectedSize(size.value)}
                   className={cn(
-                    "h-11 border text-[11px] font-bold transition-all duration-300",
-                    !available 
-                      ? "bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed relative overflow-hidden after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-[linear-gradient(to_top_right,transparent_49%,#e5e5e5_50%,transparent_51%)]" 
-                      : selectedSize === size.value
-                        ? "bg-charcoal text-cream border-charcoal"
-                        : "bg-white text-charcoal border-sand/30 hover:border-charcoal"
+                    "h-11 border text-[11px] font-bold transition-all duration-300 relative",
+                    !exists
+                      ? "opacity-20 cursor-not-allowed border-stone-200 text-stone-300"
+                      : !available
+                        ? selectedSize === size.value
+                          ? "bg-stone-100 text-charcoal border-charcoal overflow-hidden after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-[linear-gradient(to_top_right,transparent_49%,#e5e5e5_50%,transparent_51%)] cursor-pointer"
+                          : "bg-stone-50 text-stone-400 border-stone-100 hover:border-charcoal overflow-hidden after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-[linear-gradient(to_top_right,transparent_49%,#e5e5e5_50%,transparent_51%)] cursor-pointer"
+                        : selectedSize === size.value
+                          ? "bg-charcoal text-cream border-charcoal"
+                          : "bg-white text-charcoal border-sand/30 hover:border-charcoal"
                   )}
                 >
                   {size.value}
@@ -808,6 +842,16 @@ export function ProductDetail({ slug }: { slug: string }) {
           userId={identity.userId}
         />
       )}
+      {isMounted && selectedVariant && (
+        <RestockAlertModal
+          isOpen={isRestockModalOpen}
+          onClose={() => setIsRestockModalOpen(false)}
+          variantId={selectedVariant.id}
+          sizeName={selectedSize || ""}
+          colorName={selectedColor}
+          productName={product.name}
+        />
+      )}
     </div>
   );
 }
@@ -934,21 +978,20 @@ function SizeGuideDrawer({ isOpen, onClose, isFootwear, onSelectSize, availableS
                           {activeUnit === "metric" ? `${row.cm} cm` : `${row.in} in`}
                         </td>
                         <td className="p-3 text-right">
-                          {isAvailable ? (
-                            <button
-                              onClick={() => {
-                                onSelectSize(row.eu);
-                                onClose();
-                              }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-gold hover:text-charcoal transition-colors border-b border-gold hover:border-charcoal"
-                            >
-                              Select
-                            </button>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500">
-                              Sold Out
-                            </span>
-                          )}
+                          <button
+                            onClick={() => {
+                              onSelectSize(row.eu);
+                              onClose();
+                            }}
+                            className={cn(
+                              "text-[9px] font-bold uppercase tracking-widest transition-colors border-b",
+                              isAvailable
+                                ? "text-gold hover:text-charcoal border-gold hover:border-charcoal"
+                                : "text-stone-400 hover:text-charcoal border-stone-300 hover:border-charcoal"
+                            )}
+                          >
+                            {isAvailable ? "Select" : "Notify Me"}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -993,21 +1036,20 @@ function SizeGuideDrawer({ isOpen, onClose, isFootwear, onSelectSize, availableS
                           {activeUnit === "metric" ? `${row.dCm} cm` : `${row.dIn} in`}
                         </td>
                         <td className="p-3 text-right">
-                          {isAvailable ? (
-                            <button
-                              onClick={() => {
-                                onSelectSize(row.size);
-                                onClose();
-                              }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-gold hover:text-charcoal transition-colors border-b border-gold hover:border-charcoal"
-                            >
-                              Select
-                            </button>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500">
-                              Sold Out
-                            </span>
-                          )}
+                          <button
+                            onClick={() => {
+                              onSelectSize(row.size);
+                              onClose();
+                            }}
+                            className={cn(
+                              "text-[9px] font-bold uppercase tracking-widest transition-colors border-b",
+                              isAvailable
+                                ? "text-gold hover:text-charcoal border-gold hover:border-charcoal"
+                                : "text-stone-400 hover:text-charcoal border-stone-300 hover:border-charcoal"
+                            )}
+                          >
+                            {isAvailable ? "Select" : "Notify Me"}
+                          </button>
                         </td>
                       </tr>
                     );

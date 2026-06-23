@@ -174,12 +174,13 @@ export class ReservationRepositoryImpl
     return result._sum?.qty || 0;
   }
 
-  async getActiveReservedQuantity(variantId: VariantId): Promise<number> {
+  async getActiveReservedQuantity(variantId: VariantId, excludeCartId?: CartId): Promise<number> {
     const now = new Date();
     const result = await this.prisma.reservation.aggregate({
       where: {
         variantId: variantId.getValue(),
         expiresAt: { gt: now },
+        ...(excludeCartId ? { cartId: { not: excludeCartId.getValue() } } : {}),
       },
       _sum: { qty: true },
     });
@@ -191,6 +192,7 @@ export class ReservationRepositoryImpl
   async checkAvailability(
     variantId: VariantId,
     requestedQuantity: number,
+    excludeCartId?: CartId,
   ): Promise<{
     available: boolean;
     totalReserved: number;
@@ -198,7 +200,7 @@ export class ReservationRepositoryImpl
     availableForReservation: number;
   }> {
     const totalReserved = await this.getTotalReservedQuantity(variantId);
-    const activeReserved = await this.getActiveReservedQuantity(variantId);
+    const activeReserved = await this.getActiveReservedQuantity(variantId, excludeCartId);
     const actualInventory = await this.getVariantInventory(variantId.getValue());
 
     const variant = await this.prisma.productVariant.findUnique({

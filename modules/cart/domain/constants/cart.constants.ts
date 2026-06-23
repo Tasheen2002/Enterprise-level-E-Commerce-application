@@ -19,7 +19,7 @@ export const GUEST_TOKEN_BYTE_LENGTH = 32;
 export const GUEST_TOKEN_HEX_LENGTH = 64; // 32 bytes = 64 hex chars
 
 // ─── Reservation ──────────────────────────────────────────────────────────────
-export const RESERVATION_DEFAULT_DURATION_MINUTES = 30;
+export const RESERVATION_DEFAULT_DURATION_MINUTES = 1;
 export const RESERVATION_MAX_DURATION_MINUTES = 120;
 export const RESERVATION_EXPIRY_GRACE_PERIOD_HOURS = 1;
 export const RESERVATION_EXPIRING_SOON_THRESHOLD_MINUTES = 5;

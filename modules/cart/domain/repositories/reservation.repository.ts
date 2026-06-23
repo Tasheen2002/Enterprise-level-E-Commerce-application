@@ -31,12 +31,13 @@ export interface IReservationRepository {
 
   // ── Quantity aggregates ────────────────────────────────────────────
   getTotalReservedQuantity(variantId: VariantId): Promise<number>;
-  getActiveReservedQuantity(variantId: VariantId): Promise<number>;
+  getActiveReservedQuantity(variantId: VariantId, excludeCartId?: CartId): Promise<number>;
 
   // ── Availability / conflict checks ─────────────────────────────────
   checkAvailability(
     variantId: VariantId,
     requestedQuantity: number,
+    excludeCartId?: CartId,
   ): Promise<{
     available: boolean;
     totalReserved: number;

@@ -17,6 +17,8 @@ import {
   ShieldCheck,
   Truck,
   Percent,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@tasheen/ui";
@@ -32,6 +34,47 @@ export function CartView() {
 
   const subtotal = cart?.summary.subtotal || 0;
   const items = cart?.items || [];
+
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState<number | null>(null);
+
+  useEffect(() => {
+    const expiresAtStr = cart?.summary.reservationExpiresAt;
+    if (!expiresAtStr) {
+      setTimeLeftSeconds(null);
+      return;
+    }
+
+    const calculateTimeLeft = () => {
+      const expiresAt = new Date(expiresAtStr).getTime();
+      const now = new Date().getTime();
+      const difference = Math.floor((expiresAt - now) / 1000);
+      return difference > 0 ? difference : 0;
+    };
+
+    const initialDiff = calculateTimeLeft();
+    setTimeLeftSeconds(initialDiff);
+
+    if (initialDiff <= 0) return;
+
+    const interval = setInterval(() => {
+      const diff = calculateTimeLeft();
+      setTimeLeftSeconds(diff);
+      if (diff <= 0) {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cart?.summary.reservationExpiresAt]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const isExpired = cart?.summary.isReservationExpired || timeLeftSeconds === 0;
+  const isExpiringSoon = timeLeftSeconds !== null && timeLeftSeconds > 0 && timeLeftSeconds <= 300;
 
   // Load initially applied promo code from localStorage
   useEffect(() => {
@@ -207,9 +250,60 @@ export function CartView() {
           Le Sac / Shopping Bag
         </h1>
         <p className="text-[10px] tracking-[0.2em] text-stone-400 uppercase font-bold">
-          {cart?.summary.itemCount} {cart?.summary.itemCount === 1 ? "Item" : "Items"} Reserved
+          {isExpired 
+            ? "Hold Expired" 
+            : `${cart?.summary.itemCount} ${cart?.summary.itemCount === 1 ? "Item" : "Items"} Reserved`}
         </p>
       </div>
+
+      {/* Reservation Expiry Timer Banner */}
+      {timeLeftSeconds !== null && (
+        <div className="animate-in slide-in-from-top-4 duration-500">
+          {isExpired ? (
+            <div className="bg-stone-50 border border-sand/20 px-5 py-4 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-stone-600">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-stone-400 stroke-[1.5] shrink-0" />
+                <div className="space-y-0.5">
+                  <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-charcoal">
+                    Reservation Hold Expired
+                  </h4>
+                  <p className="text-[10.5px] text-stone-500 font-medium leading-relaxed">
+                    Items remain in your bag, but their stock is no longer guaranteed. Complete checkout now before inventory runs out.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : isExpiringSoon ? (
+            <div className="bg-amber-50/60 border border-amber-200/50 px-5 py-4 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-amber-900">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-gold stroke-[1.5] shrink-0 animate-pulse" />
+                <div className="space-y-0.5">
+                  <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-amber-800">
+                    High Demand: Reservation Expiring Soon
+                  </h4>
+                  <p className="text-[10.5px] text-amber-755/95 font-medium leading-relaxed">
+                    Bespoke inventory hold is expiring soon. Secure checkout in <span className="font-mono font-bold underline decoration-2">{formatTime(timeLeftSeconds)}</span> to guarantee acquisition.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-ivory border border-sand/20 px-5 py-4 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-stone-700">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-gold stroke-[1.5] shrink-0" />
+                <div className="space-y-0.5">
+                  <h4 className="text-[10px] uppercase font-bold tracking-[0.2em] text-stone-850">
+                    Exclusive Inventory Held
+                  </h4>
+                  <p className="text-[10.5px] text-stone-600 font-medium leading-relaxed">
+                    Bespoke sandals are reserved for your session. Complete checkout in <span className="font-mono font-bold text-gold">{formatTime(timeLeftSeconds)}</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Free Shipping Progress Indicator */}
       <div className="bg-stone-50 border border-sand/10 p-5 rounded-sm space-y-3">
@@ -248,7 +342,10 @@ export function CartView() {
               return (
                 <div
                   key={item.id}
-                  className="py-6 sm:py-8 flex gap-4 sm:gap-6 items-start first:pt-0 last:pb-8 group relative"
+                  className={cn(
+                    "py-6 sm:py-8 flex gap-4 sm:gap-6 items-start first:pt-0 last:pb-8 group relative transition-all duration-500",
+                    isExpired && "opacity-75 filter grayscale-[15%]"
+                  )}
                 >
                   {/* Product Thumbnail */}
                   <div className="relative aspect-[3/4] w-24 sm:w-32 bg-stone-50 overflow-hidden border border-sand/10 rounded-sm flex-shrink-0">
@@ -465,6 +562,11 @@ export function CartView() {
               Secure Checkout
               <ArrowRight className="h-4 w-4" />
             </button>
+            {isExpired && (
+              <p className="text-[9.5px] text-stone-400 uppercase tracking-widest text-center leading-relaxed font-semibold">
+                Hold expired. Stock will be re-verified at checkout.
+              </p>
+            )}
             <Link
               href="/catalog"
               className="block text-center text-[10px] uppercase tracking-[0.25em] text-stone-400 hover:text-charcoal transition-colors underline underline-offset-4"

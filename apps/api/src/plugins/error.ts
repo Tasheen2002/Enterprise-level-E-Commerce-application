@@ -6,7 +6,12 @@ import { Prisma } from "@prisma/client";
 const errorPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.setErrorHandler(
     (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
-      request.log.error({ err: error, url: request.url, method: request.method });
+      const logStatusCode = error.statusCode || 500;
+      if (logStatusCode >= 500) {
+        request.log.error({ err: error, url: request.url, method: request.method });
+      } else {
+        request.log.warn({ err: error.message, url: request.url, method: request.method, statusCode: logStatusCode });
+      }
 
       // Domain errors — have a statusCode property
       if ("statusCode" in error && typeof error.statusCode === "number" && error.statusCode < 600) {
@@ -15,6 +20,7 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
           statusCode: error.statusCode,
           message: error.message,
           error: error.name,
+          code: "code" in error ? (error as any).code : undefined,
         });
       }
 

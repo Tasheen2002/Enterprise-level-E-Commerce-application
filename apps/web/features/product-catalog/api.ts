@@ -586,5 +586,31 @@ export async function createProductReview(
   return res.data;
 }
 
+export interface CreateReminderPayload {
+  type: "restock" | "price_drop";
+  variantId: string;
+  contact: "email" | "phone";
+  channel: "email" | "sms" | "whatsapp" | "push";
+}
+
+/**
+ * Submit a product restock alert subscription.
+ */
+export async function createRestockReminder(
+  payload: CreateReminderPayload
+): Promise<any> {
+  const res = await api.POST<any>("/api/v1/engagement/reminders", {
+    body: payload,
+  });
+  if (res.error) {
+    throw res.error;
+  }
+  if (!res.data) {
+    throw new Error("No data returned from reminder creation");
+  }
+  return res.data;
+}
+
+
 
 

@@ -245,6 +245,17 @@ export class Reservation extends AggregateRoot {
     );
   }
 
+  syncExpiry(expiresAt: Date): void {
+    this.props.expiresAt = expiresAt;
+    this.props.updatedAt = new Date();
+    this.addDomainEvent(
+      new ReservationExtendedEvent(
+        this.props.reservationId.getValue(),
+        this.props.expiresAt.toISOString(),
+      ),
+    );
+  }
+
   get timeUntilExpirySeconds(): number {
     const timeLeft = this.props.expiresAt.getTime() - new Date().getTime();
     return Math.max(0, Math.floor(timeLeft / 1000));

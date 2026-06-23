@@ -244,8 +244,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCart(updatedCart);
       return true;
     } catch (err: any) {
-      console.error("Failed to add item to bag:", err);
-      toast.error(err.message || "Could not add item to bag.");
+      if (err instanceof ApiCallError && err.statusCode < 500) {
+        console.warn("Could not add item to bag (client/business rule):", err.message);
+      } else {
+        console.error("Failed to add item to bag:", err);
+      }
+      let errorMsg = "Could not add item to bag.";
+      if (
+        (err instanceof ApiCallError && err.code === "INSUFFICIENT_INVENTORY") ||
+        err.code === "INSUFFICIENT_INVENTORY" ||
+        err.message?.toUpperCase().includes("INSUFFICIENT INVENTORY")
+      ) {
+        errorMsg = "We're sorry, but the requested quantity exceeds available stock.";
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      toast.error(errorMsg);
       return false;
     } finally {
       setIsLoading(false);
@@ -264,8 +278,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setCart(updatedCart);
       return true;
     } catch (err: any) {
-      console.error("Failed to update item quantity:", err);
-      toast.error(err.message || "Failed to update quantity.");
+      if (err instanceof ApiCallError && err.statusCode < 500) {
+        console.warn("Could not update item quantity (client/business rule):", err.message);
+      } else {
+        console.error("Failed to update item quantity:", err);
+      }
+      let errorMsg = "Failed to update quantity.";
+      if (
+        (err instanceof ApiCallError && err.code === "INSUFFICIENT_INVENTORY") ||
+        err.code === "INSUFFICIENT_INVENTORY" ||
+        err.message?.toUpperCase().includes("INSUFFICIENT INVENTORY")
+      ) {
+        errorMsg = "We're sorry, but the requested quantity exceeds available stock.";
+      } else if (err.message) {
+        errorMsg = err.message;
+      }
+      toast.error(errorMsg);
       return false;
     } finally {
       setIsLoading(false);
@@ -304,7 +332,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       toast.success("Removed item from your shopping bag.");
       return true;
     } catch (err: any) {
-      console.error("Failed to remove item from bag:", err);
+      if (err instanceof ApiCallError && err.statusCode < 500) {
+        console.warn("Could not remove item from bag (client/business rule):", err.message);
+      } else {
+        console.error("Failed to remove item from bag:", err);
+      }
       toast.error(err.message || "Failed to remove item.");
       return false;
     } finally {
@@ -329,7 +361,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       loadCart();
       return true;
     } catch (err: any) {
-      console.error("Failed to clear shopping bag:", err);
+      if (err instanceof ApiCallError && err.statusCode < 500) {
+        console.warn("Could not clear shopping bag (client/business rule):", err.message);
+      } else {
+        console.error("Failed to clear shopping bag:", err);
+      }
       toast.error(err.message || "Failed to clear bag.");
       return false;
     } finally {

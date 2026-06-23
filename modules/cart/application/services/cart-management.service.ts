@@ -34,6 +34,7 @@ import {
   CartNotFoundError,
   CartOwnershipError,
   InvalidCartStateError,
+  InsufficientInventoryError,
 } from "../../domain/errors/cart.errors";
 
 // DTOs for service operations
@@ -194,6 +195,7 @@ export class CartManagementService {
         );
         existingCart.updateReservationExpiry(newExpiryTime);
         await this.cartRepository.save(existingCart);
+        await this.syncReservationItemsExpiry(existingCart.cartId, newExpiryTime);
       }
 
       return await this.mapCartToDto(existingCart);
@@ -245,6 +247,7 @@ export class CartManagementService {
         );
         existingCart.updateReservationExpiry(newExpiryTime);
         await this.cartRepository.save(existingCart);
+        await this.syncReservationItemsExpiry(existingCart.cartId, newExpiryTime);
 
         return await this.mapCartToDto(existingCart);
       }
@@ -459,9 +462,15 @@ export class CartManagementService {
       const newTotalQty = currentCartQty + dto.quantity;
 
       if (newTotalQty > currentReservedQty) {
-        // Need to reserve additional quantity. Mutate via the aggregate
-        // (`updateQuantity`) and persist through `save()` so the
-        // domain event fires and aggregate invariants run.
+        // Check availability of new total quantity, excluding current cart's active reservations
+        const availability = await this.reservationRepository.checkAvailability(
+          VariantId.fromString(dto.variantId),
+          newTotalQty,
+          cart.cartId,
+        );
+        if (!availability.available) {
+          throw new InsufficientInventoryError(dto.variantId, newTotalQty);
+        }
         existingReservation.updateQuantity(newTotalQty);
         await this.reservationRepository.save(existingReservation);
       }
@@ -484,8 +493,14 @@ export class CartManagementService {
       giftMessage: dto.giftMessage,
     };
 
+    // Refresh cart-level reservation expiry when items are added
+    const defaultDuration = RESERVATION_DEFAULT_DURATION_MINUTES;
+    const newExpiry = new Date(Date.now() + defaultDuration * 60 * 1000);
+    cart.updateReservationExpiry(newExpiry);
+
     cart.addItem(itemData);
     await this.cartRepository.save(cart);
+    await this.syncReservationItemsExpiry(cart.cartId, newExpiry);
 
     return await this.mapCartToDto(cart);
   }
@@ -510,16 +525,40 @@ export class CartManagementService {
 
     if (reservation) {
       if (dto.quantity > 0) {
+        if (dto.quantity > reservation.quantity.getValue()) {
+          // Check availability of the larger quantity, excluding current cart's active reservations
+          const availability = await this.reservationRepository.checkAvailability(
+            VariantId.fromString(dto.variantId),
+            dto.quantity,
+            cart.cartId,
+          );
+          if (!availability.available) {
+            throw new InsufficientInventoryError(dto.variantId, dto.quantity);
+          }
+        }
         reservation.updateQuantity(dto.quantity);
         await this.reservationRepository.save(reservation);
       } else {
         await this.reservationRepository.delete(reservation.reservationId);
       }
+    } else if (dto.quantity > 0) {
+      // Create new reservation if missing
+      await this.reservationOrchestrator.reserveInventory(
+        cart.cartId.getValue(),
+        dto.variantId,
+        dto.quantity,
+      );
     }
+
+    // Refresh cart-level reservation expiry on item quantity update
+    const defaultDuration = RESERVATION_DEFAULT_DURATION_MINUTES;
+    const newExpiry = new Date(Date.now() + defaultDuration * 60 * 1000);
+    cart.updateReservationExpiry(newExpiry);
 
     // Update cart item
     cart.updateItemQuantity(dto.variantId, dto.quantity);
     await this.cartRepository.save(cart);
+    await this.syncReservationItemsExpiry(cart.cartId, newExpiry);
 
     return await this.mapCartToDto(cart);
   }
@@ -989,4 +1028,15 @@ export class CartManagementService {
     await this.cartRepository.save(cart);
   }
 
+  private async syncReservationItemsExpiry(
+    cartId: CartId,
+    newExpiry: Date | null,
+  ): Promise<void> {
+    if (!newExpiry) return;
+    const reservations = await this.reservationRepository.findByCartId(cartId);
+    for (const reservation of reservations) {
+      reservation.syncExpiry(newExpiry);
+      await this.reservationRepository.save(reservation);
+    }
+  }
 }
