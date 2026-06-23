@@ -19,6 +19,8 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
+    "test:vitest": "vitest run",
+    "test:vitest:watch": "vitest",
     "clean": "turbo run clean",
     "api:check": "npx tsc --noEmit --ignoreDeprecations 5.0"
   },
