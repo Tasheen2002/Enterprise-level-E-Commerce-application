@@ -266,7 +266,7 @@ export class StockRepositoryImpl
       Array<{ variantId: string; locationId: string }>
     >`
       SELECT variant_id AS "variantId", location_id AS "locationId"
-      FROM inventory_management.inventory_stock
+      FROM inventory_management.inventory_stocks
       WHERE low_stock_threshold IS NOT NULL
         AND on_hand <= low_stock_threshold
     `;
@@ -334,13 +334,13 @@ export class StockRepositoryImpl
       this.prisma.inventoryStock.aggregate({ _sum: { onHand: true } }),
       this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*)::bigint AS count
-        FROM inventory_management.inventory_stock
+        FROM inventory_management.inventory_stocks
         WHERE low_stock_threshold IS NOT NULL
           AND on_hand <= low_stock_threshold
       `,
       this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*)::bigint AS count
-        FROM inventory_management.inventory_stock
+        FROM inventory_management.inventory_stocks
         WHERE on_hand <= reserved
       `,
     ]);

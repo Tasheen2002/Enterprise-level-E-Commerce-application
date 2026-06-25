@@ -129,6 +129,7 @@ export class ProductRepositoryImpl
       seoTitle: product.seoTitle,
       seoDescription: product.seoDescription,
       price: product.price.getAmount(),
+      currency: product.price.getCurrency().getValue(),
       priceSgd: product.priceSgd?.getAmount() ?? null,
       priceUsd: product.priceUsd?.getAmount() ?? null,
       compareAtPrice: product.compareAtPrice?.getAmount() ?? null,

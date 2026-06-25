@@ -226,6 +226,19 @@ export class ProductManagementService {
       );
     }
 
+    if (sanitized.price !== undefined) {
+      product.updatePrice(sanitized.price);
+    }
+    if (sanitized.priceSgd !== undefined) {
+      product.updatePriceSgd(sanitized.priceSgd);
+    }
+    if (sanitized.priceUsd !== undefined) {
+      product.updatePriceUsd(sanitized.priceUsd);
+    }
+    if (sanitized.compareAtPrice !== undefined) {
+      product.updateCompareAtPrice(sanitized.compareAtPrice);
+    }
+
     if (data.status !== undefined) {
       this.applyStatusTransition(product, data.status, data.publishAt);
     }

@@ -119,6 +119,7 @@ export class Product extends AggregateRoot {
     images?: string[];
     categoryIds?: string[];
   }): Product {
+    Product.validateTitle(params.title);
     const productId = ProductId.create();
     const slug = params.slug
       ? Slug.fromString(params.slug)

@@ -635,15 +635,27 @@ export class CartManagementService {
             guestCart.cartId,
           );
         for (const reservation of guestReservations) {
-          // Create a new reservation against the user cart via the
-          // aggregate-then-save pattern (drops the old repo-side
-          // factory in favour of `Reservation.create()` + `save()`).
-          const transferred = Reservation.create({
-            cartId: userCart.cartId.getValue(),
-            variantId: reservation.variantId.getValue(),
-            quantity: reservation.quantity.getValue(),
-          });
-          await this.reservationRepository.save(transferred);
+          const existingUserReservation = await this.reservationRepository.findByCartAndVariant(
+            userCart.cartId,
+            reservation.variantId,
+          );
+
+          if (existingUserReservation) {
+            existingUserReservation.updateQuantity(
+              existingUserReservation.quantity.getValue() + reservation.quantity.getValue()
+            );
+            await this.reservationRepository.save(existingUserReservation);
+          } else {
+            // Create a new reservation against the user cart via the
+            // aggregate-then-save pattern (drops the old repo-side
+            // factory in favour of `Reservation.create()` + `save()`).
+            const transferred = Reservation.create({
+              cartId: userCart.cartId.getValue(),
+              variantId: reservation.variantId.getValue(),
+              quantity: reservation.quantity.getValue(),
+            });
+            await this.reservationRepository.save(transferred);
+          }
         }
 
         // Delete guest cart and its reservations
