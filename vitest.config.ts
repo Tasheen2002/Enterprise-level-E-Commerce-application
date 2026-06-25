@@ -1,4 +1,8 @@
 import { defineConfig } from "vitest/config";
+import dotenv from "dotenv";
+
+// Load test environment variables before anything else
+dotenv.config({ path: ".env.test" });
 
 export default defineConfig({
   resolve: {
@@ -7,7 +11,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    // Run test files sequentially to avoid database conflicts
+    // Disable parallel execution of test files to prevent PostgreSQL deadlocks
+    fileParallelism: false,
+    maxWorkers: 1,
+    minWorkers: 1,
     sequence: {
       concurrent: false,
     },

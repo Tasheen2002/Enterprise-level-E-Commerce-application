@@ -43,8 +43,6 @@
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
     "apps/web",
     "apps/admin",
     "packages/ui",
