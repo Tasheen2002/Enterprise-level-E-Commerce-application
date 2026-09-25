@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCart, type CartItem } from "@/hooks/useCart";
 import { api } from "@/lib/api-client";
+import { buildProductHref } from "@/features/product-catalog/api";
 import { imageKitUrl } from "@/lib/imagekit";
 import { useCurrentIdentity } from "../../user-management/hooks/useCurrentIdentity";
 import {
@@ -339,6 +340,10 @@ export function CartView() {
                   : imageKitUrl(imageUrl)
                 : "/images/placeholder.png";
 
+              const productHref = item.product
+                ? buildProductHref(item.product.slug, item.product.categoryIds)
+                : "#";
+
               return (
                 <div
                   key={item.id}
@@ -349,7 +354,7 @@ export function CartView() {
                 >
                   {/* Product Thumbnail */}
                   <div className="relative aspect-[3/4] w-24 sm:w-32 bg-stone-50 overflow-hidden border border-sand/10 rounded-sm flex-shrink-0">
-                    <Link href={`/catalog/women/heeled-sandals/${item.product?.slug}`}>
+                    <Link href={productHref}>
                       <Image
                         src={resolvedImgSrc}
                         alt={item.product?.title || "Bespoke Sandal"}
@@ -361,11 +366,11 @@ export function CartView() {
                   </div>
 
                 {/* Product Meta & Adjustments */}
-                <div className="flex-grow flex flex-col justify-between min-h-[120px] sm:min-h-[160px]">
+                <div className="flex-grow flex flex-col justify-between min-h-[120px] sm:min-h-[160px] min-w-0">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start gap-4">
                       <h3 className="font-serif text-[14px] sm:text-[16px] tracking-wide text-charcoal font-bold uppercase truncate max-w-[80%] hover:text-gold transition-colors">
-                        <Link href={`/catalog/women/heeled-sandals/${item.product?.slug}`}>
+                        <Link href={productHref}>
                           {item.product?.title}
                         </Link>
                       </h3>
