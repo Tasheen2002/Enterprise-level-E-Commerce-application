@@ -1164,6 +1164,7 @@ export class Container {
             getTitle: () => dto.title,
             getSlug: () => ({ getValue: () => dto.slug }),
             getPrice: () => ({ getValue: () => dto.price }),
+            getCategoryIds: () => dto.categoryIds || [],
           };
         } catch {
           return null;
