@@ -14,11 +14,12 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { gender, category } = await params;
-  const title = `${category.replace(/-/g, " ")} | ${gender.toUpperCase()} | Slipperze`;
+  const cleanCategoryName = category.replace(/^(men-|women-)/g, "").replace(/-/g, " ");
+  const title = `${cleanCategoryName} | ${gender.toUpperCase()} | Slipperze`;
 
   return {
     title,
-    description: `Discover our artisanal selection of ${gender}'s ${category.replace(/-/g, " ")}. Hand-crafted heritage goods.`,
+    description: `Discover our artisanal selection of ${gender}'s ${cleanCategoryName}. Hand-crafted heritage goods.`,
   };
 }
 
@@ -26,8 +27,10 @@ export default async function CatalogCategoryPage({ params }: Props) {
   const { gender, category } = await params;
   
   // Logic to determine if we show subcategories or products
-  const subCategories = await getSubCategories(category);
+  const subCategories = await getSubCategories(category, gender);
   const isProductCategory = subCategories.length === 0;
+
+  const cleanCategoryName = category.replace(/^(men-|women-)/g, "").replace(/-/g, " ");
 
   return (
     <main className="min-h-screen bg-cream">
@@ -38,7 +41,7 @@ export default async function CatalogCategoryPage({ params }: Props) {
       {/* Iconic Title Section */}
       <div className="pt-0 pb-10 text-center">
         <h1 className="font-serif text-xl md:text-2xl uppercase tracking-[0.3em] text-charcoal/90">
-          {category.replace(/-/g, " ")}
+          {cleanCategoryName}
         </h1>
       </div>
 
@@ -46,21 +49,21 @@ export default async function CatalogCategoryPage({ params }: Props) {
       {isProductCategory ? (
         <ProductGallery category={category} />
       ) : (
-        <CategoryGallery category={category} />
+        <CategoryGallery category={category} gender={gender} />
       )}
 
       {/* Editorial Footer - Storytelling & Navigation */}
       <div className="pb-24 px-6 text-center max-w-4xl mx-auto space-y-8">
         <p className="text-[11px] sm:text-[12px] text-stone-500 max-w-2xl mx-auto leading-relaxed">
-          Discover our selection of {gender}&apos;s {category.replace(/-/g, " ")} made in Portugal and Spain.
-          Tote bags, shoulder bags, belts, wallets... In leather or suede, make your choice.
+          Discover our selection of {gender}&apos;s {cleanCategoryName} made in Portugal and Spain.
+          {category.includes("leather-goods") && " Tote bags, shoulder bags, belts, wallets... In leather or suede, make your choice."}
         </p>
 
         {/* Breadcrumbs */}
         <nav className="text-[9px] sm:text-[10px] uppercase tracking-[0.2em] text-stone-400">
           <Link href="/" className="hover:text-gold transition-colors">Collection</Link>
           <span className="mx-3 text-stone-300">/</span>
-          <span className="text-stone-600 font-bold">{category.replace(/-/g, " ")}</span>
+          <span className="text-stone-600 font-bold">{cleanCategoryName}</span>
         </nav>
       </div>
     </main>
