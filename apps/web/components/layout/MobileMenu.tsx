@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -111,6 +111,17 @@ export function MobileMenu({ isTransparent }: { isTransparent: boolean }) {
   const { wishlistItems } = useWishlist();
   const count = cart?.summary?.itemCount || 0;
   const wishlistCount = wishlistItems?.length || 0;
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
 
   const close = () => setMobileOpen(false);
 
