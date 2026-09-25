@@ -94,7 +94,7 @@ export function MarketingHeader({
             <div className="absolute left-1/2 top-1/2 lg:top-[40px] -translate-x-1/2 -translate-y-1/2">
               <Link href="/catalog?gender=women" aria-label="Slipperze Boutique">
                 <h1 className={cn(
-                  "font-serif text-2xl sm:text-3xl lg:text-5xl tracking-[0.15em] sm:tracking-[0.18em] leading-none transition-colors duration-500",
+                  "font-serif text-xl sm:text-3xl lg:text-5xl tracking-[0.12em] sm:tracking-[0.18em] leading-none transition-colors duration-500",
                   isTransparent ? "text-cream" : "text-charcoal"
                 )}>
                   slipperze
