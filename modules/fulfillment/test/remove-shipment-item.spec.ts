@@ -1,5 +1,9 @@
+import { CommandResult } from "../../../packages/core/src/application/cqrs";
 import { describe, it, expect, vi } from "vitest";
-import { RemoveShipmentItemCommandHandler, RemoveShipmentItemCommand, CommandResult } from "@modules/fulfillment/application/commands/remove-shipment-item.command";
+import {
+  RemoveShipmentItemCommandHandler,
+  RemoveShipmentItemCommand,
+} from "@modules/fulfillment/application/commands/remove-shipment-item.command";
 import { ShipmentService } from "@modules/fulfillment/application/services/shipment.service";
 import { Shipment } from "@modules/fulfillment/domain/entities/shipment.entity";
 

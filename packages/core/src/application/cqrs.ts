@@ -28,5 +28,5 @@ export interface IQueryHandler<TQuery extends IQuery, TResult = any> {
 // Result Types
 // ============================================
 
-export { CommandResult } from './command-result';
-export { QueryResult } from './query-result';
+export { CommandResult } from "./command-result";
+export { QueryResult } from "./query-result";

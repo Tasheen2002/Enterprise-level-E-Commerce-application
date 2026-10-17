@@ -1,31 +1,11 @@
+import {
+  type IQuery,
+  type IQueryHandler,
+  QueryResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { ReturnItemService } from "../services/return-item.service.js";
 
 // Base interfaces
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = void> {
-  handle(query: TQuery): Promise<TResult>;
-}
-
-export class QueryResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): QueryResult<T> {
-    return new QueryResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): QueryResult<T> {
-    return new QueryResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface GetReturnItemQuery extends IQuery {
   rmaId: string;
@@ -47,31 +27,22 @@ export interface ReturnItemDto {
 }
 
 export class GetReturnItemHandler
-  implements
-    IQueryHandler<GetReturnItemQuery, QueryResult<ReturnItemDto | null>>
+  implements IQueryHandler<GetReturnItemQuery, QueryResult<ReturnItemDto | null>>
 {
   constructor(private readonly returnItemService: ReturnItemService) {}
 
-  async handle(
-    query: GetReturnItemQuery
-  ): Promise<QueryResult<ReturnItemDto | null>> {
+  async handle(query: GetReturnItemQuery): Promise<QueryResult<ReturnItemDto | null>> {
     try {
       if (!query.rmaId) {
-        return QueryResult.failure<ReturnItemDto | null>("RMA ID is required", [
-          "rmaId",
-        ]);
+        return QueryResult.failure<ReturnItemDto | null>("RMA ID is required", ["rmaId"]);
       }
       if (!query.orderItemId) {
-        return QueryResult.failure<ReturnItemDto | null>(
-          "Order Item ID is required",
-          ["orderItemId"]
-        );
+        return QueryResult.failure<ReturnItemDto | null>("Order Item ID is required", [
+          "orderItemId",
+        ]);
       }
 
-      const item = await this.returnItemService.getItem(
-        query.rmaId,
-        query.orderItemId
-      );
+      const item = await this.returnItemService.getItem(query.rmaId, query.orderItemId);
       if (!item) {
         return QueryResult.success<ReturnItemDto | null>(null);
       }
@@ -86,13 +57,12 @@ export class GetReturnItemHandler
       return QueryResult.success<ReturnItemDto | null>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<ReturnItemDto | null>(
-          "Failed to get return item",
-          [error.message]
-        );
+        return QueryResult.failure<ReturnItemDto | null>("Failed to get return item", [
+          error.message,
+        ]);
       }
       return QueryResult.failure<ReturnItemDto | null>(
-        "An unexpected error occurred while getting return item"
+        "An unexpected error occurred while getting return item",
       );
     }
   }
@@ -104,14 +74,10 @@ export class GetReturnItemsHandler
 {
   constructor(private readonly returnItemService: ReturnItemService) {}
 
-  async handle(
-    query: GetReturnItemsQuery
-  ): Promise<QueryResult<ReturnItemDto[]>> {
+  async handle(query: GetReturnItemsQuery): Promise<QueryResult<ReturnItemDto[]>> {
     try {
       if (!query.rmaId) {
-        return QueryResult.failure<ReturnItemDto[]>("RMA ID is required", [
-          "rmaId",
-        ]);
+        return QueryResult.failure<ReturnItemDto[]>("RMA ID is required", ["rmaId"]);
       }
 
       const items = await this.returnItemService.getItemsByRmaId(query.rmaId);
@@ -128,13 +94,10 @@ export class GetReturnItemsHandler
       return QueryResult.success<ReturnItemDto[]>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<ReturnItemDto[]>(
-          "Failed to get return items",
-          [error.message]
-        );
+        return QueryResult.failure<ReturnItemDto[]>("Failed to get return items", [error.message]);
       }
       return QueryResult.failure<ReturnItemDto[]>(
-        "An unexpected error occurred while getting return items"
+        "An unexpected error occurred while getting return items",
       );
     }
   }

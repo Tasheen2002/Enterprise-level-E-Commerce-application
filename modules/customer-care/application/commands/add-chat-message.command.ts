@@ -1,31 +1,10 @@
+import {
+  type ICommand,
+  type ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { ChatMessageService } from "../services/chat-message.service.js";
 import { ChatSenderType } from "../../domain/value-objects/index.js";
-
-export interface ICommand {
-  readonly commandId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface ICommandHandler<TCommand extends ICommand, TResult = void> {
-  handle(command: TCommand): Promise<TResult>;
-}
-
-export class CommandResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): CommandResult<T> {
-    return new CommandResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): CommandResult<T> {
-    return new CommandResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface AddChatMessageCommand extends ICommand {
   sessionId: string;
@@ -49,37 +28,23 @@ export interface ChatMessageResult {
 }
 
 export class AddChatMessageHandler
-  implements
-    ICommandHandler<AddChatMessageCommand, CommandResult<ChatMessageResult>>
+  implements ICommandHandler<AddChatMessageCommand, CommandResult<ChatMessageResult>>
 {
   constructor(private readonly messageService: ChatMessageService) {}
 
-  async handle(
-    command: AddChatMessageCommand
-  ): Promise<CommandResult<ChatMessageResult>> {
+  async handle(command: AddChatMessageCommand): Promise<CommandResult<ChatMessageResult>> {
     try {
       if (!command.sessionId) {
-        return CommandResult.failure<ChatMessageResult>(
-          "Session ID is required",
-          ["sessionId"]
-        );
+        return CommandResult.failure<ChatMessageResult>("Session ID is required", ["sessionId"]);
       }
       if (!command.senderId) {
-        return CommandResult.failure<ChatMessageResult>(
-          "Sender ID is required",
-          ["senderId"]
-        );
+        return CommandResult.failure<ChatMessageResult>("Sender ID is required", ["senderId"]);
       }
       if (!command.senderType) {
-        return CommandResult.failure<ChatMessageResult>(
-          "Sender type is required",
-          ["senderType"]
-        );
+        return CommandResult.failure<ChatMessageResult>("Sender type is required", ["senderType"]);
       }
       if (!command.content || command.content.trim().length === 0) {
-        return CommandResult.failure<ChatMessageResult>("Content is required", [
-          "content",
-        ]);
+        return CommandResult.failure<ChatMessageResult>("Content is required", ["content"]);
       }
 
       const message = await this.messageService.createMessage({
@@ -106,14 +71,13 @@ export class AddChatMessageHandler
       return CommandResult.success<ChatMessageResult>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return CommandResult.failure<ChatMessageResult>(
-          "Failed to add chat message",
-          [error.message]
-        );
+        return CommandResult.failure<ChatMessageResult>("Failed to add chat message", [
+          error.message,
+        ]);
       }
 
       return CommandResult.failure<ChatMessageResult>(
-        "An unexpected error occurred while adding chat message"
+        "An unexpected error occurred while adding chat message",
       );
     }
   }

@@ -1,31 +1,11 @@
+import {
+  type IQuery,
+  type IQueryHandler,
+  QueryResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { CustomerFeedbackService } from "../services/customer-feedback.service.js";
 
 // Base interfaces
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = void> {
-  handle(query: TQuery): Promise<TResult>;
-}
-
-export class QueryResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): QueryResult<T> {
-    return new QueryResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): QueryResult<T> {
-    return new QueryResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface ListCustomerFeedbackQuery extends IQuery {}
 
@@ -41,16 +21,11 @@ export interface CustomerFeedbackDto {
 }
 
 export class ListCustomerFeedbackHandler
-  implements
-    IQueryHandler<ListCustomerFeedbackQuery, QueryResult<CustomerFeedbackDto[]>>
+  implements IQueryHandler<ListCustomerFeedbackQuery, QueryResult<CustomerFeedbackDto[]>>
 {
-  constructor(
-    private readonly customerFeedbackService: CustomerFeedbackService
-  ) {}
+  constructor(private readonly customerFeedbackService: CustomerFeedbackService) {}
 
-  async handle(
-    query: ListCustomerFeedbackQuery
-  ): Promise<QueryResult<CustomerFeedbackDto[]>> {
+  async handle(query: ListCustomerFeedbackQuery): Promise<QueryResult<CustomerFeedbackDto[]>> {
     try {
       const feedbacks = await this.customerFeedbackService.getAllFeedback();
       const result: CustomerFeedbackDto[] = feedbacks.map((feedback) => ({
@@ -66,13 +41,12 @@ export class ListCustomerFeedbackHandler
       return QueryResult.success<CustomerFeedbackDto[]>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<CustomerFeedbackDto[]>(
-          "Failed to list customer feedback",
-          [error.message]
-        );
+        return QueryResult.failure<CustomerFeedbackDto[]>("Failed to list customer feedback", [
+          error.message,
+        ]);
       }
       return QueryResult.failure<CustomerFeedbackDto[]>(
-        "An unexpected error occurred while listing customer feedback"
+        "An unexpected error occurred while listing customer feedback",
       );
     }
   }

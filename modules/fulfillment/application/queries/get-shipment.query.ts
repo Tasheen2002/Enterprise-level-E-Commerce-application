@@ -1,16 +1,12 @@
+import {
+  type IQuery,
+  type IQueryHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { ShipmentService } from "../services/shipment.service";
 import { Shipment } from "../../domain/entities/shipment.entity";
-import { CommandResult } from "../commands/create-shipment.command";
 
 // Query interfaces
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = any> {
-  handle(query: TQuery): Promise<TResult>;
-}
 
 export interface GetShipmentQuery extends IQuery {
   shipmentId: string;
@@ -40,9 +36,7 @@ export class GetShipmentQueryHandler
 {
   constructor(private readonly shipmentService: ShipmentService) {}
 
-  async handle(
-    query: GetShipmentQuery
-  ): Promise<CommandResult<ShipmentResult>> {
+  async handle(query: GetShipmentQuery): Promise<CommandResult<ShipmentResult>> {
     try {
       const errors: string[] = [];
 
@@ -83,7 +77,7 @@ export class GetShipmentQueryHandler
       return CommandResult.success(result);
     } catch (error) {
       return CommandResult.failure(
-        error instanceof Error ? error.message : "Unknown error occurred"
+        error instanceof Error ? error.message : "Unknown error occurred",
       );
     }
   }

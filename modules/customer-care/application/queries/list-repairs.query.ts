@@ -1,31 +1,11 @@
+import {
+  type IQuery,
+  type IQueryHandler,
+  QueryResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { RepairService } from "../services/repair.service.js";
 
 // Base interfaces
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = void> {
-  handle(query: TQuery): Promise<TResult>;
-}
-
-export class QueryResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): QueryResult<T> {
-    return new QueryResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): QueryResult<T> {
-    return new QueryResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface ListRepairsQuery extends IQuery {}
 
@@ -53,13 +33,9 @@ export class ListRepairsHandler
       return QueryResult.success<RepairDto[]>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<RepairDto[]>("Failed to list repairs", [
-          error.message,
-        ]);
+        return QueryResult.failure<RepairDto[]>("Failed to list repairs", [error.message]);
       }
-      return QueryResult.failure<RepairDto[]>(
-        "An unexpected error occurred while listing repairs"
-      );
+      return QueryResult.failure<RepairDto[]>("An unexpected error occurred while listing repairs");
     }
   }
 }

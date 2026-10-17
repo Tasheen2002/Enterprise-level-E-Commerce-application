@@ -1,5 +1,9 @@
+import { CommandResult } from "../../../packages/core/src/application/cqrs";
 import { describe, it, expect, vi } from "vitest";
-import { CloseTicketHandler, CloseTicketCommand, CommandResult } from "@modules/customer-care/application/commands/close-ticket.command";
+import {
+  CloseTicketHandler,
+  CloseTicketCommand,
+} from "@modules/customer-care/application/commands/close-ticket.command";
 import { SupportTicketService } from "@modules/customer-care/application/services/support-ticket.service";
 
 describe("CloseTicketHandler", () => {

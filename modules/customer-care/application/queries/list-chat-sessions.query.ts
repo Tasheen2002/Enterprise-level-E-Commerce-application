@@ -1,9 +1,9 @@
-import { ChatSessionService } from "../services/chat-session.service.js";
 import {
-  IQuery,
-  IQueryHandler,
+  type IQuery,
+  type IQueryHandler,
   QueryResult,
-} from "./get-support-ticket.query.js";
+} from "../../../../packages/core/src/application/cqrs";
+import { ChatSessionService } from "../services/chat-session.service.js";
 
 export interface ListChatSessionsQuery extends IQuery {}
 
@@ -23,9 +23,7 @@ export class ListChatSessionsHandler
 {
   constructor(private readonly chatSessionService: ChatSessionService) {}
 
-  async handle(
-    query: ListChatSessionsQuery
-  ): Promise<QueryResult<ChatSessionDto[]>> {
+  async handle(query: ListChatSessionsQuery): Promise<QueryResult<ChatSessionDto[]>> {
     try {
       const sessions = await this.chatSessionService.getAllSessions();
       const result: ChatSessionDto[] = sessions.map((session) => ({
@@ -41,13 +39,12 @@ export class ListChatSessionsHandler
       return QueryResult.success<ChatSessionDto[]>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<ChatSessionDto[]>(
-          "Failed to list chat sessions",
-          [error.message]
-        );
+        return QueryResult.failure<ChatSessionDto[]>("Failed to list chat sessions", [
+          error.message,
+        ]);
       }
       return QueryResult.failure<ChatSessionDto[]>(
-        "An unexpected error occurred while listing chat sessions"
+        "An unexpected error occurred while listing chat sessions",
       );
     }
   }

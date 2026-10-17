@@ -1,9 +1,9 @@
-import { GoodwillRecordService } from "../services/goodwill-record.service.js";
 import {
-  IQuery,
-  IQueryHandler,
+  type IQuery,
+  type IQueryHandler,
   QueryResult,
-} from "./get-support-ticket.query.js";
+} from "../../../../packages/core/src/application/cqrs";
+import { GoodwillRecordService } from "../services/goodwill-record.service.js";
 
 export interface GetGoodwillRecordQuery extends IQuery {
   goodwillId: string;
@@ -20,25 +20,19 @@ export interface GoodwillRecordDto {
 }
 
 export class GetGoodwillRecordHandler
-  implements
-    IQueryHandler<GetGoodwillRecordQuery, QueryResult<GoodwillRecordDto | null>>
+  implements IQueryHandler<GetGoodwillRecordQuery, QueryResult<GoodwillRecordDto | null>>
 {
   constructor(private readonly goodwillRecordService: GoodwillRecordService) {}
 
-  async handle(
-    query: GetGoodwillRecordQuery
-  ): Promise<QueryResult<GoodwillRecordDto | null>> {
+  async handle(query: GetGoodwillRecordQuery): Promise<QueryResult<GoodwillRecordDto | null>> {
     try {
       if (!query.goodwillId) {
-        return QueryResult.failure<GoodwillRecordDto | null>(
-          "Goodwill ID is required",
-          ["goodwillId"]
-        );
+        return QueryResult.failure<GoodwillRecordDto | null>("Goodwill ID is required", [
+          "goodwillId",
+        ]);
       }
 
-      const record = await this.goodwillRecordService.getRecord(
-        query.goodwillId
-      );
+      const record = await this.goodwillRecordService.getRecord(query.goodwillId);
       if (!record) {
         return QueryResult.success<GoodwillRecordDto | null>(null);
       }
@@ -54,13 +48,12 @@ export class GetGoodwillRecordHandler
       return QueryResult.success<GoodwillRecordDto | null>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<GoodwillRecordDto | null>(
-          "Failed to get goodwill record",
-          [error.message]
-        );
+        return QueryResult.failure<GoodwillRecordDto | null>("Failed to get goodwill record", [
+          error.message,
+        ]);
       }
       return QueryResult.failure<GoodwillRecordDto | null>(
-        "An unexpected error occurred while getting goodwill record"
+        "An unexpected error occurred while getting goodwill record",
       );
     }
   }

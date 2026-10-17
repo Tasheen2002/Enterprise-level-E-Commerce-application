@@ -1,9 +1,9 @@
-import { RepairService } from "../services/repair.service.js";
 import {
-  ICommand,
-  ICommandHandler,
+  type ICommand,
+  type ICommandHandler,
   CommandResult,
-} from "./add-return-item.command.js";
+} from "../../../../packages/core/src/application/cqrs";
+import { RepairService } from "../services/repair.service.js";
 
 export interface CreateRepairCommand extends ICommand {
   orderItemId: string;
@@ -22,15 +22,10 @@ export class CreateRepairHandler
 {
   constructor(private readonly repairService: RepairService) {}
 
-  async handle(
-    command: CreateRepairCommand
-  ): Promise<CommandResult<RepairResult>> {
+  async handle(command: CreateRepairCommand): Promise<CommandResult<RepairResult>> {
     try {
       if (!command.orderItemId) {
-        return CommandResult.failure<RepairResult>(
-          "Order Item ID is required",
-          ["orderItemId"]
-        );
+        return CommandResult.failure<RepairResult>("Order Item ID is required", ["orderItemId"]);
       }
 
       const repair = await this.repairService.createRepair({
@@ -48,12 +43,10 @@ export class CreateRepairHandler
       return CommandResult.success<RepairResult>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return CommandResult.failure<RepairResult>("Failed to create repair", [
-          error.message,
-        ]);
+        return CommandResult.failure<RepairResult>("Failed to create repair", [error.message]);
       }
       return CommandResult.failure<RepairResult>(
-        "An unexpected error occurred while creating repair"
+        "An unexpected error occurred while creating repair",
       );
     }
   }

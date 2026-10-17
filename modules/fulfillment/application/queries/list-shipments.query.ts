@@ -1,17 +1,14 @@
+import {
+  type IQuery,
+  type IQueryHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { ShipmentService } from "../services/shipment.service";
-import { CommandResult } from "../commands/create-shipment.command";
+
 import { ShipmentResult } from "./get-shipment.query";
 import { ShipmentStatus } from "../../domain/value-objects";
 
 // Query interfaces
-export interface IQuery {
-  readonly queryId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface IQueryHandler<TQuery extends IQuery, TResult = any> {
-  handle(query: TQuery): Promise<TResult>;
-}
 
 export interface ListShipmentsQuery extends IQuery {
   orderId?: string;
@@ -31,14 +28,11 @@ export interface ListShipmentsResult {
 }
 
 export class ListShipmentsQueryHandler
-  implements
-    IQueryHandler<ListShipmentsQuery, CommandResult<ListShipmentsResult>>
+  implements IQueryHandler<ListShipmentsQuery, CommandResult<ListShipmentsResult>>
 {
   constructor(private readonly shipmentService: ShipmentService) {}
 
-  async handle(
-    query: ListShipmentsQuery
-  ): Promise<CommandResult<ListShipmentsResult>> {
+  async handle(query: ListShipmentsQuery): Promise<CommandResult<ListShipmentsResult>> {
     try {
       const filters = {
         orderId: query.orderId,
@@ -53,10 +47,7 @@ export class ListShipmentsQueryHandler
         sortOrder: query.sortOrder || ("desc" as const),
       };
 
-      const { shipments, total } = await this.shipmentService.listShipments(
-        filters,
-        options
-      );
+      const { shipments, total } = await this.shipmentService.listShipments(filters, options);
 
       const result: ListShipmentsResult = {
         shipments: shipments.map((shipment) => ({
@@ -85,7 +76,7 @@ export class ListShipmentsQueryHandler
       return CommandResult.success(result);
     } catch (error) {
       return CommandResult.failure(
-        error instanceof Error ? error.message : "Unknown error occurred"
+        error instanceof Error ? error.message : "Unknown error occurred",
       );
     }
   }

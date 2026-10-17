@@ -1,7 +1,10 @@
+import { CommandResult } from "../../../packages/core/src/application/cqrs";
 import { describe, it, expect, vi } from "vitest";
-import { TrackBeginCheckoutHandler, TrackBeginCheckoutCommand } from "@modules/analytics/application/commands/track-begin-checkout.command";
+import {
+  TrackBeginCheckoutHandler,
+  TrackBeginCheckoutCommand,
+} from "@modules/analytics/application/commands/track-begin-checkout.command";
 import { AnalyticsTrackingService } from "@modules/analytics/application/services/analytics-tracking.service";
-import { CommandResult } from "@modules/analytics/application/commands/track-product-view.command";
 
 describe("TrackBeginCheckoutHandler", () => {
   it("should successfully track begin checkout using AnalyticsTrackingService", async () => {
