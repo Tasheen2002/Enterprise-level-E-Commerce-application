@@ -287,7 +287,7 @@ export function WishlistList() {
         </div>
       ) : (
         /* Grid List */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {items.map((item) => (
             <div
               key={item.wishlistItemId}
@@ -301,14 +301,14 @@ export function WishlistList() {
                     alt={item.name}
                     fill
                     className="object-cover transition-all duration-[2000ms] ease-editorial group-hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 30vw"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 30vw"
                   />
                 </Link>
               </div>
 
               {/* Product Meta */}
-              <div className="flex justify-between items-start pt-1">
-                <div className="space-y-1 max-w-[70%]">
+              <div className="flex justify-between items-start pt-1 gap-2">
+                <div className="space-y-1 flex-1 min-w-0">
                   <h3 className="font-serif text-[13px] tracking-[0.2em] text-charcoal uppercase font-bold truncate">
                     <Link href={item.href} className="hover:text-gold transition-colors">
                       {item.name}

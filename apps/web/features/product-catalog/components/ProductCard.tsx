@@ -164,9 +164,9 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* Product Info */}
-      <div className="flex justify-between items-start pt-1">
-        <div className="space-y-1">
-          <h3 className="font-serif text-[13px] tracking-[0.2em] text-charcoal uppercase font-bold">
+      <div className="flex justify-between items-start pt-1 gap-2">
+        <div className="space-y-1 flex-1 min-w-0">
+          <h3 className="font-serif text-[13px] tracking-[0.2em] text-charcoal uppercase font-bold truncate">
             <Link href={product.href} className="hover:text-gold transition-colors">
               {product.name}
             </Link>

@@ -91,7 +91,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   /**
    * Fetch and enrich all items from the active wishlist.
    */
-  const getWishlistItems = useCallback(async (): Promise<WishlistProduct[]> => {
+  const getWishlistItems = useCallback(async (retryCount = 0): Promise<WishlistProduct[]> => {
     setIsLoading(true);
     try {
       const guestToken = getOrCreateGuestToken();
@@ -160,6 +160,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return validItems;
     } catch (err: any) {
       console.error("Failed to load wishlist items:", err);
+      const is404 = err instanceof ApiCallError && err.statusCode === 404;
+      const isNotFoundMsg = err?.message?.toLowerCase().includes("not found");
+      if ((is404 || isNotFoundMsg) && retryCount === 0) {
+        console.warn("Wishlist not found. Clearing cached wishlist ID and retrying...");
+        localStorage.removeItem("ts_wishlist_id");
+        return getWishlistItems(1);
+      }
       return [];
     } finally {
       setIsLoading(false);

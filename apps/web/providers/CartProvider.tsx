@@ -33,6 +33,7 @@ export interface CartProduct {
   title: string;
   slug: string;
   images?: CartProductImage[];
+  categoryIds?: string[];
 }
 
 export interface CartVariant {
