@@ -1,7 +1,7 @@
 -- ============================================================================
 -- CRITICAL PERFORMANCE INDEXES FOR E-COMMERCE PLATFORM
 -- ============================================================================
--- Execute this SQL script after reviewing the DATABASE_INDEX_STRATEGY.md
+-- Historical index proposals: review current queries/indexes under docs/reviews/backend-audit-plan.md (P02) before execution.
 -- Or add these as @@index[] directives in your Prisma schema.prisma file
 -- ============================================================================
 

@@ -32,3 +32,6 @@ Thumbs.db
 
 # Turborepo
 .turbo
+
+# Generated local inspection export
+scratch/loyalty-data.txt

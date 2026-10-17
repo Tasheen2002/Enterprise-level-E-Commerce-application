@@ -1,6 +1,6 @@
 # Slipperze: Enterprise-Level E-Commerce Monorepo
 
-Slipperze is a production-grade, enterprise-scale e-commerce platform built using Clean Architecture and Domain-Driven Design (DDD) principles. The codebase is organized as a monorepo containing frontend applications, administrative dashboards, shared core packages, and a modular backend server.
+Slipperze is a personal e-commerce project built using Clean Architecture and Domain-Driven Design (DDD) patterns. The monorepo contains a storefront, an administration portal, shared packages, and a modular backend server. Backend verification is in progress; production readiness has not been established. See the [backend audit plan](docs/reviews/backend-audit-plan.md) and [current review status](docs/reviews/backend-audit-plan.md#11-current-review-status-and-retained-evidence).
 
 ---
 
@@ -52,8 +52,8 @@ tasheen-monorepo/
 ## 3. Core Modules & Business Domain Rules
 
 - **User Management:** Secure token-based session auth, role-based access control (Admin, Staff, Customer), Google OAuth, and optional Two-Factor Authentication (2FA).
-- **Product Catalog:** Advanced categorization tree, attribute variations, full-text catalog search, and scheduled future publications.
-- **Cart Holds:** Elegant shopping cart reservation system enforcing a 15-minute hold timer. Holds block other customers from reserving the same stock, releasing inventory automatically if reservations expire without checkout.
+- **Product Catalog:** Category hierarchies, variants, substring-based catalog search, and publication scheduling code.
+- **Cart Holds:** Time-limited cart reservations and checkout expiry. Duration, release behavior and concurrent stock allocation remain subject to the cart and inventory reviews.
 - **Order Management:** Coordinates orders, pre-order queues (converting to active orders on releases), back-orders, and shipment creation (integrated with shipping carrier adapters like FedEx).
 - **Payment & Promotion:** Stripe webhook integrations authorizing and capturing payments, custom gift card balance redemptions, and active promotion code discount bounds.
 - **Loyalty Program:** Automatically awards signup bonuses, tracks purchase multipliers based on loyalty tiers (Style Lover, Fashion Fan, Style Insider, VIP Stylist), processes redemptions, and manages admin points adjustments.
@@ -65,7 +65,7 @@ tasheen-monorepo/
 
 ### Prerequisites
 - Node.js (v20 or higher)
-- `pnpm` installed globally: `npm install -g pnpm`
+- `pnpm` 9.12.0, as pinned by `packageManager` in the root manifest.
 - Docker & Docker Compose (optional, for containerized local environments)
 
 ### Local Installation & Setup
@@ -86,18 +86,19 @@ tasheen-monorepo/
    pnpm install --frozen-lockfile
    ```
 
-4. **Initialize the Database:**
-   Deploy the schemas and push migrations to your local PostgreSQL instance:
+4. **Initialize a disposable local development database:**
+   Confirm `DATABASE_URL` points to the intended local development database before synchronizing the schema:
    ```bash
    npx prisma db push
    ```
+   This synchronizes the Prisma schema; it does not apply or verify migration history. Migration deployment and replay are separate checks in audit phase P02. Do not use the scripts in `scratch/` as installation or test setup; several contain hardcoded database destinations and destructive operations.
 
 5. **Start Local Development Servers:**
-   To run the API, storefront, and admin portal concurrently in development watch modes:
+   Start the storefront and admin portal through workspace development tasks:
    ```bash
    pnpm run dev
    ```
-   Or start the API server individually:
+   Start the API separately in another terminal (`apps/api` has no workspace package manifest, so Turbo does not start it):
    ```bash
    pnpm run dev:api
    ```
@@ -108,27 +109,35 @@ tasheen-monorepo/
 
 The test suites are divided into Unit, Database Integration, and Fastify HTTP E2E tests.
 
-### Running all tests
-Execute Vitest globally across all backend modules:
+### Running unit tests
+The default command excludes the integration and E2E test directories:
 ```bash
 pnpm run test
 ```
 
 ### Running a specific module's tests
-For isolated development feedback, target a specific module's test directory:
+For isolated unit feedback, target a module's unit directory:
 ```bash
-npx vitest run modules/loyalty/test/
+npx vitest run modules/loyalty/test/unit/
 ```
 
 ### Testing Constraints & Isolation
-- Database integration and E2E tests run on a clean database. The global [vitest.setup.ts](file:///C:/Users/TASHEEN/Desktop/Projects/Enterprise-level-E-Commerce-application/vitest.setup.ts) hook truncates all schema tables before each test suite executes.
+- Database integration and E2E tests require `TEST_DATABASE_URL`, `ALLOW_DATABASE_TEST_CLEANUP=1`, and an allowed test database name and host. The global [vitest.setup.ts](vitest.setup.ts) hook truncates tables in its allowlisted application schemas before each database test. Cleanup is destructive; use a dedicated disposable database. See [test environment evidence](docs/reviews/backend-audit-plan.md#11-current-review-status-and-retained-evidence) before running `pnpm run test:vitest` (the full suite).
 - Ensure that integration tests seed any parent model dependencies (e.g., creating a `User` record) inside local `beforeEach` blocks before saving child aggregates.
+
+### Dependency and verification policy
+
+Use pnpm and `pnpm-lock.yaml` for installs and dependency changes. The stale `package-lock.json` has been removed. Do not create another lockfile with npm; use pnpm for dependency changes.
+
+`pnpm run type-check` runs backend, tooling/test-infrastructure and workspace compiler tasks. `pnpm run lint` runs backend, tooling/utility and available workspace lint tasks. `pnpm run format:check` checks selected shared foundation directories plus reviewed tooling, test infrastructure and updated utilities; it is not repository-wide. A passing command does not establish complete backend verification; see [file-level check scope](docs/reviews/p00-check-scope.json).
+
+The reviewed clear/create/drop/admin/catalog seed utilities in `scratch/` now operate only on an explicitly selected disposable test database. They require `NODE_ENV=test`, `TEST_DATABASE_URL`, `ALLOW_DATABASE_TEST_CLEANUP=1` and `ALLOW_OPERATIONAL_DATABASE_WRITES=1`; create/drop additionally require `TEST_DATABASE_ADMIN_URL` for the same server's `postgres` maintenance database. The admin seed requires `TEST_ADMIN_EMAIL` and `TEST_ADMIN_PASSWORD` (at least 12 characters) and refuses an existing email. These variables must be set explicitly; the utilities do not automatically load the ignored audit environment. The two restock probes create isolated fixtures and roll them back or remove them; dispatcher verification blocks email and checks simulated state only. Other scratch utilities remain under review. See [operational verification and limitations](docs/reviews/backend-audit-plan.md#11-current-review-status-and-retained-evidence).
 
 ---
 
 ## 6. Docker & CI/CD Pipeline
 
-- **Production Docker container:** Build the lightweight, multi-stage Docker image locally:
+- **API Docker container:** The multi-stage image currently copies dependencies and TypeScript sources and runs the API with `tsx`; a compiled, pruned runtime and production container behavior have not been verified. Build locally with:
   ```bash
   docker build -f apps/api/Dockerfile -t slipperze-api:latest .
   ```
@@ -136,4 +145,4 @@ npx vitest run modules/loyalty/test/
   ```bash
   docker compose up --build
   ```
-- **CI/CD Pipeline:** The automated GitHub Actions workflow [.github/workflows/ci-cd.yml](file:///C:/Users/TASHEEN/Desktop/Projects/Enterprise-level-E-Commerce-application/.github/workflows/ci-cd.yml) runs on every push and pull request to `main` and `develop` branches. It validates the code via ESLint, runs compile-time TypeScript checks across all workspace projects, applies migrations, executes Vitest test runs against a PostgreSQL service container, and packages and pushes verified images to the GitHub Container Registry on success.
+- **CI/CD Pipeline:** The [workflow](.github/workflows/ci-cd.yml) is configured for all branch pushes and pull requests targeting `main` or `develop`. It runs lint, selected formatting, type checks, schema synchronization with `db push`, tests and unit coverage. The image publish job is limited to pushes to `main` after the validation job succeeds. This describes configuration; a successful hosted run, migration replay and deployed behavior remain unverified in the current audit.
