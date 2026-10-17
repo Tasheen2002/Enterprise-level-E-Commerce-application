@@ -5,7 +5,7 @@ import helmet from "@fastify/helmet";
 
 const securityPlugin: FastifyPluginAsync = async (fastify) => {
   await fastify.register(cors, {
-    origin: process.env.FRONTEND_URL?.split(",") || [
+    origin: fastify.config?.FRONTEND_URL.split(",") || [
       "http://localhost:3000",
       "http://localhost:3001",
       "http://localhost:3002",

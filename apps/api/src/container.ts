@@ -641,6 +641,7 @@ export class Container {
     config: {
       jwtSecret: string;
       jwtExpiresIn: string;
+      fedex?: import('../../../modules/order-management/infra/shipping/fedex-shipping.service').FedExConfig;
       firebaseAdmin?: {
         projectId: string;
         clientEmail: string;
@@ -1337,12 +1338,7 @@ export class Container {
     };
 
     const orderEventService = new OrderEventService(orderEventRepository);
-    const fedexShippingService = new FedExShippingService({
-      apiKey: process.env.FEDEX_API_KEY ?? "l747befc81f4f94ab285631a2148503751",
-      secretKey: process.env.FEDEX_SECRET_KEY ?? "512d30a91889472fb4d3335c06b96f03",
-      accountNumber: process.env.FEDEX_ACCOUNT_NUMBER ?? "740561073",
-      baseUrl: process.env.FEDEX_URL ?? "https://apis-sandbox.fedex.com",
-    });
+    const fedexShippingService = config.fedex ? new FedExShippingService(config.fedex) : undefined;
 
     const orderManagementService = new OrderManagementService(
       orderRepository,

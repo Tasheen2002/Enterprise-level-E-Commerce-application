@@ -689,8 +689,11 @@ export class OrderManagementService {
 
     let finalTrackingNumber = data.trackingNumber;
     let finalCarrier = data.carrier;
-    let finalService = data.service;
+    const finalService = data.service;
 
+    if (data.carrier.toUpperCase().includes('FEDEX') && !this.fedexShippingService) {
+      throw Object.assign(new Error('Shipping provider is not configured'), { statusCode: 503 });
+    }
     if (data.carrier.toUpperCase().includes("FEDEX") && this.fedexShippingService) {
       try {
         const order = await this.requireOrder(data.orderId);
