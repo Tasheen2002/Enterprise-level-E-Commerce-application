@@ -1,0 +1,61 @@
+{
+  "date": "2026-10-17",
+  "mode": "Current CLI refusal before client construction",
+  "sourceCommit": "working-tree",
+  "results": [
+    {
+      "script": "scratch/clear-database.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/create-test-db.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/drop-test-db.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/seed-admin.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/seed-development-db.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-wallets.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/verify-cart-inventory-check.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/verify-restock-reminder.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/verify-restock-dispatcher.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    }
+  ]
+}

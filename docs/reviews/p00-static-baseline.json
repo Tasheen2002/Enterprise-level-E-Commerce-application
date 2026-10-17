@@ -1,0 +1,40 @@
+{
+  "source_commit": "161dcd13b32ada7aab76f2f73c40cb45cbce6e04",
+  "static_route_declarations": 427,
+  "route_areas": {
+    "api-host": 2,
+    "analytics": 6,
+    "cart": 41,
+    "customer-care": 38,
+    "engagement": 38,
+    "fulfillment": 12,
+    "inventory-management": 50,
+    "loyalty": 7,
+    "order-management": 47,
+    "payment": 23,
+    "product-catalog": 116,
+    "user-management": 45,
+    "apps/web": 2
+  },
+  "route_registration_candidates": {
+    "declared-under-registered-module": 364,
+    "unregistered-or-needs-tracing": 56,
+    "conditional-stripe-config": 5,
+    "next-filesystem-route": 2
+  },
+  "test_files": 96,
+  "test_type_candidates": {
+    "in-process-http-candidate": 3,
+    "mocked-unit-candidate": 35,
+    "database-backed-http-candidate": 12,
+    "database-repository-candidate": 17,
+    "unit-candidate": 29
+  },
+  "default_unit_files": 65,
+  "direct_database_files": 29,
+  "database_files_without_current_setup_guard": [],
+  "routes_without_literal_http_test_candidate": 383,
+  "route_options_requiring_inheritance_trace": 427,
+  "semantic_files_closed": 0,
+  "limitations": "Static candidates only. Parameterized/dynamic URLs, inherited plugin hooks, conditional registration, controller authorization, transitive test imports and actual route mounting require runtime/manual reconciliation. Test declarations/assertions are not actual executed test-case counts. No endpoint is marked fully tested from a string/import match."
+}

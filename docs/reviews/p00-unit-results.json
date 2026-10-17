@@ -1,0 +1,1923 @@
+{
+  "date": "2026-10-17",
+  "passed_tests": 381,
+  "failed_tests": 0,
+  "passed_files": 65,
+  "coverage_scope": "Latest full unit run without broad coverage; most recent broad measurement is the earlier 367-test run; operational helpers measured separately",
+  "results": [
+    {
+      "file": "modules/analytics/test/track-begin-checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "TrackBeginCheckoutHandler should successfully track begin checkout using AnalyticsTrackingService",
+          "status": "passed"
+        },
+        {
+          "title": "TrackBeginCheckoutHandler should fail silently and return success: true even if service throws error",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/customer-care/test/close-ticket.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CloseTicketHandler should successfully close a ticket using SupportTicketService",
+          "status": "passed"
+        },
+        {
+          "title": "CloseTicketHandler should fail validation if ticketId is missing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/fulfillment/test/remove-shipment-item.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RemoveShipmentItemCommandHandler should successfully remove an item from a shipment",
+          "status": "passed"
+        },
+        {
+          "title": "RemoveShipmentItemCommandHandler should fail validation if fields are empty",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/auth-boundary.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "access authentication boundary persists logout revocation using the signed access session",
+          "status": "passed"
+        },
+        {
+          "title": "access authentication boundary builds email links from the primary configured frontend origin",
+          "status": "passed"
+        },
+        {
+          "title": "access authentication boundary rejects wrong token kinds, malformed claims and blacklisted tokens",
+          "status": "passed"
+        },
+        {
+          "title": "access authentication boundary checks persisted session state for every protected application request",
+          "status": "passed"
+        },
+        {
+          "title": "database cleanup safety requires an explicit dedicated test URL and destructive cleanup opt-in",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/database-test-safety.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "database test classification before client imports guards database suite modules/cart/test/integration/repository.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports guards database suite modules/cart/test/e2e/checkout.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports guards database suite C:\\project\\modules\\cart\\test\\integration\\repository.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports guards database suite C:\\project\\modules\\cart\\test\\E2E\\checkout.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports guards database suite modules/cart/test/repository.integration.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports guards database suite modules/cart/test/checkout.e2e.test.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports does not treat a unit helper path as a database suite: undefined",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports does not treat a unit helper path as a database suite: ",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports does not treat a unit helper path as a database suite: modules/cart/test/unit/repository.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports does not treat a unit helper path as a database suite: modules/cart/test/integration-helper.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "database test classification before client imports does not treat a unit helper path as a database suite: modules/cart/test/unit/e2e-helper.spec.ts",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy accepts an explicitly enabled local test destination: postgres://test:test@127.0.0.1/example_test",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy accepts an explicitly enabled local test destination: postgresql://test:test@[::1]/example_test",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy accepts an explicitly enabled local test destination: postgresql://test:test@localhost/example_test_worker1",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy requires an exact explicit host match for a nonlocal test database",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy rejects an unsafe or unusable destination",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy rejects an unsafe or unusable destination",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy rejects an unsafe or unusable destination",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy rejects an unsafe or unusable destination",
+          "status": "passed"
+        },
+        {
+          "title": "isolated database destination policy rejects an unsafe or unusable destination",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/operational-database-safety.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "legacy operational database boundaries accepts only the explicitly selected disposable test destination",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects absent opt-in, production and unsafe destinations before construction",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries requires separate maintenance credentials on exactly the same server",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects ambiguous or mismatched maintenance destinations",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries treats omitted and explicit default PostgreSQL ports alike",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects names unsuitable for a PostgreSQL identifier",
+          "status": "passed"
+        },
+        {
+          "title": "legacy operational database boundaries rejects names unsuitable for a PostgreSQL identifier",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/restock-probes.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "isolated restock operational probes rolls reminder fixtures back and verifies they are absent",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes propagates insert failures instead of treating them as expected rollback",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects invalid persisted reminder state",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects invalid persisted reminder state",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects invalid persisted reminder state",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects an incorrect isolated count",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects rollback that leaves a fixture",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes rejects rollback that leaves a product",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes attempts scoped cleanup when fixture insertion fails",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes awaits the subscriber and removes only its own fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes cleans fixtures when publishing fails",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes cleans fixtures when the subscriber leaves the reminder pending",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes reports cleanup failures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated restock operational probes preserves both subscriber and cleanup failures",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/shared-foundation.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "rate limit boundaries shares an explicit global policy across encapsulated modules",
+          "status": "passed"
+        },
+        {
+          "title": "rate limit boundaries ignores spoofed forwarding headers and isolates policies and server instances",
+          "status": "passed"
+        },
+        {
+          "title": "rate limit boundaries resolves verified user identity before an early user limiter",
+          "status": "passed"
+        },
+        {
+          "title": "rate limit boundaries expires quotas without a background timer and rejects invalid policies",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract redacts failures with an explicitly invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract does not expose command field errors for server failures",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract redacts unexpected production errors through both response paths",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 400",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 401",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 403",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 404",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 409",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract preserves a command failure status 500",
+          "status": "passed"
+        },
+        {
+          "title": "HTTP error contract retains structured field errors through Fastify response serialization",
+          "status": "passed"
+        },
+        {
+          "title": "shared contracts uses exactly one profile schema with valid dates, locale and avatar/default fields",
+          "status": "passed"
+        },
+        {
+          "title": "shared contracts rejects invalid startup values without terminating the process",
+          "status": "passed"
+        },
+        {
+          "title": "shared contracts retains compatibility for query field errors while using canonical results",
+          "status": "passed"
+        },
+        {
+          "title": "shared contracts normalizes UUID spelling and separates different semantic ID types",
+          "status": "passed"
+        },
+        {
+          "title": "shared contracts does not repeat successful subscribers when retrying a failed event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/api-client/test/unit/index.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "authenticated API client retries shares a refresh operation and retries each concurrent request once",
+          "status": "passed"
+        },
+        {
+          "title": "authenticated API client retries keeps network failures visible and permits subsequent requests",
+          "status": "passed"
+        },
+        {
+          "title": "authenticated API client retries returns an unauthorized response when refresh fails",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToCartHandler should successfully add item to cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/clear-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ClearCartHandler should successfully clear the cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/create-reservation.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateReservationHandler should successfully create a reservation using ReservationService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/initialize-checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "InitializeCheckoutHandler should successfully initialize checkout using CheckoutService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/applied-promos.vo.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AppliedPromos Value Object should create empty promos collection",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should create promos collection with unique promos",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should silently de-duplicate promos by ID upon creation, keeping the first seen",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should throw validation errors on invalid promo schema",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should support serialization to and from JSON string",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should throw on malformed JSON parsing",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should calculate correct percentage and fixed discounts",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should support adding a new promo",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should throw when adding an already applied promo",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should support removing an applied promo",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should throw when removing a promo that is not applied",
+          "status": "passed"
+        },
+        {
+          "title": "AppliedPromos Value Object should support clearing all promos",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/cart-item.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CartItem Entity should create a CartItem successfully",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should throw validation error if unit price is negative",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should throw validation error if gift item is created without a message",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should support incrementing and decrementing quantity",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should support marking/unmarking as gift with messages",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should throw error if updating gift message on a non-gift item",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should calculate correct discounts with percentage and fixed promos",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should cap total discount at the subtotal amount",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should support adding/removing promos dynamically",
+          "status": "passed"
+        },
+        {
+          "title": "CartItem Entity should correctly support snapshots and DTO conversions",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Checkout Aggregate Root should create a Checkout successfully for a user",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should create a Checkout successfully for a guest",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should throw validation error if ownership is invalid",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should throw validation error if total amount is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should support updating total amount",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should complete checkout successfully and block subsequent changes",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should support cancelling checkout",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should support expiring checkout",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should support guest-to-user checkout transfer",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should throw error when transferring a checkout that already has a user",
+          "status": "passed"
+        },
+        {
+          "title": "Checkout Aggregate Root should correctly serialize snapshots and DTOs",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/quantity.vo.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Quantity Value Object should create a valid quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should throw validation error if quantity is not an integer",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should throw validation error if quantity is less than minimum",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should throw validation error if quantity exceeds maximum",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should support equality comparison",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should support arithmetic operations",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should throw validation error when multiplying by negative or non-integer value",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should support relational comparisons",
+          "status": "passed"
+        },
+        {
+          "title": "Quantity Value Object should provide factory methods for min and max bounds",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/reservation.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Reservation Aggregate Root should create a Reservation successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should support custom reservation durations",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should throw validation error if quantity is less than 1",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should support updating and incrementing/decrementing quantities",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should evaluate expiration state correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should support extending a reservation",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should support renewing a reservation and cap duration",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should evaluate detailed status checks correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Reservation Aggregate Root should evaluate cover capability and target matches",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/shopping-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ShoppingCart Aggregate Root Creation Invariants should successfully create a user cart",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Creation Invariants should successfully create a guest cart",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Creation Invariants should throw validation error if ownership is invalid",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should support adding a new item to the cart",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should combine quantities when adding an existing item",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should support updating item quantity",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should throw error when updating quantity for an item not in cart",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should support removing an item",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Item Management should support clearing all items",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Calculations, Shipping, and Gifts should calculate correct totals with discount promos",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Calculations, Shipping, and Gifts should evaluate free shipping status",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Calculations, Shipping, and Gifts should identify gift items",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Pre-checkout and Address mutations should support email updates",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Pre-checkout and Address mutations should support shipping info updates",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Pre-checkout and Address mutations should support patch-style address updates",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Guest-to-User Transfer and Cart Merging should transfer ownership from guest to user successfully",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Guest-to-User Transfer and Cart Merging should throw error if attempting to transfer an already user cart",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Guest-to-User Transfer and Cart Merging should merge items into a user cart correctly",
+          "status": "passed"
+        },
+        {
+          "title": "ShoppingCart Aggregate Root Guest-to-User Transfer and Cart Merging should throw error if attempting to merge into a guest cart",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Simple Value Objects CartId should create a CartId with a valid UUID",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CartId should reconstruct from string",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CartId should check equality",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CartOwnerId should create from user ID string",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CartOwnerId should check equality",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CartOwnerId should throw error on invalid UUID format",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CheckoutId should create and reconstruct CheckoutId",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects ReservationId should create and reconstruct ReservationId",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects GuestToken should generate a valid guest token",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects GuestToken should parse and validate custom guest prefix tokens",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects GuestToken should throw on invalid guest token formats",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects GuestToken should mask tokens for display",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CheckoutStatus should create from string",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CheckoutStatus should throw on invalid checkout status",
+          "status": "passed"
+        },
+        {
+          "title": "Simple Value Objects CheckoutStatus should support equality comparison",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToWishlistHandler should successfully add an item to wishlist using WishlistManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/create-product-review.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateProductReviewHandler should successfully create a product review using ProductReviewService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/delete-reminder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteReminderHandler should successfully delete a reminder using ReminderManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SubscribeNewsletterHandler should successfully subscribe email to newsletter using NewsletterService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Appointment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Appointment Aggregate Root should successfully create an appointment and emit AppointmentCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is equal or after end time",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is in the past",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if user ID is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support rescheduling and emit AppointmentRescheduledEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support cancelling and emit AppointmentCancelledEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support updating notes and location",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should compute duration and check upcoming/past/ongoing states correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should detect overlapping conflicts between appointments",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/NewsletterSubscription.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "NewsletterSubscription Aggregate Root should successfully create an active newsletter subscription and emit SubscriptionCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for empty email",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for invalid email formats",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should support status transitions: unsubscribe, bounce, spam, activate",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Notification.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Notification Aggregate Root should successfully create a pending notification and emit NotificationCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should successfully create a scheduled notification when scheduledAt is set in the future",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should throw DomainValidationError if scheduledAt is in the past",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support updating payload",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support scheduling a notification in the future",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support status transitions: sending, sent, failed",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support retry on failed notifications",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should compute isDue correctly",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/ProductReview.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ProductReview Aggregate Root should successfully create a pending review and emit ReviewSubmittedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw DomainValidationError if productId is empty",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw DomainValidationError if userId is empty",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support updating rating, title, and body while pending",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support moderation states (approve, reject, flag) and emit ReviewStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw ReviewNotEditableError if editing a review that is not pending",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support helper methods for rating checks",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Reminder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Reminder Aggregate Root should successfully create a reminder and emit ReminderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw DomainValidationError if variant ID is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support optIn status change",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support markAsSent and emit ReminderStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw InvalidOperationError if marking a non-pending reminder as sent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support unsubscribe and emit ReminderStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw InvalidOperationError if unsubscribing an already unsubscribed reminder",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support checking reminder types",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Wishlist.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Wishlist Aggregate Root should successfully create a user wishlist and emit WishlistCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should successfully create a guest wishlist",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should throw DomainValidationError if neither user nor guest ownership is specified",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should throw DomainValidationError if both user and guest ownership are specified simultaneously",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support updating name and description",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support default and publicity state mutations",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should transfer wishlist ownership from guest to user and emit WishlistOwnershipTransferredEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support adding, removing and clearing items",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
+          "status": "passed"
+        },
+        {
+          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LoyaltyAccount Aggregate Root should successfully create a new loyalty account with default values",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should accrue points and recalculate tier when earning points",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should upgrade tier automatically when points threshold is crossed",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should redeem points and decrement current balance",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should throw InsufficientPointsError when redeeming more points than available",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should adjust points (addition and subtraction)",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should expire points (resetting balance to 0 if expiring more than balance)",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should convert correctly to DTO",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/loyalty-program.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LoyaltyProgram Aggregate Root should successfully create a new loyalty program",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError if name is empty or whitespaces",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should successfully update properties and emit LoyaltyProgramUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError when updating to an empty name",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should correctly calculate points for purchases based on earn rules",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should return the correct tier config for points",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should convert correctly to DTO",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Loyalty Value Objects Points Value Object should successfully create points from non-negative integers",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should create points from integer strings",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with negative number",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with a float",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when parsing an invalid string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly add points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly subtract points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InsufficientPointsError when subtracting more points than available",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly compare points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should support toString conversion",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should have a default tier of STYLE_LOVER",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should calculate correct tier based on lifetime points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should calculate next tier correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should return correct multipliers and required points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should create from valid strings",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should throw InvalidFormatError when creating from invalid string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should create correct instances from reason string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should identify correct reason via helper methods",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should throw InvalidFormatError when creating with invalid reason",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should update order item quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support marking as notified only after release date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should support correct transitions",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support cancelling gift card",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should handle expiration correctly",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should validate link to order",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support failing payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should check equality correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should handle comparison operators",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should update product title successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/change-email.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ChangeEmailHandler should change user email using AuthenticationService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/change-password.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ChangePasswordHandler should successfully change a password using AuthenticationService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/login-user.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LoginUserHandler should successfully log in a user and clear failed attempts",
+          "status": "passed"
+        },
+        {
+          "title": "LoginUserHandler should fail immediately if the account is locked",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/logout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LogoutHandler should successfully log out a user and blacklist tokens",
+          "status": "passed"
+        },
+        {
+          "title": "LogoutHandler should log out successfully without blacklisting if no tokens are provided",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/register-user.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RegisterUserHandler should successfully register a user and trigger email verification",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/reset-password.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ResetPasswordHandler should successfully reset password when token is valid",
+          "status": "passed"
+        },
+        {
+          "title": "ResetPasswordHandler should throw DomainValidationError when token is invalid or expired",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/update-profile.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "UpdateProfileHandler should successfully update user profile details using UserProfileService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/application/verify-email.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "VerifyEmailHandler should successfully verify email when verification token is valid",
+          "status": "passed"
+        },
+        {
+          "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "User Aggregate Root should create a standard customer user successfully",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if names exceed max length",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should not record email changed event if email is the same",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

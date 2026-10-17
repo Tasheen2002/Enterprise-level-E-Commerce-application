@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-17",
+  "authoritative_install_evidence": [
+    "packageManager=pnpm@9.12.0",
+    "CI pnpm install --frozen-lockfile",
+    "pnpm-workspace.yaml present"
+  ],
+  "pnpm_frozen_offline_validation": "passed; no dependency upgrades",
+  "npm_manifest_mismatches": {
+    "dependencies": [
+      "firebase-admin",
+      "nodemailer"
+    ],
+    "devDependencies": [
+      "@types/nodemailer",
+      "@typescript-eslint/eslint-plugin",
+      "@typescript-eslint/parser",
+      "@vitest/coverage-v8",
+      "eslint",
+      "prettier",
+      "turbo",
+      "vite-tsconfig-paths",
+      "vitest"
+    ]
+  },
+  "action": "stale package-lock.json removed; pnpm-only policy documented; no dependency upgrades",
+  "post_removal_pnpm_frozen_offline_validation": "passed, 17 October 2026"
+}

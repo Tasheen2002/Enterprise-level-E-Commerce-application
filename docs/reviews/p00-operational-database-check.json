@@ -1,0 +1,31 @@
+{
+  "date": "2026-10-17",
+  "container": "slipperze-audit-p00-postgres",
+  "results": {
+    "createAndExisting": "passed",
+    "schemaSynchronization": "passed; migration history not replayed",
+    "restockWithoutExistingCatalog": "passed; persistence rollback and simulated subscriber cleanup leave no fixtures; SMTP blocked",
+    "seedAndMediaMetadata": "passed; 28 products, 24 categories, 97 variants",
+    "failedSeedRollback": "passed; original product identities and variant count preserved",
+    "restockInsertFailureRollback": "passed; both CLIs fail without leftover fixtures or changes to existing catalog",
+    "adminCreateAndConflict": "passed; existing account preserved",
+    "failedCleanupRollback": "passed; product identities, stock and media links preserved",
+    "catalogCleanup": "passed",
+    "dropAndMissing": "passed; newly created database removed"
+  },
+  "productionData": "not accessed",
+  "externalProviders": "not called",
+  "verified_source_sha256": {
+    "scripts/testing/database-safety.ts": "425c7d249b66b763ce14463508944719e0dabba51e4d1f6d498064ccc1493d3c",
+    "scripts/testing/operational-database.ts": "b437f37074f9b1cd5c7a717eaef1e263cd95335c508ea0a0f2b5e215e82b7a0c",
+    "scripts/testing/restock-probes.ts": "00ee381b7bbbd8881a3a5744d6d3e28046e31eec8546cb44bdf699544af427d7",
+    "scratch/create-test-db.ts": "a2eb14d4cfe501f1dc672164f3037c9d9f7d484cd1d5806e1207d87fb9e0fb0c",
+    "scratch/drop-test-db.ts": "831c4b888dd9fd87af45aa6ebee89810c3b6fdd041731987112e1e3d0920c927",
+    "scratch/clear-database.ts": "409999ee4c99219f5470da1ac101eae7923d7dfc5d23e9da7d2406414e9d5d8e",
+    "scratch/seed-admin.ts": "777a7815dbd2ce77b3a5c49d48023bab53191e3c1246bbd151fb7376277f8df3",
+    "scratch/seed-development-db.ts": "96a2bfdb4bb6b1d6e98fbd1dc9c4373b5ba9c14b656ecb7c916b8df5ebe7a301",
+    "scratch/verify-restock-reminder.ts": "d3efea60d40c77f3275ad4c8a5a177e583d0834a8440c0a6517263a58ab127f5",
+    "scratch/verify-restock-dispatcher.ts": "7596a5be32cad44f53b7355ffb64ab57eb3f2d938c8bbbf4cdfece57dafa4197"
+  },
+  "limitation": "Disposable schema synchronization and operational CLI checks only; not migration replay or business-module integration certification"
+}

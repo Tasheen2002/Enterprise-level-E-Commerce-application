@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-17",
+  "mode": "Guard-bypass reproduction with constructor tripwire and inert container import; no DB client/query ran",
+  "sourceCommit": "161dcd13b32ada7aab76f2f73c40cb45cbce6e04",
+  "results": [
+    {
+      "script": "scratch/verify-restock-reminder.ts",
+      "passed": true,
+      "exitCode": 99,
+      "prismaConstruction": "attempted"
+    },
+    {
+      "script": "scratch/verify-restock-dispatcher.ts",
+      "passed": true,
+      "exitCode": 99,
+      "prismaConstruction": "attempted"
+    }
+  ]
+}

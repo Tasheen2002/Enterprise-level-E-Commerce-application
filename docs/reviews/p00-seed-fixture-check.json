@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-17",
+  "file": "scratch/seed-development-db.ts",
+  "mode": "TypeScript AST inspection only; no seed execution, Prisma or network calls",
+  "products": 28,
+  "categories": 24,
+  "variants": 97,
+  "productMediaLinks": 100,
+  "deletionOrder": [
+    "wishlistItem",
+    "wishlist",
+    "cartItem",
+    "shoppingCart",
+    "inventoryTransaction",
+    "stockAlert",
+    "reservation",
+    "inventoryStock",
+    "productCategory",
+    "productMedia",
+    "mediaAsset",
+    "productVariant",
+    "product",
+    "category",
+    "location"
+  ],
+  "checks": "Unique fixture slugs/category identifiers/generated SKUs; created-first category parents; product category references; positive prices/nonnegative integer stock; nonempty media/sizes/categories and per-product image uniqueness",
+  "failures": [],
+  "safetyChanges": "Guarded explicit test datasource; single transaction; nonzero failure exit; JPG/PNG MIME selection. Refusal-path tripwire verified separately; see p00-operational-database-check.json for separate real-DB verification.",
+  "unresolved": [
+    "Business-module fixture completeness and cleanup under additional real-world relational states remain subject to module review",
+    "EUR, SGD and USD numeric prices are copied from the same value; this is fixture data, not currency conversion",
+    "Random IDs and destructive replacement are unsuitable as repeatable integration fixtures without redesign",
+    "Asset existence and media delivery were not checked; no provider requests"
+  ]
+}
