@@ -24,6 +24,7 @@ export interface ExternalProductData {
   getTitle(): string;
   getSlug(): { getValue(): string };
   getPrice(): { getValue(): number };
+  getCategoryIds?: () => string[];
 }
 
 export interface IExternalProductRepository {

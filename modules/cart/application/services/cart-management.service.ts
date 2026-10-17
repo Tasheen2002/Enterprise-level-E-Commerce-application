@@ -115,6 +115,7 @@ interface CartItemDto {
     title: string;
     slug: string;
     images: Array<{ url: string; alt?: string }>;
+    categoryIds?: string[];
   };
   // Variant details
   variant?: {
@@ -927,6 +928,7 @@ export class CartManagementService {
             title: product.getTitle(),
             slug: product.getSlug().getValue(),
             images,
+            categoryIds: product.getCategoryIds ? product.getCategoryIds() : [],
           };
         }
       }

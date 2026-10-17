@@ -98,19 +98,19 @@ export function AccountSidebar() {
                   className={cn(
                     "flex items-center gap-4 px-10 py-5 text-[10px] tracking-[0.25em] uppercase transition-all duration-500 ease-editorial",
                     isActive
-                      ? "text-burgundy font-bold bg-stone-50/50"
-                      : "text-stone-500 hover:text-charcoal hover:translate-x-1",
+                      ? "text-gold-deep font-bold bg-sand/20"
+                      : "text-stone-700 hover:text-charcoal hover:translate-x-1",
                   )}
                 >
                   <Icon
                     className={cn(
                       "h-3.5 w-3.5 transition-colors duration-500",
-                      isActive ? "text-burgundy" : "text-stone-300",
+                      isActive ? "text-gold-deep" : "text-stone-400",
                     )}
                   />
                   {item.label}
                   {isActive && (
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-burgundy rounded-r-full" />
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gold-deep rounded-r-full" />
                   )}
                 </Link>
               </li>
@@ -126,7 +126,7 @@ export function AccountSidebar() {
           onFocus={prefetchSignIn}
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          className="w-full flex items-center gap-4 px-4 py-4 text-[11px] tracking-widest uppercase text-stone-400 hover:text-burgundy transition-all duration-300 group"
+          className="w-full flex items-center gap-4 px-4 py-4 text-[11px] tracking-widest uppercase text-stone-500 hover:text-burgundy transition-all duration-300 group"
         >
           <LogOut className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
           {logout.isPending ? "Signing out..." : "Sign Out"}
