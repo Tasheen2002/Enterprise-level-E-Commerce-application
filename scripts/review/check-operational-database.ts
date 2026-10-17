@@ -53,7 +53,15 @@ async function main() {
       encoding: "utf8",
       timeout: 90_000,
     });
-    if (child.error || child.status !== expected) throw new Error(`Unexpected exit: ${file}`);
+    if (child.error || child.status !== expected) {
+      if (file === "test-expiry-renewal") {
+        const safe = child.stderr?.match(
+          /Cart expiry probe refused or failed\. \[[A-Za-z0-9_:]+\]/,
+        )?.[0];
+        if (safe) console.error(safe);
+      }
+      throw new Error(`Unexpected exit: ${file}`);
+    }
   };
   const admin = new PrismaClient({ datasources: { db: { url: maintenance.toString() } } });
   let client: PrismaClient | undefined;
@@ -100,6 +108,21 @@ async function main() {
     }
     results.restockWithoutExistingCatalog =
       "passed; persistence rollback and simulated subscriber cleanup leave no fixtures; SMTP blocked";
+    run("test-expiry-renewal");
+    if (
+      (await client.product.count()) ||
+      (await client.productVariant.count()) ||
+      (await client.user.count()) ||
+      (await client.location.count()) ||
+      (await client.shoppingCart.count()) ||
+      (await client.cartItem.count()) ||
+      (await client.reservation.count()) ||
+      (await client.inventoryStock.count())
+    ) {
+      throw new Error("Expiry probe left fixtures in the empty database");
+    }
+    results.expiryRenewalWithoutExistingCatalog =
+      "passed; real cart service renews cart/reservation expiry and quantity; all owned fixtures removed";
     run("seed-development-db");
     const before = await client.product.findMany({ select: { id: true }, orderBy: { id: "asc" } });
     if (
@@ -158,6 +181,60 @@ async function main() {
     await client.$executeRawUnsafe(`DROP FUNCTION engagement.p00_reject_reminder()`);
     results.restockInsertFailureRollback =
       "passed; both CLIs fail without leftover fixtures or changes to existing catalog";
+    await client.$executeRawUnsafe(
+      `CREATE FUNCTION cart.p00_reject_expiry_probe() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'P00 injected cart reservation failure'; END $$`,
+    );
+    await client.$executeRawUnsafe(
+      `CREATE TRIGGER p00_reject_expiry_probe BEFORE INSERT ON cart.reservations FOR EACH ROW EXECUTE FUNCTION cart.p00_reject_expiry_probe()`,
+    );
+    run("test-expiry-renewal", 1);
+    const expiryPreserved = await client.product.findMany({
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+    if (
+      JSON.stringify(before) !== JSON.stringify(expiryPreserved) ||
+      (await client.productVariant.count()) !== 97 ||
+      (await client.user.count()) ||
+      (await client.location.count()) !== 1 ||
+      (await client.shoppingCart.count()) ||
+      (await client.cartItem.count()) ||
+      (await client.reservation.count()) ||
+      (await client.inventoryStock.count()) !== 97
+    ) {
+      throw new Error("Failed expiry probe changed existing catalog or left fixtures");
+    }
+    await client.$executeRawUnsafe(`DROP TRIGGER p00_reject_expiry_probe ON cart.reservations`);
+    await client.$executeRawUnsafe(`DROP FUNCTION cart.p00_reject_expiry_probe()`);
+    results.expiryFixtureFailureRollback =
+      "passed; unsuccessful exit, no fixture leak and existing catalog preserved";
+    await client.$executeRawUnsafe(
+      `CREATE FUNCTION cart.p00_reject_expiry_sync() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.expires_at > OLD.expires_at THEN RAISE EXCEPTION 'P00 injected expiry synchronization failure'; END IF; RETURN NEW; END $$`,
+    );
+    await client.$executeRawUnsafe(
+      `CREATE TRIGGER p00_reject_expiry_sync BEFORE UPDATE ON cart.reservations FOR EACH ROW EXECUTE FUNCTION cart.p00_reject_expiry_sync()`,
+    );
+    run("test-expiry-renewal", 1);
+    const syncPreserved = await client.product.findMany({
+      select: { id: true },
+      orderBy: { id: "asc" },
+    });
+    if (
+      JSON.stringify(before) !== JSON.stringify(syncPreserved) ||
+      (await client.productVariant.count()) !== 97 ||
+      (await client.user.count()) ||
+      (await client.location.count()) !== 1 ||
+      (await client.shoppingCart.count()) ||
+      (await client.cartItem.count()) ||
+      (await client.reservation.count()) ||
+      (await client.inventoryStock.count()) !== 97
+    ) {
+      throw new Error("Expiry synchronization failure leaked fixtures or changed existing catalog");
+    }
+    await client.$executeRawUnsafe(`DROP TRIGGER p00_reject_expiry_sync ON cart.reservations`);
+    await client.$executeRawUnsafe(`DROP FUNCTION cart.p00_reject_expiry_sync()`);
+    results.expirySynchronizationFailureCleanup =
+      "passed; actual service failure after cart persistence exits unsuccessfully, removes partial fixtures and preserves existing catalog";
     run("seed-admin");
     const user = await client.user.findUniqueOrThrow({ where: { email: env.TEST_ADMIN_EMAIL } });
     if (
@@ -235,6 +312,7 @@ async function main() {
         "scripts/testing/database-safety.ts",
         "scripts/testing/operational-database.ts",
         "scripts/testing/restock-probes.ts",
+        "scripts/testing/cart-expiry-probe.ts",
         ...[
           "create-test-db",
           "drop-test-db",
@@ -243,6 +321,7 @@ async function main() {
           "seed-development-db",
           "verify-restock-reminder",
           "verify-restock-dispatcher",
+          "test-expiry-renewal",
         ].map((name) => `scratch/${name}.ts`),
       ].map((file) => [file, createHash("sha256").update(fs.readFileSync(file)).digest("hex")]),
     ),
