@@ -37,6 +37,8 @@ export interface Product {
   status?: string;
   categoryIds?: string[];
   variants?: Variant[];
+  shortDesc?: string | null;
+  longDescHtml?: string | null;
 }
 
 export interface CategoryPageData {
