@@ -17,7 +17,7 @@ const WOMEN_CONTENT = {
     { label: "Stores", href: "#" },
   ],
   categories: [
-    { title: "Leather Goods", img: imageKitUrl("cat-leather-goods.png"), href: "/catalog/women/leather-goods" },
+    { title: "Leather Goods", img: imageKitUrl("cat-leather-goods.png"), href: "/catalog/women/women-leather-goods" },
     { title: "Heeled Sandals", img: imageKitUrl("cat-heeled-sandals.png"), href: "/catalog/women/heeled-sandals" },
     { title: "Flat Sandals", img: imageKitUrl("cat-flat-sandals.png"), href: "/catalog/women/flat-sandals" },
     { title: "Ballet Flats", img: imageKitUrl("cat-ballet-flats.png"), href: "/catalog/women/ballet-flats" },
@@ -40,7 +40,7 @@ const MEN_CONTENT = {
     { label: "Stores", href: "#" },
   ],
   categories: [
-    { title: "Leather Goods", img: imageKitUrl("cat-men-leather-goods.png"), href: "/catalog/men/leather-goods" },
+    { title: "Leather Goods", img: imageKitUrl("cat-men-leather-goods.png"), href: "/catalog/men/men-leather-goods" },
     { title: "Loafers", img: imageKitUrl("cat-men-loafers.png"), href: "/catalog/men/loafers" },
     { title: "Boat Shoes", img: imageKitUrl("cat-men-boat-shoes.png"), href: "/catalog/men/boat-shoes" },
     { title: "Sneakers", img: imageKitUrl("hero-men.png"), href: "/catalog/men/sneakers" },
@@ -89,7 +89,7 @@ export function CatalogContent() {
         {/* Sub-navigation */}
         <div className="absolute bottom-12 left-0 w-full z-20">
           <Container size="wide">
-            <nav className="flex items-center justify-center gap-12 lg:gap-20">
+            <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 lg:gap-x-20">
               {content.subVisit.map((item) => (
                 <Link
                   key={item.label}
