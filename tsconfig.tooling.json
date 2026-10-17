@@ -5,6 +5,7 @@
     "vitest.config.ts",
     "vitest.setup.ts",
     "apps/api/src/types/**/*.d.ts",
+    "apps/api/src/plugins/**/*.ts",
     "scripts/**/*.ts",
     "packages/api-client/test/**/*.ts",
     "scratch/**/*.ts"
