@@ -1,4 +1,10 @@
 /** Validate before importing/constructing any database test clients. */
+export function isDatabaseTestPath(testPath: string | undefined): boolean {
+  if (!testPath) return false;
+  const normalized = testPath.replace(/\\/g, "/").toLowerCase();
+  return /(?:^|[/.])(?:integration|e2e)(?:[/.]|$)/.test(normalized);
+}
+
 export function requireTestDatabase(env: NodeJS.ProcessEnv): string {
   if (env.ALLOW_DATABASE_TEST_CLEANUP !== "1" || !env.TEST_DATABASE_URL) {
     throw new Error("Database tests require TEST_DATABASE_URL and ALLOW_DATABASE_TEST_CLEANUP=1");

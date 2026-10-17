@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
-import { beforeAll, beforeEach, afterAll } from "vitest";
-import { requireTestDatabase } from "./scripts/testing/database-safety";
+import { beforeAll, beforeEach, afterAll, expect } from "vitest";
+import { isDatabaseTestPath, requireTestDatabase } from "./scripts/testing/database-safety";
 
 let prisma: PrismaClient | null = null;
 
@@ -36,7 +36,7 @@ async function cleanDatabase() {
 // Check if the current test file is a database E2E/Integration test
 function isDatabaseTest(): boolean {
   const testPath = expect.getState().testPath;
-  return !!testPath && (testPath.includes(".e2e.") || testPath.includes(".integration."));
+  return isDatabaseTestPath(testPath);
 }
 
 // Setup files run before test modules create their own Prisma clients.

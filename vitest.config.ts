@@ -26,7 +26,6 @@ export default defineConfig({
     // Disable parallel execution of test files to prevent PostgreSQL deadlocks
     fileParallelism: false,
     maxWorkers: 1,
-    minWorkers: 1,
     sequence: {
       concurrent: false,
     },
