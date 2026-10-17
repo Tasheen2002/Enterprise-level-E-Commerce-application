@@ -471,6 +471,16 @@ export class AuthenticationService {
   }
 
   async logout(userId: string, accessToken?: string, refreshToken?: string): Promise<void> {
+    // Persist revocation even when the client only sends its access token.
+    // The signed identity binds the session to the user requesting logout.
+    if (accessToken) {
+      let payload;
+      try { payload = this.jwtService.verifyAccess(accessToken); }
+      catch { /* Logout remains idempotent for an already expired token. */ }
+      if (payload?.sessionId && payload.userId === userId) {
+        await this.sessionRepository.revoke(payload.sessionId);
+      }
+    }
     if (refreshToken) {
       const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       const session = await this.sessionRepository.findByTokenHash(hash);
@@ -524,8 +534,8 @@ export class AuthenticationService {
       createdAt: user.createdAt.toISOString(),
     };
 
-    const accessToken = this.jwtService.signAccess(base);
-    const newRefreshToken = this.jwtService.signRefresh(base, true); // Assume persistent if they have a refresh token
+    const accessToken = this.jwtService.signAccess({ ...base, sessionId: session.id });
+    const newRefreshToken = this.jwtService.signRefresh({ ...base, sessionId: session.id }, true);
     const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
     const newExpiresAt = new Date();
@@ -813,10 +823,12 @@ export class AuthenticationService {
     rememberMe: boolean = false,
     sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }
   ): Promise<AuthResult> {
+    const sessionId = crypto.randomUUID();
     const base = {
       userId: user.id.getValue(),
       email: user.email.getValue(),
       role: user.role,
+      sessionId,
       updatedAt: user.updatedAt.toISOString(),
       createdAt: user.createdAt.toISOString(),
     };
@@ -835,6 +847,7 @@ export class AuthenticationService {
     const uaInfo = parseUserAgent(sessionMeta?.userAgent);
 
     const session = MemberSession.create({
+      id: sessionId,
       userId: user.id,
       refreshTokenHash,
       ipAddress: sessionMeta?.ipAddress,

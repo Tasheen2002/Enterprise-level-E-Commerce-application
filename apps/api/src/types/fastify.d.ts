@@ -6,7 +6,7 @@ declare module "fastify" {
       userId: string;
       email: string;
       role?: string;
-    };
+    } | null;
     rawBody?: Buffer;
   }
 

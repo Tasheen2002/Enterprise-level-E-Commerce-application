@@ -2,6 +2,7 @@ export interface TokenPayload {
   userId: string;
   email: string;
   role: string;
+  sessionId?: string;
   type: "access" | "refresh" | "2fa_pending";
   updatedAt?: string;
   createdAt?: string;
