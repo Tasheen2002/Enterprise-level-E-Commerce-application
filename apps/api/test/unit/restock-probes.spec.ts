@@ -41,6 +41,7 @@ describe("isolated restock operational probes", () => {
       tx.product.create.mock.calls[0][0].data.id,
     );
     expect(tx.user.create.mock.calls[0][0].data.email).toMatch(/@example\.invalid$/);
+    expect(tx.productVariant.create.mock.calls[0][0].data.sku).toMatch(/^[A-Z0-9-]+$/);
   });
 
   it("propagates insert failures instead of treating them as expected rollback", async () => {

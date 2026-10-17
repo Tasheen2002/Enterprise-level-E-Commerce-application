@@ -22,7 +22,12 @@ async function createFixtures(tx: Prisma.TransactionClient, ids: ReturnType<type
     },
   });
   await tx.productVariant.create({
-    data: { id: ids.variant, productId: ids.product, sku: `PROBE-${ids.variant}`, price: 10 },
+    data: {
+      id: ids.variant,
+      productId: ids.product,
+      sku: `PROBE-${ids.variant.toUpperCase()}`,
+      price: 10,
+    },
   });
   await tx.user.create({
     data: { id: ids.user, email: `restock-${ids.user}@example.invalid`, isGuest: true },
