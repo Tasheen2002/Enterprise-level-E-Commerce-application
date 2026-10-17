@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 
 export interface RateLimitOptions {
   windowMs: number;
@@ -7,6 +8,7 @@ export interface RateLimitOptions {
   message?: string;
   statusCode?: number;
   headers?: boolean;
+  scope?: string;
 }
 
 interface RateLimitEntry {
@@ -16,21 +18,15 @@ interface RateLimitEntry {
 
 class RateLimitStore {
   private store: Map<string, RateLimitEntry> = new Map();
-  private cleanupInterval: NodeJS.Timeout;
-
-  constructor() {
-    this.cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [key, entry] of this.store.entries()) {
-        if (now >= entry.resetAt) {
-          this.store.delete(key);
-        }
-      }
-    }, 60000);
-  }
+  private nextCleanup = 0;
 
   increment(key: string, windowMs: number): RateLimitEntry {
     const now = Date.now();
+    if (now >= this.nextCleanup) {
+      for (const [storedKey, entry] of this.store)
+        if (now >= entry.resetAt) this.store.delete(storedKey);
+      this.nextCleanup = now + 60_000;
+    }
     const entry = this.store.get(key);
     if (!entry || now >= entry.resetAt) {
       const newEntry: RateLimitEntry = { count: 1, resetAt: now + windowMs };
@@ -42,14 +38,22 @@ class RateLimitStore {
   }
 
   destroy(): void {
-    clearInterval(this.cleanupInterval);
     this.store.clear();
   }
 }
 
-const store = new RateLimitStore();
+const stores = new WeakMap<FastifyInstance, RateLimitStore>();
+let policySequence = 0;
 
-export function createRateLimiter(options: RateLimitOptions) {
+export function createRateLimiter(options: RateLimitOptions, storeOwner?: FastifyInstance) {
+  if (
+    !Number.isInteger(options.windowMs) ||
+    options.windowMs <= 0 ||
+    !Number.isInteger(options.maxRequests) ||
+    options.maxRequests <= 0
+  )
+    throw new Error("Invalid rate limit policy");
+  const policyId = `policy-${++policySequence}`;
   const {
     windowMs,
     maxRequests,
@@ -60,12 +64,29 @@ export function createRateLimiter(options: RateLimitOptions) {
   } = options;
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    // Disable rate limiting in tests
-    if (process.env.NODE_ENV === "test") {
-      return;
+    if (
+      (keyGenerator === userKeyGenerator || keyGenerator === userOrIpKeyGenerator) &&
+      !request.user &&
+      request.headers.authorization
+    ) {
+      try {
+        await request.server.authenticate(request);
+      } catch (error) {
+        if (
+          !(error && typeof error === "object" && "statusCode" in error && error.statusCode === 401)
+        )
+          throw error;
+      }
     }
-
-    const key = keyGenerator(request);
+    const owner = storeOwner ?? request.server;
+    let store = stores.get(owner);
+    if (!store) {
+      store = new RateLimitStore();
+      stores.set(owner, store);
+    }
+    const scope =
+      options.scope ?? `${request.method}:${request.routeOptions.url ?? request.url.split("?")[0]}`;
+    const key = `${policyId}:${scope}:${keyGenerator(request)}`;
     const entry = store.increment(key, windowMs);
     const remaining = Math.max(0, maxRequests - entry.count);
     const resetTime = Math.ceil(entry.resetAt / 1000);
@@ -80,6 +101,9 @@ export function createRateLimiter(options: RateLimitOptions) {
       const retryAfter = Math.ceil((entry.resetAt - Date.now()) / 1000);
       reply.header("Retry-After", retryAfter);
       return reply.status(statusCode).send({
+        success: false,
+        statusCode,
+        code: "RATE_LIMITED",
         error: "Too Many Requests",
         message,
         retryAfter,
@@ -88,17 +112,19 @@ export function createRateLimiter(options: RateLimitOptions) {
   };
 }
 
+export function disposeRateLimits(server: FastifyInstance): void {
+  stores.get(server)?.destroy();
+  stores.delete(server);
+}
+
 function defaultKeyGenerator(request: FastifyRequest): string {
-  const forwarded = request.headers["x-forwarded-for"];
-  const ip =
-    typeof forwarded === "string" ? forwarded.split(",")[0].trim() : request.ip;
-  return `rate_limit:${ip}`;
+  return `rate_limit:ip:${request.ip}`;
 }
 
 export function userKeyGenerator(request: FastifyRequest): string {
   const user = request.user as { id?: string; userId?: string } | undefined;
-  const userId = user?.userId || user?.id || "anonymous";
-  return `rate_limit:user:${userId}`;
+  const userId = user?.userId || user?.id;
+  return userId ? `rate_limit:user:${userId}` : defaultKeyGenerator(request);
 }
 
 // Hybrid keyer for routes that mix authenticated and unauthenticated traffic
@@ -109,10 +135,7 @@ export function userOrIpKeyGenerator(request: FastifyRequest): string {
   const user = request.user as { id?: string; userId?: string } | undefined;
   const userId = user?.userId || user?.id;
   if (userId) return `rate_limit:user:${userId}`;
-  const forwarded = request.headers["x-forwarded-for"];
-  const ip =
-    typeof forwarded === "string" ? forwarded.split(",")[0].trim() : request.ip;
-  return `rate_limit:ip:${ip}`;
+  return defaultKeyGenerator(request);
 }
 
 // Preset configurations for athletic shoes e-commerce
