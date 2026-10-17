@@ -283,7 +283,7 @@ export function CheckoutWizard() {
             )}>01</span>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-800">Shipping</span>
-              <span className="text-[9px] text-stone-600 font-medium">Where to deliver</span>
+              <span className="text-[9px] text-stone-600 font-medium hidden sm:block">Where to deliver</span>
             </div>
           </div>
           <div className="h-[1px] flex-1 bg-stone-100 max-w-[40px] mx-2" />
@@ -294,7 +294,7 @@ export function CheckoutWizard() {
             )}>02</span>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-800">Billing</span>
-              <span className="text-[9px] text-stone-600 font-medium">Payment address</span>
+              <span className="text-[9px] text-stone-600 font-medium hidden sm:block">Payment address</span>
             </div>
           </div>
           <div className="h-[1px] flex-1 bg-stone-100 max-w-[40px] mx-2" />
@@ -305,7 +305,7 @@ export function CheckoutWizard() {
             )}>03</span>
             <div className="flex flex-col">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-800">Review</span>
-              <span className="text-[9px] text-stone-600 font-medium">Order review</span>
+              <span className="text-[9px] text-stone-600 font-medium hidden sm:block">Order review</span>
             </div>
           </div>
         </div>
