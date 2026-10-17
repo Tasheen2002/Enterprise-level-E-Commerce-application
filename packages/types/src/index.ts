@@ -9,9 +9,7 @@
 
 // Re-exports of canonical wire vocabularies. Generated SDK should be the
 // source of truth; this barrel is for ergonomic consumption.
-export type Result<T, E = Error> =
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 export type Nullable<T> = T | null;
 export type Maybe<T> = T | undefined;
@@ -39,7 +37,7 @@ export interface ApiError {
   statusCode: number;
   message: string;
   code?: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, string[]>;
 }
 
 export type ApiEnvelope<T> = ApiSuccess<T> | ApiError;

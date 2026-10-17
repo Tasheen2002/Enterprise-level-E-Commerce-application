@@ -1,12 +1,8 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z, ZodSchema, ZodError } from "zod";
-
-function formatZodErrors(error: ZodError) {
-  return error.issues.map((issue) => ({
-    field: issue.path.join("."),
-    message: issue.message,
-  }));
-}
+import { serializeError } from "./error-response";
+export { paginationQuerySchema } from "../../../../../packages/validation/src/common";
+export type { PaginationQuery } from "../../../../../packages/validation/src/common";
 
 /**
  * Convert a Zod schema to a JSON Schema (draft-07) for use in Fastify
@@ -22,7 +18,6 @@ function formatZodErrors(error: ZodError) {
  *   }, ...);
  */
 export function toJsonSchema(schema: ZodSchema): object {
-
   return z.toJSONSchema(schema, { target: "draft-7", unrepresentable: "any" });
 }
 
@@ -36,12 +31,6 @@ export function toJsonSchema(schema: ZodSchema): object {
  *
  * Coerces query-string values (always strings on the wire) into numbers.
  */
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
 
 export function validateBody<T extends ZodSchema>(schema: T) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
@@ -49,12 +38,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
       request.body = schema.parse(request.body);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
+        return reply.status(400).send(serializeError(error));
       }
       throw error;
     }
@@ -67,12 +51,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
       request.query = schema.parse(request.query);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
+        return reply.status(400).send(serializeError(error));
       }
       throw error;
     }
@@ -85,12 +64,7 @@ export function validateParams<T extends ZodSchema>(schema: T) {
       request.params = schema.parse(request.params);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
+        return reply.status(400).send(serializeError(error));
       }
       throw error;
     }
