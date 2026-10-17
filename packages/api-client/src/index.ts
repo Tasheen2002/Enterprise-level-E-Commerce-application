@@ -33,10 +33,12 @@ export interface CreateApiClientOptions {
 export function createApiClient(options: CreateApiClientOptions) {
   const client = createClient<Paths>({ baseUrl: options.baseUrl });
 
-  const retryClones = new Map<string, Request>();
+  // Weak keys release clones when a network failure skips onResponse.
+  const retryClones = new WeakMap<Request, Request>();
+  let refreshInFlight: Promise<string | null> | null = null;
 
   const authMiddleware: Middleware = {
-    async onRequest({ request, id }) {
+    async onRequest({ request }) {
       const token = options.getToken?.();
       if (token) {
         request.headers.set("Authorization", `Bearer ${token}`);
@@ -44,13 +46,13 @@ export function createApiClient(options: CreateApiClientOptions) {
       // Stash a clone BEFORE the body stream is consumed by fetch — we
       // need an unconsumed body to be able to retry the request.
       if (options.refreshToken) {
-        retryClones.set(id, request.clone());
+        retryClones.set(request, request.clone());
       }
       return request;
     },
-    async onResponse({ request, response, id }) {
-      const clone = retryClones.get(id);
-      retryClones.delete(id);
+    async onResponse({ request, response }) {
+      const clone = retryClones.get(request);
+      retryClones.delete(request);
 
       if (response.status !== 401) return response;
 
@@ -61,7 +63,14 @@ export function createApiClient(options: CreateApiClientOptions) {
         return response;
       }
 
-      const newToken = await options.refreshToken();
+      if (!refreshInFlight)
+        refreshInFlight = options
+          .refreshToken()
+          .catch(() => null)
+          .finally(() => {
+            refreshInFlight = null;
+          });
+      const newToken = await refreshInFlight;
       if (!newToken || !clone) {
         await options.onUnauthorized?.();
         return response;
