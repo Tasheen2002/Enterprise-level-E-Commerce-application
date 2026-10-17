@@ -70,7 +70,8 @@ export class NodemailerEmailService implements IEmailService {
   }
 
   async sendPasswordResetEmail(email: string, token: string): Promise<void> {
-    const resetUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/reset-password?token=${token}`;
+    const frontendOrigin = (process.env.FRONTEND_URL || "http://localhost:3000").split(',')[0].trim().replace(/\/+$/, '');
+    const resetUrl = `${frontendOrigin}/reset-password?token=${encodeURIComponent(token)}`;
 
     if (this.isDevelopment) {
       console.log("----------------------------------------------------------------");
@@ -111,7 +112,8 @@ export class NodemailerEmailService implements IEmailService {
       return;
     }
 
-    const verifyUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/verify-email?token=${token}`;
+    const frontendOrigin = (process.env.FRONTEND_URL || "http://localhost:3000").split(',')[0].trim().replace(/\/+$/, '');
+    const verifyUrl = `${frontendOrigin}/verify-email?token=${encodeURIComponent(token)}`;
     
     if (this.isDevelopment) {
       console.log("----------------------------------------------------------------");
