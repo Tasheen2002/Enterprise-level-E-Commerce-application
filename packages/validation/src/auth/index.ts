@@ -10,10 +10,7 @@ export const registerRequestSchema = z.object({
   email: z.string().email("Please provide a valid correspondence email"),
   password: z
     .string()
-    .min(
-      PASSWORD_MIN,
-      `Security Key must be at least ${PASSWORD_MIN} characters`,
-    )
+    .min(PASSWORD_MIN, `Security Key must be at least ${PASSWORD_MIN} characters`)
     .max(PASSWORD_MAX),
   phone: z.string().optional(),
   firstName: z.string().max(NAME_MAX).optional(),
@@ -85,24 +82,8 @@ export const resendVerificationRequestSchema = z.object({
   email: z.string().email(),
 });
 
-export const updateProfileRequestSchema = z.object({
-  firstName: z.string().max(100).optional(),
-  lastName: z.string().max(100).optional(),
-  phone: z.string().max(20).optional(),
-  title: z.string().max(50).optional(),
-  dateOfBirth: z.string().optional(), // We'll validate date string format in the UI
-  residentOf: z.string().max(100).optional(),
-  nationality: z.string().max(100).optional(),
-  locale: z.string().regex(/^[a-z]{2}(-[A-Z]{2,3})?$/).optional(),
-  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
-  // Public ImageKit URL (or null to clear). Capped at 2 KB to defend
-  // against accidental payload bloat — real ImageKit URLs are well under
-  // 500 chars.
-  avatarUrl: z.string().url().max(2048).nullable().optional(),
-  prefs: z.record(z.string(), z.unknown()).optional(),
-  stylePreferences: z.record(z.string(), z.unknown()).optional(),
-  preferredSizes: z.record(z.string(), z.string().optional()).optional(),
-});
+export { updateProfileRequestSchema } from "../user";
+import { updateProfileRequestSchema } from "../user";
 
 export const changeEmailRequestSchema = z.object({
   newEmail: z.string().email(),
@@ -149,9 +130,7 @@ export type Enable2FARequest = z.infer<typeof enable2FARequestSchema>;
 export type Disable2FARequest = z.infer<typeof disable2FARequestSchema>;
 export type RegenerateBackupCodesRequest = z.infer<typeof regenerateBackupCodesRequestSchema>;
 export type Verify2FALoginRequest = z.infer<typeof verify2FALoginRequestSchema>;
-export type ResendVerificationRequest = z.infer<
-  typeof resendVerificationRequestSchema
->;
+export type ResendVerificationRequest = z.infer<typeof resendVerificationRequestSchema>;
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
 export type ChangeEmailRequest = z.infer<typeof changeEmailRequestSchema>;
 export type DeleteAccountRequest = z.infer<typeof deleteAccountRequestSchema>;

@@ -8,10 +8,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./auth": "./src/auth/index.ts",
-    "./cart": "./src/cart/index.ts",
-    "./product": "./src/product/index.ts",
-    "./order": "./src/order/index.ts",
-    "./payment": "./src/payment/index.ts",
     "./user": "./src/user/index.ts",
     "./common": "./src/common/index.ts"
   },

@@ -17,7 +17,7 @@ export const updateProfileRequestSchema = z.object({
   lastName: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   title: z.string().max(50).optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.iso.datetime({ offset: true }).or(z.iso.date()).optional(),
   residentOf: z.string().max(100).optional(),
   nationality: z.string().max(100).optional(),
   locale: z
@@ -30,6 +30,7 @@ export const updateProfileRequestSchema = z.object({
     .optional(),
   defaultAddressId: z.string().uuid().optional(),
   defaultPaymentMethodId: z.string().uuid().optional(),
+  avatarUrl: z.string().url().max(2048).nullable().optional(),
   prefs: z.record(z.string(), z.unknown()).optional(),
   stylePreferences: z.record(z.string(), z.unknown()).optional(),
   preferredSizes: z.record(z.string(), z.string().optional()).optional(),
@@ -58,12 +59,7 @@ export const updateAddressRequestSchema = addAddressRequestSchema.partial();
 
 // ─── Payment method ─────────────────────────────────────────────────────────
 
-export const paymentMethodTypeEnum = z.enum([
-  "CARD",
-  "WALLET",
-  "BANK_TRANSFER",
-  "COD",
-]);
+export const paymentMethodTypeEnum = z.enum(["CARD", "WALLET", "BANK_TRANSFER", "COD"]);
 
 export const addPaymentMethodRequestSchema = z.object({
   type: paymentMethodTypeEnum,
@@ -92,11 +88,7 @@ export const updatePaymentMethodRequestSchema = z.object({
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
 export type AddAddressRequest = z.infer<typeof addAddressRequestSchema>;
 export type UpdateAddressRequest = z.infer<typeof updateAddressRequestSchema>;
-export type AddPaymentMethodRequest = z.infer<
-  typeof addPaymentMethodRequestSchema
->;
-export type UpdatePaymentMethodRequest = z.infer<
-  typeof updatePaymentMethodRequestSchema
->;
+export type AddPaymentMethodRequest = z.infer<typeof addPaymentMethodRequestSchema>;
+export type UpdatePaymentMethodRequest = z.infer<typeof updatePaymentMethodRequestSchema>;
 export type AddressType = z.infer<typeof addressTypeEnum>;
 export type PaymentMethodType = z.infer<typeof paymentMethodTypeEnum>;

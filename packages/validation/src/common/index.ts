@@ -5,7 +5,7 @@ import { z } from "zod";
 // this for list-page query string parsing so client and server agree on
 // bounds.
 export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
 
