@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: ['**']
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 jobs:
   validate-and-test:
@@ -47,6 +47,9 @@ jobs:
       - name: Run Linter & Formatter
         run: pnpm run lint
 
+      - name: Check shared foundation formatting
+        run: pnpm run format:check
+
       - name: Type-Check (TypeScript compiler)
         run: pnpm run type-check
 
@@ -54,13 +57,29 @@ jobs:
         run: npx prisma db push
         env:
           DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"
+          TEST_DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"
+          ALLOW_DATABASE_TEST_CLEANUP: '1'
 
       - name: Run Tests (Vitest)
         run: pnpm run test:vitest
         env:
           DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"
+          TEST_DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"
+          ALLOW_DATABASE_TEST_CLEANUP: '1'
           NODE_ENV: test
           JWT_SECRET: temp-secret-key-for-tests
+
+      - name: Measure backend unit coverage
+        run: pnpm run test:coverage
+        env:
+          NODE_ENV: test
+          JWT_SECRET: temp-secret-key-for-tests
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-unit-coverage
+          path: coverage/
 
   build-and-package:
     needs: validate-and-test
