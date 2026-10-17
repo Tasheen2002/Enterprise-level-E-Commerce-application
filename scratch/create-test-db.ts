@@ -1,36 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { requireTestDatabaseAdmin } from "../scripts/testing/operational-database";
 
 async function main() {
-  // Connect to the default 'postgres' database to run administrative commands
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: "postgresql://postgres:1234@localhost:5432/postgres"
-      }
-    }
-  });
-
-  const dbName = "enterprise_level_ecommerce_test";
-  console.log(`=== Checking if database '${dbName}' exists ===`);
-
+  const { url, database } = requireTestDatabaseAdmin(process.env);
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
   try {
-    const result = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT 1 FROM pg_database WHERE datname = '${dbName}'`
-    );
-
-    if (result.length > 0) {
-      console.log(`Database '${dbName}' already exists.`);
-    } else {
-      console.log(`Database '${dbName}' does not exist. Creating...`);
-      // CREATE DATABASE cannot be executed inside a transaction block, $executeRawUnsafe handles this
-      await prisma.$executeRawUnsafe(`CREATE DATABASE ${dbName};`);
-      console.log(`Database '${dbName}' created successfully!`);
+    const existing = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+      SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = ${database}) AS exists
+    `;
+    if (!existing[0]?.exists) {
+      // Identifiers cannot be parameters; the shared guard restricts this name.
+      await prisma.$executeRawUnsafe(`CREATE DATABASE "${database}"`);
     }
-  } catch (error: any) {
-    console.error("Error creating test database:", error.message);
+    console.log("Selected test database is available.");
   } finally {
     await prisma.$disconnect();
   }
 }
-
-main().catch(console.error);
+main().catch(() => {
+  console.error("Test database creation refused or failed; check test and maintenance settings.");
+  process.exitCode = 1;
+});

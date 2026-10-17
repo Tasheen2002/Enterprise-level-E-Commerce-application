@@ -1,30 +1,26 @@
 import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://postgres:1234@localhost:5432/enterprise_level_ecommerce"
-    }
-  }
-});
+import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
 
 async function main() {
-  console.log("=== Clearing Seeded Product Catalog Data from Dev Database ===");
+  const url = requireOperationalTestDatabase(process.env);
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
   try {
-    await prisma.inventoryStock.deleteMany({});
-    await prisma.productCategory.deleteMany({});
-    await prisma.productMedia.deleteMany({});
-    await prisma.mediaAsset.deleteMany({});
-    await prisma.productVariant.deleteMany({});
-    await prisma.product.deleteMany({});
-    await prisma.category.deleteMany({});
-    await prisma.location.deleteMany({});
-    console.log("All product catalog data and images cleared successfully!");
-  } catch (error: any) {
-    console.error("Error clearing database:", error.message);
+    await prisma.$transaction(async (tx) => {
+      await tx.inventoryStock.deleteMany({});
+      await tx.productCategory.deleteMany({});
+      await tx.productMedia.deleteMany({});
+      await tx.mediaAsset.deleteMany({});
+      await tx.productVariant.deleteMany({});
+      await tx.product.deleteMany({});
+      await tx.category.deleteMany({});
+      await tx.location.deleteMany({});
+    });
+    console.log("Test catalog cleanup committed.");
   } finally {
     await prisma.$disconnect();
   }
 }
-
-main().catch(console.error);
+main().catch(() => {
+  console.error("Catalog cleanup refused or failed; check the disposable test settings.");
+  process.exitCode = 1;
+});

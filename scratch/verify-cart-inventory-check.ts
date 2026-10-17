@@ -3,18 +3,21 @@ import { ReservationRepositoryImpl as ResRepo } from "../modules/cart/infra/pers
 import { VariantId } from "../modules/product-catalog/domain/value-objects/variant-id.vo";
 import { CartId } from "../modules/cart/domain/value-objects/cart-id.vo";
 
-const prisma = new PrismaClient();
+import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
+let prisma: PrismaClient;
 
 async function main() {
+  const url = requireOperationalTestDatabase(process.env);
+  prisma = new PrismaClient({ datasources: { db: { url } } });
   console.log("Initializing Cart Inventory Enforcement Test...");
 
   const mockStockService = {
     getTotalAvailableStock: async (variantId: string) => {
       const stock = await prisma.inventoryStock.findFirst({
-        where: { variantId }
+        where: { variantId },
       });
-      return stock ? (stock.onHand - stock.reserved) : 0;
-    }
+      return stock ? stock.onHand - stock.reserved : 0;
+    },
   };
 
   const resRepo = new ResRepo(prisma, mockStockService as any);
@@ -31,7 +34,7 @@ async function main() {
 
   // Let's check the inventory stocks for this variant, or create one if missing
   let stock = await prisma.inventoryStock.findFirst({
-    where: { variantId: variant.id }
+    where: { variantId: variant.id },
   });
 
   if (!stock) {
@@ -44,16 +47,17 @@ async function main() {
     }
     stock = await prisma.inventoryStock.create({
       data: {
-        id: "d3b07384-d111-4777-a111-dcd3d2c1b2a3",
         variantId: variant.id,
         locationId: location.id,
         onHand: 10,
-        reserved: 0
-      }
+        reserved: 0,
+      },
     });
   }
 
-  console.log(`Inventory Stock: OnHand=${stock.onHand}, Reserved=${stock.reserved}, Available (OnHand-Reserved)=${stock.onHand - stock.reserved}`);
+  console.log(
+    `Inventory Stock: OnHand=${stock.onHand}, Reserved=${stock.reserved}, Available (OnHand-Reserved)=${stock.onHand - stock.reserved}`,
+  );
 
   const variantVO = VariantId.fromString(variant.id);
   // Using valid v4 UUIDs
@@ -62,19 +66,19 @@ async function main() {
 
   // Clear existing test records first
   await prisma.reservation.deleteMany({
-    where: { cartId: { in: [cartIdA.getValue(), cartIdB.getValue()] } }
+    where: { cartId: { in: [cartIdA.getValue(), cartIdB.getValue()] } },
   });
   await prisma.shoppingCart.deleteMany({
-    where: { id: { in: [cartIdA.getValue(), cartIdB.getValue()] } }
+    where: { id: { in: [cartIdA.getValue(), cartIdB.getValue()] } },
   });
 
   // Create mock shopping carts so reservations fkey constraint is satisfied
   console.log("Creating mock Shopping Carts...");
   await prisma.shoppingCart.create({
-    data: { id: cartIdA.getValue(), currency: "EUR" }
+    data: { id: cartIdA.getValue(), currency: "EUR" },
   });
   await prisma.shoppingCart.create({
-    data: { id: cartIdB.getValue(), currency: "EUR" }
+    data: { id: cartIdB.getValue(), currency: "EUR" },
   });
 
   // Temporarily disable preorder and backorder on this variant to enforce stock limits
@@ -84,7 +88,7 @@ async function main() {
 
   await prisma.productVariant.update({
     where: { id: variant.id },
-    data: { allowPreorder: false, allowBackorder: false }
+    data: { allowPreorder: false, allowBackorder: false },
   });
 
   // Temporarily set variant stock to: onHand = 5, reserved = 0 (so available = 5)
@@ -94,7 +98,7 @@ async function main() {
 
   await prisma.inventoryStock.updateMany({
     where: { variantId: variant.id },
-    data: { onHand: 5, reserved: 0 }
+    data: { onHand: 5, reserved: 0 },
   });
 
   try {
@@ -120,8 +124,8 @@ async function main() {
         cartId: cartIdA.getValue(),
         variantId: variant.id,
         qty: 3,
-        expiresAt: new Date(Date.now() + 60000)
-      }
+        expiresAt: new Date(Date.now() + 60000),
+      },
     });
     console.log("Created reservation for Cart A: Qty = 3");
 
@@ -152,25 +156,26 @@ async function main() {
     console.log(`Cart B trying to reserve 3: is available? ${checkB.available} (Expected: false)`);
 
     if (checkB.available) {
-      throw new Error("Validation failed: Cart B should not be allowed to reserve 3 when Cart A holds 3 out of 5.");
+      throw new Error(
+        "Validation failed: Cart B should not be allowed to reserve 3 when Cart A holds 3 out of 5.",
+      );
     }
-
   } finally {
     // Restore original variant options, stock and clean up reservations & carts
     console.log("Restoring original variant options, stock levels and cleaning up test records...");
     await prisma.productVariant.update({
       where: { id: variant.id },
-      data: { allowPreorder: originalAllowPreorder, allowBackorder: originalAllowBackorder }
+      data: { allowPreorder: originalAllowPreorder, allowBackorder: originalAllowBackorder },
     });
     await prisma.inventoryStock.updateMany({
       where: { variantId: variant.id },
-      data: { onHand: originalOnHand, reserved: originalReserved }
+      data: { onHand: originalOnHand, reserved: originalReserved },
     });
     await prisma.reservation.deleteMany({
-      where: { cartId: { in: [cartIdA.getValue(), cartIdB.getValue()] } }
+      where: { cartId: { in: [cartIdA.getValue(), cartIdB.getValue()] } },
     });
     await prisma.shoppingCart.deleteMany({
-      where: { id: { in: [cartIdA.getValue(), cartIdB.getValue()] } }
+      where: { id: { in: [cartIdA.getValue(), cartIdB.getValue()] } },
     });
   }
 
@@ -178,7 +183,8 @@ async function main() {
 }
 
 main()
-  .catch((err) => {
-    console.error("Test failed:", err);
+  .catch(() => {
+    console.error("Cart inventory probe refused or failed.");
+    process.exitCode = 1;
   })
-  .finally(() => prisma.$disconnect());
+  .finally(() => prisma?.$disconnect());

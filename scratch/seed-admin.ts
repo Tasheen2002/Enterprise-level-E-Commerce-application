@@ -1,63 +1,36 @@
 import { PrismaClient, UserRole, UserStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://postgres:1234@localhost:5432/enterprise_level_ecommerce"
-    }
-  }
-});
+import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
 
 async function main() {
-  const email = "tasheenadmin@gmail.com";
-  const password = "JackCM@3003";
-
-  console.log(`=== Seeding Admin User: ${email} ===`);
-
+  const url = requireOperationalTestDatabase(process.env);
+  const email = process.env.TEST_ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.TEST_ADMIN_PASSWORD;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length < 12) {
+    throw new Error("Provide TEST_ADMIN_EMAIL and TEST_ADMIN_PASSWORD (at least 12 characters)");
+  }
+  const passwordHash = await bcrypt.hash(password, 12);
+  const prisma = new PrismaClient({ datasources: { db: { url } } });
   try {
-    // Check if the user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
-
-    if (existingUser) {
-      console.log(`User ${email} already exists. Deleting first to ensure fresh state...`);
-      await prisma.user.delete({
-        where: { email }
-      });
-    }
-
-    // Hash the password with 12 rounds
-    const saltRounds = 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
-
-    // Create the user
-    const newUser = await prisma.user.create({
+    // A conflict fails without deleting or modifying an existing account.
+    await prisma.user.create({
       data: {
         email,
         passwordHash,
         role: UserRole.ADMIN,
         status: UserStatus.active,
         emailVerified: true,
-        isGuest: false
-      }
+        isGuest: false,
+      },
     });
-
-    console.log("Admin user created successfully!");
-    console.log("Details:", {
-      id: newUser.id,
-      email: newUser.email,
-      role: newUser.role,
-      status: newUser.status,
-      emailVerified: newUser.emailVerified
-    });
-
-  } catch (error: any) {
-    console.error("Error creating admin user:", error);
+    console.log("Test administrator created.");
   } finally {
     await prisma.$disconnect();
   }
 }
-
-main().catch(console.error);
+main().catch(() => {
+  console.error(
+    "Test administrator creation refused or failed; check settings and whether the account exists.",
+  );
+  process.exitCode = 1;
+});
