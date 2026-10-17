@@ -15,6 +15,8 @@ interface DbProduct {
   status: string;
   sizes?: { value: string; isAvailable: boolean }[];
   categoryIds?: string[];
+  shortDesc?: string | null;
+  longDescHtml?: string | null;
 }
 
 interface CategoryMapItem {
@@ -24,7 +26,7 @@ interface CategoryMapItem {
 
 const CATEGORY_MAP: Record<string, CategoryMapItem> = {
   "45c2f063-7e4b-4436-97d3-b5cb77027b01": { slug: "women", parentId: null },
-  "b7a5f2e8-1b3b-4aa6-b129-dd593d379976": { slug: "leather-goods", parentId: "45c2f063-7e4b-4436-97d3-b5cb77027b01" },
+  "b7a5f2e8-1b3b-4aa6-b129-dd593d379976": { slug: "women-leather-goods", parentId: "45c2f063-7e4b-4436-97d3-b5cb77027b01" },
   "09ba7651-a19a-43e2-8f6a-1feb88fc1012": { slug: "bags", parentId: "b7a5f2e8-1b3b-4aa6-b129-dd593d379976" },
   "58eaac47-6f9a-42b0-9f13-db911ac3228d": { slug: "belts", parentId: "b7a5f2e8-1b3b-4aa6-b129-dd593d379976" },
   "651d752a-3e85-452a-94c6-8b1224a68a3c": { slug: "heeled-sandals", parentId: "45c2f063-7e4b-4436-97d3-b5cb77027b01" },
@@ -150,40 +152,92 @@ export const LEATHER_GOODS_DATA: SubCategory[] = [
   {
     id: "bags",
     title: "BAGS",
-    image: "leather-bags-heritage.png",
+    image: "Women/Leather Goods/Bags/leather-bags-heritage.png",
     href: "/catalog/women/bags",
   },
   {
     id: "belts",
     title: "BELTS",
-    image: "artisan-belts.png",
+    image: "Women/Leather Goods/Belts/artisan-belts.png",
     href: "/catalog/women/belts",
   },
   {
     id: "small-leather-goods",
     title: "SMALL LEATHER GOODS",
-    image: "small-leather-goods.png",
-    href: "/catalog/women/wallets",
+    image: "Women/Leather Goods/Small Leather Goods/small-leather-goods.png",
+    href: "/catalog/women/small-leather-goods",
   },
   {
     id: "laptop-sleeves",
     title: "LAPTOP SLEEVES",
-    image: "leather-laptop-sleeves.png",
+    image: "Women/Leather Goods/Laptop Sleeves/leather-laptop-sleeves.jpg",
     href: "/catalog/women/laptop-sleeves",
   },
   {
     id: "phone-straps",
     title: "PHONE STRAPS",
-    image: "artisan-phone-straps.png",
+    image: "Women/Leather Goods/artisan-phone-straps.png",
     href: "/catalog/women/phone-straps",
   },
   {
     id: "view-all",
     title: "VIEW ALL",
-    image: "view-all-editorial.png",
-    href: "/catalog/women/leather-goods",
+    image: "Women/Leather Goods/view-all-editorial.png",
+    href: "/catalog/women/women-leather-goods",
   },
 ];
+
+export const MEN_LEATHER_GOODS_DATA: SubCategory[] = [
+  {
+    id: "backpacks",
+    title: "BACKPACKS",
+    image: "Men/Leather Goods/cat_men_backpacks.jpg",
+    href: "/catalog/men/men-backpacks",
+  },
+  {
+    id: "travel-bags",
+    title: "TRAVEL BAGS",
+    image: "Men/Leather Goods/cat_men_travel_bags.jpg",
+    href: "/catalog/men/men-travel-bags",
+  },
+  {
+    id: "briefcases",
+    title: "BRIEFCASES",
+    image: "Men/Leather Goods/cat_men_briefcases.jpg",
+    href: "/catalog/men/men-briefcases",
+  },
+  {
+    id: "laptop-sleeves",
+    title: "LAPTOP SLEEVES",
+    image: "Men/Leather Goods/cat_men_laptop_sleeves.jpg",
+    href: "/catalog/men/men-laptop-sleeves",
+  },
+  {
+    id: "belts",
+    title: "BELTS",
+    image: "Men/Leather Goods/cat_men_belts.jpg",
+    href: "/catalog/men/men-belts",
+  },
+  {
+    id: "small-leather-goods",
+    title: "SMALL LEATHER GOODS",
+    image: "Men/Leather Goods/cat_men_small_leather.jpg",
+    href: "/catalog/men/men-small-leather-goods",
+  },
+  {
+    id: "toiletry-bags",
+    title: "TOILETRY BAGS",
+    image: "Men/Leather Goods/cat_men_toiletry_bags.jpg",
+    href: "/catalog/men/men-toiletry-bags",
+  },
+  {
+    id: "view-all",
+    title: "VIEW ALL",
+    image: "Men/Leather Goods/cat_men_view_all.jpg",
+    href: "/catalog/men/men-view-all",
+  },
+];
+
 
 const DEFAULT_SIZES = [
   { value: "35", isAvailable: true },
@@ -233,10 +287,16 @@ function mapVariantsToSizes(items: ApiVariant[]): { value: string; isAvailable: 
     return a.localeCompare(b);
   });
 
-  return uniqueSizes.map(size => ({
-    value: size,
-    isAvailable: true,
-  }));
+  return uniqueSizes.map(size => {
+    const isAvail = items.some(v => 
+      v.size === size && 
+      ((v.inventory ?? 0) > 0 || v.allowPreorder || v.allowBackorder)
+    );
+    return {
+      value: size,
+      isAvailable: isAvail,
+    };
+  });
 }
 
 
@@ -257,14 +317,25 @@ function mapDbProduct(p: DbProduct): Product {
     sizes: p.sizes || DEFAULT_SIZES,
     status: p.status,
     categoryIds: p.categoryIds,
+    shortDesc: p.shortDesc ?? null,
+    longDescHtml: p.longDescHtml ?? null,
   };
 }
 
 /**
  * Fetches subcategories for a given parent category.
  */
-export async function getSubCategories(category: string): Promise<SubCategory[]> {
+export async function getSubCategories(category: string, gender?: string): Promise<SubCategory[]> {
+  if (category === "women-leather-goods") {
+    return Promise.resolve(LEATHER_GOODS_DATA);
+  }
+  if (category === "men-leather-goods") {
+    return Promise.resolve(MEN_LEATHER_GOODS_DATA);
+  }
   if (category === "leather-goods") {
+    if (gender === "men") {
+      return Promise.resolve(MEN_LEATHER_GOODS_DATA);
+    }
     return Promise.resolve(LEATHER_GOODS_DATA);
   }
   return Promise.resolve([]);
