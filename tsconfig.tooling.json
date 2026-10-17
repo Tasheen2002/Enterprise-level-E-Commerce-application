@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "moduleDetection": "force" },
+  "include": [
+    "vitest.config.ts",
+    "vitest.setup.ts",
+    "apps/api/src/types/**/*.d.ts",
+    "scripts/**/*.ts",
+    "packages/api-client/test/**/*.ts",
+    "scratch/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

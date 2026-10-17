@@ -16,10 +16,10 @@
     "dev": "turbo run dev --parallel",
     "build": "pnpm run type-check:api && turbo run build",
     "build:api": "npx tsc --noEmit",
-    "lint": "pnpm run lint:api && turbo run lint",
+    "lint": "pnpm run lint:api && pnpm run lint:tooling && turbo run lint",
     "lint:api": "eslint --no-eslintrc --config .eslintrc.backend.cjs --ext .ts apps/api modules packages/core/src packages/types/src packages/validation/src scripts",
-    "format:check": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing",
-    "type-check": "pnpm run type-check:api && turbo run type-check",
+    "format:check": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts",
+    "type-check": "pnpm run type-check:api && pnpm run type-check:tooling && turbo run type-check",
     "type-check:api": "tsc --noEmit",
     "test": "pnpm run test:unit",
     "test:unit": "vitest run --exclude \"**/test/integration/**\" --exclude \"**/test/e2e/**\"",
@@ -27,7 +27,9 @@
     "test:vitest": "vitest run",
     "test:vitest:watch": "vitest",
     "clean": "turbo run clean",
-    "api:check": "npx tsc --noEmit --ignoreDeprecations 5.0"
+    "api:check": "npx tsc --noEmit --ignoreDeprecations 5.0",
+    "type-check:tooling": "tsc --project tsconfig.tooling.json --noEmit",
+    "lint:tooling": "eslint --no-eslintrc --config .eslintrc.backend.cjs --ext .ts,.cjs \"scripts/**/*.cjs\" scratch packages/api-client packages/config vitest.config.ts vitest.setup.ts .eslintrc.backend.cjs .prettierrc.cjs --ignore-pattern \"!.prettierrc.cjs\""
   },
   "repository": {
     "type": "git",

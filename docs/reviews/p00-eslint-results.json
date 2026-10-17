@@ -1,0 +1,5680 @@
+[
+  {
+    "filePath": "apps/api/src/container.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'size' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 1639,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1639,
+        "endColumn": 21
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'color' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 1640,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1640,
+        "endColumn": 22
+      }
+    ]
+  },
+  {
+    "filePath": "apps/api/src/index.ts"
+  },
+  {
+    "filePath": "apps/api/src/modules.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/auth.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/config.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/db.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/error.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/security.ts"
+  },
+  {
+    "filePath": "apps/api/src/plugins/swagger.ts"
+  },
+  {
+    "filePath": "apps/api/src/server.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/application/index.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/http/error-response.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/http/response-schemas.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/http/validation.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/infrastructure/persistence/index.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/infrastructure/persistence/prisma-repository.helper.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/interfaces/authenticated-request.interface.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/middleware/authenticate.middleware.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/middleware/index.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/middleware/optional-auth.middleware.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/middleware/rate-limiter.middleware.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/middleware/role-authorization.middleware.ts"
+  },
+  {
+    "filePath": "apps/api/src/shared/response.helper.ts"
+  },
+  {
+    "filePath": "apps/api/src/types/fastify.d.ts"
+  },
+  {
+    "filePath": "apps/api/test/unit/auth-boundary.spec.ts"
+  },
+  {
+    "filePath": "apps/api/test/unit/shared-foundation.spec.ts"
+  },
+  {
+    "filePath": "modules/analytics/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-add-payment-info.command.ts"
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-add-shipping-info.command.ts"
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-add-to-cart.command.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'TrackAddToCartDto' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 8,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 8,
+        "endColumn": 20,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "TrackAddToCartDto"
+            },
+            "fix": {
+              "range": [
+                159,
+                180
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"TrackAddToCartDto\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-begin-checkout.command.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'TrackBeginCheckoutDto' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 8,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 8,
+        "endColumn": 24,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "TrackBeginCheckoutDto"
+            },
+            "fix": {
+              "range": [
+                159,
+                184
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"TrackBeginCheckoutDto\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-product-view.command.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'TrackProductViewDto' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 8,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 8,
+        "endColumn": 22,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "TrackProductViewDto"
+            },
+            "fix": {
+              "range": [
+                159,
+                182
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"TrackProductViewDto\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/analytics/application/commands/track-purchase.command.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'TrackPurchaseDto' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 36,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 52,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "TrackPurchaseDto"
+            },
+            "fix": {
+              "range": [
+                157,
+                175
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"TrackPurchaseDto\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/analytics/application/services/analytics-tracking.service.ts"
+  },
+  {
+    "filePath": "modules/analytics/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/entities/analytics-event.entity.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/repositories/analytics-event.repository.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/event-id.vo.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/event-type.vo.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/product-reference.vo.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/session-id.vo.ts"
+  },
+  {
+    "filePath": "modules/analytics/domain/value-objects/user-context.vo.ts"
+  },
+  {
+    "filePath": "modules/analytics/infra/http/controllers/analytics-tracking.controller.ts"
+  },
+  {
+    "filePath": "modules/analytics/infra/http/routes.ts"
+  },
+  {
+    "filePath": "modules/analytics/infra/persistence/repositories/analytics-event.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/analytics/test/track-begin-checkout.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/add-to-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/adjust-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/calculate-checkout-tax.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/cancel-checkout.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/cleanup-expired-carts.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/clear-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/clear-guest-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/clear-user-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/complete-checkout-with-order.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/complete-checkout.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/create-bulk-reservations.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/create-guest-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/create-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/create-user-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/extend-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/initialize-checkout.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/release-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/remove-from-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/renew-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/resolve-reservation-conflicts.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/transfer-cart.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/update-cart-addresses.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/update-cart-email.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/update-cart-item.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/commands/update-cart-shipping-info.command.ts"
+  },
+  {
+    "filePath": "modules/cart/application/index.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/check-availability.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-active-cart-by-guest-token.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-active-cart-by-user.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-cart-statistics.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-cart-summary.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-cart.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-checkout.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-order-by-checkout.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reservation-by-variant.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reservation-statistics.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reservation.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reservations-by-status.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reservations.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-reserved-quantity.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/get-variant-reservations.query.ts"
+  },
+  {
+    "filePath": "modules/cart/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/cart/application/services/cart-management.service.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'err' is defined but never used.",
+        "line": 714,
+        "column": 20,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 714,
+        "endColumn": 23
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'error' is defined but never used.",
+        "line": 720,
+        "column": 14,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 720,
+        "endColumn": 19
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/application/services/checkout-order.service.ts"
+  },
+  {
+    "filePath": "modules/cart/application/services/checkout.service.ts"
+  },
+  {
+    "filePath": "modules/cart/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/cart/application/services/reservation-orchestrator.service.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 16,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "CartId"
+            },
+            "fix": {
+              "range": [
+                181,
+                246
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/application/services/reservation.service.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/constants/cart.constants.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/entities/cart-item.entity.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/entities/checkout.entity.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/entities/reservation.entity.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/entities/shopping-cart.entity.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/errors/cart.errors.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/ports/external-services.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/ports/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/repositories/cart.repository.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/repositories/checkout.repository.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/repositories/reservation.repository.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/applied-promos.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/cart-id.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/cart-owner-id.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/checkout-id.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/checkout-status.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/guest-token.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/quantity.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/domain/value-objects/reservation-id.vo.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/controllers/cart.controller.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/controllers/checkout.controller.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/controllers/reservation.controller.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/middleware/cart-auth.middleware.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/routes/cart.routes.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/routes/checkout.routes.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/routes/reservation.routes.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/validation/cart.schema.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/validation/checkout.schema.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/validation/reservation.schema.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/cart.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/checkout-completion.port.impl.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/checkout.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/reservation.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/cart/infra/persistence/repositories/settings.service.impl.ts"
+  },
+  {
+    "filePath": "modules/cart/test/e2e/cart.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'productId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 15,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 15,
+        "endColumn": 16
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'locationId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 18,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 18,
+        "endColumn": 17
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/integration/CartRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 16,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CartId"
+            },
+            "fix": {
+              "range": [
+                355,
+                362
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CartId\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/integration/CheckoutRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'afterAll' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 1,
+        "column": 55,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1,
+        "endColumn": 63,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "afterAll"
+            },
+            "fix": {
+              "range": [
+                52,
+                62
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"afterAll\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CheckoutId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 20,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CheckoutId"
+            },
+            "fix": {
+              "range": [
+                364,
+                375
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CheckoutId\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/integration/ReservationRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'afterAll' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 1,
+        "column": 55,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1,
+        "endColumn": 63,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "afterAll"
+            },
+            "fix": {
+              "range": [
+                52,
+                62
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"afterAll\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ReservationId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 23,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "ReservationId"
+            },
+            "fix": {
+              "range": [
+                376,
+                390
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"ReservationId\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/unit/application/add-to-cart.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/application/clear-cart.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/application/create-reservation.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/application/initialize-checkout.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/applied-promos.vo.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/cart-item.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/checkout.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CheckoutId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 20,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CheckoutId"
+            },
+            "fix": {
+              "range": [
+                130,
+                141
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CheckoutId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 22,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 28,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CartId"
+            },
+            "fix": {
+              "range": [
+                140,
+                148
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CartId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartOwnerId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 30,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 41,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CartOwnerId"
+            },
+            "fix": {
+              "range": [
+                148,
+                161
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CartOwnerId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'GuestToken' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 43,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 53,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "GuestToken"
+            },
+            "fix": {
+              "range": [
+                161,
+                173
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"GuestToken\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CheckoutStatus' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 55,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 69,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "CheckoutStatus"
+            },
+            "fix": {
+              "range": [
+                121,
+                235
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/quantity.vo.spec.ts"
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/reservation.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ReservationId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 23,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "ReservationId"
+            },
+            "fix": {
+              "range": [
+                163,
+                177
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"ReservationId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 25,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 31,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "CartId"
+            },
+            "fix": {
+              "range": [
+                154,
+                230
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/shopping-cart.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 16,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CartId"
+            },
+            "fix": {
+              "range": [
+                139,
+                146
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CartId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'CartOwnerId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 18,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 29,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "CartOwnerId"
+            },
+            "fix": {
+              "range": [
+                145,
+                158
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"CartOwnerId\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'GuestToken' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 31,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 41,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "GuestToken"
+            },
+            "fix": {
+              "range": [
+                130,
+                216
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'DomainValidationError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 4,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 4,
+        "endColumn": 31,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "DomainValidationError"
+            },
+            "fix": {
+              "range": [
+                225,
+                247
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"DomainValidationError\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/cart/test/unit/domain/value-objects.spec.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/add-chat-message.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/add-customer-feedback.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/add-return-item.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/add-ticket-message.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/approve-return.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/assign-support-agent.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/close-ticket.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-chat-session.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-goodwill-record.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-repair.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-return-request.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-support-agent.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/create-support-ticket.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/delete-repair.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/delete-return-request.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/delete-support-agent.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/delete-support-ticket.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/end-chat-session.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/process-refund.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/reject-return.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-repair-status.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-repair.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-return-item-condition.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-return-request.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-rma-status.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-support-agent.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-support-ticket.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/commands/update-ticket-status.command.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-chat-messages.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-chat-session.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-customer-feedback.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-goodwill-record.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-repair.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-return-items.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-return-request.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-support-agent.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-support-ticket.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/get-ticket-messages.query.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-chat-sessions.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 26,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 26,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-customer-feedback.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 28,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 28,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-goodwill-records.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 27,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 27,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-repairs.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 24,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 24,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-return-requests.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 27,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 27,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-support-agents.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 22,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 22,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/queries/list-support-tickets.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 26,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 26,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/application/services/chat-message.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/chat-session.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/customer-feedback.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/goodwill-record.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/repair.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/return-item.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/return-request.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/support-agent.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/support-ticket.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/application/services/ticket-message.service.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/chat-message.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/chat-session.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/customer-feedback.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/goodwill-record.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/repair.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/return-item.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/return-request.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/support-agent.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/support-ticket.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/entities/ticket-message.entity.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/external-services.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/chat-message.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/chat-session.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/customer-feedback.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/goodwill-record.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/repair.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/return-item.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/return-request.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/support-agent.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/support-ticket.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/repositories/ticket-message.repository.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/agent-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/chat-sender-type.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/chat-status.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/feedback-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/goodwill-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/goodwill-type.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/item-condition.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/item-disposition.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/message-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/message-sender.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/money.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/repair-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/repair-status.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/rma-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/rma-status.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/rma-type.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/session-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/ticket-id.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/ticket-priority.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/ticket-source.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/domain/value-objects/ticket-status.vo.ts"
+  },
+  {
+    "filePath": "modules/customer-care/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/chat-message.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/chat-session.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/customer-feedback.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/goodwill-record.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/repair.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/return-item.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/return-request.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/support-agent.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/support-ticket.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/controllers/ticket-message.controller.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/http/routes.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/chat-message.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/chat-session.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/customer-feedback.repository.impl.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'createdAt' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 268,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 268,
+        "endColumn": 26
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/goodwill-record.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/repair.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/return-item.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/return-request.repository.impl.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'createdAt' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 55,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 55,
+        "endColumn": 26
+      }
+    ]
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/support-agent.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/support-ticket.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/infra/persistence/repositories/ticket-message.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/customer-care/test/close-ticket.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/add-to-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/cancel-appointment.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/create-appointment.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/create-product-review.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/create-reminder.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/create-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/delete-product-review.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/delete-reminder.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/delete-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/mark-reminder-as-sent.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/remove-from-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/schedule-notification.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/send-notification.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/subscribe-newsletter.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/transfer-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/unsubscribe-newsletter.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/unsubscribe-reminder.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/update-appointment.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/update-review-status.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/commands/update-wishlist.command.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-all-reviews.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-appointment.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-location-appointments.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-newsletter-subscription.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-notification.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-notifications-by-type.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-product-review.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-product-reviews.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-public-wishlists.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-reminder.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-user-appointments.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-user-reminders.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-user-reviews.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-user-wishlists.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-variant-reminders.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-wishlist-items.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/get-wishlist.query.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/appointment.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/newsletter.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/notification.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/product-review.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/reminder-management.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/application/services/wishlist-management.service.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/constants/engagement.constants.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/appointment.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/newsletter-subscription.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/notification.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/product-review.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/reminder.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/wishlist-item.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/entities/wishlist.entity.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/errors/engagement.errors.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/appointment.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/newsletter-subscription.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/notification.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/product-review.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/reminder.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/wishlist-item.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/repositories/wishlist.repository.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/appointment-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/appointment-type.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/channel-type.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/contact-type.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/notification-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/notification-status.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/notification-type.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/rating.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/reminder-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/reminder-status.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/reminder-type.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/review-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/review-status.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/subscription-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/subscription-status.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/wishlist-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts"
+  },
+  {
+    "filePath": "modules/engagement/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/appointment.controller.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/newsletter.controller.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'error' is defined but never used.",
+        "line": 71,
+        "column": 14,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 71,
+        "endColumn": 19
+      }
+    ]
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/notification.controller.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/product-review.controller.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/reminder.controller.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/controllers/wishlist.controller.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/appointment.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/newsletter.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/notification.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/product-review.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/reminder.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/routes/wishlist.routes.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/appointment.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/newsletter.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/notification.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/product-review.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/reminder.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/http/validation/wishlist.schema.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/appointment.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/newsletter-subscription.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/notification.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/product-review.repository.impl.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ProductReviewDatabaseRow' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 20,
+        "column": 11,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 20,
+        "endColumn": 35
+      }
+    ]
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/reminder.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/wishlist-item.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/infra/persistence/repositories/wishlist.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/e2e/engagement.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/integration/ProductReviewRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/integration/ReminderRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ReminderId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 20,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "ReminderId"
+            },
+            "fix": {
+              "range": [
+                366,
+                377
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"ReminderId\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/engagement/test/integration/WishlistRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/application/create-product-review.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/application/delete-reminder.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/Appointment.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/NewsletterSubscription.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/Notification.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'NotificationStatusChangedEvent' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 11,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 11,
+        "endColumn": 33,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "NotificationStatusChangedEvent"
+            },
+            "fix": {
+              "range": [
+                224,
+                258
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"NotificationStatusChangedEvent\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/ProductReview.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/Reminder.spec.ts"
+  },
+  {
+    "filePath": "modules/engagement/test/unit/domain/Wishlist.spec.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/commands/add-shipment-item.command.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/commands/create-shipment.command.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/commands/remove-shipment-item.command.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/commands/update-shipment-status.command.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/queries/get-shipment-items.query.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/queries/get-shipment.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'Shipment' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 7,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 7,
+        "endColumn": 18,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "Shipment"
+            },
+            "fix": {
+              "range": [
+                184,
+                250
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/fulfillment/application/queries/list-shipments.query.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/services/shipment-item.service.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/application/services/shipment.service.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/entities/shipment-item.entity.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/entities/shipment.entity.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/repositories/shipment-item.repository.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ShipmentId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 2,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 20,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "ShipmentId"
+            },
+            "fix": {
+              "range": [
+                66,
+                114
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/fulfillment/domain/repositories/shipment.repository.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/value-objects/shipment-id.vo.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/domain/value-objects/shipment-status.vo.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/http/controllers/shipment-item.controller.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/http/controllers/shipment.controller.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/http/routes.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/persistence/repositories/shipment-item.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/infra/persistence/repositories/shipment.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/fulfillment/test/remove-shipment-item.spec.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/add-po-item.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/add-stock.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/adjust-stock.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/cancel-pickup-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-location.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-pickup-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-purchase-order-with-items.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-purchase-order.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-stock-alert.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/create-supplier.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/delete-location.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/delete-purchase-order.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/delete-stock-alert.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/delete-supplier.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/extend-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/fulfill-reservation.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/receive-po-items.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/remove-po-item.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/reserve-stock.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/resolve-stock-alert.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/set-stock-thresholds.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/transfer-stock.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/update-location.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/update-po-eta.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/update-po-item.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/update-po-status.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/commands/update-supplier.command.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-active-alerts.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-location.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-low-stock-items.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-out-of-stock-items.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-overdue-purchase-orders.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-pending-receival.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-pickup-reservation.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-po-items.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-purchase-order.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-stock-alert.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-stock-by-variant.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-stock-stats.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-stock.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-supplier.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-total-available-stock.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-transaction.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/get-transactions-by-variant.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-locations.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-pickup-reservations.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-purchase-orders.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-stock-alerts.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-stocks.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-suppliers.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/queries/list-transactions.query.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/location-management.service.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/pickup-reservation.service.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'Stock' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 2,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 15,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "Stock"
+            },
+            "fix": {
+              "range": [
+                108,
+                169
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/purchase-order-management.service.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/stock-alert.service.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/stock-management.service.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/application/services/supplier-management.service.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/constants/inventory-management.constants.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/inventory-transaction.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/location.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/pickup-reservation.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/purchase-order-item.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/purchase-order.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/stock-alert.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/stock.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/entities/supplier.entity.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/errors/inventory-management.errors.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/inventory-transaction.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/location.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/pickup-reservation.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/purchase-order-item.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/purchase-order.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/stock-alert.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/stock.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/repositories/supplier.repository.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/alert-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/alert-type.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/location-address.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/location-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/location-name.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/location-type.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/purchase-order-status.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/reservation-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/reservation-status.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/stock-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/stock-level.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/supplier-contact.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/supplier-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/supplier-name.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/transaction-id.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/domain/value-objects/transaction-reason.vo.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/inventory-transaction.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/location.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/pickup-reservation.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/purchase-order-item.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/purchase-order.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/stock-alert.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/stock.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/controllers/supplier.controller.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/inventory-transaction.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/location.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/pickup-reservation.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/purchase-order-item.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/purchase-order.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/stock-alert.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/stock.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/routes/supplier.routes.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/inventory-transaction.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/location.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/pickup-reservation.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/purchase-order.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/stock-alert.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/stock.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/supplier.schema.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/inventory-transaction.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/location.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/pickup-reservation.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/purchase-order-item.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/purchase-order.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/stock-alert.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/stock.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/infra/persistence/repositories/supplier.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/test/e2e/inventory.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/test/integration/StockRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'afterAll' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 1,
+        "column": 55,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1,
+        "endColumn": 63,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "afterAll"
+            },
+            "fix": {
+              "range": [
+                52,
+                62
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"afterAll\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'StockId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 17,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "StockId"
+            },
+            "fix": {
+              "range": [
+                375,
+                465
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/inventory-management/test/unit/application/add-stock.spec.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts"
+  },
+  {
+    "filePath": "modules/inventory-management/test/unit/domain/Stock.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/commands/adjust-points.command.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/commands/award-loyalty-points.command.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/commands/create-loyalty-program.command.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/commands/redeem-loyalty-points.command.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/queries/get-loyalty-account.query.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/queries/get-loyalty-programs.query.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/queries/get-loyalty-transactions.query.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/services/loyalty-program.service.ts"
+  },
+  {
+    "filePath": "modules/loyalty/application/services/loyalty.service.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/constants/loyalty.constants.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/entities/loyalty-account.entity.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/entities/loyalty-program.entity.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/entities/loyalty-transaction.entity.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/errors/loyalty.errors.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/repositories/loyalty-account.repository.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/repositories/loyalty-program.repository.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/repositories/loyalty-transaction.repository.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/loyalty-reason.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/points.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/domain/value-objects/tier.vo.ts"
+  },
+  {
+    "filePath": "modules/loyalty/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/controllers/loyalty.controller.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/routes/loyalty.routes.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/validation/loyalty.schema.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/persistence/repositories/loyalty-account.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/persistence/repositories/loyalty-program.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/loyalty/infra/persistence/repositories/loyalty-transaction.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/e2e/loyalty.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/integration/LoyaltyAccountRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/integration/LoyaltyTransactionRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/application/adjust-points.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/domain/loyalty-program.spec.ts"
+  },
+  {
+    "filePath": "modules/loyalty/test/unit/domain/value-objects.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/add-order-item.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/cancel-order.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/create-backorder.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/create-order.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/create-preorder.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/create-shipment.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/delete-backorder.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/delete-order.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/delete-preorder.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/log-order-event.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/log-order-status-change.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-backorder-notified.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-order-fulfilled.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-order-paid.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-preorder-notified.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-shipment-delivered.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/mark-shipment-shipped.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/remove-order-item.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/set-order-addresses.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-backorder-eta.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-billing-address.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-order-item.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-order-status.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-order-totals.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-preorder-release-date.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-shipment-tracking.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/commands/update-shipping-address.command.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-backorder.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-dashboard-metrics.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-order-address.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-order-event.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-order-item.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-order-status-history.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-order.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-preorder.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-shipment-by-tracking-number.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/get-shipment.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-backorders.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-order-events.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-order-items.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-order-shipments.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-orders.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/list-preorders.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/queries/track-order.query.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/backorder-management.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/order-event.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/order-item-management.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/order-management.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/preorder-management.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/application/services/shipment-management.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/constants/order-management.constants.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/backorder.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order-address.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order-event.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order-item.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order-shipment.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order-status-history.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/order.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/entities/preorder.entity.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/errors/order-management.errors.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/ports/external-services.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/backorder.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order-address.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order-event.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order-item.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order-shipment.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order-status-history.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/order.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/repositories/preorder.repository.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/address-snapshot.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-id.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-item-id.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-number.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-source.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-status.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/order-totals.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/product-snapshot.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/domain/value-objects/shipment-id.vo.ts"
+  },
+  {
+    "filePath": "modules/order-management/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/admin-notification.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/backorder.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order-address.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order-event.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order-item.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order-shipment.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order-status-history.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/order.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/controllers/preorder.controller.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/admin-notification.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/backorder.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order-address.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order-event.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order-item.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order-shipment.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order-status-history.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/order.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/routes/preorder.routes.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/admin-notification.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/backorder.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order-address.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order-event.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order-item.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order-shipment.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order-status-history.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/order.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/preorder.schema.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/backorder.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order-address.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order-event.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order-item.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order-shipment.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order-status-history.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/order.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/persistence/repositories/preorder.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/order-management/infra/shipping/fedex-shipping.service.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/e2e/order.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'productId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 22,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 22,
+        "endColumn": 16
+      }
+    ]
+  },
+  {
+    "filePath": "modules/order-management/test/integration/BackorderRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/integration/OrderRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'OrderStatus' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 9,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 9,
+        "endColumn": 21,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "OrderStatus"
+            },
+            "fix": {
+              "range": [
+                645,
+                739
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/order-management/test/integration/OrderShipmentRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/integration/PreorderRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/unit/application/cancel-order.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/unit/application/create-order.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/unit/application/create-shipment.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/unit/domain/backorder.spec.ts"
+  },
+  {
+    "filePath": "modules/order-management/test/unit/domain/order.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'OrderItemRemovedEvent' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 2,
+        "column": 82,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 103,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "OrderItemRemovedEvent"
+            },
+            "fix": {
+              "range": [
+                126,
+                149
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"OrderItemRemovedEvent\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'OrderShipmentCreatedEvent' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 2,
+        "column": 105,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 130,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "OrderShipmentCreatedEvent"
+            },
+            "fix": {
+              "range": [
+                149,
+                176
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"OrderShipmentCreatedEvent\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'OrderStatus' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 7,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 7,
+        "endColumn": 21,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "OrderStatus"
+            },
+            "fix": {
+              "range": [
+                617,
+                711
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'OrderNotEditableError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 12,
+        "column": 33,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 12,
+        "endColumn": 54,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "OrderNotEditableError"
+            },
+            "fix": {
+              "range": [
+                1114,
+                1137
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"OrderNotEditableError\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'InvalidOperationError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 12,
+        "column": 107,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 12,
+        "endColumn": 128,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "InvalidOperationError"
+            },
+            "fix": {
+              "range": [
+                1188,
+                1211
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"InvalidOperationError\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'InvalidOrderStatusTransitionError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 12,
+        "column": 172,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 12,
+        "endColumn": 205,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "InvalidOrderStatusTransitionError"
+            },
+            "fix": {
+              "range": [
+                1253,
+                1288
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"InvalidOrderStatusTransitionError\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/order-management/test/unit/domain/preorder.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'PreorderNotifiedEvent' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 2,
+        "column": 75,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 96,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "PreorderNotifiedEvent"
+            },
+            "fix": {
+              "range": [
+                119,
+                142
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"PreorderNotifiedEvent\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/order-management/test/unit/domain/value-objects.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'Currency' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 11,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 11,
+        "endColumn": 18,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "Currency"
+            },
+            "fix": {
+              "range": [
+                918,
+                993
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/payment/application/commands/apply-promotion.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/create-bnpl-transaction.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/create-gift-card.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/create-payment-intent.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/create-promotion.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/process-bnpl-payment.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/process-payment.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/process-webhook-event.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/record-promotion-usage.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/redeem-gift-card.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/refund-payment.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/commands/void-payment.command.ts"
+  },
+  {
+    "filePath": "modules/payment/application/index.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-active-promotions.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-bnpl-transactions.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-gift-card-balance.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-gift-card-transactions.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-payment-intent.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-payment-transactions.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-promotion-usage.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/get-webhook-events.query.ts"
+  },
+  {
+    "filePath": "modules/payment/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/bnpl-transaction.service.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/gift-card.service.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/payment-webhook.service.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/payment.service.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/promotion.service.ts"
+  },
+  {
+    "filePath": "modules/payment/application/services/stripe-card-setup.service.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/constants/payment-loyalty.constants.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/bnpl-transaction.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/gift-card-transaction.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/gift-card.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/payment-intent.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/payment-transaction.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/payment-webhook-event.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/promotion-usage.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/entities/promotion.entity.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/errors/payment-loyalty.errors.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/external-services.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/bnpl-transaction.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/gift-card-transaction.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/gift-card.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/payment-intent.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/payment-transaction.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/payment-webhook-event.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/promotion-usage.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/repositories/promotion.repository.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/bnpl-provider.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/bnpl-status.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/currency.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/gift-card-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/gift-card-status.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/gift-card-transaction-type.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/money.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-intent-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-intent-status.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-method.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-transaction-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-transaction-status.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/payment-transaction-type.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/promotion-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/promotion-status.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/promotion-usage-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/webhook-event-id.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/domain/value-objects/webhook-event-type.vo.ts"
+  },
+  {
+    "filePath": "modules/payment/index.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/config/stripe.config.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/bnpl-transaction.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/gift-card.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/payment-intent.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/payment-webhook.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/promotion.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/stripe-card-setup.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/controllers/stripe-webhook.controller.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/bnpl-transaction.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/gift-card.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/payment-intent.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/promotion.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/stripe-card-setup.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/routes/webhook.routes.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/bnpl.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/gift-card.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/loyalty.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/payment-intent.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/promotion.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/stripe-card-setup.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/http/validation/webhook.schema.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/payment-providers/stripe.provider.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/bnpl-transaction.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/gift-card-transaction.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/gift-card.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/payment-intent.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/payment-transaction.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/payment-webhook-event.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/promotion-usage.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/infra/persistence/repositories/promotion.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/payment/test/e2e/payment.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'signature' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 22,
+        "column": 90,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 22,
+        "endColumn": 99
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'secret' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 22,
+        "column": 101,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 22,
+        "endColumn": 107
+      }
+    ]
+  },
+  {
+    "filePath": "modules/payment/test/integration/GiftCardRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/integration/PaymentIntentRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'PaymentIntentId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 5,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 5,
+        "endColumn": 25,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "PaymentIntentId"
+            },
+            "fix": {
+              "range": [
+                320,
+                414
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/payment/test/integration/PromotionRepository.integration.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/unit/application/create-payment-intent.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/unit/application/process-payment.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/unit/application/void-payment.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/unit/domain/gift-card.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'GiftCardRefundError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 5,
+        "column": 35,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 5,
+        "endColumn": 54,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "GiftCardRefundError"
+            },
+            "fix": {
+              "range": [
+                307,
+                328
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"GiftCardRefundError\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/payment/test/unit/domain/payment-intent.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'PaymentIntentStatus' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 3,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 3,
+        "endColumn": 29,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "PaymentIntentStatus"
+            },
+            "fix": {
+              "range": [
+                135,
+                237
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'Money' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 4,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 4,
+        "endColumn": 15,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "Money"
+            },
+            "fix": {
+              "range": [
+                237,
+                309
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'Currency' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 5,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 5,
+        "endColumn": 18,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "Currency"
+            },
+            "fix": {
+              "range": [
+                309,
+                387
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/payment/test/unit/domain/promotion.spec.ts"
+  },
+  {
+    "filePath": "modules/payment/test/unit/domain/value-objects.spec.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/add-media-to-multiple-variants.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/add-media-to-product.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/add-media-to-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/add-multiple-media-to-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/add-product-to-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/associate-product-tags.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/clear-editorial-look-story-content.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/clear-size-guide-content.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/compact-product-media-positions.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/copy-product-variant-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-bulk-editorial-looks.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-bulk-product-tags.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-bulk-size-guides.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-category-size-guide.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-category.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-media-asset.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-product-tag.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-product-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-product.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-regional-size-guide.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/create-size-guide.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-bulk-editorial-looks.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-bulk-product-tags.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-bulk-size-guides.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-category.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-media-asset.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-product-tag.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-product-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-product.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/delete-size-guide.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/duplicate-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/duplicate-product-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/duplicate-variant-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/move-media-position.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/process-scheduled-editorial-look-publications.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/publish-bulk-editorial-looks.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/publish-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-all-product-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-all-variant-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-cover-image.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-editorial-look-hero-image.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-media-from-product.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-media-from-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-product-from-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/remove-product-tag-association.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/reorder-categories.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/reorder-product-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/schedule-editorial-look-publication.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/set-editorial-look-hero-image.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/set-editorial-look-products.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/set-product-cover-image.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/set-product-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/set-variant-media.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/unpublish-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-category.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-editorial-look-story-content.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-editorial-look.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-media-asset.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-product-tag.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-product-variant.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-product.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-size-guide-content.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/commands/update-size-guide.command.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-available-size-guide-categories.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-available-size-guide-regions.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-category-hierarchy.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 9,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 9,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-category.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-color-variant-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-editorial-look-products.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-editorial-look-stats.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-editorial-look.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-editorial-looks-by-hero-asset.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-editorial-looks-by-product.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-general-size-guides.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-media-asset.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-most-used-product-tags.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-popular-editorial-look-products.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-popular-searches.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 14,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 14,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-editorial-looks.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-media-asset-usage-count.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-media-statistics.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-tag-stats.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-tag-suggestions.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-tag.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-tags.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product-variant-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-product.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-products-using-asset.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-ready-to-publish-editorial-looks.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-regional-size-guides.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-search-filters.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-search-stats.query.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "line": 9,
+        "column": 16,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 9,
+        "endColumn": 21
+      }
+    ]
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-search-suggestions.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-size-guide-stats.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-size-guide.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-size-variant-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-tag-products.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-unused-variant-media-assets.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-variant-media-asset-usage-count.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-variant-media-statistics.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-variant-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-variant.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/get-variants-using-asset.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-categories.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-editorial-looks.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-product-tags.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-products.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-size-guides.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/list-variants.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/search-media-assets.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/search-products.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/validate-editorial-look-for-publication.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/validate-product-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/validate-product-tag.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/validate-size-guide-uniqueness.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/queries/validate-variant-media.query.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/category-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/editorial-look-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/ihtml-sanitizer.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/media-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/product-management.service.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ProductAlreadyExistsError' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 18,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 18,
+        "endColumn": 28,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "ProductAlreadyExistsError"
+            },
+            "fix": {
+              "range": [
+                918,
+                948
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"ProductAlreadyExistsError\"."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/product-media-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/product-search.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/product-tag-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/size-guide-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/variant-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/application/services/variant-media-management.service.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/constants/pagination.constants.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/category.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/editorial-look.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/media-asset.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/product-media.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/product-tag-association.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/product-tag.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/product-variant.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/product.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/size-guide.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/entities/variant-media.entity.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/errors/product-catalog.errors.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/category.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/editorial-look.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/media-asset.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/product-media.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/product-tag-association.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/product-tag.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/product-variant.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/product.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/size-guide.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/repositories/variant-media.repository.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/category-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/money.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/product-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/product-status.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/region.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/sku.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/slug.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/domain/value-objects/variant-id.vo.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/category.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/editorial-look.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/media.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/product-media.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/product-tag.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/product.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/search.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/size-guide.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/variant-media.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/controllers/variant.controller.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/category.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/editorial-look.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/media.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/product-media.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/product-tag.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/product.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/search.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/size-guide.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/variant-media.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/routes/variant.routes.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/category.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/editorial-look.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/media.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/product-media.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/product-tag.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/product.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/search.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/size-guide.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/variant-media.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/http/validation/variant.schema.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/category.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/editorial-look.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/media-asset.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/product-media.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/product-tag-association.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/product-tag.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/product-variant.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/product.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/size-guide.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/persistence/repositories/variant-media.repository.impl.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/infra/security/sanitize-html.adapter.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/test/e2e/product-catalog.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/test/integration/ProductRepository.integration.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'afterAll' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 1,
+        "column": 43,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1,
+        "endColumn": 51,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "afterAll"
+            },
+            "fix": {
+              "range": [
+                40,
+                50
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"afterAll\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'ProductId' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 6,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 6,
+        "endColumn": 19,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "ProductId"
+            },
+            "fix": {
+              "range": [
+                361,
+                450
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/test/unit/application/delete-category.spec.ts"
+  },
+  {
+    "filePath": "modules/product-catalog/test/unit/domain/Product.spec.ts"
+  },
+  {
+    "filePath": "modules/shared/domain/ports/email.service.port.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/accept-admin-invitation.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/add-address.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/add-payment-method.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/change-email.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/change-password.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/delete-account.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/delete-address.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/delete-payment-method.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/delete-user.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/disable-2fa.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/enable-2fa.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/initiate-password-reset.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/invite-admin.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/login-user.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/login-with-google.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/logout.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/refresh-token.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/regenerate-backup-codes.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/register-user.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/resend-verification.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/reset-password.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/revoke-admin-invitation.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/revoke-session.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/set-default-payment-method.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/setup-2fa.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/toggle-user-email-verified.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/update-address.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/update-payment-method.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/update-profile.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/update-user-role.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/update-user-status.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/verify-2fa-login.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/verify-email.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/commands/verify-phone.command.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/get-active-sessions.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/get-user-details.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/get-user-profile.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/list-addresses.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/list-admin-invitations.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/list-payment-methods.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/queries/list-user.query.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/address-management.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/authentication.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/iemail.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/ifirebase-auth-verifier.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/ijwt.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/imagekit-upload-auth.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/itoken-blacklist.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/itotp.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/itwo-factor-backup-code.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/password-hasher.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/payment-method.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/user-agent-parser.util.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/user-profile.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/application/services/user.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/constants/currency.constants.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/constants/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/constants/locale.constants.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/constants/pagination.constants.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/constants/user-management.constants.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/address.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/admin-invitation.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/member-session.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/payment-method.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/social-login.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/user-profile.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/entities/user.entity.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/errors/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/errors/user-management.errors.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/iaddress.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/iadmin-invitation.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/ipayment-method.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/isession.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/isocial-login.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/itwo-factor-backup-code.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/iuser-profile.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/repositories/iuser.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/services/address-shipping.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/address-id.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/address-type.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/address.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/email.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/locale.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/payment-method-id.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/payment-method-type.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/phone.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/shipping-zone.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/social-login-id.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/social-provider.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/user-id.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/user-role.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/domain/value-objects/user-status.vo.ts"
+  },
+  {
+    "filePath": "modules/user-management/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/addresses.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/admin-invitation.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/auth.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/payment-methods.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/profile.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/controllers/users.controller.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/addresses.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/admin-invitations.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/auth.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/payment-methods.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/profile.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/routes/users.routes.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/security/jwt.service.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/security/token-blacklist.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/address.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/admin-invitation.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/auth.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/payment-method.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/profile.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/user.schema.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/http/validation/validator.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/address.repository.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'id' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 147,
+        "column": 13,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 147,
+        "endColumn": 15
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'userId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 147,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 147,
+        "endColumn": 23
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'createdAt' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 147,
+        "column": 25,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 147,
+        "endColumn": 34
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/admin-invitation.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/index.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/payment-method.repository.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'id' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 138,
+        "column": 13,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 138,
+        "endColumn": 15
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'userId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 138,
+        "column": 17,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 138,
+        "endColumn": 23
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'createdAt' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 138,
+        "column": 25,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 138,
+        "endColumn": 34
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/prisma-session.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/social-login.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/two-factor-backup-code.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/user-profile.repository.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'userId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 53,
+        "column": 13,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 53,
+        "endColumn": 19
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/infra/persistence/repositories/user.repository.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/security/bcrypt-password-hasher.adapter.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/security/firebase-auth-verifier.adapter.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/security/nodemailer-email.adapter.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/security/speakeasy-totp.adapter.ts"
+  },
+  {
+    "filePath": "modules/user-management/infra/security/two-factor-backup-code.adapter.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/delete-account.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/google-login.e2e.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/phone-verification.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'PrismaClient' is defined but never used. Allowed unused vars must match /^_/u.",
+        "line": 4,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 4,
+        "endColumn": 22,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "PrismaClient"
+            },
+            "fix": {
+              "range": [
+                223,
+                270
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/session-management.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'prisma' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 7,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 7,
+        "endColumn": 13
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/two-factor-auth.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'prisma' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 8,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 8,
+        "endColumn": 13
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'refreshToken' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 13,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 13,
+        "endColumn": 19
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'userId' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 14,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 14,
+        "endColumn": 13
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'backupCodes' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 100,
+        "column": 11,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 100,
+        "endColumn": 22
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/test/e2e/user-lifecycle.e2e.spec.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'prisma' is assigned a value but never used. Allowed unused vars must match /^_/u.",
+        "line": 7,
+        "column": 7,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 7,
+        "endColumn": 13
+      }
+    ]
+  },
+  {
+    "filePath": "modules/user-management/test/integration/initiate-password-reset.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/change-email.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/change-password.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/login-user.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/logout.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/register-user.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/reset-password.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/update-profile.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/application/verify-email.spec.ts"
+  },
+  {
+    "filePath": "modules/user-management/test/unit/domain/User.spec.ts"
+  },
+  {
+    "filePath": "packages/core/src/application/command-result.ts"
+  },
+  {
+    "filePath": "packages/core/src/application/cqrs.ts"
+  },
+  {
+    "filePath": "packages/core/src/application/index.ts"
+  },
+  {
+    "filePath": "packages/core/src/application/query-result.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/aggregate-root.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/domain-error.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/events/domain-event.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/events/in-memory-event-bus.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/events/index.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/index.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/interfaces/index.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/interfaces/paginated-result.interface.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/value-objects/currency.constants.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/value-objects/currency.vo.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/value-objects/index.ts"
+  },
+  {
+    "filePath": "packages/core/src/domain/value-objects/uuid-id.base.ts"
+  },
+  {
+    "filePath": "packages/core/src/index.ts"
+  },
+  {
+    "filePath": "packages/types/src/index.ts"
+  },
+  {
+    "filePath": "packages/validation/src/auth/index.ts"
+  },
+  {
+    "filePath": "packages/validation/src/common/index.ts"
+  },
+  {
+    "filePath": "packages/validation/src/index.ts"
+  },
+  {
+    "filePath": "packages/validation/src/user/index.ts"
+  },
+  {
+    "filePath": "scripts/testing/database-safety.ts"
+  }
+]
