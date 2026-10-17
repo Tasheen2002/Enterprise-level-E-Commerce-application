@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-17",
+  "mode": "Original utility exits successfully after injected server failure; inert imports and no DB access",
+  "sourceCommit": "161dcd13b32ada7aab76f2f73c40cb45cbce6e04",
+  "results": [
+    {
+      "script": "scratch/test-expiry-renewal.ts",
+      "passed": true,
+      "exitCode": 0,
+      "prismaConstruction": "not-attempted"
+    }
+  ]
+}

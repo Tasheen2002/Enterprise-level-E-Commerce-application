@@ -1,18 +1,13 @@
 {
   "date": "2026-10-17",
   "passed_tests": 14,
-  "scope": "scripts/testing/restock-probes.ts only; simulated dispatcher state is not delivery certification",
+  "suite_tests": 42,
+  "scope": "Restock helper portion of the latest expiry/restock focused suite; actual notification delivery remains unverified",
   "coverage": {
     "total": {
       "lines": {
         "total": 36,
         "covered": 36,
-        "skipped": 0,
-        "pct": 100
-      },
-      "statements": {
-        "total": 40,
-        "covered": 40,
         "skipped": 0,
         "pct": 100
       },
@@ -22,17 +17,17 @@
         "skipped": 0,
         "pct": 100
       },
+      "statements": {
+        "total": 40,
+        "covered": 40,
+        "skipped": 0,
+        "pct": 100
+      },
       "branches": {
         "total": 17,
         "covered": 17,
         "skipped": 0,
         "pct": 100
-      },
-      "branchesTrue": {
-        "total": 0,
-        "covered": 0,
-        "skipped": 0,
-        "pct": "Unknown"
       }
     },
     "scripts/testing/restock-probes.ts": {

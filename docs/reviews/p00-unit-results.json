@@ -1,8 +1,8 @@
 {
   "date": "2026-10-17",
-  "passed_tests": 381,
+  "passed_tests": 409,
   "failed_tests": 0,
-  "passed_files": 65,
+  "passed_files": 66,
   "coverage_scope": "Latest full unit run without broad coverage; most recent broad measurement is the earlier 367-test run; operational helpers measured separately",
   "results": [
     {
@@ -69,6 +69,124 @@
         },
         {
           "title": "database cleanup safety requires an explicit dedicated test URL and destructive cleanup opt-in",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/cart-expiry-probe.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "isolated cart expiry renewal probe asserts persisted renewal and removes only generated fixture identities",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects an invalid starting cart and cleans fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent renewed summaries",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent renewed summaries",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent renewed summaries",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent renewed summaries",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent renewed summaries",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent persisted carts",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent persisted carts",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent persisted carts",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects missing or inconsistent persisted carts",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects persisted expiry outside the configured renewal window: -1 ms",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects persisted expiry outside the configured renewal window: 1 ms",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects unrenewed or missing persisted reservations",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects unrenewed or missing persisted reservations",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects unrenewed or missing persisted reservations",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects wrong quantities or duplicate cart lines",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects wrong quantities or duplicate cart lines",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe rejects wrong quantities or duplicate cart lines",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe propagates service failure after cleaning the owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe cleans fixture insertion failures without running the service",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe reports cleanup failures after a successful assertion",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart expiry renewal probe preserves both renewal and cleanup failures",
           "status": "passed"
         }
       ]
@@ -1074,6 +1192,26 @@
       ]
     },
     {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1151,60 +1289,6 @@
         },
         {
           "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
-          "status": "passed"
-        },
-        {
-          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
           "status": "passed"
         }
       ]
@@ -1359,6 +1443,40 @@
         },
         {
           "title": "Loyalty Value Objects LoyaltyReason Value Object should throw InvalidFormatError when creating with invalid reason",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
+          "status": "passed"
+        },
+        {
+          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
           "status": "passed"
         }
       ]
@@ -1542,36 +1660,6 @@
       ]
     },
     {
-      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1708,25 +1796,31 @@
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
           "status": "passed"
-        },
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
         {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
           "status": "passed"
         }
       ]
@@ -1765,6 +1859,30 @@
         },
         {
           "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
           "status": "passed"
         }
       ]

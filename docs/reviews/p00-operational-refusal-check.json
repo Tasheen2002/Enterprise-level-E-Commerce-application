@@ -56,6 +56,12 @@
       "passed": true,
       "exitCode": 1,
       "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/test-expiry-renewal.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
     }
   ]
 }

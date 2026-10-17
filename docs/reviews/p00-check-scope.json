@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1319
+      "localSourceFiles": 1321
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,13 +35,13 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 1005
+      "localSourceFiles": 937
     }
   ],
   "commands": {
     "typeCheck": "pnpm run type-check:api && pnpm run type-check:tooling && turbo run type-check",
     "lint": "pnpm run lint:api && pnpm run lint:tooling && turbo run lint",
-    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts"
+    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts apps/api/test/unit/cart-expiry-probe.spec.ts scratch/test-expiry-renewal.ts"
   },
   "note": "Compiler program membership includes imported files outside include roots; this is scope evidence, not a new type-check result. skipLibCheck limits declaration checking. Lint membership is the saved backend run only; Next lint is separate. Formatter membership describes current explicit roots, not a formatting result. JavaScript checkJs is not enabled. Missing coverage requires a deliberate policy, not blanket exclusions.",
   "files": [
@@ -887,8 +887,7 @@
     {
       "file": "apps/api/src/modules.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -957,8 +956,7 @@
     {
       "file": "apps/api/src/server.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -986,8 +984,7 @@
     {
       "file": "apps/api/src/shared/http/response-schemas.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
@@ -1118,6 +1115,15 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/cart-expiry-probe.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -3667,8 +3673,7 @@
     {
       "file": "modules/cart/infra/http/routes/cart.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -3677,8 +3682,7 @@
     {
       "file": "modules/cart/infra/http/routes/checkout.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -3687,8 +3691,7 @@
     {
       "file": "modules/cart/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -3697,8 +3700,7 @@
     {
       "file": "modules/cart/infra/http/routes/reservation.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -3737,8 +3739,7 @@
     {
       "file": "modules/cart/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6073,8 +6074,7 @@
     {
       "file": "modules/engagement/infra/http/routes/appointment.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6083,8 +6083,7 @@
     {
       "file": "modules/engagement/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6093,8 +6092,7 @@
     {
       "file": "modules/engagement/infra/http/routes/newsletter.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6103,8 +6101,7 @@
     {
       "file": "modules/engagement/infra/http/routes/notification.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6113,8 +6110,7 @@
     {
       "file": "modules/engagement/infra/http/routes/product-review.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6123,8 +6119,7 @@
     {
       "file": "modules/engagement/infra/http/routes/reminder.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -6133,8 +6128,7 @@
     {
       "file": "modules/engagement/infra/http/routes/wishlist.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7748,8 +7742,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7758,8 +7751,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/inventory-transaction.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7768,8 +7760,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/location.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7778,8 +7769,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/pickup-reservation.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7788,8 +7778,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/purchase-order-item.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7798,8 +7787,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/purchase-order.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7808,8 +7796,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/stock-alert.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7818,8 +7805,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/stock.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7828,8 +7814,7 @@
     {
       "file": "modules/inventory-management/infra/http/routes/supplier.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -7908,8 +7893,7 @@
     {
       "file": "modules/inventory-management/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -8405,8 +8389,7 @@
     {
       "file": "modules/loyalty/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -8415,8 +8398,7 @@
     {
       "file": "modules/loyalty/infra/http/routes/loyalty.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -8435,8 +8417,7 @@
     {
       "file": "modules/loyalty/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9559,8 +9540,7 @@
     {
       "file": "modules/order-management/infra/http/routes/admin-notification.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9569,8 +9549,7 @@
     {
       "file": "modules/order-management/infra/http/routes/backorder.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9579,8 +9558,7 @@
     {
       "file": "modules/order-management/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9589,8 +9567,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order-address.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9599,8 +9576,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order-event.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9609,8 +9585,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order-item.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9619,8 +9594,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order-shipment.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9629,8 +9603,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order-status-history.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9639,8 +9612,7 @@
     {
       "file": "modules/order-management/infra/http/routes/order.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9649,8 +9621,7 @@
     {
       "file": "modules/order-management/infra/http/routes/preorder.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9659,8 +9630,7 @@
     {
       "file": "modules/order-management/infra/http/validation/admin-notification.schema.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -9749,8 +9719,7 @@
     {
       "file": "modules/order-management/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10827,8 +10796,7 @@
     {
       "file": "modules/payment/infra/http/routes/bnpl-transaction.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10837,8 +10805,7 @@
     {
       "file": "modules/payment/infra/http/routes/gift-card.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10847,8 +10814,7 @@
     {
       "file": "modules/payment/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10857,8 +10823,7 @@
     {
       "file": "modules/payment/infra/http/routes/payment-intent.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10867,8 +10832,7 @@
     {
       "file": "modules/payment/infra/http/routes/promotion.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10877,8 +10841,7 @@
     {
       "file": "modules/payment/infra/http/routes/stripe-card-setup.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10887,8 +10850,7 @@
     {
       "file": "modules/payment/infra/http/routes/webhook.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -10956,8 +10918,7 @@
     {
       "file": "modules/payment/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13038,8 +12999,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/category.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13048,8 +13008,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/editorial-look.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13058,8 +13017,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13068,8 +13026,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/media.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13078,8 +13035,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/product-media.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13088,8 +13044,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/product-tag.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13098,8 +13053,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/product.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13108,8 +13062,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/search.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13118,8 +13071,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/size-guide.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13128,8 +13080,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/variant-media.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13138,8 +13089,7 @@
     {
       "file": "modules/product-catalog/infra/http/routes/variant.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -13228,8 +13178,7 @@
     {
       "file": "modules/product-catalog/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14512,8 +14461,7 @@
     {
       "file": "modules/user-management/infra/http/routes/addresses.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14522,8 +14470,7 @@
     {
       "file": "modules/user-management/infra/http/routes/admin-invitations.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14532,8 +14479,7 @@
     {
       "file": "modules/user-management/infra/http/routes/auth.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14542,8 +14488,7 @@
     {
       "file": "modules/user-management/infra/http/routes/index.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14552,8 +14497,7 @@
     {
       "file": "modules/user-management/infra/http/routes/payment-methods.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14562,8 +14506,7 @@
     {
       "file": "modules/user-management/infra/http/routes/profile.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14572,8 +14515,7 @@
     {
       "file": "modules/user-management/infra/http/routes/users.routes.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14612,8 +14554,7 @@
     {
       "file": "modules/user-management/infra/http/validation/admin-invitation.schema.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -14662,8 +14603,7 @@
     {
       "file": "modules/user-management/infra/http/validation/validator.ts",
       "compilerPrograms": [
-        "tsconfig.json",
-        "tsconfig.tooling.json"
+        "tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
@@ -15641,7 +15581,7 @@
         "tsconfig.tooling.json"
       ],
       "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -15738,6 +15678,16 @@
     {
       "file": "scripts/review/verify-test-safety.cjs",
       "compilerPrograms": [],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "scripts/testing/cart-expiry-probe.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json"
+      ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
       "generated": false
