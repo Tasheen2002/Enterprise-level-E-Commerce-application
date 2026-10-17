@@ -30,7 +30,14 @@ export const ADMIN_ROLES = ["ADMIN"] as const;
 export const STAFF_ROLES = ["ADMIN", "INVENTORY_STAFF", "CUSTOMER_SERVICE", "ANALYST"] as const;
 export const CUSTOMER_CARE_ROLES = ["ADMIN", "CUSTOMER_SERVICE"] as const;
 export const VENDOR_ROLES = ["ADMIN", "VENDOR"] as const;
-export const AUTHENTICATED_ROLES = ["ADMIN", "INVENTORY_STAFF", "CUSTOMER_SERVICE", "ANALYST", "VENDOR", "CUSTOMER"] as const;
+export const AUTHENTICATED_ROLES = [
+  "ADMIN",
+  "INVENTORY_STAFF",
+  "CUSTOMER_SERVICE",
+  "ANALYST",
+  "VENDOR",
+  "CUSTOMER",
+] as const;
 
 // Common role presets for athletic shoes e-commerce
 export const RolePermissions = {

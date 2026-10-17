@@ -8,8 +8,7 @@ export default fp(
       openapi: {
         info: {
           title: "Athletic Shoes E-Commerce API",
-          description:
-            "Enterprise-level athletic shoes e-commerce platform API",
+          description: "Enterprise-level athletic shoes e-commerce platform API",
           version: "1.0.0",
         },
         servers: [

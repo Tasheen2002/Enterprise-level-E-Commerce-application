@@ -391,7 +391,7 @@ export class ProductManagementService {
   }
 
   private async resolveUniqueSlug(baseSlug: Slug, excludeId?: string): Promise<Slug> {
-    let slugStr = baseSlug.getValue();
+    const slugStr = baseSlug.getValue();
     let uniqueSlug = baseSlug;
     let counter = 1;
 

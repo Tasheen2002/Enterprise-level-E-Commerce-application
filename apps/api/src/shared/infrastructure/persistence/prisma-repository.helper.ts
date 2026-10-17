@@ -1,7 +1,7 @@
 import {
   PaginatedResult,
   PaginationOptions,
-} from '../../../../../../packages/core/src/domain/interfaces/paginated-result.interface';
+} from "../../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
 /**
  * Helper utilities for Prisma repository operations.
@@ -25,7 +25,7 @@ export class PrismaRepositoryHelper {
       select?: any;
     },
     toDomain: (record: TRecord) => TEntity,
-    options?: PaginationOptions
+    options?: PaginationOptions,
   ): Promise<PaginatedResult<TEntity>> {
     const limit = options?.limit ?? 50;
     const offset = options?.offset ?? 0;

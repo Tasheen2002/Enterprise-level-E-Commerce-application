@@ -88,7 +88,7 @@ describe("ProductReview Aggregate Root", () => {
     expect(review.isApproved()).toBe(true);
     expect(review.status.equals(ReviewStatus.APPROVED)).toBe(true);
 
-    let events = review.domainEvents;
+    const events = review.domainEvents;
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(ReviewStatusChangedEvent);
     expect((events[0] as ReviewStatusChangedEvent).oldStatus).toBe("pending");

@@ -20,7 +20,7 @@ const CITY_MAX_LENGTH = 128;
 export class LocationAddress {
   
   private static readonly COUNTRY_CODE_REGEX = /^[A-Z]{2}$/;
-  private static readonly POSTAL_CODE_REGEX = /^[A-Z0-9\s\-]{3,10}$/i;
+  private static readonly POSTAL_CODE_REGEX = /^[A-Z0-9\s-]{3,10}$/i;
 
   private constructor(private readonly props: LocationAddressData) {
     LocationAddress.validate(props);

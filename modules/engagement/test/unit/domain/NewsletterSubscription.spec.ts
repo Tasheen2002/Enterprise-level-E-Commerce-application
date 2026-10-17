@@ -58,7 +58,7 @@ describe("NewsletterSubscription Aggregate Root", () => {
     expect(subscription.isUnsubscribed()).toBe(true);
     expect(subscription.canReceiveEmails()).toBe(false);
 
-    let events = subscription.domainEvents;
+    const events = subscription.domainEvents;
     expect(events).toHaveLength(1);
     expect(events[0]).toBeInstanceOf(SubscriptionStatusChangedEvent);
     expect((events[0] as SubscriptionStatusChangedEvent).newStatus).toBe("unsubscribed");

@@ -69,7 +69,7 @@ export class BcryptPasswordHasherAdapter implements IPasswordHasherService {
       feedback.push("Password must contain at least one number");
     }
 
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       score += 1;
     } else {
       feedback.push("Password must contain at least one special character");

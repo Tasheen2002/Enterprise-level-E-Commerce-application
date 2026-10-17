@@ -16,8 +16,7 @@ export interface AuthenticatedUser {
   createdAt?: string;
 }
 
-export interface AuthenticatedRequest<
-  RouteGeneric extends RouteGenericInterface = any,
-> extends FastifyRequest<RouteGeneric> {
+export interface AuthenticatedRequest<RouteGeneric extends RouteGenericInterface = any>
+  extends FastifyRequest<RouteGeneric> {
   user: AuthenticatedUser;
 }
