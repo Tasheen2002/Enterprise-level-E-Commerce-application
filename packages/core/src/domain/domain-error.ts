@@ -17,7 +17,7 @@ export abstract class DomainValidationError extends Error {
 
 export class EmptyFieldError extends DomainValidationError {
   constructor(fieldName: string) {
-    super(`${fieldName} cannot be empty`, 'EMPTY_FIELD', fieldName);
+    super(`${fieldName} cannot be empty`, "EMPTY_FIELD", fieldName);
   }
 }
 
@@ -27,8 +27,8 @@ export class InvalidFormatError extends DomainValidationError {
       expectedFormat
         ? `${fieldName} must be a valid ${expectedFormat}`
         : `${fieldName} has an invalid format`,
-      'INVALID_FORMAT',
-      fieldName
+      "INVALID_FORMAT",
+      fieldName,
     );
   }
 }
@@ -38,18 +38,14 @@ export abstract class DomainError extends Error {
   public readonly code: string;
   public readonly name: string;
 
-  constructor(
-    message: string,
-    codeOrStatusCode?: string | number,
-    statusCode?: number
-  ) {
+  constructor(message: string, codeOrStatusCode?: string | number, statusCode?: number) {
     super(message);
 
-    if (typeof codeOrStatusCode === 'string') {
+    if (typeof codeOrStatusCode === "string") {
       this.code = codeOrStatusCode;
       this.statusCode = statusCode ?? 400;
     } else {
-      this.code = 'DOMAIN_ERROR';
+      this.code = "DOMAIN_ERROR";
       this.statusCode = codeOrStatusCode ?? 400;
     }
 

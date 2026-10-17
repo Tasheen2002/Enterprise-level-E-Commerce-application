@@ -1,10 +1,10 @@
 class InvalidUuidError extends Error {
   public readonly statusCode = 400;
-  public readonly code = 'INVALID_UUID_FORMAT';
+  public readonly code = "INVALID_UUID_FORMAT";
 
   constructor(typeName: string, value: string) {
     super(`Invalid ${typeName} format: ${value}`);
-    this.name = 'InvalidUuidError';
+    this.name = "InvalidUuidError";
   }
 }
 
@@ -14,15 +14,16 @@ export abstract class UuidId {
 
   protected constructor(
     private readonly value: string,
-    private readonly typeName: string
+    private readonly typeName: string,
   ) {
     if (!UuidId.isValid(value)) {
       throw new InvalidUuidError(typeName, value);
     }
+    this.value = value.toLowerCase();
   }
 
   static isValid(id: string): boolean {
-    return typeof id === 'string' && UuidId.UUID_REGEX.test(id);
+    return typeof id === "string" && UuidId.UUID_REGEX.test(id);
   }
 
   getValue(): string {
@@ -31,7 +32,7 @@ export abstract class UuidId {
 
   equals(other: UuidId | null | undefined): boolean {
     if (!other) return false;
-    return this.value === other.value;
+    return this.typeName === other.typeName && this.value === other.value;
   }
 
   toString(): string {

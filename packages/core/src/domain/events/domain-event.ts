@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
 
 export abstract class DomainEvent {
   public readonly eventId: string;
@@ -37,14 +37,11 @@ export interface DomainEventHandler<T extends DomainEvent = DomainEvent> {
 export interface IEventBus {
   publish(event: DomainEvent): Promise<void>;
   publishAll(events: DomainEvent[]): Promise<void>;
-  subscribe<T extends DomainEvent>(
-    eventType: string,
-    handler: DomainEventHandler<T>
-  ): void;
+  subscribe<T extends DomainEvent>(eventType: string, handler: DomainEventHandler<T>): void;
   unsubscribe(eventType: string, handler: DomainEventHandler): void;
 }
 
 export interface EventEmittingAggregate {
   readonly domainEvents: DomainEvent[];
-  clearEvents(): void;
+  clearDomainEvents(): void;
 }

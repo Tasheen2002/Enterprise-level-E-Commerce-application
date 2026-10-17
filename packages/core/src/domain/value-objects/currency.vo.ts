@@ -1,7 +1,6 @@
 import { DomainError } from "../domain-error";
 import {
   SUPPORTED_CURRENCIES,
-  CRYPTO_CURRENCIES,
   CURRENCY_NAMES,
   CURRENCY_SYMBOLS,
   CURRENCY_REGIONS,
@@ -71,10 +70,6 @@ export class Currency {
 
   isBaseCurrency(): boolean {
     return this.value === DEFAULT_CURRENCY;
-  }
-
-  isCrypto(): boolean {
-    return (CRYPTO_CURRENCIES as readonly string[]).includes(this.value);
   }
 
   equals(other: Currency): boolean {
