@@ -19,6 +19,10 @@ const scripts = baselineExpiry
         "verify-restock-reminder",
         "verify-restock-dispatcher",
         "test-expiry-renewal",
+        "inspect-cart-expiry",
+        "inspect-reminders",
+        "check-db-reminders",
+        "inspect-inventory-stock",
       ];
 const results = [];
 for (const script of scripts) {
@@ -92,7 +96,7 @@ fs.writeFileSync(
       : "docs/reviews/p00-operational-refusal-check.json",
   JSON.stringify(
     {
-      date: "2026-10-17",
+      date: "2026-10-18",
       mode: baselineExpiry
         ? "Original utility exits successfully after injected server failure; inert imports and no DB access"
         : baseline
