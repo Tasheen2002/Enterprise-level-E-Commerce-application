@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-17",
+  "focused_tests_passed": 36,
+  "scope": "scripts/testing/cart-inventory-probe.ts only; no application-wide coverage claim",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 44,
+        "covered": 42,
+        "skipped": 0,
+        "pct": 95.45
+      },
+      "statements": {
+        "total": 46,
+        "covered": 44,
+        "skipped": 0,
+        "pct": 95.65
+      },
+      "functions": {
+        "total": 8,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 75
+      },
+      "branches": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    },
+    "scripts/testing/cart-inventory-probe.ts": {
+      "lines": {
+        "total": 44,
+        "covered": 42,
+        "skipped": 0,
+        "pct": 95.45
+      },
+      "functions": {
+        "total": 8,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 75
+      },
+      "statements": {
+        "total": 46,
+        "covered": 44,
+        "skipped": 0,
+        "pct": 95.65
+      },
+      "branches": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "uncovered": "Two adapter methods (adjustStock and findWarehouseId) are required by the existing full stock port but never called by this availability probe. Their lines/functions remain uncovered; no exclusion or full-coverage claim. Helper remains open pending resolution.",
+  "raw_source": "coverage/p00-cart-inventory/coverage-summary.json"
+}

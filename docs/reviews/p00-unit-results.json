@@ -1,8 +1,8 @@
 {
-  "date": "2026-10-17",
-  "passed_tests": 409,
+  "date": "2026-10-18",
+  "passed_tests": 474,
   "failed_tests": 0,
-  "passed_files": 66,
+  "passed_files": 70,
   "coverage_scope": "Latest full unit run without broad coverage; most recent broad measurement is the earlier 367-test run; operational helpers measured separately",
   "results": [
     {
@@ -69,6 +69,68 @@
         },
         {
           "title": "database cleanup safety requires an explicit dedicated test URL and destructive cleanup opt-in",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/cart-expiry-inspection.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "cart expiry aggregate inspection uses one snapshot/cutoff, explicit guarded URL, counts only and no sensitive fields",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection handles an empty database and the default timestamp",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection refuses unsafe settings before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection refuses unsafe settings before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection refuses unsafe settings before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection refuses unsafe settings before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection rejects invalid cutoff before client construction",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection propagates constructor failure without producing a partial report",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection disconnects and rejects shoppingCart query failure without reporting partial counts",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection disconnects and rejects reservation query failure without reporting partial counts",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection disconnects and rejects cartItem query failure without reporting partial counts",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection disconnects when report output fails",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection propagates disconnect failure",
+          "status": "passed"
+        },
+        {
+          "title": "cart expiry aggregate inspection preserves query and disconnect failures together",
           "status": "passed"
         }
       ]
@@ -192,6 +254,156 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/cart-inventory-probe.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "isolated cart inventory probe uses multi-location stock and asserts initial, own-cart, competing and expired holds",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 1 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 1 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 1 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 1 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 2 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 2 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 2 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 2 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 3 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 3 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 3 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 3 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 4 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 4 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 4 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 4 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 5 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 5 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 5 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 5 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 6 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 6 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 6 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 6 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent available at availability check 7 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent totalReserved at availability check 7 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent activeReserved at availability check 7 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe rejects inconsistent availableForReservation at availability check 7 and cleans owned fixtures",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe cleans after productVariant fixture failure",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe cleans after inventoryStock fixture failure",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe cleans after shoppingCart fixture failure",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe cleans after reservation fixture failure",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe propagates stock lookup failure after cleaning",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe reports cleanup failure after successful assertions",
+          "status": "passed"
+        },
+        {
+          "title": "isolated cart inventory probe preserves operation and cleanup errors together",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/database-test-safety.spec.ts",
       "status": "passed",
       "assertions": [
@@ -278,6 +490,48 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/inventory-stock-inspection.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "inventory stock aggregate inspection handles empty sums with one count/sum query and no row/location reads",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection reports raw totals without clamping or exposing extra fields: {\"onHand\":31,\"reserved\":7,\"net\":24}",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection reports raw totals without clamping or exposing extra fields: {\"onHand\":0,\"reserved\":0,\"net\":0}",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection reports raw totals without clamping or exposing extra fields: {\"onHand\":2,\"reserved\":5,\"net\":-3}",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection rejects unsafe settings before client construction",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection disconnects on aggregate failure without partial output",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection disconnects on output failure",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection propagates disconnect failure after reading",
+          "status": "passed"
+        },
+        {
+          "title": "inventory stock aggregate inspection retains aggregate and disconnect failures together",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/operational-database-safety.spec.ts",
       "status": "passed",
       "assertions": [
@@ -351,6 +605,36 @@
         },
         {
           "title": "legacy operational database boundaries rejects names unsuitable for a PostgreSQL identifier",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/reminder-inspection.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "canonical reminder aggregate inspection reports an empty database without row queries or identity output",
+          "status": "passed"
+        },
+        {
+          "title": "canonical reminder aggregate inspection counts every status/type/channel and exposes only enum groups and counts",
+          "status": "passed"
+        },
+        {
+          "title": "canonical reminder aggregate inspection rejects unsafe settings before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "canonical reminder aggregate inspection rejects aggregate failure without partial output and disconnects",
+          "status": "passed"
+        },
+        {
+          "title": "canonical reminder aggregate inspection disconnects when output fails",
+          "status": "passed"
+        },
+        {
+          "title": "canonical reminder aggregate inspection preserves aggregate and disconnect failures",
           "status": "passed"
         }
       ]
@@ -1294,6 +1578,40 @@
       ]
     },
     {
+      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
+          "status": "passed"
+        },
+        {
+          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1448,35 +1766,167 @@
       ]
     },
     {
-      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
+          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support cancelling gift card",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should handle expiration correctly",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should validate link to order",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support failing payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should check equality correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should handle comparison operators",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
           "status": "passed"
         }
       ]
@@ -1660,172 +2110,6 @@
       ]
     },
     {
-      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support cancelling gift card",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should handle expiration correctly",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should validate link to order",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support failing payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should check equality correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should handle comparison operators",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1883,6 +2167,60 @@
         },
         {
           "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "User Aggregate Root should create a standard customer user successfully",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if names exceed max length",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should not record email changed event if email is the same",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
@@ -1979,60 +2317,6 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]

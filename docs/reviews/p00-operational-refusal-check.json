@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-17",
+  "date": "2026-10-18",
   "mode": "Current CLI refusal before client construction",
   "sourceCommit": "working-tree",
   "results": [
@@ -59,6 +59,30 @@
     },
     {
       "script": "scratch/test-expiry-renewal.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-cart-expiry.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-reminders.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/check-db-reminders.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-inventory-stock.ts",
       "passed": true,
       "exitCode": 1,
       "prismaConstruction": "not-attempted"

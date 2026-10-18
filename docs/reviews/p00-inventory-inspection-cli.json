@@ -1,0 +1,85 @@
+{
+  "date": "2026-10-18",
+  "sourceCommit": "f8babd21420019fe3cb69209f0441a52e6dc67eb",
+  "scope": "Inert Prisma substitution; original private-field/error output and false success reproduced; current CLI success/query/disconnect/dual failure verified without DB access",
+  "results": [
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "old-success",
+      "passed": true,
+      "exitCode": 0,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 0,
+      "identityReads": 1,
+      "explicitDatasource": false,
+      "sensitiveOutput": true,
+      "safeFailure": false
+    },
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "old-query-failure",
+      "passed": true,
+      "exitCode": 0,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 0,
+      "identityReads": 1,
+      "explicitDatasource": false,
+      "sensitiveOutput": true,
+      "safeFailure": false
+    },
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "current-success",
+      "passed": true,
+      "exitCode": 0,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 1,
+      "identityReads": 0,
+      "explicitDatasource": true,
+      "sensitiveOutput": false,
+      "safeFailure": false
+    },
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "current-query-failure",
+      "passed": true,
+      "exitCode": 1,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 1,
+      "identityReads": 0,
+      "explicitDatasource": true,
+      "sensitiveOutput": false,
+      "safeFailure": true
+    },
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "current-disconnect-failure",
+      "passed": true,
+      "exitCode": 1,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 1,
+      "identityReads": 0,
+      "explicitDatasource": true,
+      "sensitiveOutput": false,
+      "safeFailure": true
+    },
+    {
+      "file": "scratch/inspect-inventory-stock.ts",
+      "mode": "current-dual-failure",
+      "passed": true,
+      "exitCode": 1,
+      "constructed": 1,
+      "disconnected": 1,
+      "counts": 1,
+      "identityReads": 0,
+      "explicitDatasource": true,
+      "sensitiveOutput": false,
+      "safeFailure": true
+    }
+  ]
+}
