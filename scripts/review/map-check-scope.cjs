@@ -7,7 +7,7 @@ const root = process.cwd();
 const relative = (file) => path.relative(root, file).replace(/\\/g, "/");
 const manifest = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const projects = ["."];
-const extraConfigs = ["tsconfig.tooling.json"];
+const extraConfigs = ["tsconfig.tooling.json", "scratch/tsconfig.json"];
 for (const group of ["apps", "packages"]) {
   for (const name of fs.readdirSync(group)) {
     const folder = `${group}/${name}`;

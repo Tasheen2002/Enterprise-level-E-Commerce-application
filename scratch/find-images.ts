@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 function findImageFiles(dir: string, extensions: string[], results: string[] = []) {
   if (dir.includes("node_modules") || dir.includes(".git") || dir.includes(".turbo") || dir.includes(".next")) {
