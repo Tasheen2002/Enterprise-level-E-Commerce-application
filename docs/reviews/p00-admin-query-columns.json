@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-19",
+  "queryReferencedColumns": [
+    "user_id",
+    "email",
+    "role",
+    "status"
+  ],
+  "threeColumnRead": "failed",
+  "threeColumnErrorCode": "unknown",
+  "withPrimaryKeyRead": "passed",
+  "secretColumnPermissions": {
+    "password_read": false,
+    "mfa_read": false
+  },
+  "temporaryDatabaseRemoved": true
+}

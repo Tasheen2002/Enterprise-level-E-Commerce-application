@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-18",
+  "date": "2026-10-19",
   "mode": "Current CLI refusal before client construction",
   "sourceCommit": "working-tree",
   "results": [
@@ -83,6 +83,18 @@
     },
     {
       "script": "scratch/inspect-inventory-stock.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/verify-admin.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-loyalty-data.ts",
       "passed": true,
       "exitCode": 1,
       "prismaConstruction": "not-attempted"

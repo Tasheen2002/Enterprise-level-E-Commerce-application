@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-18",
+  "date": "2026-10-19",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1330
+      "localSourceFiles": 1336
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,17 +35,17 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 942
+      "localSourceFiles": 945
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 942
+      "localSourceFiles": 945
     }
   ],
   "commands": {
     "typeCheck": "pnpm run type-check:api && pnpm run type-check:tooling && turbo run type-check",
     "lint": "pnpm run lint:api && pnpm run lint:tooling && turbo run lint",
-    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json scratch/tsconfig.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts apps/api/test/unit/cart-expiry-probe.spec.ts scratch/test-expiry-renewal.ts apps/api/test/unit/cart-inventory-probe.spec.ts apps/api/test/unit/cart-expiry-inspection.spec.ts scratch/inspect-cart-expiry.ts apps/api/test/unit/reminder-inspection.spec.ts scratch/inspect-reminders.ts scratch/check-db-reminders.ts apps/api/test/unit/inventory-stock-inspection.spec.ts scratch/inspect-inventory-stock.ts"
+    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json scratch/tsconfig.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts apps/api/test/unit/cart-expiry-probe.spec.ts scratch/test-expiry-renewal.ts apps/api/test/unit/cart-inventory-probe.spec.ts apps/api/test/unit/cart-expiry-inspection.spec.ts scratch/inspect-cart-expiry.ts apps/api/test/unit/reminder-inspection.spec.ts scratch/inspect-reminders.ts scratch/check-db-reminders.ts apps/api/test/unit/inventory-stock-inspection.spec.ts scratch/inspect-inventory-stock.ts apps/api/test/unit/admin-inspection.spec.ts scratch/verify-admin.ts apps/api/test/unit/wallet-inspection.spec.ts apps/api/test/unit/loyalty-inspection.spec.ts scratch/inspect-loyalty-data.ts"
   },
   "note": "Compiler program membership includes imported files outside include roots; this is scope evidence, not a new type-check result. skipLibCheck limits declaration checking. Lint membership is the saved backend run only; Next lint is separate. Formatter membership describes current explicit roots, not a formatting result. JavaScript checkJs is not enabled. Missing coverage requires a deliberate policy, not blanket exclusions.",
   "files": [
@@ -1131,6 +1131,15 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/admin-inspection.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/auth-boundary.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
@@ -1185,6 +1194,15 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/loyalty-inspection.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/operational-database-safety.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
@@ -1218,6 +1236,15 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/wallet-inspection.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -16416,7 +16443,7 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -16556,7 +16583,7 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -16668,6 +16695,17 @@
       "generated": false
     },
     {
+      "file": "scripts/testing/admin-inspection.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "scripts/testing/cart-expiry-inspection.ts",
       "compilerPrograms": [
         "tsconfig.json",
@@ -16734,6 +16772,17 @@
       "generated": false
     },
     {
+      "file": "scripts/testing/loyalty-inspection.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "scripts/testing/operational-database.ts",
       "compilerPrograms": [
         "tsconfig.json",
@@ -16757,6 +16806,17 @@
     },
     {
       "file": "scripts/testing/restock-probes.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "scripts/testing/wallet-inspection.ts",
       "compilerPrograms": [
         "tsconfig.json",
         "tsconfig.tooling.json",

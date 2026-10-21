@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-18",
+  "date": "2026-10-19",
   "sourceCommit": "f8babd21420019fe3cb69209f0441a52e6dc67eb",
   "scope": "Inert Prisma substitution; original private-field/error output and false success reproduced; current CLI success/query/disconnect/dual failure verified without DB access",
   "results": [
@@ -13,6 +13,7 @@
       "counts": 0,
       "identityReads": 1,
       "explicitDatasource": false,
+      "fileWrites": 0,
       "sensitiveOutput": true,
       "safeFailure": false
     },
@@ -26,6 +27,7 @@
       "counts": 0,
       "identityReads": 1,
       "explicitDatasource": false,
+      "fileWrites": 0,
       "sensitiveOutput": true,
       "safeFailure": false
     },
@@ -39,6 +41,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": false
     },
@@ -52,6 +55,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     },
@@ -65,6 +69,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     },
@@ -78,6 +83,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     },
@@ -91,6 +97,7 @@
       "counts": 0,
       "identityReads": 1,
       "explicitDatasource": false,
+      "fileWrites": 0,
       "sensitiveOutput": true,
       "safeFailure": false
     },
@@ -104,6 +111,7 @@
       "counts": 0,
       "identityReads": 1,
       "explicitDatasource": false,
+      "fileWrites": 0,
       "sensitiveOutput": true,
       "safeFailure": false
     },
@@ -117,6 +125,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": false
     },
@@ -130,6 +139,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     },
@@ -143,6 +153,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     },
@@ -156,6 +167,7 @@
       "counts": 1,
       "identityReads": 0,
       "explicitDatasource": true,
+      "fileWrites": 0,
       "sensitiveOutput": false,
       "safeFailure": true
     }
