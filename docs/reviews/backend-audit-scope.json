@@ -1,20 +1,20 @@
 {
-  "date": "2026-10-19",
-  "commit": "6c1faa035a236b44ef9624d7daf794b781a2fefa",
+  "date": "2026-10-21",
+  "commit": "4e36e447a7fbee24216455cdc0003239255be9fd",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1788,
-  "backend_review_scope_files": 1490,
+  "candidate_files": 1790,
+  "backend_review_scope_files": 1489,
   "scope_counts": {
-    "audit-record": 53,
-    "backend": 1355,
-    "backend-support": 74,
+    "audit-record": 56,
+    "backend": 1356,
+    "backend-support": 72,
     "excluded-frontend": 245,
     "frontend-boundary": 61
   },
   "area_counts": {
     ".github": 1,
     "apps/admin": 18,
-    "apps/api": 39,
+    "apps/api": 40,
     "apps/web": 43,
     "modules/analytics": 23,
     "modules/cart": 109,
@@ -35,12 +35,12 @@
     "packages/validation": 6,
     "prisma": 13,
     "root": 19,
-    "scratch": 31,
-    "scripts": 23
+    "scratch": 27,
+    "scripts": 25
   },
   "phase_counts": {
-    "P00": 74,
-    "P01": 83,
+    "P00": 72,
+    "P01": 84,
     "P02": 13,
     "P03": 155,
     "P04": 226,
@@ -62,12 +62,12 @@
     "generated-contract": 1,
     "migration-or-sql": 13,
     "sensitive-environment-metadata-only": 1,
-    "source-or-configuration": 1211,
-    "test": 104
+    "source-or-configuration": 1209,
+    "test": 105
   },
   "closure_counts": {
-    "open": 1468,
-    "closed": 22
+    "open": 1465,
+    "closed": 24
   },
   "removed_files_requiring_verification": [],
   "unclassified_files": [],

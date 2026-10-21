@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-21",
   "sourceCommit": "f8babd21420019fe3cb69209f0441a52e6dc67eb",
   "scope": "Inert Prisma substitution; pinned guarded wallet source raw-path output and existing nonzero query failure verified; current bounded metadata CLI success and failure paths verified without DB access",
   "results": [

@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-21",
   "sourceCommit": "f8babd21420019fe3cb69209f0441a52e6dc67eb",
   "scope": "Inert Prisma substitution; original private-field/error output and false success reproduced; current CLI success/query/disconnect/dual failure verified without DB access",
   "results": [

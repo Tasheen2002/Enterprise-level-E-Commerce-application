@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-19",
-  "passed_tests": 529,
+  "date": "2026-10-21",
+  "passed_tests": 560,
   "failed_tests": 0,
-  "passed_files": 73,
-  "coverage_scope": "Standalone complete default unit subset after loyalty diagnostics; broad backend coverage not remeasured. Earlier verification history remains in p00-admin-verification-history.json, p00-wallet-inspection-coverage.json and p00-loyalty-inspection-coverage.json.",
+  "passed_files": 74,
+  "coverage_scope": "Standalone complete default unit subset after catalog/shared-schema changes; broad backend coverage not remeasured. Prior batch verification histories retained in their existing evidence files.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -477,6 +477,136 @@
         },
         {
           "title": "isolated cart inventory probe preserves operation and cleanup errors together",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/database-catalog-inspection.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "selected test database table counts reports an empty table set using the guarded target and a repeatable-read snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database table counts escapes quoted identifiers and preserves exact large and zero counts without reading records",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database table counts truthfully bounds table output/count work at 100 catalog rows",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database table counts truthfully bounds table output/count work at 101 catalog rows",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database table counts fails on a later count error without partial output or silently reporting zero",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database table counts rejects an unexpected missing count result without fabricating zero",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence reports existence true without returning database names or claiming readiness",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence reports existence false without returning database names or claiming readiness",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence rejects unsafe maintenance settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence rejects unsafe maintenance settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence rejects unsafe maintenance settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence rejects unsafe maintenance settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "selected test database existence rejects missing catalog results without reporting absence",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle propagates construction failure without output",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle disconnects on a query failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle disconnects on output failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle propagates disconnect failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog tables lifecycle retains both primary and cleanup failures",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle refuses unsafe test settings before construction",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle propagates construction failure without output",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle disconnects on a query failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle disconnects on output failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle propagates disconnect failure",
+          "status": "passed"
+        },
+        {
+          "title": "catalog existence lifecycle retains both primary and cleanup failures",
           "status": "passed"
         }
       ]
@@ -1040,6 +1170,46 @@
       ]
     },
     {
+      "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToWishlistHandler should successfully add an item to wishlist using WishlistManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/create-product-review.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateProductReviewHandler should successfully create a product review using ProductReviewService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/delete-reminder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteReminderHandler should successfully delete a reminder using ReminderManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SubscribeNewsletterHandler should successfully subscribe email to newsletter using NewsletterService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/engagement/test/unit/domain/Appointment.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1247,46 +1417,6 @@
         },
         {
           "title": "Wishlist Aggregate Root should support adding, removing and clearing items",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddToWishlistHandler should successfully add an item to wishlist using WishlistManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/engagement/test/unit/application/create-product-review.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateProductReviewHandler should successfully create a product review using ProductReviewService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/engagement/test/unit/application/delete-reminder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "DeleteReminderHandler should successfully delete a reminder using ReminderManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "SubscribeNewsletterHandler should successfully subscribe email to newsletter using NewsletterService",
           "status": "passed"
         }
       ]
@@ -1714,6 +1844,108 @@
       ]
     },
     {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1932,6 +2164,142 @@
       ]
     },
     {
+      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support cancelling gift card",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should handle expiration correctly",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should validate link to order",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support failing payment intent",
+          "status": "passed"
+        },
+        {
+          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
+          "status": "passed"
+        },
+        {
+          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Currency VO should check equality correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects Money VO should handle comparison operators",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2080,108 +2448,6 @@
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2212,137 +2478,25 @@
       ]
     },
     {
-      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support cancelling gift card",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should handle expiration correctly",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
           "status": "passed"
         },
         {
-          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should validate link to order",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support failing payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should check equality correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should handle comparison operators",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
           "status": "passed"
         }
       ]
@@ -2381,30 +2535,6 @@
         },
         {
           "title": "Product Aggregate Root should schedule a publication date in the future",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
-          "status": "passed"
-        },
-        {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
           "status": "passed"
         }
       ]

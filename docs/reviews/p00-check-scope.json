@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-21",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1336
+      "localSourceFiles": 1338
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,17 +35,17 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 945
+      "localSourceFiles": 942
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 945
+      "localSourceFiles": 942
     }
   ],
   "commands": {
     "typeCheck": "pnpm run type-check:api && pnpm run type-check:tooling && turbo run type-check",
     "lint": "pnpm run lint:api && pnpm run lint:tooling && turbo run lint",
-    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json scratch/tsconfig.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts apps/api/test/unit/cart-expiry-probe.spec.ts scratch/test-expiry-renewal.ts apps/api/test/unit/cart-inventory-probe.spec.ts apps/api/test/unit/cart-expiry-inspection.spec.ts scratch/inspect-cart-expiry.ts apps/api/test/unit/reminder-inspection.spec.ts scratch/inspect-reminders.ts scratch/check-db-reminders.ts apps/api/test/unit/inventory-stock-inspection.spec.ts scratch/inspect-inventory-stock.ts apps/api/test/unit/admin-inspection.spec.ts scratch/verify-admin.ts apps/api/test/unit/wallet-inspection.spec.ts apps/api/test/unit/loyalty-inspection.spec.ts scratch/inspect-loyalty-data.ts"
+    "formatCheck": "prettier --check apps/api/src/shared apps/api/src/plugins packages/core/src packages/types/src packages/validation/src scripts/testing scripts/review vitest.config.ts vitest.setup.ts tsconfig.tooling.json scratch/tsconfig.json apps/api/test/unit/database-test-safety.spec.ts apps/api/test/unit/operational-database-safety.spec.ts scratch/clear-database.ts scratch/create-test-db.ts scratch/drop-test-db.ts scratch/seed-admin.ts scratch/seed-development-db.ts scratch/inspect-wallets.ts scratch/verify-cart-inventory-check.ts apps/api/test/unit/restock-probes.spec.ts scratch/verify-restock-reminder.ts scratch/verify-restock-dispatcher.ts apps/api/test/unit/cart-expiry-probe.spec.ts scratch/test-expiry-renewal.ts apps/api/test/unit/cart-inventory-probe.spec.ts apps/api/test/unit/cart-expiry-inspection.spec.ts scratch/inspect-cart-expiry.ts apps/api/test/unit/reminder-inspection.spec.ts scratch/inspect-reminders.ts scratch/check-db-reminders.ts apps/api/test/unit/inventory-stock-inspection.spec.ts scratch/inspect-inventory-stock.ts apps/api/test/unit/admin-inspection.spec.ts scratch/verify-admin.ts apps/api/test/unit/wallet-inspection.spec.ts apps/api/test/unit/loyalty-inspection.spec.ts scratch/inspect-loyalty-data.ts apps/api/test/unit/database-catalog-inspection.spec.ts scratch/inspect-databases-local.ts scratch/list-databases.ts"
   },
   "note": "Compiler program membership includes imported files outside include roots; this is scope evidence, not a new type-check result. skipLibCheck limits declaration checking. Lint membership is the saved backend run only; Next lint is separate. Formatter membership describes current explicit roots, not a formatting result. JavaScript checkJs is not enabled. Missing coverage requires a deliberate policy, not blanket exclusions.",
   "files": [
@@ -1168,6 +1168,15 @@
     },
     {
       "file": "apps/api/test/unit/cart-inventory-probe.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/database-catalog-inspection.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
@@ -16423,7 +16432,7 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
@@ -16473,21 +16482,11 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
+      "inConfiguredFormatRoots": true,
       "generated": false
     },
     {
       "file": "scratch/list-env-keys.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/list-imagekit-files.ts",
       "compilerPrograms": [
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
@@ -16534,36 +16533,6 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
-      "generated": false
-    },
-    {
-      "file": "scratch/test-cdn-images-v2.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/test-cdn-images-v3.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/test-cdn-images.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -16688,6 +16657,13 @@
       "generated": false
     },
     {
+      "file": "scripts/review/verify-retired-network-tools.cjs",
+      "compilerPrograms": [],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "scripts/review/verify-test-safety.cjs",
       "compilerPrograms": [],
       "inRecordedBackendLintRun": false,
@@ -16729,6 +16705,17 @@
     },
     {
       "file": "scripts/testing/cart-inventory-probe.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "scripts/testing/database-catalog-inspection.ts",
       "compilerPrograms": [
         "tsconfig.json",
         "tsconfig.tooling.json",

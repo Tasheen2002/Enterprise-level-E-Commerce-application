@@ -1,9 +1,13 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-21",
   "container": "slipperze-audit-p00-postgres",
   "results": {
     "createAndExisting": "passed",
     "schemaSynchronization": "passed; migration history not replayed",
+    "tableCatalogScopeAndEscaping": "passed; only selected test DB/application schemas, no migration/system/unrelated tables, legal quoted SQL-like identifier counted safely, zero/nonzero string counts and unchanged sentinel/full fixture snapshots",
+    "tableCatalogDeniedCount": "passed; denied count exits 1 with no partial report or changed rows",
+    "tableCatalogBounds": "passed; actual 100/101-table sets return 100 counts with truthful truncation; snapshots unchanged",
+    "selectedDatabaseExistence": "passed; missing/present exact selected database only; bad maintenance authentication fails; no server-wide database names emitted; existence is not readiness",
     "inventoryInspectionEmpty": "passed; empty database reports zero row count and totals",
     "walletInspectionEmpty": "passed; explicit prefix and no matches",
     "loyaltyInspectionEmpty": "passed; empty aggregate sums are string zero and no export is written",
@@ -46,7 +50,7 @@
   "productionData": "not accessed",
   "externalProviders": "not called",
   "verified_source_sha256": {
-    "scripts/testing/database-safety.ts": "425c7d249b66b763ce14463508944719e0dabba51e4d1f6d498064ccc1493d3c",
+    "scripts/testing/database-safety.ts": "753fa8d660bfe0aacd5c5136333a520901e9e3c0d31280c0fddbdfb6cf40fe49",
     "scripts/testing/operational-database.ts": "b437f37074f9b1cd5c7a717eaef1e263cd95335c508ea0a0f2b5e215e82b7a0c",
     "scripts/testing/restock-probes.ts": "19c6dd51ca7f8c0d444f0d2e4ad8c0dd6d538b8bcef28f2a78bb2783e607bcf6",
     "scripts/testing/cart-expiry-probe.ts": "cbab9a97e32e36bc75e2a7f3d9c5715ce7e3f431164f9aef53800fe7d594e011",
@@ -58,6 +62,7 @@
     "scripts/testing/admin-inspection.ts": "f54a6f7cef9b0d6428aca551af6236177400ff859d804334985f487cba8995a8",
     "scripts/testing/wallet-inspection.ts": "4aa55b88ca6391cdba7d0ba99ea3c60baa21916b2b2030103583810a8e986608",
     "scripts/testing/loyalty-inspection.ts": "d25fe2e17f0ff39e8b2cacb12cee48db488b940fa48ebd64af6ad898ef031ed9",
+    "scripts/testing/database-catalog-inspection.ts": "71fb9b6805a988774cd60f12df7cafa24b0495a411f8522d59591a36ee91169a",
     "scratch/create-test-db.ts": "a2eb14d4cfe501f1dc672164f3037c9d9f7d484cd1d5806e1207d87fb9e0fb0c",
     "scratch/drop-test-db.ts": "831c4b888dd9fd87af45aa6ebee89810c3b6fdd041731987112e1e3d0920c927",
     "scratch/clear-database.ts": "409999ee4c99219f5470da1ac101eae7923d7dfc5d23e9da7d2406414e9d5d8e",
@@ -73,7 +78,9 @@
     "scratch/inspect-inventory-stock.ts": "c77f5adb98baba575cf9b053395f17af280cb2f43ff8c225747b06232072ae02",
     "scratch/verify-admin.ts": "d185c54470bb5ef9ecf8fd87ca36800e731ab4743c4a871e5bb9dba93c488363",
     "scratch/inspect-wallets.ts": "0109b09e7bc362c7b9b933cd050def4cc10c47654d8adf90835f7a882d320c1c",
-    "scratch/inspect-loyalty-data.ts": "6e0a8a1c05031c7b5a161e1969c45794af63dfaf289673381ec3b5acafeb86a4"
+    "scratch/inspect-loyalty-data.ts": "6e0a8a1c05031c7b5a161e1969c45794af63dfaf289673381ec3b5acafeb86a4",
+    "scratch/inspect-databases-local.ts": "c03ba9bacd8996458ed58b9182dbe901f7501ce49681b85399abe8622b74b807",
+    "scratch/list-databases.ts": "d19932e2ec20621a43b71e45ed6600b9dd42e40f68a7e0cbaf167debe9fceeed"
   },
   "limitation": "Disposable schema synchronization and operational CLI checks only; not migration replay or business-module integration certification"
 }

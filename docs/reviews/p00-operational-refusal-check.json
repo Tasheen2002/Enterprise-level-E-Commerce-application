@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-19",
+  "date": "2026-10-21",
   "mode": "Current CLI refusal before client construction",
   "sourceCommit": "working-tree",
   "results": [
@@ -95,6 +95,18 @@
     },
     {
       "script": "scratch/inspect-loyalty-data.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/inspect-databases-local.ts",
+      "passed": true,
+      "exitCode": 1,
+      "prismaConstruction": "not-attempted"
+    },
+    {
+      "script": "scratch/list-databases.ts",
       "passed": true,
       "exitCode": 1,
       "prismaConstruction": "not-attempted"
