@@ -1,4 +1,18 @@
 /** Validate before importing/constructing any database test clients. */
+export const TEST_APPLICATION_SCHEMAS: readonly string[] = [
+  "public",
+  "analytics",
+  "cart",
+  "customer_care",
+  "engagement",
+  "fulfillment",
+  "inventory_management",
+  "order_management",
+  "payment_loyalty",
+  "product_catalog",
+  "user_management",
+];
+
 export function isDatabaseTestPath(testPath: string | undefined): boolean {
   if (!testPath) return false;
   const normalized = testPath.replace(/\\/g, "/").toLowerCase();

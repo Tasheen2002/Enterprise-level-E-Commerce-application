@@ -1,6 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 import { beforeAll, beforeEach, afterAll, expect } from "vitest";
-import { isDatabaseTestPath, requireTestDatabase } from "./scripts/testing/database-safety";
+import {
+  isDatabaseTestPath,
+  requireTestDatabase,
+  TEST_APPLICATION_SCHEMAS,
+} from "./scripts/testing/database-safety";
 
 let prisma: PrismaClient | null = null;
 
@@ -14,20 +18,7 @@ async function cleanDatabase() {
     `;
 
   for (const { schemaname, tablename } of tables) {
-    const schemas = [
-      "public",
-      "analytics",
-      "cart",
-      "customer_care",
-      "engagement",
-      "fulfillment",
-      "inventory_management",
-      "order_management",
-      "payment_loyalty",
-      "product_catalog",
-      "user_management",
-    ];
-    if (!schemas.includes(schemaname)) continue;
+    if (!TEST_APPLICATION_SCHEMAS.includes(schemaname)) continue;
     if (!/^[a-zA-Z0-9_]+$/.test(tablename)) throw new Error("Unexpected test table identifier");
     await prisma.$executeRawUnsafe(`TRUNCATE TABLE "${schemaname}"."${tablename}" CASCADE;`);
   }
