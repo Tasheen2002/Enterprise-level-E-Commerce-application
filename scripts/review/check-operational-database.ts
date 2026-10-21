@@ -84,8 +84,17 @@ async function main() {
   let created = false;
   let failure: unknown;
   try {
+    const expectDatabaseExists = (exists: boolean) => {
+      if (
+        JSON.stringify(JSON.parse(run("list-databases"))) !==
+        JSON.stringify({ scope: "selected-test-database", exists })
+      )
+        throw new Error("Selected test database existence output mismatch");
+    };
+    expectDatabaseExists(false);
     run("create-test-db");
     created = true;
+    expectDatabaseExists(true);
     run("create-test-db");
     results.createAndExisting = "passed";
     // Give only the new database to the existing restricted test role.
@@ -114,6 +123,95 @@ async function main() {
       throw new Error("Disposable schema synchronization failed");
     results.schemaSynchronization = "passed; migration history not replayed";
     client = new PrismaClient({ datasources: { db: { url: restricted.toString() } } });
+    stage = "catalog-fixtures";
+    // Own fixtures only; this malicious-looking name is a legal quoted PostgreSQL identifier.
+    const quotedTable = 'public."p00_quoted""; DROP TABLE p00_sentinel; --"';
+    await client.$executeRawUnsafe(`CREATE TABLE ${quotedTable} (id integer)`);
+    await client.$executeRawUnsafe(`INSERT INTO ${quotedTable} VALUES (1),(2),(3)`);
+    await client.$executeRawUnsafe(`CREATE TABLE public.p00_sentinel (id integer)`);
+    await client.$executeRawUnsafe(`INSERT INTO public.p00_sentinel VALUES (42)`);
+    await client.$executeRawUnsafe(`CREATE TABLE public.p00_empty (id integer)`);
+    await client.$executeRawUnsafe(`CREATE TABLE public._prisma_migrations (id integer)`);
+    await client.$executeRawUnsafe(`CREATE SCHEMA p00_unrelated_schema`);
+    await client.$executeRawUnsafe(`CREATE TABLE p00_unrelated_schema.private_table (id integer)`);
+    await client.$executeRawUnsafe(`INSERT INTO p00_unrelated_schema.private_table VALUES (7)`);
+    const tableSnapshot = async () =>
+      JSON.stringify(
+        await Promise.all([
+          client!.$queryRawUnsafe(`SELECT * FROM ${quotedTable} ORDER BY id`),
+          client!.$queryRawUnsafe(`SELECT * FROM public.p00_sentinel ORDER BY id`),
+          client!.$queryRawUnsafe(`SELECT * FROM p00_unrelated_schema.private_table ORDER BY id`),
+        ]),
+      );
+    const beforeTables = await tableSnapshot();
+    const initialTables = JSON.parse(run("inspect-databases-local"));
+    const findTable = (name: string) =>
+      initialTables.tables.find(
+        (row: { schema: string; table: string }) => row.schema === "public" && row.table === name,
+      );
+    if (
+      initialTables.scope !== "selected-test-database-application-tables" ||
+      initialTables.tablesTruncated ||
+      findTable('p00_quoted"; DROP TABLE p00_sentinel; --')?.rows !== "3" ||
+      findTable("p00_sentinel")?.rows !== "1" ||
+      findTable("p00_empty")?.rows !== "0" ||
+      initialTables.tables.some(
+        (row: { schema: string; table: string; rows: string }) =>
+          row.schema === "p00_unrelated_schema" ||
+          row.schema.startsWith("pg_") ||
+          row.table === "_prisma_migrations" ||
+          !/^[0-9]+$/.test(row.rows) ||
+          Object.keys(row).sort().join(",") !== "rows,schema,table",
+      ) ||
+      (await tableSnapshot()) !== beforeTables
+    )
+      throw new Error("Table catalog scope, escaping, count output or snapshot assertion failed");
+    results.tableCatalogScopeAndEscaping =
+      "passed; only selected test DB/application schemas, no migration/system/unrelated tables, legal quoted SQL-like identifier counted safely, zero/nonzero string counts and unchanged sentinel/full fixture snapshots";
+    await client.$executeRawUnsafe(`REVOKE SELECT ON ${quotedTable} FROM audit_test`);
+    run("inspect-databases-local", 1);
+    await client.$executeRawUnsafe(`GRANT SELECT ON ${quotedTable} TO audit_test`);
+    if ((await tableSnapshot()) !== beforeTables)
+      throw new Error("Failed table counts modified records");
+    results.tableCatalogDeniedCount =
+      "passed; denied count exits 1 with no partial report or changed rows";
+    const extras = 101 - initialTables.tables.length;
+    if (extras < 2)
+      throw new Error("Unexpected catalog baseline too large for exact-limit fixture");
+    for (let i = 0; i < extras; i++) {
+      await client.$executeRawUnsafe(`CREATE TABLE public.p00_catalog_extra_${i} (id integer)`);
+      if (i === extras - 2 || i === extras - 1) {
+        const bounded = JSON.parse(run("inspect-databases-local"));
+        if (
+          bounded.tables.length !== 100 ||
+          bounded.tablesTruncated !== (i === extras - 1) ||
+          (await tableSnapshot()) !== beforeTables
+        )
+          throw new Error("Catalog exact/overflow limit or snapshot assertion failed");
+      }
+    }
+    results.tableCatalogBounds =
+      "passed; actual 100/101-table sets return 100 counts with truthful truncation; snapshots unchanged";
+    for (let i = 0; i < extras; i++)
+      await client.$executeRawUnsafe(`DROP TABLE public.p00_catalog_extra_${i}`);
+    await client.$executeRawUnsafe(`DROP TABLE ${quotedTable}`);
+    await client.$executeRawUnsafe(
+      `DROP TABLE public.p00_sentinel, public.p00_empty, public._prisma_migrations`,
+    );
+    await client.$executeRawUnsafe(`DROP TABLE p00_unrelated_schema.private_table`);
+    await client.$executeRawUnsafe(`DROP SCHEMA p00_unrelated_schema`);
+    expectDatabaseExists(true);
+    const correctMaintenance = env.TEST_DATABASE_ADMIN_URL;
+    const badMaintenance = new URL(correctMaintenance!);
+    badMaintenance.password = randomUUID();
+    try {
+      env.TEST_DATABASE_ADMIN_URL = badMaintenance.toString();
+      run("list-databases", 1);
+    } finally {
+      env.TEST_DATABASE_ADMIN_URL = correctMaintenance;
+    }
+    results.selectedDatabaseExistence =
+      "passed; missing/present exact selected database only; bad maintenance authentication fails; no server-wide database names emitted; existence is not readiness";
     const inspectStock = (expected: {
       rows: number;
       totalOnHand: number;
@@ -1030,6 +1128,11 @@ async function main() {
         Array<{ exists: boolean }>
       >`SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = ${database}) AS exists`;
       if (remaining[0]?.exists) throw new Error("Disposable probe database still exists");
+      if (
+        JSON.stringify(JSON.parse(run("list-databases"))) !==
+        JSON.stringify({ scope: "selected-test-database", exists: false })
+      )
+        throw new Error("Dropped selected database reported present");
       results.dropAndMissing = "passed; newly created database removed";
     }
   } catch (error) {
@@ -1040,7 +1143,7 @@ async function main() {
   }
   if (failure) throw new Error(`Verification stage failed: ${failedStage}`, { cause: failure });
   const report = {
-    date: "2026-10-19",
+    date: "2026-10-21",
     container,
     results,
     productionData: "not accessed",
@@ -1059,6 +1162,7 @@ async function main() {
         "scripts/testing/admin-inspection.ts",
         "scripts/testing/wallet-inspection.ts",
         "scripts/testing/loyalty-inspection.ts",
+        "scripts/testing/database-catalog-inspection.ts",
         ...[
           "create-test-db",
           "drop-test-db",
@@ -1076,6 +1180,8 @@ async function main() {
           "verify-admin",
           "inspect-wallets",
           "inspect-loyalty-data",
+          "inspect-databases-local",
+          "list-databases",
         ].map((name) => `scratch/${name}.ts`),
       ].map((file) => [file, createHash("sha256").update(fs.readFileSync(file)).digest("hex")]),
     ),
