@@ -1,18 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { verifyTestAdmin } from "../scripts/testing/admin-inspection";
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: "postgresql://postgres:1234@localhost:5432/enterprise_level_ecommerce"
-    }
-  }
+verifyTestAdmin(
+  process.env,
+  (url) => new PrismaClient({ datasources: { db: { url } } }),
+  (summary) => console.log(JSON.stringify(summary)),
+).catch(() => {
+  console.error("Test administrator inspection refused or failed.");
+  process.exitCode = 1;
 });
-
-async function main() {
-  const user = await prisma.user.findUnique({
-    where: { email: "tasheenadmin@gmail.com" }
-  });
-  console.log("Admin User Query Result:", user);
-}
-
-main().catch(console.error).finally(() => prisma.$disconnect());
