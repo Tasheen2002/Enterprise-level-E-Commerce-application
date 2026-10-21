@@ -15,7 +15,10 @@ const files = [
   ]),
 ].filter(
   (file) =>
-    /\.[cm]?[jt]sx?$/.test(file) && !file.startsWith("docs/") && !file.includes("/generated/"),
+    /\.[cm]?[jt]sx?$/.test(file) &&
+    !file.startsWith("docs/") &&
+    !file.includes("/generated/") &&
+    fs.existsSync(file),
 );
 const liveModules = new Set([
   "user-management",

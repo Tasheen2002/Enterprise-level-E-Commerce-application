@@ -58,7 +58,9 @@ const files = [
       .trim()
       .split(/\r?\n/),
   ]),
-].filter((file) => /\.[cm]?[jt]sx?$/.test(file) && !file.startsWith("docs/"));
+].filter(
+  (file) => /\.[cm]?[jt]sx?$/.test(file) && !file.startsWith("docs/") && fs.existsSync(file),
+);
 const formatRoots = [
   "apps/api/src/shared/",
   "apps/api/src/plugins/",
