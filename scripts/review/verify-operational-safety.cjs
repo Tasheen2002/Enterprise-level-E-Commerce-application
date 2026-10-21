@@ -23,6 +23,8 @@ const scripts = baselineExpiry
         "inspect-reminders",
         "check-db-reminders",
         "inspect-inventory-stock",
+        "verify-admin",
+        "inspect-loyalty-data",
       ];
 const results = [];
 for (const script of scripts) {
@@ -36,8 +38,10 @@ for (const script of scripts) {
     "ALLOW_OPERATIONAL_DATABASE_WRITES",
     "TEST_ADMIN_EMAIL",
     "TEST_ADMIN_PASSWORD",
+    "TEST_PRODUCT_TITLE_PREFIX",
   ])
     delete env[key];
+  if (script === "inspect-wallets") env.TEST_PRODUCT_TITLE_PREFIX = "Mabillon";
   const probe = `
     const Module = require('node:module');
     const original = Module._load;
@@ -96,7 +100,7 @@ fs.writeFileSync(
       : "docs/reviews/p00-operational-refusal-check.json",
   JSON.stringify(
     {
-      date: "2026-10-18",
+      date: "2026-10-19",
       mode: baselineExpiry
         ? "Original utility exits successfully after injected server failure; inert imports and no DB access"
         : baseline

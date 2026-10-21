@@ -44,10 +44,14 @@ async function main() {
     TEST_DATABASE_ADMIN_URL: maintenance.toString(),
     TEST_ADMIN_EMAIL: "p00-admin@example.invalid",
     TEST_ADMIN_PASSWORD: randomUUID() + randomUUID(),
+    TEST_PRODUCT_TITLE_PREFIX: "Mabillon",
   };
   requireTestDatabaseAdmin(env);
   const results: Record<string, string> = {};
+  let stage = "database-creation";
+  let failedStage = "initialization";
   const run = (file: string, expected = 0) => {
+    stage = file;
     console.log(`P00 isolated CLI check: ${file} (expected exit ${expected})`);
     const child = spawnSync(process.execPath, ["--import", "tsx", `scratch/${file}.ts`], {
       env,
@@ -55,6 +59,16 @@ async function main() {
       timeout: 90_000,
     });
     if (child.error || child.status !== expected) {
+      console.error(
+        JSON.stringify({
+          command: file,
+          expectedExit: expected,
+          actualExit: child.status,
+          timedOut: child.error?.message.includes("ETIMEDOUT") ?? false,
+          launchError: !!child.error,
+          signal: child.signal,
+        }),
+      );
       if (file === "test-expiry-renewal") {
         const safe = child.stderr?.match(
           /Cart expiry probe refused or failed\. \[[A-Za-z0-9_:]+\]/,
@@ -75,7 +89,9 @@ async function main() {
     run("create-test-db");
     results.createAndExisting = "passed";
     // Give only the new database to the existing restricted test role.
+    stage = "restricted-owner-assignment";
     await admin.$executeRawUnsafe(`ALTER DATABASE "${database}" OWNER TO audit_test`);
+    stage = "restricted-configuration";
     const local = dotenv.parse(fs.readFileSync(".env.audit.local"));
     const restricted = new URL(local.TEST_DATABASE_URL);
     if (
@@ -88,6 +104,7 @@ async function main() {
     restricted.pathname = "/" + database;
     env.DATABASE_URL = env.TEST_DATABASE_URL = restricted.toString();
     // Empty, newly created database only. This synchronizes schema, not migration history.
+    stage = "schema-synchronization";
     const schema = spawnSync(
       process.execPath,
       ["node_modules/prisma/build/index.js", "db", "push", "--skip-generate"],
@@ -112,6 +129,171 @@ async function main() {
     };
     inspectStock({ rows: 0, totalOnHand: 0, totalReserved: 0, netOnHandMinusReserved: 0 });
     results.inventoryInspectionEmpty = "passed; empty database reports zero row count and totals";
+    if (
+      JSON.stringify(JSON.parse(run("inspect-wallets"))) !==
+      JSON.stringify({
+        scope: "product-title-prefix",
+        productsTruncated: false,
+        products: [],
+      })
+    )
+      throw new Error("Incorrect empty wallet inspection");
+    results.walletInspectionEmpty = "passed; explicit prefix and no matches";
+    const inspectLoyalty = (expected: {
+      accounts: {
+        rows: number;
+        currentBalance: string;
+        lifetimePoints: string;
+        totalPointsEarned: string;
+        totalPointsRedeemed: string;
+      };
+      transactions: { rows: number; storedPointsTotal: string };
+    }) => {
+      const actual = JSON.parse(run("inspect-loyalty-data"));
+      if (JSON.stringify(actual) !== JSON.stringify({ scope: "all-loyalty-rows", ...expected }))
+        throw new Error("Incorrect loyalty aggregate or unexpected output fields");
+      if (fs.existsSync("scratch/loyalty-data.txt"))
+        throw new Error("Loyalty inspector recreated the removed local export");
+    };
+    // Do not overwrite or delete a user's local export; require absence before any invocation.
+    if (fs.existsSync("scratch/loyalty-data.txt"))
+      throw new Error("Unexpected local loyalty export");
+    inspectLoyalty({
+      accounts: {
+        rows: 0,
+        currentBalance: "0",
+        lifetimePoints: "0",
+        totalPointsEarned: "0",
+        totalPointsRedeemed: "0",
+      },
+      transactions: { rows: 0, storedPointsTotal: "0" },
+    });
+    results.loyaltyInspectionEmpty =
+      "passed; empty aggregate sums are string zero and no export is written";
+    const loyaltyUsers = [randomUUID(), randomUUID()];
+    const loyaltyAccounts = [randomUUID(), randomUUID()];
+    const loyaltyTransactions = [randomUUID(), randomUUID(), randomUUID()];
+    await client.$transaction(async (tx) => {
+      await tx.user.createMany({
+        data: loyaltyUsers.map((id, i) => ({
+          id,
+          email: `p00-loyalty-${i}@example.invalid`,
+          firstName: "Synthetic",
+          lastName: "Private",
+        })),
+      });
+      await tx.loyaltyAccount.createMany({
+        data: [
+          {
+            accountId: loyaltyAccounts[0],
+            userId: loyaltyUsers[0],
+            joinedAt: new Date(0),
+            currentBalance: 9007199254740993n,
+            lifetimePoints: 9007199254741000n,
+            totalPointsEarned: 9007199254741010n,
+            totalPointsRedeemed: 17n,
+          },
+          {
+            accountId: loyaltyAccounts[1],
+            userId: loyaltyUsers[1],
+            joinedAt: new Date(0),
+            currentBalance: 7n,
+            lifetimePoints: 5n,
+            totalPointsEarned: 10n,
+            totalPointsRedeemed: 3n,
+          },
+        ],
+      });
+      await tx.loyaltyTransaction.createMany({
+        data: [
+          {
+            transactionId: loyaltyTransactions[0],
+            accountId: loyaltyAccounts[0],
+            type: "EARN",
+            reason: "PRIVATE_REASON",
+            description: "PRIVATE_DESCRIPTION",
+            points: 9007199254740993n,
+            balanceAfter: 9007199254740993n,
+          },
+          {
+            transactionId: loyaltyTransactions[1],
+            accountId: loyaltyAccounts[1],
+            type: "REDEEM",
+            reason: "PRIVATE_REASON",
+            points: 7n,
+            balanceAfter: 7n,
+          },
+          {
+            transactionId: loyaltyTransactions[2],
+            accountId: loyaltyAccounts[1],
+            type: "ADJUST",
+            reason: "PRIVATE_REASON",
+            points: 0n,
+            balanceAfter: 7n,
+          },
+        ],
+      });
+    });
+    const loyaltySnapshot = async () =>
+      JSON.stringify(
+        await Promise.all([
+          client!.user.findMany({ orderBy: { id: "asc" } }),
+          client!.loyaltyAccount.findMany({ orderBy: { accountId: "asc" } }),
+          client!.loyaltyTransaction.findMany({ orderBy: { transactionId: "asc" } }),
+        ]),
+        (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+      );
+    let beforeLoyalty = await loyaltySnapshot();
+    const expectedLoyalty = {
+      accounts: {
+        rows: 2,
+        currentBalance: "9007199254741000",
+        lifetimePoints: "9007199254741005",
+        totalPointsEarned: "9007199254741020",
+        totalPointsRedeemed: "20",
+      },
+      transactions: { rows: 3, storedPointsTotal: "9007199254741000" },
+    };
+    inspectLoyalty(expectedLoyalty);
+    if ((await loyaltySnapshot()) !== beforeLoyalty)
+      throw new Error("Loyalty inspection changed records");
+    results.loyaltyInspectionExact =
+      "passed; two accounts/three transactions, zero and positive stored points, exact totals above Number.MAX_SAFE_INTEGER; fixed identity-free schema and full snapshots unchanged; no export";
+    await client.loyaltyAccount.update({
+      where: { accountId: loyaltyAccounts[1] },
+      data: { currentBalance: -9007199254741000n },
+    });
+    await client.loyaltyTransaction.update({
+      where: { transactionId: loyaltyTransactions[0] },
+      data: { points: -9007199254741000n },
+    });
+    beforeLoyalty = await loyaltySnapshot();
+    expectedLoyalty.accounts.currentBalance = "-7";
+    expectedLoyalty.transactions.storedPointsTotal = "-9007199254740993";
+    inspectLoyalty(expectedLoyalty);
+    if ((await loyaltySnapshot()) !== beforeLoyalty)
+      throw new Error("Signed loyalty inspection changed records");
+    results.loyaltyInspectionSigned =
+      "passed; deliberately invalid synthetic negative balances/points remain exact raw totals, without clamping or ledger-validity claims; snapshots unchanged";
+    await client.$executeRawUnsafe(`REVOKE SELECT ON user_management.users FROM audit_test`);
+    inspectLoyalty(expectedLoyalty);
+    await client.$executeRawUnsafe(`GRANT SELECT ON user_management.users TO audit_test`);
+    if ((await loyaltySnapshot()) !== beforeLoyalty)
+      throw new Error("Identity-denied loyalty inspection changed records");
+    results.loyaltyInspectionNoUserReads =
+      "passed without SELECT on users; no identity relation required; snapshots unchanged";
+    for (const table of ["loyalty_accounts", "loyalty_transactions"]) {
+      await client.$executeRawUnsafe(`REVOKE SELECT ON payment_loyalty.${table} FROM audit_test`);
+      run("inspect-loyalty-data", 1);
+      await client.$executeRawUnsafe(`GRANT SELECT ON payment_loyalty.${table} TO audit_test`);
+      if ((await loyaltySnapshot()) !== beforeLoyalty)
+        throw new Error("Denied loyalty inspection changed records");
+    }
+    results.loyaltyInspectionDenied =
+      "passed; denied account and transaction SELECT each exit 1 without data changes or local export";
+    await client.user.deleteMany({ where: { id: { in: loyaltyUsers } } });
+    if ((await client.loyaltyAccount.count()) || (await client.loyaltyTransaction.count()))
+      throw new Error("Synthetic loyalty fixtures remain after owned-user cleanup");
     run("verify-restock-reminder");
     run("verify-restock-dispatcher");
     if (
@@ -521,6 +703,123 @@ async function main() {
     if (!jpg.length || jpg.some((asset) => asset.mime !== "image/jpeg"))
       throw new Error("Incorrect JPEG metadata");
     results.seedAndMediaMetadata = "passed; 28 products, 24 categories, 97 variants";
+    const walletSnapshot = async () =>
+      JSON.stringify(
+        await Promise.all([
+          client!.product.findMany({ orderBy: { id: "asc" } }),
+          client!.productMedia.findMany({ orderBy: { id: "asc" } }),
+          client!.mediaAsset.findMany({ orderBy: { id: "asc" } }),
+        ]),
+        (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+      );
+    let beforeWallet = await walletSnapshot();
+    const seededWallets = JSON.parse(run("inspect-wallets"));
+    const expectedWalletTitles = [
+      "Mabillon Iridescent Champagne",
+      "Mabillon Noir",
+      "Mabillon Nude Latte",
+      "Mabillon Oran Earth",
+      "Mabillon Sunrise",
+    ];
+    if (
+      seededWallets.scope !== "product-title-prefix" ||
+      seededWallets.productsTruncated ||
+      JSON.stringify(seededWallets.products.map((p: { title: string }) => p.title).sort()) !==
+        JSON.stringify(expectedWalletTitles) ||
+      seededWallets.products.some(
+        (p: { mediaTruncated: boolean; media: Array<{ storageKeyPresent: boolean }> }) =>
+          p.mediaTruncated || !p.media.length || p.media.some((m) => !m.storageKeyPresent),
+      ) ||
+      (await walletSnapshot()) !== beforeWallet
+    )
+      throw new Error("Seeded wallet inspection incorrect or changed records");
+    results.walletInspectionSeeded =
+      "passed; five Mabillon products with linked media; full product/media/asset snapshots unchanged";
+    const walletPrefix = `P00Wallet-${randomUUID()}`;
+    const walletIds = Array.from({ length: 21 }, () => randomUUID());
+    const walletAssetIds = Array.from({ length: 21 }, () => randomUUID());
+    await client.$transaction(async (tx) => {
+      await tx.mediaAsset.createMany({
+        data: walletAssetIds.map((id, i) => ({
+          id,
+          mime: "image/jpeg",
+          storageKey: i === 0 ? "  " : "PRIVATE_STORAGE_PATH",
+        })),
+      });
+      for (const [i, id] of walletIds.entries()) {
+        await tx.product.create({
+          data: {
+            id,
+            title: `${walletPrefix} ${i}`,
+            slug: `${walletPrefix.toLowerCase()}-${String(i).padStart(2, "0")}`,
+            media:
+              i === 0
+                ? {
+                    create: walletAssetIds.map((assetId, j) => ({
+                      id: `00000000-0000-4000-8000-${String(j).padStart(12, "0")}`,
+                      assetId,
+                      position: j === 20 ? null : Math.floor(j / 2),
+                      isCover: j === 0,
+                    })),
+                  }
+                : undefined,
+          },
+        });
+      }
+    });
+    env.TEST_PRODUCT_TITLE_PREFIX = walletPrefix;
+    beforeWallet = await walletSnapshot();
+    const boundedWallets = JSON.parse(run("inspect-wallets"));
+    const expectedBoundedWallets = {
+      scope: "product-title-prefix",
+      productsTruncated: true,
+      products: walletIds.slice(0, 20).map((_id, i) => ({
+        title: `${walletPrefix} ${i}`,
+        slug: `${walletPrefix.toLowerCase()}-${String(i).padStart(2, "0")}`,
+        mediaTruncated: i === 0,
+        media:
+          i === 0
+            ? walletAssetIds.slice(0, 20).map((_assetId, j) => ({
+                position: Math.floor(j / 2),
+                isCover: j === 0,
+                mime: "image/jpeg",
+                storageKeyPresent: j !== 0,
+              }))
+            : [],
+      })),
+    };
+    if (
+      JSON.stringify(boundedWallets) !== JSON.stringify(expectedBoundedWallets) ||
+      (await walletSnapshot()) !== beforeWallet
+    )
+      throw new Error("Wallet bounds, ordering, metadata or unchanged snapshot assertion failed");
+    results.walletInspectionBounds =
+      "passed; 21 matching products and 21 linked assets yield 20/20 limits with explicit truncation; slug/position/id ordering, null-last and blank key handling; no raw storage paths; exact output schema; snapshots unchanged";
+    await client.product.delete({ where: { id: walletIds[20] } });
+    await client.productMedia.deleteMany({ where: { assetId: walletAssetIds[20] } });
+    beforeWallet = await walletSnapshot();
+    expectedBoundedWallets.productsTruncated = false;
+    expectedBoundedWallets.products[0].mediaTruncated = false;
+    if (
+      JSON.stringify(JSON.parse(run("inspect-wallets"))) !==
+        JSON.stringify(expectedBoundedWallets) ||
+      (await walletSnapshot()) !== beforeWallet
+    )
+      throw new Error(
+        "Exact-limit wallet inspection incorrectly indicates truncation or changed data",
+      );
+    results.walletInspectionExactLimit =
+      "passed; exactly 20 products/media have no truncation flag; snapshots unchanged";
+    await client.$executeRawUnsafe(`REVOKE SELECT ON product_catalog.media_assets FROM audit_test`);
+    run("inspect-wallets", 1);
+    await client.$executeRawUnsafe(`GRANT SELECT ON product_catalog.media_assets TO audit_test`);
+    if ((await walletSnapshot()) !== beforeWallet)
+      throw new Error("Denied wallet inspection changed records");
+    results.walletInspectionDenied =
+      "passed; denied asset SELECT yields unsuccessful exit and unchanged snapshots";
+    await client.product.deleteMany({ where: { id: { in: walletIds } } });
+    await client.mediaAsset.deleteMany({ where: { id: { in: walletAssetIds } } });
+    env.TEST_PRODUCT_TITLE_PREFIX = "Mabillon";
     await client.$executeRawUnsafe(
       `CREATE FUNCTION product_catalog.p00_reject_variant() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'P00 injected seed failure'; END $$`,
     );
@@ -618,6 +917,9 @@ async function main() {
     await client.$executeRawUnsafe(`DROP FUNCTION cart.p00_reject_expiry_sync()`);
     results.expirySynchronizationFailureCleanup =
       "passed; actual service failure after cart persistence exits unsuccessfully, removes partial fixtures and preserves existing catalog";
+    run("verify-admin", 1);
+    results.adminInspectionMissing =
+      "passed; missing configured test account fails without seeding or changing data";
     run("seed-admin");
     const user = await client.user.findUniqueOrThrow({ where: { email: env.TEST_ADMIN_EMAIL } });
     if (
@@ -633,6 +935,57 @@ async function main() {
     if (user.id !== existing.id || user.passwordHash !== existing.passwordHash)
       throw new Error("Existing administrator was changed");
     results.adminCreateAndConflict = "passed; existing account preserved";
+    const adminSnapshot = async () =>
+      JSON.stringify(await client!.user.findUniqueOrThrow({ where: { id: existing.id } }));
+    const beforeAdminInspection = await adminSnapshot();
+    const expectedAdminInspection = { verified: true, role: "ADMIN", status: "active" };
+    if (JSON.stringify(JSON.parse(run("verify-admin"))) !== JSON.stringify(expectedAdminInspection))
+      throw new Error("Unexpected administrator inspection output fields");
+    if ((await adminSnapshot()) !== beforeAdminInspection)
+      throw new Error("Administrator inspection modified account data");
+    results.adminInspectionActive =
+      "passed; seeded active ADMIN verified with exact safe schema; full account unchanged";
+    for (const patch of [
+      { role: "CUSTOMER", status: "active" },
+      { role: "ADMIN", status: "inactive" },
+      { role: "ADMIN", status: "blocked" },
+    ] as const) {
+      await client.user.update({ where: { id: existing.id }, data: patch });
+      const beforeRejectedAdmin = await adminSnapshot();
+      run("verify-admin", 1);
+      if ((await adminSnapshot()) !== beforeRejectedAdmin)
+        throw new Error("Rejected administrator inspection modified account data");
+    }
+    await client.user.update({
+      where: { id: existing.id },
+      data: { role: "ADMIN", status: "active", updatedAt: existing.updatedAt },
+    });
+    if ((await adminSnapshot()) !== beforeAdminInspection)
+      throw new Error("Synthetic administrator state was not restored");
+    results.adminInspectionWrongState =
+      "passed; CUSTOMER, inactive ADMIN and blocked ADMIN fail without changes; fixture state restored";
+    // Prisma internally reads the primary key even when only role/status are requested.
+    // Permit that key and the email predicate; keep secret columns unavailable.
+    await client.$executeRawUnsafe(`REVOKE SELECT ON user_management.users FROM audit_test`);
+    await client.$executeRawUnsafe(
+      `GRANT SELECT (user_id, email, role, status) ON user_management.users TO audit_test`,
+    );
+    const secretRights = await client.$queryRaw<
+      Array<{ password_read: boolean; mfa_read: boolean }>
+    >`SELECT has_column_privilege('audit_test','user_management.users','password_hash','SELECT') AS password_read, has_column_privilege('audit_test','user_management.users','two_factor_secret','SELECT') AS mfa_read`;
+    if (secretRights[0]?.password_read !== false || secretRights[0]?.mfa_read !== false)
+      throw new Error("Secret user columns remain readable during restricted verification");
+    if (JSON.stringify(JSON.parse(run("verify-admin"))) !== JSON.stringify(expectedAdminInspection))
+      throw new Error("Administrator inspection requires unexpected user columns");
+    await client.$executeRawUnsafe(
+      `REVOKE SELECT (user_id, email, role, status) ON user_management.users FROM audit_test`,
+    );
+    run("verify-admin", 1);
+    await client.$executeRawUnsafe(`GRANT SELECT ON user_management.users TO audit_test`);
+    if ((await adminSnapshot()) !== beforeAdminInspection)
+      throw new Error("Permission-failed administrator inspection modified data");
+    results.adminInspectionColumnAccess =
+      "passed with SELECT limited to email predicate, ORM-required primary key and role/status; password/MFA columns unreadable; output contains no identity; full denied SELECT fails and account unchanged";
     await client.$executeRawUnsafe(
       `CREATE FUNCTION product_catalog.p00_reject_cleanup() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'P00 injected cleanup failure'; END $$`,
     );
@@ -666,6 +1019,7 @@ async function main() {
     client = undefined;
   } catch (error) {
     failure = error;
+    failedStage = stage;
   }
   try {
     await client?.$disconnect();
@@ -679,13 +1033,14 @@ async function main() {
       results.dropAndMissing = "passed; newly created database removed";
     }
   } catch (error) {
+    if (!failure) failedStage = stage;
     failure ??= error;
   } finally {
     await admin.$disconnect();
   }
-  if (failure) throw failure;
+  if (failure) throw new Error(`Verification stage failed: ${failedStage}`, { cause: failure });
   const report = {
-    date: "2026-10-18",
+    date: "2026-10-19",
     container,
     results,
     productionData: "not accessed",
@@ -701,6 +1056,9 @@ async function main() {
         "scripts/testing/database-inspection.ts",
         "scripts/testing/reminder-inspection.ts",
         "scripts/testing/inventory-stock-inspection.ts",
+        "scripts/testing/admin-inspection.ts",
+        "scripts/testing/wallet-inspection.ts",
+        "scripts/testing/loyalty-inspection.ts",
         ...[
           "create-test-db",
           "drop-test-db",
@@ -715,6 +1073,9 @@ async function main() {
           "inspect-reminders",
           "check-db-reminders",
           "inspect-inventory-stock",
+          "verify-admin",
+          "inspect-wallets",
+          "inspect-loyalty-data",
         ].map((name) => `scratch/${name}.ts`),
       ].map((file) => [file, createHash("sha256").update(fs.readFileSync(file)).digest("hex")]),
     ),
@@ -728,9 +1089,17 @@ async function main() {
   console.log(JSON.stringify(report, null, 2));
 }
 
-main().catch(() => {
+main().catch((error: unknown) => {
   console.error(
     "Isolated operational check failed; raw connection and child outputs withheld. Check probe cleanup before retrying.",
   );
+  if (
+    error instanceof Error &&
+    (error.message === "Disposable schema synchronization failed" ||
+      /^Unexpected exit: [a-z-]+$/.test(error.message) ||
+      /^Verification stage failed: [a-z-]+$/.test(error.message))
+  ) {
+    console.error(`Safe verification stage: ${error.message}`);
+  }
   process.exitCode = 1;
 });
