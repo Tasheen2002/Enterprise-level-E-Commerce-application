@@ -38,16 +38,10 @@ export class CalculateCheckoutTaxHandler implements ICommandHandler<
   CalculateCheckoutTaxCommand,
   CommandResult<CalculateCheckoutTaxResult>
 > {
-  private readonly stripe: Stripe;
-
   constructor(
     private readonly checkoutRepository: ICheckoutRepository,
     private readonly cartRepository: ICartRepository,
-  ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-      apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
-    });
-  }
+  ) {}
 
   async handle(
     command: CalculateCheckoutTaxCommand,
@@ -85,7 +79,10 @@ export class CalculateCheckoutTaxHandler implements ICommandHandler<
           tax_code: "txcd_30011000", // Standard clothing/footwear tax category
         }));
 
-        const calculation = await this.stripe.tax.calculations.create({
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+          apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
+        });
+        const calculation = await stripe.tax.calculations.create({
           currency: checkout.currency.getValue().toLowerCase(),
           line_items: lineItems,
           customer_details: {

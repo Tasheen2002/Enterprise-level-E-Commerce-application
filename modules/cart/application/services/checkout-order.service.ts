@@ -58,8 +58,6 @@ interface CompleteCheckoutWithOrderDto {
 export type OrderResult = CheckoutOrderResult;
 
 export class CheckoutOrderService {
-  private readonly stripe: Stripe;
-
   constructor(
     private readonly completionPort: ICheckoutCompletionPort,
     private readonly checkoutRepository: ICheckoutRepository,
@@ -71,11 +69,7 @@ export class CheckoutOrderService {
     private readonly snapshotFactory: IProductSnapshotFactory,
     private readonly config: { defaultStockLocation?: string },
     private readonly loyaltyService?: LoyaltyService,
-  ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-      apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
-    });
-  }
+  ) {}
 
   async completeCheckoutWithOrder(
     dto: CompleteCheckoutWithOrderDto,
@@ -166,7 +160,10 @@ export class CheckoutOrderService {
           tax_code: "txcd_30011000", // Standard clothing/footwear tax category
         }));
 
-        const calculation = await this.stripe.tax.calculations.create({
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+          apiVersion: "2026-02-25.clover" as unknown as "2026-02-25.clover",
+        });
+        const calculation = await stripe.tax.calculations.create({
           currency: checkout.currency.getValue().toLowerCase(),
           line_items: lineItems,
           customer_details: {
