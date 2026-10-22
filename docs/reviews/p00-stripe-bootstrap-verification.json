@@ -1,0 +1,124 @@
+{
+  "date": "2026-10-22",
+  "finding": "P00-20",
+  "problem": "Container registration eagerly constructed two Stripe SDK clients even for unrelated operational probes with Stripe credentials removed. Both constructors reject empty configuration; actual DB run exposed this while CLI-unit wiring doubles did not.",
+  "change": "Initialize Stripe within the existing tax request try block instead of the service/handler constructor. Unrelated container wiring and existing-order/validation paths need no Stripe credentials. SDK initialization errors now enter the pre-existing tax fallback.",
+  "regressions": {
+    "service_baseline_failed": 6,
+    "handler_baseline_failed": 5,
+    "final_passed": 11,
+    "full_unit_passed": 615,
+    "full_unit_files": 78
+  },
+  "history": [
+    "Initial six-case test fixture used a payment status rejected by the existing application; corrected it to authorized and reran the original service constructor baseline (0 pass/6 fail). After service deferral the corrected six pass. Handler extension reproduced 5 additional constructor-boundary failures; final 11 pass.",
+    "Four fresh DB attempts failed during registration; each confirmed temporary DB removal. Allowlisted-frame diagnostic runs identified the two eager constructors. Final 44-scenario run without diagnostics passed. See p00-operational-database-check.json.",
+    "New regression source formatting was corrected and checked; root/tooling TypeScript and focused lint/format pass."
+  ],
+  "verified_source_sha256": {
+    "modules/cart/application/services/checkout-order.service.ts": "ad457bd5e93a24e77199d4d1d493c7718f21954e2f41d34a96eda39369753115",
+    "modules/cart/application/commands/calculate-checkout-tax.command.ts": "0ad259f8e9e46a3ad19ab19c69c4468ff4f59524d3387a7b8e6d8f94b4424659",
+    "apps/api/test/unit/checkout-stripe-initialization.spec.ts": "27724edffaa0b90ff3955d214e711d45c50899e3414fb30d047041e75ea9d622",
+    "scripts/review/check-operational-database.ts": "5789dfe97c44262afbd4fff62db67311902bcea7c27ccd675ff3af050464085c"
+  },
+  "coverage_scope": "Only 11 bootstrap/tax-path boundary cases across these two production files; whole P06 behavior is not covered. No exclusions or whole-file closure claim.",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 125,
+        "covered": 84,
+        "skipped": 0,
+        "pct": 67.2
+      },
+      "statements": {
+        "total": 127,
+        "covered": 86,
+        "skipped": 0,
+        "pct": 67.71
+      },
+      "functions": {
+        "total": 9,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 66.66
+      },
+      "branches": {
+        "total": 103,
+        "covered": 53,
+        "skipped": 0,
+        "pct": 51.45
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "modules/cart/application/commands/calculate-checkout-tax.command.ts": {
+      "lines": {
+        "total": 33,
+        "covered": 30,
+        "skipped": 0,
+        "pct": 90.9
+      },
+      "functions": {
+        "total": 3,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 34,
+        "covered": 31,
+        "skipped": 0,
+        "pct": 91.17
+      },
+      "branches": {
+        "total": 26,
+        "covered": 19,
+        "skipped": 0,
+        "pct": 73.07
+      }
+    },
+    "modules/cart/application/services/checkout-order.service.ts": {
+      "lines": {
+        "total": 92,
+        "covered": 54,
+        "skipped": 0,
+        "pct": 58.69
+      },
+      "functions": {
+        "total": 6,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 50
+      },
+      "statements": {
+        "total": 93,
+        "covered": 55,
+        "skipped": 0,
+        "pct": 59.13
+      },
+      "branches": {
+        "total": 77,
+        "covered": 34,
+        "skipped": 0,
+        "pct": 44.15
+      }
+    }
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "tooling_tsc": "passed",
+    "focused_eslint": "passed",
+    "new_test_and_verifier_prettier": "passed",
+    "postgres": "44 operational scenarios pass; temporary DB removed"
+  },
+  "limits": [
+    "Stripe is mocked in the boundary cases. Actual operational PG run makes no provider request; no live Stripe/SMTP acceptance claimed.",
+    "Existing 8% simulated tax fallback remains. Missing SDK credentials now follow that fallback when tax is requested; production tax/configuration policy must be reviewed in P06/P08.",
+    "Service/handler whole-file line/branch coverage remains below 100%; payment status gates, ownership/idempotency, stock transaction boundaries and raw error logging still require P06/P08 review.",
+    "Broad backend coverage was not remeasured."
+  ]
+}

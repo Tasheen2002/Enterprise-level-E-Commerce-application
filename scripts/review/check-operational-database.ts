@@ -70,9 +70,7 @@ async function main() {
         }),
       );
       if (file === "test-expiry-renewal") {
-        const safe = child.stderr?.match(
-          /Cart expiry probe refused or failed\. \[[A-Za-z0-9_:]+\]/,
-        )?.[0];
+        const safe = child.stderr?.match(/Cart expiry probe refused or failed\./)?.[0];
         if (safe) console.error(safe);
       }
       throw new Error(`Unexpected exit: ${file}`);
@@ -1143,7 +1141,8 @@ async function main() {
   }
   if (failure) throw new Error(`Verification stage failed: ${failedStage}`, { cause: failure });
   const report = {
-    date: "2026-10-21",
+    date: new Date().toISOString().slice(0, 10),
+    verified_at_utc: new Date().toISOString(),
     container,
     results,
     productionData: "not accessed",
@@ -1155,6 +1154,9 @@ async function main() {
         "scripts/testing/restock-probes.ts",
         "scripts/testing/cart-expiry-probe.ts",
         "scripts/testing/cart-inventory-probe.ts",
+        "modules/cart/infra/persistence/repositories/reservation.repository.impl.ts",
+        "modules/cart/application/services/checkout-order.service.ts",
+        "modules/cart/application/commands/calculate-checkout-tax.command.ts",
         "scripts/testing/cart-expiry-inspection.ts",
         "scripts/testing/database-inspection.ts",
         "scripts/testing/reminder-inspection.ts",

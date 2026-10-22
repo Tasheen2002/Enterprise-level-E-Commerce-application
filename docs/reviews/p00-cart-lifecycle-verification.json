@@ -1,0 +1,168 @@
+{
+  "date": "2026-10-22",
+  "finding": "P00-18",
+  "changes": [
+    "Reservation repository requests only getTotalAvailableStock; probe passes the real stock service without unused adapter methods.",
+    "Extracted existing guarded lifecycle; diagnostic read/report behavior preserved; cart CLI reports success after disconnect and preserves operation/fixture-cleanup/disconnect errors."
+  ],
+  "focused_tests_passed": 164,
+  "focused_files": 10,
+  "new_tests": 13,
+  "full_unit_tests_passed": 573,
+  "full_unit_files": 76,
+  "coverage_scope": "Only the three explicit paths below; no business repository or application-wide coverage claim.",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 62,
+        "covered": 62,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 65,
+        "covered": 65,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 16,
+        "covered": 16,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scratch/verify-cart-inventory-check.ts": {
+      "lines": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 3,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/cart-inventory-probe.ts": {
+      "lines": {
+        "total": 41,
+        "covered": 41,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 43,
+        "covered": 43,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-inspection.ts": {
+      "lines": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 3,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 16,
+        "covered": 16,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "verified_source_sha256": {
+    "scripts/testing/cart-inventory-probe.ts": "ceeaa5199afcd9cc14da94a143cd5d370d806c03b14e31bc210d0729ebcdb708",
+    "scripts/testing/database-inspection.ts": "06e1e2e9a2808b09f2c5ff4fa964e0dafe520b82dd8e9c96de6e619484a1f178",
+    "scratch/verify-cart-inventory-check.ts": "a2ad904a2b821c36672263191e72e34a31a510d03ec6a7d904f31edcb33ac6ca",
+    "modules/cart/infra/persistence/repositories/reservation.repository.impl.ts": "f2faf01647ef31fd5a92776accc5d57d51c4d5ab2f39259a76634c27d82efcaf",
+    "apps/api/test/unit/cart-inventory-cli.spec.ts": "0132f0e79e94529a7757ebed0a5452340d02e5b5dc22b976490bb7737e8e2bcf",
+    "apps/api/test/unit/database-operation.spec.ts": "6ab37fff5644105df930f70cac9b9baffc9e918488cc32a06543f29836cf7621",
+    "apps/api/test/unit/cart-inventory-probe.spec.ts": "2ab877965edaba2bf143b8c7d9d0a7638e6eedaeb26d304719aaeab42889a81c"
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "tooling_tsc": "passed",
+    "focused_eslint": "passed",
+    "refusal_tripwires": "18 passed before Prisma construction",
+    "focused_prettier": "passed",
+    "git_diff_check": "passed"
+  },
+  "history": [
+    "First focused run could not collect tests due to sandbox EPERM transform-cache rename; elevated rerun passed all 164 cases.",
+    "Docker API missing before database creation; Docker Desktop startup attempted, engine remained unavailable. No new database/client or provider call ran.",
+    "Inert baseline timing harness first failed before target execution because its CommonJS exports binding was missing; corrected harness reproduced original premature success after disconnect failure.",
+    "2026-10-22: owner started Docker engine. Verified/restarted labelled tmpfs/loopback audit container, waited for readiness, restored restricted role and ignored target port. Full fresh operational DB run passed and removed its uniquely named database."
+  ],
+  "database_recheck": "passed 2026-10-22; p00-operational-database-check.json verifies exact current runtime hashes, positive/failure scenarios, sentinel preservation and temporary database absence",
+  "limits": [
+    "Sequential availability only; concurrent reservations and P06 production repository review remain open.",
+    "Other P00 utility CLI/harness gaps and test/build/CI/bootstrap remain open.",
+    "Broad backend coverage not remeasured."
+  ],
+  "baseline_cli_timing": {
+    "baseline": "4a1083ce67be6b052969d9124848f737dd480554",
+    "prematureSuccessBeforeDisconnectFailureReproduced": true,
+    "failedExit": true,
+    "databaseAccess": false
+  },
+  "database_verified_at_utc": "2026-10-22T05:32:14.618Z",
+  "latest_full_unit_recheck": {
+    "date": "2026-10-22",
+    "passed_tests": 615,
+    "passed_files": 78,
+    "evidence": "p00-unit-results.json"
+  }
+}

@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-21",
+  "date": "2026-10-22",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1338
+      "localSourceFiles": 1346
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,11 +35,11 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 942
+      "localSourceFiles": 934
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 942
+      "localSourceFiles": 934
     }
   ],
   "commands": {
@@ -1167,12 +1167,30 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/cart-inventory-cli.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/cart-inventory-probe.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/checkout-stripe-initialization.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -1185,12 +1203,30 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/database-operation.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/database-test-safety.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/expiry-restock-clis.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -16336,16 +16372,6 @@
       "generated": false
     },
     {
-      "file": "scratch/check-sql-inserts.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
       "file": "scratch/clear-database.ts",
       "compilerPrograms": [
         "tsconfig.tooling.json",
@@ -16373,46 +16399,6 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
-      "generated": false
-    },
-    {
-      "file": "scratch/find-all-env-keys.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/find-backups.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/find-imagekit.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/find-images.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -16486,36 +16472,6 @@
       "generated": false
     },
     {
-      "file": "scratch/list-env-keys.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/parse-commands.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
-      "file": "scratch/search-artifacts.ts",
-      "compilerPrograms": [
-        "tsconfig.tooling.json",
-        "scratch/tsconfig.json"
-      ],
-      "inRecordedBackendLintRun": false,
-      "inConfiguredFormatRoots": false,
-      "generated": false
-    },
-    {
       "file": "scratch/seed-admin.ts",
       "compilerPrograms": [
         "tsconfig.tooling.json",
@@ -16538,6 +16494,7 @@
     {
       "file": "scratch/test-expiry-renewal.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16558,6 +16515,7 @@
     {
       "file": "scratch/verify-cart-inventory-check.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16568,6 +16526,7 @@
     {
       "file": "scratch/verify-restock-dispatcher.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16578,6 +16537,7 @@
     {
       "file": "scratch/verify-restock-reminder.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],

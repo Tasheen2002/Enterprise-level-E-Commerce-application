@@ -63,5 +63,6 @@
     }
   },
   "uncovered": "Two adapter methods (adjustStock and findWarehouseId) are required by the existing full stock port but never called by this availability probe. Their lines/functions remain uncovered; no exclusion or full-coverage claim. Helper remains open pending resolution.",
-  "raw_source": "coverage/p00-cart-inventory/coverage-summary.json"
+  "raw_source": "coverage/p00-cart-inventory/coverage-summary.json",
+  "superseded_by": "p00-cart-lifecycle-verification.json (2026-10-22); this earlier uncovered-method report is historical"
 }
