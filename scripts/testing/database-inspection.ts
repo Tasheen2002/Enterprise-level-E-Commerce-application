@@ -8,11 +8,23 @@ export async function runDatabaseInspection<T>(
   read: (client: PrismaClient) => Promise<T>,
   report: (summary: T) => void,
 ): Promise<void> {
+  await withOperationalTestDatabase(env, createClient, async (prisma) => {
+    report(await read(prisma));
+  });
+}
+
+/** Guarded client lifecycle, including write probes that clean up their own fixtures. */
+export async function withOperationalTestDatabase<T>(
+  env: NodeJS.ProcessEnv,
+  createClient: (url: string) => PrismaClient,
+  operation: (client: PrismaClient) => Promise<T>,
+): Promise<T> {
   const url = requireOperationalTestDatabase(env);
   const prisma = createClient(url);
   const failures: unknown[] = [];
+  let result: T;
   try {
-    report(await read(prisma));
+    result = await operation(prisma);
   } catch (error) {
     failures.push(error);
   }
@@ -23,5 +35,6 @@ export async function runDatabaseInspection<T>(
   }
   if (failures.length === 1) throw failures[0];
   if (failures.length > 1)
-    throw new AggregateError(failures, "Database inspection and disconnect failed");
+    throw new AggregateError(failures, "Database operation and disconnect failed");
+  return result!;
 }

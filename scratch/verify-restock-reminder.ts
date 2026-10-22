@@ -1,16 +1,14 @@
 import { PrismaClient } from "@prisma/client";
-import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
+import { withOperationalTestDatabase } from "../scripts/testing/database-inspection";
 import { runRestockReminderProbe } from "../scripts/testing/restock-probes";
 
 async function main() {
-  const url = requireOperationalTestDatabase(process.env);
-  const prisma = new PrismaClient({ datasources: { db: { url } } });
-  try {
-    await runRestockReminderProbe(prisma);
-    console.log("Restock reminder persistence verified; fixtures rolled back. No delivery tested.");
-  } finally {
-    await prisma.$disconnect();
-  }
+  await withOperationalTestDatabase(
+    process.env,
+    (url) => new PrismaClient({ datasources: { db: { url } } }),
+    runRestockReminderProbe,
+  );
+  console.log("Restock reminder persistence verified; fixtures rolled back. No delivery tested.");
 }
 main().catch(() => {
   console.error("Restock reminder probe refused or failed.");

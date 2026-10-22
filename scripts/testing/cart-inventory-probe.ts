@@ -55,11 +55,7 @@ export async function runCartInventoryProbe(prisma: PrismaClient): Promise<void>
       new StockRepositoryImpl(prisma),
       new InventoryTransactionRepositoryImpl(prisma),
     );
-    const repository = new ReservationRepositoryImpl(prisma, {
-      getTotalAvailableStock: (variant) => stock.getTotalAvailableStock(variant),
-      adjustStock: (...args) => stock.adjustStock(...args),
-      findWarehouseId: async () => ids.locations[0],
-    });
+    const repository = new ReservationRepositoryImpl(prisma, stock);
     const variant = VariantId.fromString(ids.variant);
     const cartA = CartId.fromString(ids.carts[0]);
     const cartB = CartId.fromString(ids.carts[1]);

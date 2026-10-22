@@ -1,16 +1,14 @@
 import { PrismaClient } from "@prisma/client";
-import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
+import { withOperationalTestDatabase } from "../scripts/testing/database-inspection";
 import { runCartInventoryProbe } from "../scripts/testing/cart-inventory-probe";
 
 async function main() {
-  const url = requireOperationalTestDatabase(process.env);
-  const prisma = new PrismaClient({ datasources: { db: { url } } });
-  try {
-    await runCartInventoryProbe(prisma);
-    console.log("Sequential cart inventory checks passed; owned fixtures removed.");
-  } finally {
-    await prisma.$disconnect();
-  }
+  await withOperationalTestDatabase(
+    process.env,
+    (url) => new PrismaClient({ datasources: { db: { url } } }),
+    runCartInventoryProbe,
+  );
+  console.log("Sequential cart inventory checks passed; owned fixtures removed.");
 }
 
 main().catch(() => {

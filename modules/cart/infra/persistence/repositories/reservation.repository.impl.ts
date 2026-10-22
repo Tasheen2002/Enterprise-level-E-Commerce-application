@@ -17,7 +17,7 @@ export class ReservationRepositoryImpl
 {
   constructor(
     prisma: PrismaClient,
-    private readonly stockService?: IExternalStockService,
+    private readonly stockService?: Pick<IExternalStockService, "getTotalAvailableStock">,
     eventBus?: IEventBus,
   ) {
     super(prisma, eventBus);
