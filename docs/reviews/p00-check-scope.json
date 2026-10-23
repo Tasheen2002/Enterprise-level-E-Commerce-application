@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1356
+      "localSourceFiles": 1359
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1290,6 +1290,15 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/repository-event-dispatch.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -16170,6 +16179,24 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/domain-events.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/in-memory-event-bus.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

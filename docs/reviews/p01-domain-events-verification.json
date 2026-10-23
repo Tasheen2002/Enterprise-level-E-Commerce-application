@@ -126,5 +126,10 @@
     "UUID/currency/errors/CQRS contracts and exports/configuration remain open despite initial full core source read.",
     "Core source rows remain open until dependent delivery policy and consumer tracing are complete."
   ],
-  "full_regression_baseline": "688 tests/82 files and 46 PG groups passed before this test-only addition. Broad/full regression and database suites were not rerun because production sources are unchanged."
+  "full_regression_baseline": "688 tests/82 files and 46 PG groups passed before this test-only addition. Broad/full regression and database suites were not rerun because production sources are unchanged.",
+  "latest_revalidation": {
+    "date": "2026-10-23",
+    "evidence": "p01-event-delivery-verification.json",
+    "note": "Original hashes and 26-case coverage remain historical. Snapshot acknowledgement extends AggregateRoot; 45 focused cases and 714 full unit cases now pass at current hashes."
+  }
 }

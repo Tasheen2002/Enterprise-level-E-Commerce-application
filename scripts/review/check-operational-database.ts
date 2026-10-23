@@ -7,6 +7,9 @@ import { PrismaClient } from "@prisma/client";
 import { compare, getRounds } from "bcryptjs";
 import { requireTestDatabaseAdmin } from "../testing/operational-database";
 import { inspectCartExpiry } from "../testing/cart-expiry-inspection";
+import { InMemoryEventBus } from "../../packages/core/src/domain/events/in-memory-event-bus";
+import { Reservation } from "../../modules/cart/domain/entities/reservation.entity";
+import { ReservationRepositoryImpl } from "../../modules/cart/infra/persistence/repositories/reservation.repository.impl";
 
 async function main() {
   const container = "slipperze-audit-p00-postgres";
@@ -813,6 +816,56 @@ async function main() {
     if (!jpg.length || jpg.some((asset) => asset.mime !== "image/jpeg"))
       throw new Error("Incorrect JPEG metadata");
     results.seedAndMediaMetadata = "passed; 28 products, 24 categories, 97 variants";
+    stage = "repository-event-delivery";
+    const deliveryCart = await client.shoppingCart.create({
+      data: { id: randomUUID(), currency: "EUR", guestToken: `guest_${randomUUID()}` },
+    });
+    const deliveryVariant = await client.productVariant.findFirstOrThrow();
+    const deliveryAggregate = Reservation.create({
+      cartId: deliveryCart.id,
+      variantId: deliveryVariant.id,
+      quantity: 1,
+    });
+    const deliveryBus = new InMemoryEventBus();
+    const deliveryFailure = new Error("Synthetic P01 delivery failure");
+    let deliveryCalls = 0;
+    deliveryBus.subscribe("reservation.created", {
+      eventType: "reservation.created",
+      async handle() {
+        deliveryCalls++;
+        if (deliveryCalls === 1) throw deliveryFailure;
+      },
+    });
+    const deliveryRepository = new ReservationRepositoryImpl(client, undefined, deliveryBus);
+    let deliveryRejected = false;
+    try {
+      await deliveryRepository.save(deliveryAggregate);
+    } catch (error) {
+      if (error !== deliveryFailure) throw error;
+      deliveryRejected = true;
+    }
+    const deliveryId = deliveryAggregate.reservationId.getValue();
+    const committedReservation = await client.reservation.findUnique({ where: { id: deliveryId } });
+    if (
+      !deliveryRejected ||
+      committedReservation?.qty !== 1 ||
+      deliveryAggregate.domainEvents.length !== 1
+    )
+      throw new Error(
+        "Repository did not retain committed state and pending events on delivery failure",
+      );
+    await deliveryRepository.save(deliveryAggregate);
+    const afterDeliverySnapshot = [...deliveryAggregate.domainEvents];
+    if (
+      deliveryCalls !== 2 ||
+      afterDeliverySnapshot.length !== 0 ||
+      (await client.reservation.count({ where: { id: deliveryId } })) !== 1
+    )
+      throw new Error("Repository delivery retry did not preserve one persisted reservation");
+    await client.reservation.delete({ where: { id: deliveryId } });
+    await client.shoppingCart.delete({ where: { id: deliveryCart.id } });
+    results.repositoryEventFailureAfterPersistence =
+      "passed; real reservation upsert remains committed after subscriber failure; pending event retained, retry succeeds with one row, owned fixtures removed; no provider called";
     const walletSnapshot = async () =>
       JSON.stringify(
         await Promise.all([
@@ -1235,6 +1288,10 @@ async function main() {
     verified_source_sha256: Object.fromEntries(
       [
         "scripts/testing/database-safety.ts",
+        "packages/core/src/domain/aggregate-root.ts",
+        "packages/core/src/domain/events/domain-event.ts",
+        "packages/core/src/domain/events/in-memory-event-bus.ts",
+        "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts",
         "scripts/testing/operational-database.ts",
         "scripts/testing/restock-probes.ts",
         "scripts/testing/cart-expiry-probe.ts",

@@ -1,9 +1,9 @@
 {
   "date": "2026-10-23",
-  "passed_tests": 688,
+  "passed_tests": 714,
   "failed_tests": 0,
-  "passed_files": 82,
-  "coverage_scope": "Full default unit subset after catalog cleanup lifecycle correction; broad coverage not remeasured.",
+  "passed_files": 85,
+  "coverage_scope": "Full default unit subset after P01 delivery fixes; broad backend coverage was not remeasured.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -43,6 +43,90 @@
         },
         {
           "title": "RemoveShipmentItemCommandHandler should fail validation if fields are empty",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/core/test/domain-events.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "aggregate pending event contract starts without pending events",
+          "status": "passed"
+        },
+        {
+          "title": "aggregate pending event contract preserves recorded event identity and order",
+          "status": "passed"
+        },
+        {
+          "title": "aggregate pending event contract protects the pending queue from mutations to a returned array",
+          "status": "passed"
+        },
+        {
+          "title": "aggregate pending event contract clears pending work without changing an already captured delivery batch",
+          "status": "passed"
+        },
+        {
+          "title": "aggregate pending event contract isolates event queues across aggregate instances",
+          "status": "passed"
+        },
+        {
+          "title": "aggregate pending event contract acknowledges only the supplied event snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "domain event envelope contract assigns distinct UUID identities and captures occurrence time at creation",
+          "status": "passed"
+        },
+        {
+          "title": "domain event envelope contract serializes stable event identity, aggregate metadata, ISO time and payload",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/core/test/in-memory-event-bus.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "in-memory event bus delivery handles an event with no subscribers and delivers to a later subscriber on republish",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery deduplicates subscriptions and successful publication within one bus",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery keeps different event identities and bus instances independent",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery coalesces simultaneous publication until the single delivery finishes",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery shares a concurrent failure and permits a later retry without repeating successful handlers",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery uses the subscription snapshot captured before delivery",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery ignores removal of unknown subscriptions and removes a known handler",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery publishes a batch in order and stops at the first failure",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery retains 10,000 settled identities and permits redelivery after eviction",
+          "status": "passed"
+        },
+        {
+          "title": "in-memory event bus delivery never evicts active delivery while settled history fills",
           "status": "passed"
         }
       ]
@@ -1380,6 +1464,44 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/repository-event-dispatch.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "repository pending-event dispatch keeps the existing no-bus discard behavior",
+          "status": "passed"
+        },
+        {
+          "title": "repository pending-event dispatch does not call the bus for an empty aggregate",
+          "status": "passed"
+        },
+        {
+          "title": "repository pending-event dispatch clears a successfully delivered batch",
+          "status": "passed"
+        },
+        {
+          "title": "repository pending-event dispatch retains the batch on failure and retries without repeating successful delivery",
+          "status": "passed"
+        },
+        {
+          "title": "repository pending-event dispatch preserves events added while an earlier batch is being delivered",
+          "status": "passed"
+        },
+        {
+          "title": "repository pending-event dispatch preserves both existing and new events when a handler appends then fails",
+          "status": "passed"
+        },
+        {
+          "title": "actual reservation repository persistence/dispatch boundary does not dispatch or clear pending events when persistence rejects",
+          "status": "passed"
+        },
+        {
+          "title": "actual reservation repository persistence/dispatch boundary exposes dispatch failure after persistence has succeeded and retains events for retry",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/restock-probes.spec.ts",
       "status": "passed",
       "assertions": [
@@ -1725,6 +1847,46 @@
         },
         {
           "title": "authenticated API client retries returns an unauthorized response when refresh fails",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToCartHandler should successfully add item to cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/clear-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ClearCartHandler should successfully clear the cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/create-reservation.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateReservationHandler should successfully create a reservation using ReservationService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/initialize-checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "InitializeCheckoutHandler should successfully initialize checkout using CheckoutService",
           "status": "passed"
         }
       ]
@@ -2112,46 +2274,6 @@
       ]
     },
     {
-      "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddToCartHandler should successfully add item to cart using CartManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/clear-cart.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ClearCartHandler should successfully clear the cart using CartManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/create-reservation.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateReservationHandler should successfully create a reservation using ReservationService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/initialize-checkout.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "InitializeCheckoutHandler should successfully initialize checkout using CheckoutService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2506,40 +2628,6 @@
       ]
     },
     {
-      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
-          "status": "passed"
-        },
-        {
-          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2694,179 +2782,35 @@
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
+      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
+          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
+      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
+          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
+      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
+          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
           "status": "passed"
         },
         {
-          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should update order item quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support marking as notified only after release date",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should support correct transitions",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
+          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
           "status": "passed"
         }
       ]
@@ -3095,6 +3039,184 @@
         },
         {
           "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should update order item quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support marking as notified only after release date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should support correct transitions",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
           "status": "passed"
         }
       ]

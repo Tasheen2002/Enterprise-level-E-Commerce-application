@@ -1,0 +1,218 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "1c7d8b9f4fdc175158faf3d0f90183316f733455",
+  "findings": [
+    "P01-01 concurrent delivery/subscription snapshot/active eviction",
+    "P01-02 loss of events queued during repository dispatch"
+  ],
+  "baseline": {
+    "passed": 13,
+    "failed": 5,
+    "failed_cases": [
+      "in-memory event bus delivery coalesces simultaneous publication until the single delivery finishes",
+      "in-memory event bus delivery shares a concurrent failure and permits a later retry without repeating successful handlers",
+      "in-memory event bus delivery uses the subscription snapshot captured before delivery",
+      "in-memory event bus delivery never evicts active delivery while settled history fills",
+      "repository pending-event dispatch preserves events added while an earlier batch is being delivered"
+    ],
+    "source_sha256": {
+      "packages/core/src/domain/events/in-memory-event-bus.ts": "db5b666ccdd283ac6856f19c590fed304ff460089e92b5f40af9f5e335110fc7",
+      "packages/core/src/domain/aggregate-root.ts": "6b84c2837f0dd40ee3551912179016f5b48cc5271fd91f4dcfeb11a050aabc1f",
+      "packages/core/src/domain/events/domain-event.ts": "d6ee409db581e70b71619b17b89928260f3fbc215f00e4dd6891a146ca7dce5c",
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts": "425a22c2e9b519928eed1967b357bb2247a6edab0868558ef5ff596692801314"
+    }
+  },
+  "changes": [
+    "Concurrent publications of one event ID share one active attempt and its rejection/success.",
+    "Subscriber snapshots isolate active delivery from subscribe/unsubscribe operations.",
+    "Active attempts are separate from the bounded 10,000 settled-success/failure histories. Duplicate successful publication does not extend retention.",
+    "Successful repository dispatch acknowledges its captured event references only; later queued events survive. No-argument clearing and the existing missing-bus discard behavior are preserved."
+  ],
+  "new_test_cases": 19,
+  "focused_cases": 45,
+  "focused_files": 4,
+  "full_unit_cases": 714,
+  "full_unit_files": 85,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 54,
+        "covered": 54,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 62,
+        "covered": 62,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 26,
+        "covered": 26,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts": {
+      "lines": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 10,
+        "covered": 10,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/aggregate-root.ts": {
+      "lines": {
+        "total": 8,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/events/domain-event.ts": {
+      "lines": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/events/in-memory-event-bus.ts": {
+      "lines": {
+        "total": 32,
+        "covered": 32,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 38,
+        "covered": 38,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 20,
+        "covered": 20,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only the four listed implementation files; 100% lines/statements/functions/branches. Not all core, infrastructure or backend coverage.",
+  "verified_source_sha256": {
+    "packages/core/src/domain/events/in-memory-event-bus.ts": "2aefc48cd900f6492abb685eec8388bc718896c1f9da2211b76ad2a9943dfd22",
+    "packages/core/src/domain/aggregate-root.ts": "d41eaec554d621471e09eff67bd1f2a0db050ae7e379143bb72c7ff5f5d0191c",
+    "packages/core/src/domain/events/domain-event.ts": "8d351f9eff071dfd10f2aa9500b918c1265d5ad888f39fe27bbb8e7067171545",
+    "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts": "a6b985d05cdb0cba952f87923edf9d22bfdc57b35b2f9b2c666452352a6b234f",
+    "packages/core/test/in-memory-event-bus.spec.ts": "05ec9529d1fe934a0253e601da7d28841ac969fa55b09b2a356ed8a8c798b871",
+    "apps/api/test/unit/repository-event-dispatch.spec.ts": "2182b5242d76eef4ce7603147f10b45482304e218826cdb65caa7647d82b211c",
+    "packages/core/test/domain-events.spec.ts": "ef6cb8c901007c226196eaff89b1b148fa1bfb2d596663aca23552209a91cd87",
+    "scripts/review/check-operational-database.ts": "ef85a2190c03c53502744094b48af3247bc937d8e497aa52f613ddb5a5ce56ed"
+  },
+  "checks": {
+    "root_tsc": "passed for changed production contracts and tests",
+    "tooling_tsc": "passed including final operational checker",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed",
+    "postgres": "47 groups pass; actual reservation save remains committed after handler failure, pending event retained, retry leaves one persisted row, synthetic fixtures removed; final temporary DB absent"
+  },
+  "review_scope": {
+    "complete_source_read": [
+      "packages/core/src/domain/events/in-memory-event-bus.ts",
+      "packages/core/src/domain/aggregate-root.ts",
+      "packages/core/src/domain/events/domain-event.ts",
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts"
+    ],
+    "partial_consumer_traces": [
+      "modules/cart/infra/persistence/repositories/reservation.repository.impl.ts:1-47 save path",
+      "modules/cart/domain/entities/reservation.entity.ts:1-155 and 308-318",
+      "apps/api/src/container.ts:1601-1716 stock.added subscriber"
+    ],
+    "note": "Consumer snippets establish the reviewed dependency paths, not entire cart/container/module review. Core package had an earlier complete initial read."
+  },
+  "verification_history": [
+    "First implementation left one retention test failing (43 pass/1 fail); duplicate-success publication now preserves the existing eviction window. Final expanded focused suite is 45/45.",
+    "Compiler rejected a new harness comparison narrowed across an async call; explicitly capture the post-retry event-array snapshot. No application logic was changed to resolve that checker assertion."
+  ],
+  "limits": [
+    "In-memory deduplication is scoped to a bus instance and handler reference. Eviction, process restart and subscriber side effects before rejection permit redelivery; this is not exactly-once or durable delivery.",
+    "Active attempts are not evicted and have no built-in timeout/cancellation/concurrency admission limit. Handlers must not await their own active event or cyclic event dependencies.",
+    "Database commit and delivery remain separate. Real PostgreSQL proves the documented failure boundary, not atomic outbox/reliable messaging or whole-cart integration.",
+    "The stock.added subscriber catches its own failures, so the bus can only treat the resolved handler as success. Existing P10 restock/simulated-provider review remains open.",
+    "Missing-bus discard behavior is retained; composition must verify required buses/subscribers are actually wired. Full file/module closure remains pending these dependent checks."
+  ]
+}
