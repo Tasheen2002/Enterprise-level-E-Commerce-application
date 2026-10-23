@@ -1,3 +1,5 @@
+import { parseResultError } from "./result-error";
+
 export class QueryResult<T> {
   constructor(
     public readonly success: boolean,
@@ -26,11 +28,7 @@ export class QueryResult<T> {
   }
 
   static fromError<T>(error: unknown): QueryResult<T> {
-    const message = error instanceof Error ? error.message : "Query failed";
-    const statusCode =
-      error && typeof error === "object" && "statusCode" in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
+    const { message, statusCode } = parseResultError(error, "Query failed");
     return QueryResult.failure<T>(message, statusCode);
   }
 

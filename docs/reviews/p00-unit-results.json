@@ -1,9 +1,9 @@
 {
   "date": "2026-10-23",
-  "passed_tests": 817,
+  "passed_tests": 898,
   "failed_tests": 0,
-  "passed_files": 88,
-  "coverage_scope": "Full default unit subset after shared currency catalog and validation fixes; broad backend coverage not remeasured.",
+  "passed_files": 90,
+  "coverage_scope": "Full default unit subset after CQRS exception conversion; broad coverage not remeasured. Compile-only fixture is not counted as a Vitest test.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -43,6 +43,304 @@
         },
         {
           "title": "RemoveShipmentItemCommandHandler should fail validation if fields are empty",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/core/test/cqrs-results.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CQRS success and explicit failure compatibility exports the same result classes through every supported import path",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility retains success payload +0",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility retains success payload false",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility retains success payload ''",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility retains success payload []",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility retains success payload { total: 1 }",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility preserves command optional data and the query null sentinel",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility preserves command validation fields and explicit status",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS success and explicit failure compatibility preserves both query failure overloads and status precedence",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 400",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 401",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 403",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 404",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 409",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 422",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 429",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 500",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 503",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains explicit failure status 599",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'undefined' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'null' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'numeric-string' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'array' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'object' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'boolean' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'NaN' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'infinity' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'fraction' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'success-status' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'below-bound' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion treats malformed 'above-bound' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'undefined' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'null' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'string' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'number' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'record' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a fixed message for non-Error 'function' input",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion retains plain-object numeric status without exposing its arbitrary message",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion uses a string fallback when an Error has a malformed message",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion contains throwing status getters rather than throwing another error",
+          "status": "passed"
+        },
+        {
+          "title": "'command' exception conversion contains a proxy that refuses error introspection",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 400",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 401",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 403",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 404",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 409",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 422",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 429",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 500",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 503",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains explicit failure status 599",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'undefined' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'null' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'numeric-string' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'array' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'object' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'boolean' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'NaN' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'infinity' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'fraction' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'success-status' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'below-bound' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion treats malformed 'above-bound' status as an internal failure",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'undefined' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'null' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'string' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'number' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'record' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a fixed message for non-Error 'function' input",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion retains plain-object numeric status without exposing its arbitrary message",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion uses a string fallback when an Error has a malformed message",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion contains throwing status getters rather than throwing another error",
+          "status": "passed"
+        },
+        {
+          "title": "'query' exception conversion contains a proxy that refuses error introspection",
           "status": "passed"
         }
       ]
@@ -1196,6 +1494,44 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/cqrs-result-http.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'undefined' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'string' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'array' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'NaN' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'success-code' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary redacts converted 'server-code' failures through both result paths",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary preserves explicit validation failures and field errors without requiring a status",
+          "status": "passed"
+        },
+        {
+          "title": "CQRS result HTTP boundary retains query absence semantics and falsy success payloads",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/database-admin-cli.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2282,6 +2618,46 @@
       ]
     },
     {
+      "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToCartHandler should successfully add item to cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/clear-cart.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ClearCartHandler should successfully clear the cart using CartManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/create-reservation.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateReservationHandler should successfully create a reservation using ReservationService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/cart/test/unit/application/initialize-checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "InitializeCheckoutHandler should successfully initialize checkout using CheckoutService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/cart/test/unit/domain/applied-promos.vo.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2664,224 +3040,6 @@
       ]
     },
     {
-      "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddToCartHandler should successfully add item to cart using CartManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/clear-cart.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ClearCartHandler should successfully clear the cart using CartManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/create-reservation.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateReservationHandler should successfully create a reservation using ReservationService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/cart/test/unit/application/initialize-checkout.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "InitializeCheckoutHandler should successfully initialize checkout using CheckoutService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should update order item quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support marking as notified only after release date",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should support correct transitions",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
       "status": "passed",
       "assertions": [
@@ -3134,6 +3292,108 @@
       ]
     },
     {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
       "status": "passed",
       "assertions": [
@@ -3322,103 +3582,271 @@
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "title": "Order Aggregate Root should update order item quantity",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "title": "Preorder Entity should support marking as notified only after release date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
           "status": "passed"
         },
         {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should support correct transitions",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should update product title successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
           "status": "passed"
         }
       ]
@@ -3560,93 +3988,55 @@
       ]
     },
     {
-      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "title": "User Aggregate Root should create a standard customer user successfully",
           "status": "passed"
         },
         {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should update product title successfully",
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "title": "User Aggregate Root should throw an error if names exceed max length",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should archive a product and record archived event",
+          "title": "User Aggregate Root should not record email changed event if email is the same",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
@@ -3743,60 +4133,6 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]

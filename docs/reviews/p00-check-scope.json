@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1362
+      "localSourceFiles": 1366
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -19,7 +19,7 @@
     },
     {
       "config": "packages/core/tsconfig.json",
-      "localSourceFiles": 17
+      "localSourceFiles": 18
     },
     {
       "config": "packages/types/tsconfig.json",
@@ -35,11 +35,11 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 935
+      "localSourceFiles": 936
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 935
+      "localSourceFiles": 936
     }
   ],
   "commands": {
@@ -1213,6 +1213,15 @@
     },
     {
       "file": "apps/api/test/unit/core-error-http.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/cqrs-result-http.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
@@ -16043,6 +16052,18 @@
       "generated": false
     },
     {
+      "file": "packages/core/src/application/result-error.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "packages/core/tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "packages/core/src/domain/aggregate-root.ts",
       "compilerPrograms": [
         "tsconfig.json",
@@ -16188,6 +16209,24 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/cqrs-contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/cqrs-results.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

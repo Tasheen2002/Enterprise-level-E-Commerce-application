@@ -1,3 +1,5 @@
+import { parseResultError } from "./result-error";
+
 export class CommandResult<T> {
   constructor(
     public readonly success: boolean,
@@ -16,11 +18,7 @@ export class CommandResult<T> {
   }
 
   static fromError<T>(error: unknown): CommandResult<T> {
-    const message = error instanceof Error ? error.message : "Command failed";
-    const statusCode =
-      error && typeof error === "object" && "statusCode" in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
+    const { message, statusCode } = parseResultError(error, "Command failed");
     return CommandResult.failure<T>(message, undefined, statusCode);
   }
 }

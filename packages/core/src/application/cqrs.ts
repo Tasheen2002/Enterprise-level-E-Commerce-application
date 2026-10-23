@@ -20,7 +20,7 @@ export interface IQuery {
   readonly timestamp?: Date;
 }
 
-export interface IQueryHandler<TQuery extends IQuery, TResult = any> {
+export interface IQueryHandler<TQuery extends IQuery, TResult = unknown> {
   handle(query: TQuery): Promise<TResult>;
 }
 
