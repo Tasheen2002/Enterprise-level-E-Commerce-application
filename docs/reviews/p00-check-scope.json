@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1359
+      "localSourceFiles": 1361
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1204,6 +1204,15 @@
     },
     {
       "file": "apps/api/test/unit/checkout-stripe-initialization.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/core-error-http.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
@@ -16179,6 +16188,15 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/domain-errors-and-ids.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

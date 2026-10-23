@@ -32,7 +32,11 @@ export abstract class UuidId {
 
   equals(other: UuidId | null | undefined): boolean {
     if (!other) return false;
-    return this.typeName === other.typeName && this.value === other.value;
+    return (
+      this.constructor === other.constructor &&
+      this.typeName === other.typeName &&
+      this.value === other.value
+    );
   }
 
   toString(): string {

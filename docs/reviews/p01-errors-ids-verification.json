@@ -1,0 +1,150 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "ccf47c5fa6ba0c9b971ac90cf2b6c63420af9398",
+  "finding": "P01-03 UUID equality used a display label as the only semantic-type discriminator",
+  "baseline": {
+    "passed": 27,
+    "failed": 1,
+    "failed_cases": [
+      "UUID-backed semantic identifier contract separates cart and pickup reservation identifiers even when labels and UUID bytes match"
+    ]
+  },
+  "change": "UuidId.equals now requires the same constructor identity as well as the existing label/value match. UUID parsing, normalization, string/JSON format and stored values are unchanged. Domain error source required no correction for the reviewed cases.",
+  "new_cases": 43,
+  "focused_cases": 62,
+  "focused_files": 3,
+  "full_unit_cases": 757,
+  "full_unit_files": 87,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 36,
+        "covered": 36,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 37,
+        "covered": 37,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 17,
+        "covered": 17,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/domain-error.ts": {
+      "lines": {
+        "total": 19,
+        "covered": 19,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 19,
+        "covered": 19,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 8,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/value-objects/uuid-id.base.ts": {
+      "lines": {
+        "total": 17,
+        "covered": 17,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 8,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 18,
+        "covered": 18,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only core domain-error.ts and uuid-id.base.ts; 100% executable lines/statements/functions/branches. Not whole core or HTTP serializer coverage.",
+  "verified_source_sha256": {
+    "packages/core/src/domain/domain-error.ts": "aaca075a1e3cf4bc59ad14488349d7727056621668681daee11098d5e37c3c8c",
+    "packages/core/src/domain/value-objects/uuid-id.base.ts": "aa35c4930b5f4082402f24d06d61724472b61b892585f9bc7bb0041e989c85ed",
+    "packages/core/test/domain-errors-and-ids.spec.ts": "d27de50db0ff530ab035873270fe46f440dfa551314c76ef565765f1969f55f0",
+    "apps/api/test/unit/core-error-http.spec.ts": "f3668788695bb9f3adf82994be4fc24217d44d0ae5a045a4ad1cfafef84bf193",
+    "modules/user-management/domain/value-objects/user-id.vo.ts": "5c200b6bb2a1d09ae57765075ffa6c98aca1022d5d8c5dbb3cef02f2d40113f7",
+    "modules/product-catalog/domain/value-objects/variant-id.vo.ts": "8807ff3456717874d1e609e3eee995a19f13531a7c6aaf7a2f3076c9e5a617d9",
+    "modules/cart/domain/value-objects/cart-id.vo.ts": "8a06004db4a4962aaa8605bd0301ca481c27a29a95eb2839f4c2fbe42a71775e",
+    "modules/cart/domain/value-objects/reservation-id.vo.ts": "f9e8537bc9eedf370c040c05927b74c4785e1e6929a9b89a8aad9d5c63f1700a",
+    "modules/inventory-management/domain/value-objects/reservation-id.vo.ts": "44524a0aadaea5f00f10cb8d80efae5e491c312cf4a8253a2710f43bae71d439",
+    "modules/user-management/domain/errors/user-management.errors.ts": "778af686706cc8db78fe3f55fe572d940ed7ef7113080229ecb128d47ac1b61c",
+    "apps/api/src/shared/http/error-response.ts": "fb5a53824c2f28365284b7fd9a94cc7350ac9e37cd742e2db1d3969e09ed27f4",
+    "apps/api/src/plugins/error.ts": "0002211a85fa586f584cf26df138be600a3f7ddfc97291d32a8f13f4693a352e",
+    "apps/api/src/shared/response.helper.ts": "bd17272071afe6e423ba96f26505e160bdb961c3ef74601228a19ce7556fd080"
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "core_package_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed"
+  },
+  "observed_contracts": [
+    "Core domain errors retain Error/subclass identity, optional validation fields, numeric/coded constructor compatibility and JSON envelope without stack.",
+    "Actual Fastify plugin and ResponseHelper paths preserve 4xx status/code and redact 5xx or invalid status without stack exposure.",
+    "Current parser supports versions 1-5 with the existing variant restriction, normalizes uppercase and rejects whitespace/malformed/unsupported input. No UUID-version policy was expanded.",
+    "Actual cart and inventory reservation ID classes have identical display labels but belong to distinct models; equality now separates them while same-class equal UUIDs remain equal. This is a value-object contract regression, not a demonstrated endpoint or authorization exploit."
+  ],
+  "compile_time_followup": {
+    "finding": "P01-ID-NOMINAL-TYPES",
+    "probe": {
+      "compiler_errors": 0,
+      "user_id_assignable_to_variant_id": true,
+      "variant_id_assignable_to_user_id": true,
+      "scope": "Compile-time structural assignability probe only; runtime equality is verified separately."
+    },
+    "required": "Review nominal branding across actual ID wrappers and their callers before changing assignability; the runtime equality correction does not make TypeScript identifier types nominal."
+  },
+  "limits": [
+    "P01-TC-002 includes currencies; only the UUID half is verified here. Currency review remains next.",
+    "DomainValidationError.field exists internally; the generic HTTP serializer currently returns message/code without field details. Intended field-level HTTP policy remains for shared HTTP validation review.",
+    "Current regex support is a project contract, not a claim to accept every UUID form/version.",
+    "PostgreSQL/provider suites were not rerun for this in-memory equality/HTTP-contract change; the 47-group result at ccf47c5f remains a prior database baseline. No schema, persistence format or provider code changed.",
+    "Full consumer/module review and the nominal-type/field-serialization follow-ups remain open; no whole-module closure is implied."
+  ]
+}
