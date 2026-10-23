@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "2019ae38056e14f714588afdfc12fead9144666c",
+  "finding": {
+    "id": "P01-09",
+    "severity": "P2",
+    "title": "Shared success envelope required a payload absent from valid action acknowledgements",
+    "trigger": "Model a ResponseHelper success without data or consume a typed general ApiEnvelope as if its payload were guaranteed.",
+    "actual": "ApiSuccess required data, rejecting valid backend action replies. unwrap returned T even though those replies yield undefined at runtime.",
+    "evidence": "Actual admin invitation revoke controller sends ResponseHelper.ok without data, with actionSuccessResponse on its route. Synthetic Fastify tests exercise that same helper/schema contract, not the full authenticated invitation endpoint.",
+    "compiler_baseline": {
+      "diagnostics": [
+        "TS2741 missing data in valid ApiSuccess<void>",
+        "TS2322 backend optional-data SuccessResponse incompatible with shared ApiSuccess",
+        "Two TS2578 unused negative assertions demonstrate unchecked payload access was permitted"
+      ],
+      "fixture_repair": "Initial root attempt also exposed a misplaced expected-error directive for a nested details property. Moved it directly above the property before capturing the four-diagnostic focused compiler baseline. The initial output remains local historical evidence.",
+      "program": "Focused fixture under inherited root strict compiler options; later full root compilation passes."
+    },
+    "correction": "ApiSuccess.data is optional. unwrap overloads retain T for an input explicitly requiring data and otherwise return T | undefined. Runtime implementation is unchanged."
+  },
+  "review": {
+    "complete_package_files": [
+      "packages/types/package.json",
+      "packages/types/tsconfig.json",
+      "packages/types/src/index.ts",
+      "packages/types/test/contracts.typecheck.ts",
+      "packages/types/test/wire-contracts.spec.ts"
+    ],
+    "dependency_scope": "Read shared HTTP helper/error/schema implementation, API client implementation/configuration, shared compiler presets and representative actual frontend consumers. Trace the real invitation acknowledgement path and existing generated DTO consumer type checks. No full frontend, authentication, endpoint or generated-SDK audit implied.",
+    "exports": [
+      "Result",
+      "Nullable",
+      "Maybe",
+      "ISODateString",
+      "UUID",
+      "PaginatedResult",
+      "ApiSuccess",
+      "ApiError",
+      "ApiEnvelope"
+    ],
+    "contracts": "Compile-only positive/negative checks cover success/error discrimination, missing payload safety, required-payload precision, Result branch narrowing, null/undefined aliases, plain string wire IDs/dates, pagination equality and error-details compatibility with backend definitions.",
+    "duplication_decision": "Domain and wire pagination represent separate boundaries; retain independent declarations and check exact structural compatibility with the compiler. Avoid introducing a core/domain dependency into a source-only wire package. No duplicate runtime logic exists in the type-only file.",
+    "configuration": "Private package exports its TypeScript source. noEmit true overrides the shared library emit preset; source-only package type check and API-client resolution pass. Tests are checked by the root program rather than included under the package src rootDir. Manifest/config formatting was normalized without Git content changes.",
+    "coverage": "No executable application logic in packages/types: use compiler and wire-boundary verification rather than an artificial runtime coverage percentage."
+  },
+  "verification": {
+    "new_runtime_cases": 14,
+    "baseline_runtime_cases": 17,
+    "baseline_runtime_files": 2,
+    "focused_cases": 36,
+    "focused_files": 3,
+    "full_unit_cases": 964,
+    "full_unit_files": 94,
+    "compile_only_fixture": "packages/types/test/contracts.typecheck.ts",
+    "checks": {
+      "focused_contract_tsc": "passed after four meaningful baseline diagnostics",
+      "root_tsc": "passed",
+      "types_package_tsc": "passed",
+      "api_client_package_tsc": "passed",
+      "admin_tsc": "passed before and after, no application changes",
+      "storefront_tsc": "passed before and after, no application changes",
+      "focused_eslint": "passed for shared type/client sources and both fixtures",
+      "focused_prettier": "passed for entire types package and changed client source"
+    },
+    "runtime_cases": "Four payload-free acknowledgements (ok/created/command/query), six payloads (0/false/empty string/null/empty array/object), three error cases (field/root/server), one empty 204 response; actual Fastify helpers, action schema and client unwrap. Instances closed in finally; fetch retry suite uses inert stubs.",
+    "emission": {
+      "typescript": "5.9.3",
+      "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "removeComments": true
+      },
+      "files": [
+        {
+          "file": "packages/types/src/index.ts",
+          "emitted_javascript_unchanged": true
+        },
+        {
+          "file": "packages/api-client/src/index.ts",
+          "emitted_javascript_unchanged": true
+        }
+      ]
+    },
+    "commands": [
+      "node node_modules/typescript/bin/tsc --project coverage/tsconfig-types-contracts.json --noEmit",
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "node node_modules/typescript/bin/tsc --project packages/types/tsconfig.json --noEmit",
+      "node node_modules/typescript/bin/tsc --project packages/api-client/tsconfig.json --noEmit",
+      "node node_modules/typescript/bin/tsc --project apps/admin/tsconfig.json --noEmit",
+      "node node_modules/typescript/bin/tsc --project apps/web/tsconfig.json --noEmit",
+      "Vitest types wire tests plus API-client retry tests and shared-foundation unit tests",
+      "Full default Vitest unit subset excluding test/integration and test/e2e",
+      "Focused ESLint; Prettier for packages/types and packages/api-client/src/index.ts"
+    ],
+    "coverage": "Not remeasured; both production files emit identical JavaScript with ES2022/ESNext and comments removed. Broad backend coverage remains historical."
+  },
+  "verified_source_sha256": {
+    "packages/types/package.json": "a9e2512040fea1f83f61159a77982676ca50654170ac81cd6b2a4c096f52cccc",
+    "packages/types/tsconfig.json": "d57f233db48888e24efdc1fccb7cb9603b69121f136ee0781a109eec49d64aa0",
+    "packages/types/src/index.ts": "689f3b75560daeda69eab438c1fe68fa8d46bab8bd4e1606ad8302b59ec00e1b",
+    "packages/api-client/src/index.ts": "2ee563c589686bf4ab115796c9eb5e6442bc99ab1c094daf3c45a767b69342e4",
+    "packages/types/test/contracts.typecheck.ts": "d93b76be2d3955d0a96147a37d0e1437b2b110b1eed09272918a1d1bc462c111",
+    "packages/types/test/wire-contracts.spec.ts": "e6c9b20ee460b1f2754ac3a050a6323af40663bdd703fd2da909d9dd1d9e473d"
+  },
+  "dependency_sha256": {
+    "apps/api/src/shared/response.helper.ts": "bd17272071afe6e423ba96f26505e160bdb961c3ef74601228a19ce7556fd080",
+    "apps/api/src/shared/http/error-response.ts": "fb5a53824c2f28365284b7fd9a94cc7350ac9e37cd742e2db1d3969e09ed27f4",
+    "apps/api/src/shared/http/response-schemas.ts": "84c92a539c38c404416271eb0caacbf075b8794f4c69afe5a8e1cbab5df358bd",
+    "packages/core/src/domain/interfaces/paginated-result.interface.ts": "f2d230c4deaa0ffe55b3e04278bd7acd45ce9e5e8837dfa2164b2db50b914265",
+    "packages/api-client/package.json": "1089e48abe58d2a84b0b10adc6ba063ddd115fd39178185fe560668bcca6c306",
+    "packages/api-client/tsconfig.json": "e8ff935a3109cde9a1ce5008a720dae248c36103d620ca102e3768fe2aaf5c8c",
+    "packages/config/tsconfig.base.json": "947cdd7ad626917fdeee00f4b8583b8e9739875271815e457bfb5d8717278e49",
+    "packages/config/tsconfig.lib.json": "4e58967e161cde5e4af3b5bbe34a0f007804644adc2ec64cbdb3d1c30db84f11",
+    "apps/admin/lib/api-client.ts": "f6d6d484d29a4ff9792f9a89eb138a38ed83a6ac5f1753afc1de35344ac32f4a",
+    "apps/admin/lib/fetcher.ts": "98e14db421875d94baab1c16304994b24b85059bca67933f841d3b2230d90549",
+    "apps/web/lib/api-client.ts": "179d4d1a7dc8094bf682b0f61996258e60a748219353b56aa3e0fc90b99200d6",
+    "apps/web/lib/fetcher.ts": "98e14db421875d94baab1c16304994b24b85059bca67933f841d3b2230d90549",
+    "modules/user-management/infra/http/controllers/admin-invitation.controller.ts": "58a64e0b020d74354ff76f366426dcfca007e6feda1b09f1188ae581edfc28cf"
+  },
+  "limits": [
+    "Type declarations and overloads do not validate unknown JSON. any, assertions or incorrect endpoint types can still hide absent payloads; existing fetchers parse JSON as any. Owning frontend/network-boundary validation remains P14 work.",
+    "The storefront uses a separate request engine that unwraps already extracted payloads and returns {} as T for empty/204 bodies. It is not interchangeable with the SDK envelope unwrap; no consolidation or frontend behavior migration was made.",
+    "UUID and ISODateString remain plain wire strings, distinct from nominal domain ID classes. Runtime shape/date/UUID validation is handled in the validation/HTTP owning reviews.",
+    "Shared shape compatibility does not certify every endpoint schema/DTO, generated SDK freshness, role/ownership checks or all frontend flows. API-client source remains open for full SDK/auth-refresh review later in P01.",
+    "HTTP field-detail policy and event composition remain open in the planned shared-host review. P15 build/bootstrap/provider checks remain required.",
+    "No DB/provider rerun or frontend production build. Prior PostgreSQL 47-group evidence is historical; no persisted data, schema, dependency or runtime behavior changed."
+  ]
+}

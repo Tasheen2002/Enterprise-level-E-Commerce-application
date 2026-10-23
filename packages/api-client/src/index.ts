@@ -97,11 +97,13 @@ export function createApiClient(options: CreateApiClientOptions) {
 }
 
 /**
- * Unwraps the canonical `{ success, statusCode, message, data }` envelope
- * to the bare `data` payload. Throws on `success: false` so React Query /
- * SWR error states fire correctly.
+ * Returns the envelope payload, or undefined for a payload-free acknowledgement.
+ * A required data field in the input preserves a required payload return type.
+ * Throws on success: false so React Query / SWR error states fire correctly.
  */
-export function unwrap<T>(envelope: ApiEnvelope<T>): T {
+export function unwrap<T>(envelope: ApiEnvelope<T> & { data: T }): T;
+export function unwrap<T>(envelope: ApiEnvelope<T>): T | undefined;
+export function unwrap<T>(envelope: ApiEnvelope<T>): T | undefined {
   if (!envelope.success) {
     const err = new Error(envelope.message) as Error & {
       code?: string;

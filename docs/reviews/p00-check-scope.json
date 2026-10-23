@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1372
+      "localSourceFiles": 1376
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -15950,6 +15950,7 @@
     {
       "file": "packages/api-client/src/generated/schema.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "apps/admin/tsconfig.json",
         "packages/api-client/tsconfig.json",
         "tsconfig.tooling.json",
@@ -15962,6 +15963,7 @@
     {
       "file": "packages/api-client/src/index.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "apps/admin/tsconfig.json",
         "packages/api-client/tsconfig.json",
         "tsconfig.tooling.json",
@@ -16331,6 +16333,24 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/types/test/contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/types/test/wire-contracts.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
