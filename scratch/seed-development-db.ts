@@ -1,7 +1,7 @@
 import { PrismaClient, Prisma, ProductStatusEnum, LocationTypeEnum } from "@prisma/client";
 import { randomUUID } from "crypto";
 
-import { requireOperationalTestDatabase } from "../scripts/testing/operational-database";
+import { withOperationalTestDatabase } from "../scripts/testing/database-inspection";
 
 async function seed(prisma: Prisma.TransactionClient) {
   console.log("=== Preparing disposable test catalog fixtures ===");
@@ -261,7 +261,7 @@ async function seed(prisma: Prisma.TransactionClient) {
     },
   });
 
-  console.log("Categories seeded successfully.");
+  console.log("Categories prepared within the catalog transaction.");
 
   // 3. Create Warehouse Location
   console.log("Creating default warehouse location...");
@@ -370,7 +370,7 @@ async function seed(prisma: Prisma.TransactionClient) {
       });
     }
 
-    console.log(`Product "${options.title}" seeded successfully.`);
+    console.log(`Product "${options.title}" prepared within the catalog transaction.`);
   }
 
   // 4. Seed Products
@@ -927,14 +927,12 @@ async function seed(prisma: Prisma.TransactionClient) {
 }
 
 async function main() {
-  const url = requireOperationalTestDatabase(process.env);
-  const prisma = new PrismaClient({ datasources: { db: { url } } });
-  try {
-    await prisma.$transaction((tx) => seed(tx), { timeout: 60_000 });
-    console.log("Disposable test catalog seed committed.");
-  } finally {
-    await prisma.$disconnect();
-  }
+  await withOperationalTestDatabase(
+    process.env,
+    (url) => new PrismaClient({ datasources: { db: { url } } }),
+    (prisma) => prisma.$transaction((tx) => seed(tx), { timeout: 60_000 }),
+  );
+  console.log("Disposable test catalog seed committed.");
 }
 main().catch(() => {
   console.error("Test catalog seed refused or failed; check disposable test settings.");
