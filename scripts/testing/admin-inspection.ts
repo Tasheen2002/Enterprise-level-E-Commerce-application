@@ -1,5 +1,6 @@
 import { UserRole, UserStatus, type PrismaClient } from "@prisma/client";
 import { runDatabaseInspection } from "./database-inspection";
+import { requireTestAdminEmail } from "./test-admin-settings";
 
 export interface TestAdminSummary {
   verified: true;
@@ -13,11 +14,7 @@ export async function verifyTestAdmin(
   createClient: (url: string) => PrismaClient,
   report: (summary: TestAdminSummary) => void,
 ): Promise<void> {
-  // Match seed-admin's configured identity normalization.
-  const email = env.TEST_ADMIN_EMAIL?.trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Provide a valid TEST_ADMIN_EMAIL");
-  }
+  const email = requireTestAdminEmail(env);
   await runDatabaseInspection<TestAdminSummary>(
     env,
     createClient,
