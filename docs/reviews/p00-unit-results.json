@@ -1,9 +1,9 @@
 {
   "date": "2026-10-23",
-  "passed_tests": 898,
+  "passed_tests": 906,
   "failed_tests": 0,
-  "passed_files": 90,
-  "coverage_scope": "Full default unit subset after CQRS exception conversion; broad coverage not remeasured. Compile-only fixture is not counted as a Vitest test.",
+  "passed_files": 92,
+  "coverage_scope": "Full default unit subset after core package/config contracts; no broad coverage remeasurement. Compile-only fixture not counted as a runtime test.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -789,6 +789,50 @@
         },
         {
           "title": "in-memory event bus delivery never evicts active delivery while settled history fills",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/core/test/package-contracts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "core package integration contracts keeps public barrels compatible with direct domain/application imports",
+          "status": "passed"
+        },
+        {
+          "title": "core package integration contracts builds executable CommonJS from the actual package compiler configuration",
+          "status": "passed"
+        },
+        {
+          "title": "core package integration contracts does not emit build artifacts when a source has a type error",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "packages/core/test/pagination-contracts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "core pagination contract at an actual repository boundary preserves metadata for 'empty unbounded result'",
+          "status": "passed"
+        },
+        {
+          "title": "core pagination contract at an actual repository boundary preserves metadata for 'unbounded result'",
+          "status": "passed"
+        },
+        {
+          "title": "core pagination contract at an actual repository boundary preserves metadata for 'first bounded page'",
+          "status": "passed"
+        },
+        {
+          "title": "core pagination contract at an actual repository boundary preserves metadata for 'last bounded page'",
+          "status": "passed"
+        },
+        {
+          "title": "core pagination contract at an actual repository boundary preserves metadata for 'offset beyond total'",
           "status": "passed"
         }
       ]
@@ -2618,6 +2662,548 @@
       ]
     },
     {
+      "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddToWishlistHandler should successfully add an item to wishlist using WishlistManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/create-product-review.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreateProductReviewHandler should successfully create a product review using ProductReviewService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/delete-reminder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteReminderHandler should successfully delete a reminder using ReminderManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SubscribeNewsletterHandler should successfully subscribe email to newsletter using NewsletterService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Appointment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Appointment Aggregate Root should successfully create an appointment and emit AppointmentCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is equal or after end time",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is in the past",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should throw DomainValidationError if user ID is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support rescheduling and emit AppointmentRescheduledEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support cancelling and emit AppointmentCancelledEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should support updating notes and location",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should compute duration and check upcoming/past/ongoing states correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Appointment Aggregate Root should detect overlapping conflicts between appointments",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/NewsletterSubscription.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "NewsletterSubscription Aggregate Root should successfully create an active newsletter subscription and emit SubscriptionCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for empty email",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for invalid email formats",
+          "status": "passed"
+        },
+        {
+          "title": "NewsletterSubscription Aggregate Root should support status transitions: unsubscribe, bounce, spam, activate",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Notification.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Notification Aggregate Root should successfully create a pending notification and emit NotificationCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should successfully create a scheduled notification when scheduledAt is set in the future",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should throw DomainValidationError if scheduledAt is in the past",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support updating payload",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support scheduling a notification in the future",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support status transitions: sending, sent, failed",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should support retry on failed notifications",
+          "status": "passed"
+        },
+        {
+          "title": "Notification Aggregate Root should compute isDue correctly",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/ProductReview.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ProductReview Aggregate Root should successfully create a pending review and emit ReviewSubmittedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw DomainValidationError if productId is empty",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw DomainValidationError if userId is empty",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support updating rating, title, and body while pending",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support moderation states (approve, reject, flag) and emit ReviewStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should throw ReviewNotEditableError if editing a review that is not pending",
+          "status": "passed"
+        },
+        {
+          "title": "ProductReview Aggregate Root should support helper methods for rating checks",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Reminder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Reminder Aggregate Root should successfully create a reminder and emit ReminderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw DomainValidationError if variant ID is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support optIn status change",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support markAsSent and emit ReminderStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw InvalidOperationError if marking a non-pending reminder as sent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support unsubscribe and emit ReminderStatusChangedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should throw InvalidOperationError if unsubscribing an already unsubscribed reminder",
+          "status": "passed"
+        },
+        {
+          "title": "Reminder Aggregate Root should support checking reminder types",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/engagement/test/unit/domain/Wishlist.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Wishlist Aggregate Root should successfully create a user wishlist and emit WishlistCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should successfully create a guest wishlist",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should throw DomainValidationError if neither user nor guest ownership is specified",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should throw DomainValidationError if both user and guest ownership are specified simultaneously",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support updating name and description",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support default and publicity state mutations",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should transfer wishlist ownership from guest to user and emit WishlistOwnershipTransferredEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Wishlist Aggregate Root should support adding, removing and clearing items",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LoyaltyAccount Aggregate Root should successfully create a new loyalty account with default values",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should accrue points and recalculate tier when earning points",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should upgrade tier automatically when points threshold is crossed",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should redeem points and decrement current balance",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should throw InsufficientPointsError when redeeming more points than available",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should adjust points (addition and subtraction)",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should expire points (resetting balance to 0 if expiring more than balance)",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyAccount Aggregate Root should convert correctly to DTO",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/loyalty-program.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "LoyaltyProgram Aggregate Root should successfully create a new loyalty program",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError if name is empty or whitespaces",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should successfully update properties and emit LoyaltyProgramUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError when updating to an empty name",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should correctly calculate points for purchases based on earn rules",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should return the correct tier config for points",
+          "status": "passed"
+        },
+        {
+          "title": "LoyaltyProgram Aggregate Root should convert correctly to DTO",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Loyalty Value Objects Points Value Object should successfully create points from non-negative integers",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should create points from integer strings",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with negative number",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with a float",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when parsing an invalid string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly add points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly subtract points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should throw InsufficientPointsError when subtracting more points than available",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should correctly compare points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Points Value Object should support toString conversion",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should have a default tier of STYLE_LOVER",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should calculate correct tier based on lifetime points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should calculate next tier correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should return correct multipliers and required points",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should create from valid strings",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects Tier Value Object should throw InvalidFormatError when creating from invalid string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should create correct instances from reason string",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should identify correct reason via helper methods",
+          "status": "passed"
+        },
+        {
+          "title": "Loyalty Value Objects LoyaltyReason Value Object should throw InvalidFormatError when creating with invalid reason",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
+          "status": "passed"
+        },
+        {
+          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/cart/test/unit/application/add-to-cart.spec.ts",
       "status": "passed",
       "assertions": [
@@ -3040,543 +3626,229 @@
       ]
     },
     {
-      "file": "modules/engagement/test/unit/application/add-to-wishlist.spec.ts",
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AddToWishlistHandler should successfully add an item to wishlist using WishlistManagementService",
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/application/create-product-review.spec.ts",
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreateProductReviewHandler should successfully create a product review using ProductReviewService",
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/application/delete-reminder.spec.ts",
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "DeleteReminderHandler should successfully delete a reminder using ReminderManagementService",
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/application/subscribe-newsletter.spec.ts",
+      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "SubscribeNewsletterHandler should successfully subscribe email to newsletter using NewsletterService",
+          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should support cancelling gift card",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should handle expiration correctly",
+          "status": "passed"
+        },
+        {
+          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/Appointment.spec.ts",
+      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Appointment Aggregate Root should successfully create an appointment and emit AppointmentCreatedEvent",
+          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is equal or after end time",
+          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should throw DomainValidationError if start time is in the past",
+          "title": "PaymentIntent Aggregate Root should validate link to order",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should throw DomainValidationError if user ID is empty",
+          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should support rescheduling and emit AppointmentRescheduledEvent",
+          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should support cancelling and emit AppointmentCancelledEvent",
+          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should support updating notes and location",
+          "title": "PaymentIntent Aggregate Root should support failing payment intent",
           "status": "passed"
         },
         {
-          "title": "Appointment Aggregate Root should compute duration and check upcoming/past/ongoing states correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Appointment Aggregate Root should detect overlapping conflicts between appointments",
+          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/NewsletterSubscription.spec.ts",
+      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "NewsletterSubscription Aggregate Root should successfully create an active newsletter subscription and emit SubscriptionCreatedEvent",
+          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for empty email",
+          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
           "status": "passed"
         },
         {
-          "title": "NewsletterSubscription Aggregate Root should throw DomainValidationError for invalid email formats",
-          "status": "passed"
-        },
-        {
-          "title": "NewsletterSubscription Aggregate Root should support status transitions: unsubscribe, bounce, spam, activate",
+          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/Notification.spec.ts",
+      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Notification Aggregate Root should successfully create a pending notification and emit NotificationCreatedEvent",
+          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should successfully create a scheduled notification when scheduledAt is set in the future",
+          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should throw DomainValidationError if scheduledAt is in the past",
+          "title": "Payment Module Value Objects Currency VO should check equality correctly",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should support updating payload",
+          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should support scheduling a notification in the future",
+          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should support status transitions: sending, sent, failed",
+          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should support retry on failed notifications",
+          "title": "Payment Module Value Objects Money VO should handle comparison operators",
           "status": "passed"
         },
         {
-          "title": "Notification Aggregate Root should compute isDue correctly",
+          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
+          "status": "passed"
+        },
+        {
+          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/ProductReview.spec.ts",
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "ProductReview Aggregate Root should successfully create a pending review and emit ReviewSubmittedEvent",
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should throw DomainValidationError if productId is empty",
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should throw DomainValidationError if userId is empty",
+          "title": "Product Aggregate Root should update product title successfully",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should support updating rating, title, and body while pending",
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should support moderation states (approve, reject, flag) and emit ReviewStatusChangedEvent",
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should throw ReviewNotEditableError if editing a review that is not pending",
+          "title": "Product Aggregate Root should unpublish a published product successfully",
           "status": "passed"
         },
         {
-          "title": "ProductReview Aggregate Root should support helper methods for rating checks",
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/Reminder.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Reminder Aggregate Root should successfully create a reminder and emit ReminderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should throw DomainValidationError if variant ID is empty",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should support optIn status change",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should support markAsSent and emit ReminderStatusChangedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should throw InvalidOperationError if marking a non-pending reminder as sent",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should support unsubscribe and emit ReminderStatusChangedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should throw InvalidOperationError if unsubscribing an already unsubscribed reminder",
-          "status": "passed"
-        },
-        {
-          "title": "Reminder Aggregate Root should support checking reminder types",
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/engagement/test/unit/domain/Wishlist.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Wishlist Aggregate Root should successfully create a user wishlist and emit WishlistCreatedEvent",
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
           "status": "passed"
         },
         {
-          "title": "Wishlist Aggregate Root should successfully create a guest wishlist",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should throw DomainValidationError if neither user nor guest ownership is specified",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should throw DomainValidationError if both user and guest ownership are specified simultaneously",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should support updating name and description",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should support default and publicity state mutations",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should transfer wishlist ownership from guest to user and emit WishlistOwnershipTransferredEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Wishlist Aggregate Root should support adding, removing and clearing items",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustLoyaltyPointsHandler should successfully adjust loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/award-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AwardLoyaltyPointsHandler should successfully award loyalty points using LoyaltyService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/application/redeem-loyalty-points.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "RedeemLoyaltyPointsHandler should successfully redeem loyalty points using LoyaltyService",
-          "status": "passed"
-        },
-        {
-          "title": "RedeemLoyaltyPointsHandler should bubble up domain errors if LoyaltyService throws them",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/domain/loyalty-account.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "LoyaltyAccount Aggregate Root should successfully create a new loyalty account with default values",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should accrue points and recalculate tier when earning points",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should upgrade tier automatically when points threshold is crossed",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should redeem points and decrement current balance",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should throw InsufficientPointsError when redeeming more points than available",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should adjust points (addition and subtraction)",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should expire points (resetting balance to 0 if expiring more than balance)",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyAccount Aggregate Root should convert correctly to DTO",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/domain/loyalty-program.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "LoyaltyProgram Aggregate Root should successfully create a new loyalty program",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError if name is empty or whitespaces",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should successfully update properties and emit LoyaltyProgramUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should throw LoyaltyProgramNameRequiredError when updating to an empty name",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should correctly calculate points for purchases based on earn rules",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should return the correct tier config for points",
-          "status": "passed"
-        },
-        {
-          "title": "LoyaltyProgram Aggregate Root should convert correctly to DTO",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/loyalty/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Loyalty Value Objects Points Value Object should successfully create points from non-negative integers",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should create points from integer strings",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with negative number",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when creating with a float",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should throw InvalidFormatError when parsing an invalid string",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should correctly add points",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should correctly subtract points",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should throw InsufficientPointsError when subtracting more points than available",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should correctly compare points",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Points Value Object should support toString conversion",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should have a default tier of STYLE_LOVER",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should calculate correct tier based on lifetime points",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should calculate next tier correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should return correct multipliers and required points",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should create from valid strings",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects Tier Value Object should throw InvalidFormatError when creating from invalid string",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects LoyaltyReason Value Object should create correct instances from reason string",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects LoyaltyReason Value Object should identify correct reason via helper methods",
-          "status": "passed"
-        },
-        {
-          "title": "Loyalty Value Objects LoyaltyReason Value Object should throw InvalidFormatError when creating with invalid reason",
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
           "status": "passed"
         }
       ]
@@ -3760,288 +4032,6 @@
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
-          "status": "passed"
-        },
-        {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should update product title successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should publish a product successfully and record published event",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should unpublish a published product successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should archive a product and record archived event",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should schedule a publication date in the future",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "GiftCard Aggregate Root should create a GiftCard successfully and emit GiftCardCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support successful redemption and emit GiftCardRedeemedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should transition to redeemed state when balance reaches zero",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error when redeeming more than available balance",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support refunds and transition state back to active if redeemed",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should support cancelling gift card",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should handle expiration correctly",
-          "status": "passed"
-        },
-        {
-          "title": "GiftCard Aggregate Root should throw error if attempting to expire active non-expired card",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "PaymentIntent Aggregate Root should create a PaymentIntent successfully and emit PaymentIntentCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support updating orderId and checkoutId",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should validate link to order",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should successfully progress status through authorization and capture",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should throw error if capturing before authorized",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support voiding/cancelling payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support failing payment intent",
-          "status": "passed"
-        },
-        {
-          "title": "PaymentIntent Aggregate Root should support updating clientSecret and amount",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/promotion.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Promotion Aggregate Root should create a Promotion successfully and emit PromotionCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should check validation logic based on dates and status",
-          "status": "passed"
-        },
-        {
-          "title": "Promotion Aggregate Root should support status transitions: activate, deactivate, and expire",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Payment Module Value Objects Currency VO should create valid Currency successfully and normalize to uppercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should throw error for invalid currency code formats",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Currency VO should check equality correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should create Money from cents or decimal amount",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should perform addition and subtraction successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should throw error when operating on different currencies",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects Money VO should handle comparison operators",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should create valid PaymentMethod and normalize to lowercase",
-          "status": "passed"
-        },
-        {
-          "title": "Payment Module Value Objects PaymentMethod VO should throw error for invalid payment method strings",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/user-management/test/unit/application/change-email.spec.ts",
       "status": "passed",
       "assertions": [
@@ -4133,6 +4123,60 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "User Aggregate Root should create a standard customer user successfully",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if names exceed max length",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should not record email changed event if email is the same",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]

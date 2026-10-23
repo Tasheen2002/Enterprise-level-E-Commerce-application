@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1366
+      "localSourceFiles": 1369
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -16258,6 +16258,33 @@
     },
     {
       "file": "packages/core/test/in-memory-event-bus.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/package-contracts.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/pagination-contracts.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/pagination-contracts.typecheck.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
