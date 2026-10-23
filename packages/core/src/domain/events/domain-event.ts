@@ -43,5 +43,5 @@ export interface IEventBus {
 
 export interface EventEmittingAggregate {
   readonly domainEvents: DomainEvent[];
-  clearDomainEvents(): void;
+  clearDomainEvents(deliveredEvents?: readonly DomainEvent[]): void;
 }

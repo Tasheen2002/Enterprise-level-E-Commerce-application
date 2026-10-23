@@ -15,6 +15,8 @@ export abstract class PrismaRepository<T extends AggregateRoot> {
   /**
    * Dispatch and clear domain events from an aggregate root.
    * Call this after successful persistence operations (save, update).
+   * Delivery failure propagates and leaves the pending batch for retry; it does not
+   * undo persistence. Events queued during delivery remain pending after success.
    */
   protected async dispatchEvents(aggregate: T): Promise<void> {
     if (!this.eventBus) {
@@ -26,6 +28,6 @@ export abstract class PrismaRepository<T extends AggregateRoot> {
     if (events.length === 0) return;
 
     await this.eventBus.publishAll(events);
-    aggregate.clearDomainEvents();
+    aggregate.clearDomainEvents(events);
   }
 }

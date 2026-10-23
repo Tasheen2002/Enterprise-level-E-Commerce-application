@@ -63,6 +63,18 @@ describe("aggregate pending event contract", () => {
     second.clearDomainEvents();
     expect(first.domainEvents).toHaveLength(1);
   });
+  it("acknowledges only the supplied event snapshot", () => {
+    const aggregate = new FixtureAggregate();
+    const first = event();
+    const later = event();
+    aggregate.record(first);
+    aggregate.record(later);
+    aggregate.clearDomainEvents([]);
+    aggregate.clearDomainEvents([event()]);
+    expect(aggregate.domainEvents).toEqual([first, later]);
+    aggregate.clearDomainEvents([first]);
+    expect(aggregate.domainEvents).toEqual([later]);
+  });
 });
 
 describe("domain event envelope contract", () => {
