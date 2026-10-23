@@ -160,9 +160,19 @@
   },
   "database_verified_at_utc": "2026-10-22T05:32:14.618Z",
   "latest_full_unit_recheck": {
-    "date": "2026-10-22",
-    "passed_tests": 615,
-    "passed_files": 78,
+    "date": "2026-10-23",
+    "passed_tests": 662,
+    "passed_files": 80,
     "evidence": "p00-unit-results.json"
+  },
+  "latest_shared_lifecycle_revalidation": {
+    "date": "2026-10-22",
+    "evidence": "p00-database-admin-lifecycle-verification.json",
+    "note": "Original verified_source_sha256 remains a historical snapshot from the committed batch. Shared lifecycle was refactored for maintenance clients; current source is covered by the new 84-case focused run, 641-unit run and 45-scenario PG run."
+  },
+  "latest_admin_identity_revalidation": {
+    "date": "2026-10-23",
+    "evidence": "p00-seed-admin-verification.json",
+    "note": "Original source hashes/coverage remain historical; current configured-email helper and seed/inspector source are verified by 103 focused tests, 662 unit tests and the 46-scenario PG run. Operational verifier source also changed; current fingerprints are in the new evidence."
   }
 }

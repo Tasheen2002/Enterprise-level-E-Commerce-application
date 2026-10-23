@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-23",
+  "finding": "P00-24",
+  "baseline_commit": "7190c95e9cf3fe6274537b49b5ad4d4914c0ffa8",
+  "baseline": {
+    "passed": 13,
+    "expected_failed": 2,
+    "failed_cases": [
+      "disposable catalog cleanup CLI clears only catalog tables through one transaction and reports after disconnect",
+      "disposable catalog cleanup CLI reports disconnect failure safely"
+    ]
+  },
+  "changes": [
+    "Cleanup reuses the guarded common lifecycle; transaction and disconnect failures are retained rather than replaced by finally.",
+    "Success is emitted after transaction and disconnect complete; the existing eight-table deletion scope and transaction are unchanged.",
+    "Real verification compares full 15-table snapshots on injected product-delete failure, checks all eight target tables empty, repeats cleanup and checks the unrelated administrator row unchanged."
+  ],
+  "new_cli_cases": 15,
+  "focused_cases": 27,
+  "focused_files": 2,
+  "full_unit_tests": 688,
+  "full_unit_files": 82,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    },
+    "scratch/clear-database.ts": {
+      "lines": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only clear-database.ts. It has no instrumented conditional branches (0/0); tests exercise refusal and error propagation through the separately tested shared lifecycle. Broad backend coverage was not remeasured.",
+  "verified_source_sha256": {
+    "scratch/clear-database.ts": "332882269f0b8dc562680ecf517100bb56425e0608c900d573bfbe2139e82e5e",
+    "apps/api/test/unit/catalog-cleanup-cli.spec.ts": "a036bbc276cfd94a510e842ecd128476a5ceb27160b8dbcaa42d2f6e7c740c95",
+    "scripts/review/check-operational-database.ts": "4581cea4da4b557b3efbfacabf9c7e09687144e1d35e6f6297f29f168b3e4ab7",
+    "scripts/testing/database-inspection.ts": "fe932a7f9faa4b8fb1454ba90bbf02d6f7043e78113294e0c61fe195f8609c0f"
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "tooling_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed",
+    "operational_refusals": "18 passed before construction",
+    "postgres": "46 groups pass; complete rollback snapshots, eight empty target tables, idempotent repeat and unchanged administrator; temporary database removed"
+  },
+  "limitations": [
+    "A disconnect failure after successful transaction commit does not roll back that committed transaction. The CLI reports failure without a success message.",
+    "This clears a disposable catalog fixture; it is not a complete database reset. Foreign keys to business records may refuse cleanup; transaction failure must preserve prior rows.",
+    "Exhaustive verifier fault/teardown coverage, CI/bootstrap reproducibility, hosted Node parity, migration replay and live providers remain explicit final-verification follow-ups. No business module is closed by this batch."
+  ]
+}

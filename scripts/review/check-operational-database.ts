@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
-import { compare } from "bcryptjs";
+import { compare, getRounds } from "bcryptjs";
 import { requireTestDatabaseAdmin } from "../testing/operational-database";
 import { inspectCartExpiry } from "../testing/cart-expiry-inspection";
 
@@ -121,6 +121,15 @@ async function main() {
       throw new Error("Disposable schema synchronization failed");
     results.schemaSynchronization = "passed; migration history not replayed";
     client = new PrismaClient({ datasources: { db: { url: restricted.toString() } } });
+    await client.$queryRaw`SELECT 1`;
+    run("drop-test-db", 1);
+    const activeDatabase = await admin.$queryRaw<Array<{ exists: boolean }>>`
+      SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = ${database}) AS exists
+    `;
+    if (!activeDatabase[0]?.exists) throw new Error("Active disposable database was dropped");
+    await client.$queryRaw`SELECT 1`;
+    results.dropActiveSessionsRefused =
+      "passed; DROP refuses a connected selected test database without terminating its sessions; existing client remains usable";
     stage = "catalog-fixtures";
     // Own fixtures only; this malicious-looking name is a legal quoted PostgreSQL identifier.
     const quotedTable = 'public."p00_quoted""; DROP TABLE p00_sentinel; --"';
@@ -784,7 +793,12 @@ async function main() {
     await client.cartItem.deleteMany({ where: { cartId: { in: inspectionIds.carts } } });
     await client.shoppingCart.deleteMany({ where: { id: { in: inspectionIds.carts } } });
     await client.product.delete({ where: { id: inspectionIds.product } });
-    run("seed-development-db");
+    const seedOutput = run("seed-development-db");
+    if (
+      seedOutput.includes("seeded successfully") ||
+      !seedOutput.trimEnd().endsWith("Disposable test catalog seed committed.")
+    )
+      throw new Error("Catalog seed completion output mismatch");
     const before = await client.product.findMany({ select: { id: true }, orderBy: { id: "asc" } });
     if (
       before.length !== 28 ||
@@ -922,7 +936,37 @@ async function main() {
     await client.$executeRawUnsafe(
       `CREATE TRIGGER p00_reject_variant BEFORE INSERT ON product_catalog.product_variants FOR EACH ROW EXECUTE FUNCTION product_catalog.p00_reject_variant()`,
     );
-    run("seed-development-db", 1);
+    const seedSnapshot = async () =>
+      JSON.stringify(
+        await Promise.all([
+          client!.wishlistItem.findMany({ orderBy: [{ wishlistId: "asc" }, { variantId: "asc" }] }),
+          client!.wishlist.findMany({ orderBy: { id: "asc" } }),
+          client!.cartItem.findMany({ orderBy: { id: "asc" } }),
+          client!.shoppingCart.findMany({ orderBy: { id: "asc" } }),
+          client!.inventoryTransaction.findMany({ orderBy: { invTxnId: "asc" } }),
+          client!.stockAlert.findMany({ orderBy: { alertId: "asc" } }),
+          client!.reservation.findMany({ orderBy: { id: "asc" } }),
+          client!.inventoryStock.findMany({
+            orderBy: [{ variantId: "asc" }, { locationId: "asc" }],
+          }),
+          client!.productCategory.findMany({
+            orderBy: [{ productId: "asc" }, { categoryId: "asc" }],
+          }),
+          client!.productMedia.findMany({ orderBy: { id: "asc" } }),
+          client!.mediaAsset.findMany({ orderBy: { id: "asc" } }),
+          client!.productVariant.findMany({ orderBy: { id: "asc" } }),
+          client!.product.findMany({ orderBy: { id: "asc" } }),
+          client!.category.findMany({ orderBy: { id: "asc" } }),
+          client!.location.findMany({ orderBy: { id: "asc" } }),
+        ]),
+        (_key, value) => (typeof value === "bigint" ? value.toString() : value),
+      );
+    const beforeSeedFailure = await seedSnapshot();
+    const failedSeedOutput = run("seed-development-db", 1);
+    if (/seeded successfully|catalog seed committed/.test(failedSeedOutput))
+      throw new Error("Failed catalog seed announced success");
+    if ((await seedSnapshot()) !== beforeSeedFailure)
+      throw new Error("Failed seed changed catalog-related rows");
     const after = await client.product.findMany({ select: { id: true }, orderBy: { id: "asc" } });
     if (
       JSON.stringify(before) !== JSON.stringify(after) ||
@@ -933,7 +977,8 @@ async function main() {
       `DROP TRIGGER p00_reject_variant ON product_catalog.product_variants`,
     );
     await client.$executeRawUnsafe(`DROP FUNCTION product_catalog.p00_reject_variant()`);
-    results.failedSeedRollback = "passed; original product identities and variant count preserved";
+    results.failedSeedRollback =
+      "passed; full ordered snapshots of all 15 seed-touched tables preserved after variant insert failure; no success output";
     await client.$executeRawUnsafe(
       `CREATE FUNCTION engagement.p00_reject_reminder() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'P00 injected reminder failure'; END $$`,
     );
@@ -1016,11 +1061,28 @@ async function main() {
     run("verify-admin", 1);
     results.adminInspectionMissing =
       "passed; missing configured test account fails without seeding or changing data";
+    const seedPassword = env.TEST_ADMIN_PASSWORD;
+    for (const password of ["a".repeat(73), "é".repeat(37)]) {
+      env.TEST_ADMIN_PASSWORD = password;
+      run("seed-admin", 1);
+      if (await client.user.findUnique({ where: { email: env.TEST_ADMIN_EMAIL } }))
+        throw new Error("Unsupported test password created an account");
+    }
+    env.TEST_ADMIN_PASSWORD = seedPassword;
+    results.adminSeedRejectedTruncatingPasswords =
+      "passed; over-72-byte ASCII and multibyte test passwords are refused and create no account";
+    const seedEmail = env.TEST_ADMIN_EMAIL!;
+    env.TEST_ADMIN_EMAIL = `  ${seedEmail.toUpperCase()}  `;
     run("seed-admin");
+    env.TEST_ADMIN_EMAIL = seedEmail;
     const user = await client.user.findUniqueOrThrow({ where: { email: env.TEST_ADMIN_EMAIL } });
     if (
       user.role !== "ADMIN" ||
+      user.status !== "active" ||
+      !user.emailVerified ||
+      user.isGuest ||
       !user.passwordHash ||
+      getRounds(user.passwordHash) !== 12 ||
       !(await compare(env.TEST_ADMIN_PASSWORD!, user.passwordHash))
     )
       throw new Error("Invalid test administrator");
@@ -1028,9 +1090,10 @@ async function main() {
     const existing = await client.user.findUniqueOrThrow({
       where: { email: env.TEST_ADMIN_EMAIL },
     });
-    if (user.id !== existing.id || user.passwordHash !== existing.passwordHash)
+    if (JSON.stringify(user) !== JSON.stringify(existing))
       throw new Error("Existing administrator was changed");
-    results.adminCreateAndConflict = "passed; existing account preserved";
+    results.adminCreateAndConflict =
+      "passed; normalized configured identity and expected flags; real password hash cost 12 and match verified; duplicate insert preserves full account snapshot";
     const adminSnapshot = async () =>
       JSON.stringify(await client!.user.findUniqueOrThrow({ where: { id: existing.id } }));
     const beforeAdminInspection = await adminSnapshot();
@@ -1088,7 +1151,12 @@ async function main() {
     await client.$executeRawUnsafe(
       `CREATE TRIGGER p00_reject_cleanup BEFORE DELETE ON product_catalog.products FOR EACH ROW EXECUTE FUNCTION product_catalog.p00_reject_cleanup()`,
     );
-    run("clear-database", 1);
+    const beforeCleanupFailure = await seedSnapshot();
+    const cleanupFailureOutput = run("clear-database", 1);
+    if (cleanupFailureOutput.includes("Test catalog cleanup committed."))
+      throw new Error("Failed cleanup announced success");
+    if ((await seedSnapshot()) !== beforeCleanupFailure)
+      throw new Error("Failed cleanup changed catalog-related rows");
     const preserved = await client.product.findMany({
       select: { id: true },
       orderBy: { id: "asc" },
@@ -1102,15 +1170,32 @@ async function main() {
     }
     await client.$executeRawUnsafe(`DROP TRIGGER p00_reject_cleanup ON product_catalog.products`);
     await client.$executeRawUnsafe(`DROP FUNCTION product_catalog.p00_reject_cleanup()`);
-    results.failedCleanupRollback = "passed; product identities, stock and media links preserved";
+    results.failedCleanupRollback =
+      "passed; full ordered snapshots of all 15 catalog-related tables preserved after product-delete failure; no success output";
+    const cleanupOutput = run("clear-database");
+    if (cleanupOutput.trim() !== "Test catalog cleanup committed.")
+      throw new Error("Catalog cleanup completion output mismatch");
+    const remainingCatalogRows = await Promise.all([
+      client.inventoryStock.count(),
+      client.productCategory.count(),
+      client.productMedia.count(),
+      client.mediaAsset.count(),
+      client.productVariant.count(),
+      client.product.count(),
+      client.category.count(),
+      client.location.count(),
+    ]);
+    if (remainingCatalogRows.some((count) => count !== 0))
+      throw new Error("Catalog cleanup incomplete");
+    const emptyCatalog = await seedSnapshot();
     run("clear-database");
     if (
-      (await client.product.count()) ||
-      (await client.category.count()) ||
-      (await client.inventoryStock.count())
+      (await seedSnapshot()) !== emptyCatalog ||
+      (await adminSnapshot()) !== beforeAdminInspection
     )
-      throw new Error("Catalog cleanup incomplete");
-    results.catalogCleanup = "passed";
+      throw new Error("Repeated cleanup changed unrelated or empty fixture records");
+    results.catalogCleanup =
+      "passed; all eight target tables empty; repeated cleanup succeeds without changes and administrator row remains unchanged";
     await client.$disconnect();
     client = undefined;
   } catch (error) {
@@ -1162,6 +1247,7 @@ async function main() {
         "scripts/testing/reminder-inspection.ts",
         "scripts/testing/inventory-stock-inspection.ts",
         "scripts/testing/admin-inspection.ts",
+        "scripts/testing/test-admin-settings.ts",
         "scripts/testing/wallet-inspection.ts",
         "scripts/testing/loyalty-inspection.ts",
         "scripts/testing/database-catalog-inspection.ts",

@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-22",
+  "date": "2026-10-23",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1346
+      "localSourceFiles": 1356
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,11 +35,11 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 934
+      "localSourceFiles": 935
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 934
+      "localSourceFiles": 935
     }
   ],
   "commands": {
@@ -1185,7 +1185,34 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/catalog-cleanup-cli.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/catalog-seed-cli.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/checkout-stripe-initialization.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/database-admin-cli.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
@@ -1272,6 +1299,15 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/seed-admin-cli.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
@@ -16374,6 +16410,7 @@
     {
       "file": "scratch/clear-database.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16384,6 +16421,7 @@
     {
       "file": "scratch/create-test-db.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16394,6 +16432,7 @@
     {
       "file": "scratch/drop-test-db.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16474,6 +16513,7 @@
     {
       "file": "scratch/seed-admin.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16484,6 +16524,7 @@
     {
       "file": "scratch/seed-development-db.ts",
       "compilerPrograms": [
+        "tsconfig.json",
         "tsconfig.tooling.json",
         "scratch/tsconfig.json"
       ],
@@ -16753,6 +16794,17 @@
     },
     {
       "file": "scripts/testing/restock-probes.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "scripts/testing/test-admin-settings.ts",
       "compilerPrograms": [
         "tsconfig.json",
         "tsconfig.tooling.json",

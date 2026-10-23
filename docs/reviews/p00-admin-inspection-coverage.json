@@ -169,5 +169,16 @@
         "pct": 100
       }
     }
+  },
+  "latest_full_unit_recheck": {
+    "date": "2026-10-23",
+    "passed_tests": 662,
+    "passed_files": 80,
+    "evidence": "p00-unit-results.json"
+  },
+  "latest_admin_identity_revalidation": {
+    "date": "2026-10-23",
+    "evidence": "p00-seed-admin-verification.json",
+    "note": "Original source hashes/coverage remain historical; current configured-email helper and seed/inspector source are verified by 103 focused tests, 662 unit tests and the 46-scenario PG run. Operational verifier source also changed; current fingerprints are in the new evidence."
   }
 }

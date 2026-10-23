@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-22",
-  "passed_tests": 615,
+  "date": "2026-10-23",
+  "passed_tests": 688,
   "failed_tests": 0,
-  "passed_files": 78,
-  "coverage_scope": "Full default unit subset after both eager Stripe bootstrap fixes and successful operational PG run; broad backend coverage not remeasured.",
+  "passed_files": 82,
+  "coverage_scope": "Full default unit subset after catalog cleanup lifecycle correction; broad coverage not remeasured.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -516,6 +516,122 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/catalog-cleanup-cli.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "disposable catalog cleanup CLI clears only catalog tables through one transaction and reports after disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI refuses unsafe opt-in before client construction",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI refuses unsafe target before client construction",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI handles construction failure without disconnecting an absent client",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed inventoryStock deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed productCategory deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed productMedia deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed mediaAsset deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed productVariant deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed product deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed category deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI stops and disconnects on failed location deletion",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI reports transaction failure safely",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI reports disconnect failure safely",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog cleanup CLI reports combined operation and disconnect failure safely",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/catalog-seed-cli.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "disposable catalog seed CLI seeds the catalog in one bounded transaction and reports success after disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI refuses unsafe opt-in before construction",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI refuses unsafe target before construction",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI handles constructor failure without attempting disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI reuses a media asset returned by lookup",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely on transaction without announcing fixture success",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely on remove without announcing fixture success",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely on variant without announcing fixture success",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely on stock without announcing fixture success",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely on disconnect without announcing fixture success",
+          "status": "passed"
+        },
+        {
+          "title": "disposable catalog seed CLI fails safely when both transaction and disconnect reject",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/checkout-stripe-initialization.spec.ts",
       "status": "passed",
       "assertions": [
@@ -561,6 +677,92 @@
         },
         {
           "title": "checkout tax handler Stripe initialization boundary keeps the existing country-less fallback free of provider setup",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/database-admin-cli.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "create database CLI uses guarded maintenance credentials and reports success after disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI refuses invalid opt-in before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI refuses invalid maintenance-server before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI refuses invalid maintenance-database before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI refuses invalid identifier before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI fails safely for construction errors",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI fails safely for DDL errors",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI fails safely for disconnect errors",
+          "status": "passed"
+        },
+        {
+          "title": "create database CLI fails safely for combined errors",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI uses guarded maintenance credentials and reports success after disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI refuses invalid opt-in before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI refuses invalid maintenance-server before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI refuses invalid maintenance-database before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI refuses invalid identifier before constructing a client",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI fails safely for construction errors",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI fails safely for DDL errors",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI fails safely for disconnect errors",
+          "status": "passed"
+        },
+        {
+          "title": "drop database CLI fails safely for combined errors",
+          "status": "passed"
+        },
+        {
+          "title": "create database catalog lookup skips DDL for an existing selected database",
+          "status": "passed"
+        },
+        {
+          "title": "create database catalog lookup disconnects and fails safely when catalog lookup fails",
           "status": "passed"
         }
       ]
@@ -721,6 +923,30 @@
         },
         {
           "title": "guarded database operation lifecycle retains probe/fixture-cleanup errors alongside disconnect failure",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle rejects mismatched servers before constructing or operating",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle uses maintenance credentials and passes only the guarded selected database",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle does not disconnect a client whose construction failed",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle preserves a single maintenance operation error",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle preserves a single maintenance disconnect error",
+          "status": "passed"
+        },
+        {
+          "title": "guarded maintenance operation lifecycle retains maintenance operation and disconnect failures together",
           "status": "passed"
         }
       ]
@@ -1211,6 +1437,96 @@
         },
         {
           "title": "isolated restock operational probes preserves both subscriber and cleanup failures",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/seed-admin-cli.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "test administrator seed CLI normalizes identity, hashes at cost twelve, inserts minimal flags and reports after disconnect",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI refuses unsafe opt-in before hashing or construction",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI refuses unsafe target before hashing or construction",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects invalid administrator identity: undefined",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects invalid administrator identity: ",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects invalid administrator identity: invalid-email",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI accepts supported minimum/UTF-8 byte boundaries without trimming",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI accepts supported minimum/UTF-8 byte boundaries without trimming",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI accepts supported minimum/UTF-8 byte boundaries without trimming",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI does not construct a client when hashing fails",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI rechecks test authorization after asynchronous hashing",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI fails safely for construction without modifying an existing account",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI fails safely for insert without modifying an existing account",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI fails safely for conflict without modifying an existing account",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI fails safely for disconnect without modifying an existing account",
+          "status": "passed"
+        },
+        {
+          "title": "test administrator seed CLI fails safely for combined without modifying an existing account",
           "status": "passed"
         }
       ]
@@ -2556,36 +2872,6 @@
       ]
     },
     {
-      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/payment/test/unit/domain/gift-card.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2722,6 +3008,36 @@
       ]
     },
     {
+      "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CreatePaymentIntentHandler should successfully create a payment intent using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/process-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "ProcessPaymentHandler should successfully process payment by authorizing and capturing via PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/payment/test/unit/application/void-payment.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "VoidPaymentHandler should successfully void a payment using PaymentService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2779,60 +3095,6 @@
         },
         {
           "title": "Product Aggregate Root should schedule a publication date in the future",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
@@ -2929,6 +3191,60 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "User Aggregate Root should create a standard customer user successfully",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should throw an error if names exceed max length",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should not record email changed event if email is the same",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
