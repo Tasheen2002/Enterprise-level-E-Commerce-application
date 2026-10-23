@@ -2,6 +2,8 @@ import { randomUUID } from "crypto";
 import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
 
 export class TransactionId extends UuidId {
+  declare private readonly _uuidBrand: void;
+
   private constructor(value: string) {
     super(value, "Transaction ID");
   }

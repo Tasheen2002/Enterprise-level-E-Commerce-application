@@ -404,3 +404,5 @@
 "packages/core/src/index.ts","packages/core/test/pagination-contracts.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
 "modules/loyalty/infra/persistence/repositories/loyalty-account.repository.impl.ts","packages/core/test/pagination-contracts.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
 "modules/loyalty/domain/entities/loyalty-account.entity.ts","packages/core/test/pagination-contracts.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"packages/core/src/index.ts","packages/core/test/uuid-wrappers.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"packages/core/test/uuid-wrapper-cases.ts","packages/core/test/uuid-wrappers.spec.ts","direct-import-only-not-proof-of-behavior-coverage"

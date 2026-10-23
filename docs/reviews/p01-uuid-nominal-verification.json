@@ -1,0 +1,1618 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "7c186888252aa3edb68a5c50c5dc18a14125080f",
+  "finding": {
+    "id": "P01-ID-NOMINAL-TYPES",
+    "followup_id": "P01-FOLLOWUP-001",
+    "status": "resolved for all 42 current concrete UuidId wrappers",
+    "severity": "P2",
+    "trigger": "Pass a UserId to a VariantId repository method, or an inventory pickup ReservationId to a cart ReservationId repository method.",
+    "observed": "Shared inherited instance members made semantic wrappers structurally interchangeable despite distinct runtime equality.",
+    "baseline": {
+      "compiler_exit_code": 1,
+      "matrix_diagnostic": "TS2344: CrossAssignablePairs does not satisfy never",
+      "unused_negative_assertions": 4,
+      "unused_assertion_diagnostic": "TS2578 demonstrates incorrect assignments/calls compiled before the correction",
+      "runtime_compatibility_cases_passed": 44
+    },
+    "change": "Each concrete class declares its own private readonly _uuidBrand: void. The declaration is erased; distinct private declarations make instance types nominal. A base-class comment explains why the brand belongs on each wrapper."
+  },
+  "review": {
+    "complete_files": [
+      "packages/core/src/domain/value-objects/uuid-id.base.ts",
+      "modules/cart/domain/value-objects/cart-id.vo.ts",
+      "modules/cart/domain/value-objects/cart-owner-id.vo.ts",
+      "modules/cart/domain/value-objects/checkout-id.vo.ts",
+      "modules/cart/domain/value-objects/reservation-id.vo.ts",
+      "modules/engagement/domain/value-objects/appointment-id.vo.ts",
+      "modules/engagement/domain/value-objects/notification-id.vo.ts",
+      "modules/engagement/domain/value-objects/reminder-id.vo.ts",
+      "modules/engagement/domain/value-objects/review-id.vo.ts",
+      "modules/engagement/domain/value-objects/subscription-id.vo.ts",
+      "modules/engagement/domain/value-objects/wishlist-id.vo.ts",
+      "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/alert-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/location-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/reservation-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/supplier-id.vo.ts",
+      "modules/inventory-management/domain/value-objects/transaction-id.vo.ts",
+      "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts",
+      "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts",
+      "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts",
+      "modules/order-management/domain/value-objects/order-id.vo.ts",
+      "modules/order-management/domain/value-objects/order-item-id.vo.ts",
+      "modules/order-management/domain/value-objects/shipment-id.vo.ts",
+      "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts",
+      "modules/payment/domain/value-objects/gift-card-id.vo.ts",
+      "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts",
+      "modules/payment/domain/value-objects/payment-intent-id.vo.ts",
+      "modules/payment/domain/value-objects/payment-transaction-id.vo.ts",
+      "modules/payment/domain/value-objects/promotion-id.vo.ts",
+      "modules/payment/domain/value-objects/promotion-usage-id.vo.ts",
+      "modules/payment/domain/value-objects/webhook-event-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/category-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/product-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts",
+      "modules/product-catalog/domain/value-objects/variant-id.vo.ts",
+      "modules/user-management/domain/value-objects/address-id.vo.ts",
+      "modules/user-management/domain/value-objects/payment-method-id.vo.ts",
+      "modules/user-management/domain/value-objects/social-login-id.vo.ts",
+      "modules/user-management/domain/value-objects/user-id.vo.ts",
+      "packages/core/test/uuid-wrapper-cases.ts",
+      "packages/core/test/uuid-wrappers.spec.ts",
+      "packages/core/test/uuid-nominal-contracts.typecheck.ts"
+    ],
+    "wrapper_count": 42,
+    "owning_modules": [
+      "cart",
+      "engagement",
+      "inventory-management",
+      "loyalty",
+      "order-management",
+      "payment",
+      "product-catalog",
+      "user-management"
+    ],
+    "compiler_contract": "Mapped type checks all 1722 ordered pairs of distinct wrapper types, factory/hydration return compatibility and widening to UuidId. Four negative assertions cover actual repository arguments and direct assignments; valid same-type calls remain accepted.",
+    "caller_scope": "All current root TypeScript program callers compile after migration without changes, casts or widened signatures. Manually traced product variant, cart reservation, pickup reservation and user repository contracts plus reservation orchestration and structural external-service ports. This is compiler compatibility across its configured scope, not full semantic review of each module or every call.",
+    "persistence_scope": "No schema, UUID parsing/normalization, labels, stored strings, factory behavior or equality behavior changed. No live database execution needed to prove an erased type declaration."
+  },
+  "verification": {
+    "new_runtime_cases": 44,
+    "focused_cases": 246,
+    "focused_files": 9,
+    "full_unit_cases": 950,
+    "full_unit_files": 93,
+    "compile_only_fixture": "packages/core/test/uuid-nominal-contracts.typecheck.ts",
+    "ordered_distinct_type_pairs": 1722,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 143,
+          "covered": 143,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 144,
+          "covered": 144,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 134,
+          "covered": 134,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/cart/domain/value-objects/cart-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/cart/domain/value-objects/cart-owner-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/cart/domain/value-objects/checkout-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/cart/domain/value-objects/reservation-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/appointment-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/notification-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/reminder-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/review-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/subscription-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/wishlist-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/alert-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/location-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/reservation-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/supplier-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/inventory-management/domain/value-objects/transaction-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/order-management/domain/value-objects/order-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/order-management/domain/value-objects/order-item-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/order-management/domain/value-objects/shipment-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/gift-card-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/payment-intent-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/payment-transaction-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/promotion-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/promotion-usage-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/payment/domain/value-objects/webhook-event-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/category-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/product-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/product-catalog/domain/value-objects/variant-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/user-management/domain/value-objects/address-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/user-management/domain/value-objects/payment-method-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/user-management/domain/value-objects/social-login-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "modules/user-management/domain/value-objects/user-id.vo.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/core/src/domain/value-objects/uuid-id.base.ts": {
+        "lines": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 18,
+          "covered": 18,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only uuid-id.base.ts plus 42 current wrappers: 143 executable lines, 144 statements, 134 functions, nine branches. Wrappers delegate validation to the base; do not treat branch-free wrappers as additional validation branches. No broad backend coverage remeasurement.",
+    "checks": {
+      "root_tsc": "passed; exhaustive pair matrix and four positive/negative repository/assignment contracts included",
+      "core_package_tsc": "passed",
+      "focused_eslint": "passed for all 46 target source/test files",
+      "focused_prettier": "passed for all 46 target source/test files"
+    },
+    "emitted_javascript": {
+      "typescript": "5.9.3",
+      "normalization": "Prettier normalized baseline and current sources; TypeScript transpileModule with comments removed and the two configured root/core target/module pairs. Current source is exactly baseline plus a declaration and formatting.",
+      "wrappers": [
+        {
+          "file": "modules/cart/domain/value-objects/cart-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/cart/domain/value-objects/cart-owner-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/cart/domain/value-objects/checkout-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/cart/domain/value-objects/reservation-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/appointment-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/notification-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/reminder-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/review-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/subscription-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/wishlist-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/alert-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/location-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/reservation-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/supplier-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/inventory-management/domain/value-objects/transaction-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/order-management/domain/value-objects/order-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/order-management/domain/value-objects/order-item-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/order-management/domain/value-objects/shipment-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/gift-card-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/payment-intent-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/payment-transaction-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/promotion-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/promotion-usage-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/payment/domain/value-objects/webhook-event-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/category-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/product-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/product-catalog/domain/value-objects/variant-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/user-management/domain/value-objects/address-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/user-management/domain/value-objects/payment-method-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/user-management/domain/value-objects/social-login-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        },
+        {
+          "file": "modules/user-management/domain/value-objects/user-id.vo.ts",
+          "only_brand_and_format": true,
+          "root_emitted_js_unchanged": true,
+          "core_emitted_js_unchanged": true
+        }
+      ]
+    },
+    "commands": [
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "node node_modules/typescript/bin/tsc --project packages/core/tsconfig.json --noEmit",
+      "Vitest packages/core/test plus apps/api/test/unit/core-error-http.spec.ts with coverage limited to 43 explicit production paths",
+      "Full default Vitest unit subset excluding test/integration and test/e2e",
+      "Focused ESLint and Prettier; compiler membership refreshed separately"
+    ]
+  },
+  "verified_source_sha256": {
+    "packages/core/src/domain/value-objects/uuid-id.base.ts": "fb46a041e626096de98f58714c45366cc7c358856e02b94b59091b34d6d424d2",
+    "modules/cart/domain/value-objects/cart-id.vo.ts": "4c720124ae94ae11786f1d3c977cdf5039ca30f929f7f3e04a3d3be099cc333f",
+    "modules/cart/domain/value-objects/cart-owner-id.vo.ts": "64349050c83840828f92b51c959f37adb1275a29343fa3239b4de03e88a89dc9",
+    "modules/cart/domain/value-objects/checkout-id.vo.ts": "48f00b059fddb51fd2d24902ad0115d6836db3a916b730de0439b2e49f44769b",
+    "modules/cart/domain/value-objects/reservation-id.vo.ts": "5e7a5c01db93bbbec06d673e1dd0594fa070187f2c8263c1d2f02733a088a793",
+    "modules/engagement/domain/value-objects/appointment-id.vo.ts": "83a9cf2dd522d884d8ebebcc57688a313387dd0db091497101508b9d96cb14af",
+    "modules/engagement/domain/value-objects/notification-id.vo.ts": "8a51d76ba543847f4a84c744ec8b2e91faaba2dda050a1b824c21d2ec93aef76",
+    "modules/engagement/domain/value-objects/reminder-id.vo.ts": "2836ecbe81932016f4b21d38e0230f2037143cdfb7dec0de2445e5ce1e3539ad",
+    "modules/engagement/domain/value-objects/review-id.vo.ts": "2cdb46ee5bd28075c892a056bc58494e4dd0106baeee4f64d662912a9611505d",
+    "modules/engagement/domain/value-objects/subscription-id.vo.ts": "03640c295cb62cb1f6d865017fae3f330ce08eb0f1eef8cda4d0f009e9763975",
+    "modules/engagement/domain/value-objects/wishlist-id.vo.ts": "4ed6a57c68c0894af0f2607a70a5551e85bc00bedbf247b7e51b02a79c378da7",
+    "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts": "39a1ab077dad872dd6c699910bb67ccb49ccc5558b899da8ff391ade62355363",
+    "modules/inventory-management/domain/value-objects/alert-id.vo.ts": "4d7b5de0ff10f6ea5dc3bc9a6e03f8ae9a50006b291e079ecd644ac0e8db2185",
+    "modules/inventory-management/domain/value-objects/location-id.vo.ts": "bb59d813ef28c1ddcc9f8affa2916827c3886198a8b39e2e146e7299a3db2671",
+    "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts": "8f3d5e2b2fe22a6896cdd9e2af004d05750d201f7282f5bccc16e21d6d3c85f0",
+    "modules/inventory-management/domain/value-objects/reservation-id.vo.ts": "607642f50adb6d5a69bb89b3ee9ae68580e8d35fc0897bc277869ff84ff2216c",
+    "modules/inventory-management/domain/value-objects/supplier-id.vo.ts": "30327f6040415e616a2167ad5f8167097ed31289dd8281b3d863a999dc0d1632",
+    "modules/inventory-management/domain/value-objects/transaction-id.vo.ts": "294ac3db64db3bc98a219d6f06133cc7ae56d0f1bf49e3a9d60d30e9d4722317",
+    "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts": "4dee338f5d800dd257aeeb70f0961431c2d531469ad511a5c34943a6133158d6",
+    "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts": "42ba080a42da43f59cdb43a3a21fc442f6060f5cb760ef021d29dc77002e9fb6",
+    "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts": "9735a8852d3d72677b2dca12bc2a14633ae7f83be419d64e1dc0b20d3fcfcd08",
+    "modules/order-management/domain/value-objects/order-id.vo.ts": "3f8f43cc3e8cdebef727236c3b0295ab35cd492d8f319d4541653e1d99bb7adc",
+    "modules/order-management/domain/value-objects/order-item-id.vo.ts": "aa4c3bd908d45e93db10a67d293862c5795b2335d8dc2f22d0adc61c9e01af61",
+    "modules/order-management/domain/value-objects/shipment-id.vo.ts": "5b61a007ae50be052900defcbbe86190348ee260c73d3d5bb55c60b44b06abb2",
+    "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts": "58bd18f85b102533133dbc51c26720c1417b65c4b6c51d0f2baffbc8d14abbdc",
+    "modules/payment/domain/value-objects/gift-card-id.vo.ts": "e7e4631e5ec1fac933b28235e5a3527bd4ddd187133fc7ff538c06fe73f2b726",
+    "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts": "096a22be5d4af68dc683174de5631dd5f08a7303fbb2d1234b5f21b0a1a9dcfc",
+    "modules/payment/domain/value-objects/payment-intent-id.vo.ts": "e06261711422a09f4b099c73c2a5870211b75dd3ac2eb52035dd876408d1dd34",
+    "modules/payment/domain/value-objects/payment-transaction-id.vo.ts": "01174b5531e96a6c6184560bef64a6027bbf65dd07356fbc57f67ca8374c7076",
+    "modules/payment/domain/value-objects/promotion-id.vo.ts": "3aa081d303a3c3756f5f7dd7dc189cee6c8a043b51743eba8ed68d393d798993",
+    "modules/payment/domain/value-objects/promotion-usage-id.vo.ts": "1249b80c91ca96fd094ac68d8551d4cda55ef0425d93c8fbad97a0184846e30d",
+    "modules/payment/domain/value-objects/webhook-event-id.vo.ts": "7a7bf760d6cbc5f40d369cd2414e151afe4d4aaa8a4ee6b911b0a7dbe1ff554a",
+    "modules/product-catalog/domain/value-objects/category-id.vo.ts": "91837c557eca11fede2d5a1d60632d989c1294ab2765668eaa7d73b4dd076a85",
+    "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts": "de67356013c7c011005cfb04afbd107a8b894a519c09f45bb542326699c589e0",
+    "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts": "183cd3589b50006519079c8dec6768efa5d97df630964bc9418ea15334c1ed43",
+    "modules/product-catalog/domain/value-objects/product-id.vo.ts": "9559a3806b453c18afbc21b405c7cc912d7f5cb09833cb2e1d44de7e2d20e55c",
+    "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts": "a1169257c9232f389a38080cf947e5736572d1c6e194804658ff5599e7ce7975",
+    "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts": "cf30215270aaadf1841fead6b2a221a177fcbb93b8c9a72c8bb0a5fdaea78d59",
+    "modules/product-catalog/domain/value-objects/variant-id.vo.ts": "7e26f1988d0c87a6d4725c3903eee34390cd9ca93ad091a12a20456f83e0ccd0",
+    "modules/user-management/domain/value-objects/address-id.vo.ts": "7581c000a5814a7db23451c6233bb534d7e7b331374ce543a97f9bb859d07dd7",
+    "modules/user-management/domain/value-objects/payment-method-id.vo.ts": "230cc6491ca63c4e2c0c3a3ef571f7b96f0bac76b69878cb592b9a9926464e3a",
+    "modules/user-management/domain/value-objects/social-login-id.vo.ts": "381767a131f56d04ec4c3fdb7b3aba4d8e57979cf204a3d2a3b3b05bb35971c1",
+    "modules/user-management/domain/value-objects/user-id.vo.ts": "9f50a2439f98a2c17402975fb365dd53d4f943aaa3ba7c5a9095ce98040cdf19",
+    "packages/core/test/uuid-wrapper-cases.ts": "70a92862c922dd019d0d241e035f1d054fd82c930f88f61774ef2e05bd987cda",
+    "packages/core/test/uuid-wrappers.spec.ts": "7fc4889682aaaedd8bb5f5df863c4e4ebfa573ff3929dcf3bc393e9f0cca6acf",
+    "packages/core/test/uuid-nominal-contracts.typecheck.ts": "a66eb055dd29d94f3d8e0fc1867b00b37c4f0837da0fc5f031a61280e7178c70"
+  },
+  "baseline_wrapper_sha256": {
+    "modules/cart/domain/value-objects/cart-id.vo.ts": "8a06004db4a4962aaa8605bd0301ca481c27a29a95eb2839f4c2fbe42a71775e",
+    "modules/cart/domain/value-objects/cart-owner-id.vo.ts": "ad1e54aa8c4ea5672e8807d8b0f2a4a894a81363c6f417eb9b43d9a3249d551f",
+    "modules/cart/domain/value-objects/checkout-id.vo.ts": "a55d1733ab5dcfba166296c42eb4d5d64fc06be5bbecb4691d6aaa23789e93da",
+    "modules/cart/domain/value-objects/reservation-id.vo.ts": "f9e8537bc9eedf370c040c05927b74c4785e1e6929a9b89a8aad9d5c63f1700a",
+    "modules/engagement/domain/value-objects/appointment-id.vo.ts": "4c95aa56c7ad41a6867bf765ed9d5b78f12e64e9392a2d49ae51f12e735c2948",
+    "modules/engagement/domain/value-objects/notification-id.vo.ts": "8d7c76d4f035a81d82726876012f4a90e9616e391c836b11d59a11d07e1a6657",
+    "modules/engagement/domain/value-objects/reminder-id.vo.ts": "85b0a338124e1e24b1874a473cb893d3e09538827441baebcb7b4b19ca897065",
+    "modules/engagement/domain/value-objects/review-id.vo.ts": "c0bf55f53a3d59bbff4f0afd6bdfe5d2d6a0f213b9cae2e22bf0ec14d176392a",
+    "modules/engagement/domain/value-objects/subscription-id.vo.ts": "144909f8b457b09e103ce899eba1b8dde5722c761b3bc88555b4f558e85b7bd9",
+    "modules/engagement/domain/value-objects/wishlist-id.vo.ts": "dcb98498448dc9b346e1657a657d38a9e49a3b28fecd710ca53c6d79cf7d39f9",
+    "modules/engagement/domain/value-objects/wishlist-item-id.vo.ts": "d60c804d8b1181a9471ace8401b136d8bc2b56f4921c0a1d85c01dbe6ccb1fc2",
+    "modules/inventory-management/domain/value-objects/alert-id.vo.ts": "41381237d2fa2015cece5a076ff52023eca6c12adb979afb960272d17aba2267",
+    "modules/inventory-management/domain/value-objects/location-id.vo.ts": "56980b689b76df72ac7de957736d296de09849e0765931e63e9dbdc1c5e16393",
+    "modules/inventory-management/domain/value-objects/purchase-order-id.vo.ts": "f115f5ce08894c691661db223c77029a9281636862dc0777444f7b1622546312",
+    "modules/inventory-management/domain/value-objects/reservation-id.vo.ts": "44524a0aadaea5f00f10cb8d80efae5e491c312cf4a8253a2710f43bae71d439",
+    "modules/inventory-management/domain/value-objects/supplier-id.vo.ts": "bd57aec88e5c29b4f2795105b013c1ae7d2c456514389ae7dc114966ae4cb4ae",
+    "modules/inventory-management/domain/value-objects/transaction-id.vo.ts": "5d26aebb958f2a33103f534a640066cdb5015fbca82f89df0ccbb9ac290bf57d",
+    "modules/loyalty/domain/value-objects/loyalty-account-id.vo.ts": "e0d6167cd9c1674b841bf5c4bd67c69fb2cc7ea5735e157b1348b6b4c8c532b7",
+    "modules/loyalty/domain/value-objects/loyalty-program-id.vo.ts": "7dcdb0f8ed585d6671e92be1e7073b435dc379d339311745f527cfac277acf90",
+    "modules/loyalty/domain/value-objects/loyalty-transaction-id.vo.ts": "f0a9769a25e578a723dfd721579edab5eaa13d586b54559096e0a397a8ae0072",
+    "modules/order-management/domain/value-objects/order-id.vo.ts": "22b7048fc4d4533ad4fe3fa4de3fbef912b71108d71f7acd982fa392df6f1e45",
+    "modules/order-management/domain/value-objects/order-item-id.vo.ts": "dd897e199e93da8c66459efe18b179218c73551cecc267980da59a8becf4ccf0",
+    "modules/order-management/domain/value-objects/shipment-id.vo.ts": "103f28ab94a1d128451d0c29470e1fcdb1f6060a76267bc6a7bba4520756a414",
+    "modules/payment/domain/value-objects/bnpl-transaction-id.vo.ts": "9453c74a89a0e4a0559e88f10f4a8085e7ed27ce67b52cbdaf0919ddf00438b6",
+    "modules/payment/domain/value-objects/gift-card-id.vo.ts": "d06b5f375ad5e4b983bea12d844addc66c94bb8a7bea720f7062be1a275ac45c",
+    "modules/payment/domain/value-objects/gift-card-transaction-id.vo.ts": "ac288314b7aa58e86dec8c82f9f99fda24700686ddef03080444aa5f09764d29",
+    "modules/payment/domain/value-objects/payment-intent-id.vo.ts": "9ce548f78dbda414581b6e9babd41e87676fcd66cc8ba338f72bdbaf43e17abb",
+    "modules/payment/domain/value-objects/payment-transaction-id.vo.ts": "3e0fd69e0066cf304ffc1fd2d12a0df6b973ad8bb5aefa1747b777937b95eb57",
+    "modules/payment/domain/value-objects/promotion-id.vo.ts": "7c05a9cde24198c0c7989269da4da86b11243897f6a6b3e336b68ea5e8920745",
+    "modules/payment/domain/value-objects/promotion-usage-id.vo.ts": "f34c5893fd3b7dedebd5ec2eb6e85b14763cbe4a8df0dded4c93424733e1912f",
+    "modules/payment/domain/value-objects/webhook-event-id.vo.ts": "66426aaa98d97ebd195c917787e0c21fd13b2fb0830c5994c77bd27c42242427",
+    "modules/product-catalog/domain/value-objects/category-id.vo.ts": "28aaafbe86f8f6097a8894de0e9f25f8dae775533772731769095c432247be6f",
+    "modules/product-catalog/domain/value-objects/editorial-look-id.vo.ts": "2cae59b88176e2cfd77602571ae5ecfbbef38d30c6687a31803ca960d86f5c5d",
+    "modules/product-catalog/domain/value-objects/media-asset-id.vo.ts": "a1f5243c41240563315422b6728b72045385a54a387aeea19098a673cb0fa803",
+    "modules/product-catalog/domain/value-objects/product-id.vo.ts": "99a9df4078eb8c6f599b480499d92d270dc5dab7c296f152d203bd8e40aeb95e",
+    "modules/product-catalog/domain/value-objects/product-tag-id.vo.ts": "86f8e66d705b063484aabe4332d6df3cf15186bed1378b341d1db34f7dd05641",
+    "modules/product-catalog/domain/value-objects/size-guide-id.vo.ts": "a5f733d97eed422c04df945582759aa2d35bbfa334bafe01ebae5adcf4a55916",
+    "modules/product-catalog/domain/value-objects/variant-id.vo.ts": "8807ff3456717874d1e609e3eee995a19f13531a7c6aaf7a2f3076c9e5a617d9",
+    "modules/user-management/domain/value-objects/address-id.vo.ts": "0daa76f603a11105a4e7c2430db1850d8dc829043ad570eb37d82fbbf27e4f3e",
+    "modules/user-management/domain/value-objects/payment-method-id.vo.ts": "e7f502d26df8adc7e2ccd8fbde30951d465f1a1367d9232790bc92e72bcfd3e1",
+    "modules/user-management/domain/value-objects/social-login-id.vo.ts": "21c1baf3e444b8bc59a0f51ba463c61f47967ac213b1c9e09459bd2216c06406",
+    "modules/user-management/domain/value-objects/user-id.vo.ts": "5c200b6bb2a1d09ae57765075ffa6c98aca1022d5d8c5dbb3cef02f2d40113f7"
+  },
+  "limits": [
+    "This protects concrete wrapper assignments in checked TypeScript. Type assertions, any, raw strings and interfaces exposing only getValue() intentionally erase the semantic distinction; they are not made nominal by this task.",
+    "Cart external-service ports explicitly use structural getValue contracts. Their boundary design and raw-string conversion policies remain for P06 and cross-module integration review; no incorrect production call was demonstrated here.",
+    "The migration covers all 42 current direct UuidId subclasses, not every custom/composite/string identifier in the project. Future wrappers must be added to the explicit fixture inventory; discovery test prevents current omissions.",
+    "This is a compile-time defect correction, not a demonstrated authorization exploit. Runtime ownership and database constraints still need module-specific verification.",
+    "No database/provider rerun or whole-build/bootstrap certification. Prior PostgreSQL 47-group evidence is historical; P15-FOLLOWUP-001 remains open.",
+    "P01 remains open for shared types/validation, shared module/HTTP infrastructure and composition; field-detail serialization and event-composition policies remain pending."
+  ]
+}

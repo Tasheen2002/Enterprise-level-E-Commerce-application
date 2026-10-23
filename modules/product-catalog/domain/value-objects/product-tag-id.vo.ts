@@ -1,9 +1,11 @@
-import { randomUUID } from 'crypto';
-import { UuidId } from '../../../../packages/core/src/domain/value-objects/uuid-id.base';
+import { randomUUID } from "crypto";
+import { UuidId } from "../../../../packages/core/src/domain/value-objects/uuid-id.base";
 
 export class ProductTagId extends UuidId {
+  declare private readonly _uuidBrand: void;
+
   private constructor(value: string) {
-    super(value, 'ProductTagId');
+    super(value, "ProductTagId");
   }
 
   static create(): ProductTagId {

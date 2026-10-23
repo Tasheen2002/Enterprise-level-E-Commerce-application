@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1369
+      "localSourceFiles": 1372
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -16285,6 +16285,33 @@
     },
     {
       "file": "packages/core/test/pagination-contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/uuid-nominal-contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/uuid-wrapper-cases.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/uuid-wrappers.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],

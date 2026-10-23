@@ -138,7 +138,8 @@
       "variant_id_assignable_to_user_id": true,
       "scope": "Compile-time structural assignability probe only; runtime equality is verified separately."
     },
-    "required": "Review nominal branding across actual ID wrappers and their callers before changing assignability; the runtime equality correction does not make TypeScript identifier types nominal."
+    "required": "Review nominal branding across actual ID wrappers and their callers before changing assignability; the runtime equality correction does not make TypeScript identifier types nominal.",
+    "current_status": "resolved by p01-uuid-nominal-verification.json; original probe retained as historical evidence"
   },
   "limits": [
     "P01-TC-002 includes currencies; only the UUID half is verified here. Currency review remains next.",
@@ -146,5 +147,11 @@
     "Current regex support is a project contract, not a claim to accept every UUID form/version.",
     "PostgreSQL/provider suites were not rerun for this in-memory equality/HTTP-contract change; the 47-group result at ccf47c5f remains a prior database baseline. No schema, persistence format or provider code changed.",
     "Full consumer/module review and the nominal-type/field-serialization follow-ups remain open; no whole-module closure is implied."
-  ]
+  ],
+  "latest_uuid_revalidation": {
+    "date": "2026-10-23",
+    "evidence": "p01-uuid-nominal-verification.json",
+    "result": "246 focused/950 full unit cases pass; all 42 wrappers nominally separated; historical source hashes/coverage above retained, not rewritten",
+    "remaining": "HTTP field-detail policy and full consumer/module review remain open"
+  }
 }

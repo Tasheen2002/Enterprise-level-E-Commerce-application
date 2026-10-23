@@ -8,6 +8,11 @@ class InvalidUuidError extends Error {
   }
 }
 
+/**
+ * Concrete semantic IDs declare their own private _uuidBrand for compile-time separation.
+ * Keep that declaration on each wrapper: a private member shared here cannot distinguish them.
+ * Declaration-only brands add no runtime fields or serialized data.
+ */
 export abstract class UuidId {
   private static readonly UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
