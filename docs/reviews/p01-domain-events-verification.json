@@ -1,0 +1,130 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "3aaf70e7",
+  "behavior": "P01-TC-003",
+  "changes": "Seven dedicated public aggregate/event contract tests added; no production behavior changed.",
+  "focused_tests": 26,
+  "focused_files": 2,
+  "new_contract_tests": 7,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/aggregate-root.ts": {
+      "lines": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 3,
+        "covered": 3,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/events/domain-event.ts": {
+      "lines": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only AggregateRoot and DomainEvent; 100% executable lines/statements/functions and zero instrumented conditional branches. Not package/backend coverage.",
+  "verified_source_sha256": {
+    "packages/core/src/domain/aggregate-root.ts": "6b84c2837f0dd40ee3551912179016f5b48cc5271fd91f4dcfeb11a050aabc1f",
+    "packages/core/src/domain/events/domain-event.ts": "d6ee409db581e70b71619b17b89928260f3fbc215f00e4dd6891a146ca7dce5c",
+    "packages/core/test/domain-events.spec.ts": "5e8fa251ed8e72369d802cf26362a4a0090027710d4c140f7164250e107c470f"
+  },
+  "checks": {
+    "focused_vitest": "passed; seven new and nineteen existing foundation cases",
+    "root_tsc": "passed with the new test",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed"
+  },
+  "caller_trace": {
+    "complete_core_files": [
+      "packages/core/src/domain/aggregate-root.ts",
+      "packages/core/src/domain/events/domain-event.ts"
+    ],
+    "complete_dependency_read": [
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts"
+    ],
+    "partial_consumer_read": [
+      "modules/user-management/domain/entities/user.entity.ts:1-135",
+      "modules/cart/domain/entities/shopping-cart.entity.ts:1-60",
+      "modules/user-management/infra/persistence/repositories/user.repository.ts:1-85"
+    ],
+    "observed": "Repository base takes a pending-event array snapshot, awaits publishAll, then clears. UserRepository persists before dispatch. Missing bus clears pending events. These paths are source observations; post-persistence/concurrent delivery outcomes still need dedicated verification."
+  },
+  "remaining": [
+    "P01-TC-004: concurrent event publication, retries, subscriber changes and bounded retention.",
+    "P01-TC-005: repository persistence/dispatch ordering, failure and events added while dispatch is pending.",
+    "UUID/currency/errors/CQRS contracts and exports/configuration remain open despite initial full core source read.",
+    "Core source rows remain open until dependent delivery policy and consumer tracing are complete."
+  ],
+  "full_regression_baseline": "688 tests/82 files and 46 PG groups passed before this test-only addition. Broad/full regression and database suites were not rerun because production sources are unchanged."
+}
