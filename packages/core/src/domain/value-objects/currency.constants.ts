@@ -1,4 +1,4 @@
-export const SUPPORTED_CURRENCIES = [
+export const SUPPORTED_CURRENCIES = Object.freeze([
   "USD",
   "EUR",
   "GBP",
@@ -30,11 +30,13 @@ export const SUPPORTED_CURRENCIES = [
   "AED",
   "SAR",
   "LKR",
-] as const;
+] as const);
 
-export const CRYPTO_CURRENCIES = ["BTC", "ETH", "LTC"] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
-export const CURRENCY_NAMES: Record<string, string> = {
+export const CRYPTO_CURRENCIES = Object.freeze(["BTC", "ETH", "LTC"] as const);
+
+export const CURRENCY_NAMES = Object.freeze({
   USD: "US Dollar",
   EUR: "Euro",
   GBP: "British Pound",
@@ -66,9 +68,9 @@ export const CURRENCY_NAMES: Record<string, string> = {
   AED: "UAE Dirham",
   SAR: "Saudi Riyal",
   LKR: "Sri Lankan Rupee",
-};
+} satisfies Record<SupportedCurrency, string>);
 
-export const CURRENCY_SYMBOLS: Record<string, string> = {
+export const CURRENCY_SYMBOLS = Object.freeze({
   USD: "$",
   EUR: "€",
   GBP: "£",
@@ -100,9 +102,9 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   AED: "د.إ",
   SAR: "﷼",
   LKR: "Rs",
-};
+} satisfies Record<SupportedCurrency, string>);
 
-export const CURRENCY_REGIONS: Record<string, string> = {
+export const CURRENCY_REGIONS = Object.freeze({
   USD: "North America",
   CAD: "North America",
   MXN: "North America",
@@ -134,6 +136,6 @@ export const CURRENCY_REGIONS: Record<string, string> = {
   ILS: "Middle East",
   TRY: "Middle East",
   LKR: "Asia",
-};
+} satisfies Record<SupportedCurrency, string>);
 
-export const DEFAULT_CURRENCY = "USD";
+export const DEFAULT_CURRENCY = "USD" satisfies SupportedCurrency;

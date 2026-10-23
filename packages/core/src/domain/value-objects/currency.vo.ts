@@ -5,6 +5,7 @@ import {
   CURRENCY_SYMBOLS,
   CURRENCY_REGIONS,
   DEFAULT_CURRENCY,
+  type SupportedCurrency,
 } from "./currency.constants";
 
 class InvalidCurrencyError extends DomainError {
@@ -14,17 +15,20 @@ class InvalidCurrencyError extends DomainError {
 }
 
 export class Currency {
-  private constructor(private readonly value: string) {
+  private readonly value: SupportedCurrency;
+
+  private constructor(value: string) {
+    if (typeof value !== "string") throw new InvalidCurrencyError("Currency must be a string");
     if (!value) throw new InvalidCurrencyError("Currency is required");
     if (!Currency.isValidCurrency(value)) {
-      throw new InvalidCurrencyError(
-        `Invalid currency code: ${value}. Must be a valid ISO 4217 code`,
-      );
+      throw new InvalidCurrencyError(`Unsupported currency code: ${value}`);
     }
+    this.value = value;
   }
 
   static create(currency: string): Currency {
-    return new Currency(currency.trim().toUpperCase());
+    const normalized = typeof currency === "string" ? currency.trim().toUpperCase() : currency;
+    return new Currency(normalized);
   }
 
   static fromString(currency: string): Currency {
@@ -48,7 +52,7 @@ export class Currency {
     }
   }
 
-  private static isValidCurrency(currency: string): boolean {
+  private static isValidCurrency(currency: string): currency is SupportedCurrency {
     return (SUPPORTED_CURRENCIES as readonly string[]).includes(currency);
   }
 
@@ -57,15 +61,15 @@ export class Currency {
   }
 
   getDisplayName(): string {
-    return CURRENCY_NAMES[this.value] ?? this.value;
+    return CURRENCY_NAMES[this.value];
   }
 
   getSymbol(): string {
-    return CURRENCY_SYMBOLS[this.value] ?? this.value;
+    return CURRENCY_SYMBOLS[this.value];
   }
 
   getMajorCurrencyRegion(): string {
-    return CURRENCY_REGIONS[this.value] ?? "Other";
+    return CURRENCY_REGIONS[this.value];
   }
 
   isBaseCurrency(): boolean {

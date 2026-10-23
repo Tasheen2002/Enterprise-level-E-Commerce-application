@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1361
+      "localSourceFiles": 1362
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -16188,6 +16188,15 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/core/test/currency.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

@@ -1,0 +1,168 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "f65647f6cae7d1b882014d50f59036c698b294c1",
+  "findings": [
+    "P01-04 mutable/duplicated shared currency catalogs",
+    "P01-05 invalid-type currency input escaped the domain error contract; unsupported-list error misdescribed the configured policy"
+  ],
+  "baseline": {
+    "passed": 46,
+    "failed": 14,
+    "failed_cases": [
+      "shared currency catalog contract reuses the canonical catalog through the legacy user-management export",
+      "shared currency catalog contract prevents runtime mutation of supported",
+      "shared currency catalog contract prevents runtime mutation of crypto",
+      "shared currency catalog contract prevents runtime mutation of names",
+      "shared currency catalog contract prevents runtime mutation of symbols",
+      "shared currency catalog contract prevents runtime mutation of regions",
+      "currency value object retains default and stable display metadata",
+      "currency value object uses the domain error contract for non-string input undefined",
+      "currency value object uses the domain error contract for non-string input null",
+      "currency value object uses the domain error contract for non-string input 123",
+      "currency value object uses the domain error contract for non-string input {}",
+      "currency value object uses the domain error contract for non-string input undefined",
+      "currency value object rejects objects without invoking their string conversion",
+      "currency value object describes the application allowlist rather than promising every currency code"
+    ]
+  },
+  "changes": [
+    "Freeze supported and crypto arrays and all three string-valued metadata maps; the public readonly catalog can no longer be modified at runtime.",
+    "Replace the byte-for-byte equivalent user-management catalog values with compatibility re-exports from core.",
+    "Add a SupportedCurrency union and complete typed metadata maps; validate and narrow stored values so metadata lookups are total. Prior fallback paths are unnecessary for complete immutable metadata.",
+    "Reject non-string inputs through InvalidCurrencyError without invoking object conversion; keep the existing domain error code/status and distinguish unsupported application currencies in the message.",
+    "Retain normalized create(), strict fromString(), all 31 supported codes, all metadata values, crypto separation and USD default."
+  ],
+  "catalog_comparison": {
+    "previous_user_catalog_matches_core": true,
+    "current_catalog_values_unchanged": true,
+    "configured_fiat_codes": 31,
+    "compared_exports": [
+      "SUPPORTED_CURRENCIES",
+      "CRYPTO_CURRENCIES",
+      "CURRENCY_NAMES",
+      "CURRENCY_SYMBOLS",
+      "CURRENCY_REGIONS",
+      "DEFAULT_CURRENCY"
+    ],
+    "scope": "Static TypeScript literals only; no financial reference-data or provider-support certification."
+  },
+  "new_test_cases": 60,
+  "focused_cases": 107,
+  "focused_files": 3,
+  "full_unit_cases": 817,
+  "full_unit_files": 88,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 29,
+        "covered": 29,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 31,
+        "covered": 31,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 8,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    },
+    "packages/core/src/domain/value-objects/currency.constants.ts": {
+      "lines": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/domain/value-objects/currency.vo.ts": {
+      "lines": {
+        "total": 23,
+        "covered": 23,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 25,
+        "covered": 25,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 8,
+        "covered": 8,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only core currency.constants.ts and currency.vo.ts; 100% lines/statements/functions/branches, 29 executable lines and eight branches. Export facades are verified by compiler and runtime export identity rather than numeric coverage.",
+  "verified_source_sha256": {
+    "packages/core/src/domain/value-objects/currency.constants.ts": "4c6e55518f5917b21202971e3b55c0172359a99be04cb4f09d947712133021ed",
+    "packages/core/src/domain/value-objects/currency.vo.ts": "6eccbecd12bf2fed59060d49deff23628775af5a1c4b3a8ce808d9086c58ca5c",
+    "packages/core/src/domain/value-objects/index.ts": "c01d1ad641b4998fcd55a3c85a465e8813d2ec1da389a5fed868b3297953c942",
+    "modules/user-management/domain/constants/currency.constants.ts": "f98f28b20c46241f72f30ef81efd286bf74507a0a17b4425efe4ff4c8bf3e15c",
+    "packages/core/test/currency.spec.ts": "8d9078e882275a42766174a7c775a621d46c158388692a2eec503ba8f20c2369"
+  },
+  "checks": {
+    "root_tsc": "passed after final fixture correction",
+    "core_package_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed"
+  },
+  "test_quality_note": "The initial parameterized non-string array fixture registered a second undefined case. It was corrected to an explicit labelled object carrying an array before final focused/full runs. Original 46/14 baseline is retained honestly; the array case is separately verified by final passing results.",
+  "consumer_checks": [
+    "Actual UserProfile creation/default, preference update, rejected lowercase update and unchanged prior preference.",
+    "Actual catalog Money normalized creation and strict persistence hydration.",
+    "Complete target/catalog/export source read; payment Currency source and profile/catalog consumer paths inspected without certifying entire business modules."
+  ],
+  "limits": [
+    "This verifies the configured application catalog, not an exhaustive external ISO reference list or processor support. No financial reference-data policy was changed.",
+    "Payment Currency remains a separate three-letter-code validator; processor support, money precision, conversions and cross-module currency policy require owning module review. It was not blindly replaced by the core allowlist.",
+    "Profile request validation currently checks uppercase three-letter shape while the shared domain applies the configured allowlist; end-to-end API validation policy remains for the shared/user reviews.",
+    "No database schema, persisted currency values or provider code changed. PostgreSQL/provider suites were not rerun; the prior 47-group database baseline remains historical.",
+    "P01 is not complete. Nominal ID typing, field-detail serialization, event composition and remaining shared foundations retain their open findings."
+  ]
+}

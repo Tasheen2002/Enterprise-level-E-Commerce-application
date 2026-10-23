@@ -1,5 +1,5 @@
 {
-  "source_commit": "ccf47c5fa6ba0c9b971ac90cf2b6c63420af9398",
+  "source_commit": "f65647f6cae7d1b882014d50f59036c698b294c1",
   "static_route_declarations": 427,
   "route_areas": {
     "api-host": 2,
@@ -22,15 +22,15 @@
     "conditional-stripe-config": 5,
     "next-filesystem-route": 2
   },
-  "test_files": 118,
+  "test_files": 119,
   "test_type_candidates": {
-    "mocked-unit-candidate": 54,
+    "mocked-unit-candidate": 55,
     "in-process-http-candidate": 4,
     "unit-candidate": 31,
     "database-backed-http-candidate": 12,
     "database-repository-candidate": 17
   },
-  "default_unit_files": 87,
+  "default_unit_files": 88,
   "direct_database_files": 29,
   "database_files_without_current_setup_guard": [],
   "routes_without_literal_http_test_candidate": 383,
