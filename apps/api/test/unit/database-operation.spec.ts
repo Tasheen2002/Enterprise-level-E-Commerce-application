@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PrismaClient } from "@prisma/client";
-import { withOperationalTestDatabase } from "../../../../scripts/testing/database-inspection";
+import {
+  withOperationalTestDatabase,
+  withTestDatabaseAdmin,
+} from "../../../../scripts/testing/database-inspection";
 
 const env = {
   NODE_ENV: "test",
@@ -74,6 +77,65 @@ describe("guarded database operation lifecycle", () => {
       errors: [probe, disconnect],
     });
     expect(probe.errors).toEqual([operation, cleanup]);
+    expect(h.disconnect).toHaveBeenCalledOnce();
+  });
+});
+
+describe("guarded maintenance operation lifecycle", () => {
+  const maintenance = { ...env, TEST_DATABASE_ADMIN_URL: "postgresql://localhost/postgres" };
+
+  it("rejects mismatched servers before constructing or operating", async () => {
+    const h = fixture();
+    await expect(
+      withTestDatabaseAdmin(
+        { ...maintenance, TEST_DATABASE_ADMIN_URL: "postgresql://different/postgres" },
+        h.create,
+        h.operation,
+      ),
+    ).rejects.toThrow();
+    expect(h.create).not.toHaveBeenCalled();
+    expect(h.operation).not.toHaveBeenCalled();
+  });
+
+  it("uses maintenance credentials and passes only the guarded selected database", async () => {
+    const h = fixture();
+    const value = await withTestDatabaseAdmin(maintenance, h.create, h.operation);
+    expect(h.create).toHaveBeenCalledWith(maintenance.TEST_DATABASE_ADMIN_URL);
+    expect(h.operation).toHaveBeenCalledWith(h.client, "operation_test");
+    expect(h.disconnect).toHaveBeenCalledOnce();
+    expect(value).toEqual({ passed: true });
+  });
+
+  it("does not disconnect a client whose construction failed", async () => {
+    const h = fixture();
+    const error = new Error("construction failure");
+    h.create.mockImplementation(() => {
+      throw error;
+    });
+    await expect(withTestDatabaseAdmin(maintenance, h.create, h.operation)).rejects.toBe(error);
+    expect(h.disconnect).not.toHaveBeenCalled();
+  });
+
+  it.each(["operation", "disconnect"] as const)(
+    "preserves a single maintenance %s error",
+    async (stage) => {
+      const h = fixture();
+      const error = new Error("synthetic maintenance failure");
+      h[stage].mockRejectedValueOnce(error);
+      await expect(withTestDatabaseAdmin(maintenance, h.create, h.operation)).rejects.toBe(error);
+      expect(h.disconnect).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("retains maintenance operation and disconnect failures together", async () => {
+    const h = fixture();
+    const operation = new Error("maintenance failure"),
+      disconnect = new Error("disconnect failure");
+    h.operation.mockRejectedValueOnce(operation);
+    h.disconnect.mockRejectedValueOnce(disconnect);
+    await expect(withTestDatabaseAdmin(maintenance, h.create, h.operation)).rejects.toMatchObject({
+      errors: [operation, disconnect],
+    });
     expect(h.disconnect).toHaveBeenCalledOnce();
   });
 });
