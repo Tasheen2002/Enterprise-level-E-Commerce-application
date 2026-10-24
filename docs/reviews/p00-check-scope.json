@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-23",
+  "date": "2026-10-24",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1376
+      "localSourceFiles": 1380
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -16562,6 +16562,42 @@
       ],
       "inRecordedBackendLintRun": true,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "packages/validation/test/boundaries.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/validation/test/contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/validation/test/schema-cases.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "packages/validation/test/schemas.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

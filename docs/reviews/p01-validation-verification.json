@@ -1,0 +1,279 @@
+{
+  "date": "2026-10-24",
+  "phase": "P01",
+  "baseline_commit": "6231ea1e610905ea96231b09ddccb550e9f623a8",
+  "findings": [
+    {
+      "id": "P01-10",
+      "severity": "P2",
+      "file": "packages/validation/src/auth/index.ts",
+      "problem": "Shared change-email/delete-account password fields lacked the existing server maximum of 128 characters.",
+      "correction": "Apply existing PASSWORD_MAX to both shared fields; server/other password rules remain unchanged."
+    },
+    {
+      "id": "P01-11",
+      "severity": "P2",
+      "file": "packages/validation/src/common/index.ts",
+      "problem": "Shared paginated response schema rejected limit zero, emitted by empty unbounded repository queries.",
+      "correction": "Response limit is a nonnegative integer; request limits remain positive and at most 100.",
+      "caller_scope": "No production direct consumer of paginatedResponseShape found; actual repository mapping with an inert client reproduces the reusable-helper incompatibility."
+    },
+    {
+      "id": "P01-12",
+      "severity": "P2",
+      "file": "packages/validation/src/user/index.ts",
+      "problem": "Shared address/payment enum vocabularies differed from actual server wire values. Address values were uppercase; payment values were uppercase, used BANK_TRANSFER and omitted gift_card.",
+      "correction": "Use billing/shipping and card/wallet/bank/cod/gift_card, matching existing backend/domain vocabularies. Do not widen/change server enums.",
+      "caller_scope": "No current direct production consumer of the shared address/payment schema exports found; frontend maintains its own model, whose separate mismatch remains P14 work."
+    }
+  ],
+  "baseline": {
+    "passed": 83,
+    "failed": 10,
+    "failed_cases": [
+      "shared/backend wire schema contracts matches 'change-email' JSON constraints",
+      "shared/backend wire schema contracts matches 'delete-account' JSON constraints",
+      "shared/backend wire schema contracts matches 'add-address' JSON constraints",
+      "shared/backend wire schema contracts matches 'update-address' JSON constraints",
+      "shared/backend wire schema contracts matches 'add-payment' JSON constraints",
+      "shared/backend wire schema contracts accepts valid 'add-address' input and strips extra top-level fields",
+      "shared/backend wire schema contracts accepts valid 'add-payment' input and strips extra top-level fields",
+      "authentication bounds and UI-only refinements bounds 'change-email' password field 'password' at 128 characters",
+      "authentication bounds and UI-only refinements bounds 'delete-account' password field 'password' at 128 characters",
+      "pagination transport boundaries accepts the zero-limit metadata emitted for an empty unbounded repository page"
+    ],
+    "initial_fixture_note": "Initial valid enum examples used old shared uppercase literals. Corrected to actual backend lowercase values and clarified password-case titles before the definitive 83/10 pre-fix baseline. Preliminary output retained locally; production was unchanged until the definitive baseline."
+  },
+  "review": {
+    "complete_package_and_test_files": [
+      "packages/validation/package.json",
+      "packages/validation/tsconfig.json",
+      "packages/validation/src/index.ts",
+      "packages/validation/src/common/index.ts",
+      "packages/validation/src/auth/index.ts",
+      "packages/validation/src/user/index.ts",
+      "packages/validation/test/schema-cases.ts",
+      "packages/validation/test/schemas.spec.ts",
+      "packages/validation/test/boundaries.spec.ts",
+      "packages/validation/test/contracts.typecheck.ts"
+    ],
+    "wire_schema_pairs": 21,
+    "schema_pair_scope": "16 auth request shapes, shared profile facade, add/update address and add/update payment methods. Compare generated JSON constraints, valid parsed output/unknown-field stripping and invalid issue paths/codes; UI messages may differ.",
+    "behaviors": "Password/name/token bounds; UI terms and confirmation refinements; profile date/offset/UUID/locale/currency/structured fields; address lengths/enums; payment strings/suffix/expiry/reference types; pagination coercion/defaultlessness/bounds/metadata/item validation; runtime export identity and compile-time inferred contracts.",
+    "deduplication": "Profile already uses one schema instance across auth/user/backend exports; retain it with a single import path plus local export. Other backend wire schemas remain independent mirrors guarded by 21 parity cases. Full P03 consolidation must preserve server/form error messages and domain vocabulary ownership; no blind domain imports into the browser package.",
+    "configuration": "Private package source exports root/common/auth/user and noEmit library preset resolve in validation, backend, admin and storefront compiler programs. Description updated to match actual shared/mirrored responsibilities; no dependency or lockfile change.",
+    "consumer_scope": "Trace direct imports across backend/frontend; manually inspect shared HTTP validation, backend wire definitions/constants/enums, sign-up/profile form integration and typed API request inputs. This does not certify whole frontend/user/auth modules."
+  },
+  "verification": {
+    "new_runtime_cases": 131,
+    "focused_cases": 150,
+    "focused_files": 3,
+    "full_unit_cases": 1095,
+    "full_unit_files": 96,
+    "compile_only_fixture": "packages/validation/test/contracts.typecheck.ts",
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/validation/src/index.ts": {
+        "lines": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/validation/src/auth/index.ts": {
+        "lines": {
+          "total": 23,
+          "covered": 23,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 23,
+          "covered": 23,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/validation/src/common/index.ts": {
+        "lines": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 1,
+          "covered": 1,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "packages/validation/src/user/index.ts": {
+        "lines": {
+          "total": 7,
+          "covered": 7,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 7,
+          "covered": 7,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only packages/validation/src/**/*.ts: 33 executable lines/statements, three refinement/factory functions, zero instrumented branch points. 100% lines/statements/functions; branch percentage is not a meaningful additional claim for zero points. Zod library internals, full endpoint/module logic and whole-backend coverage are outside this denominator.",
+    "http_and_repository": "Four synthetic Fastify routes use shared pre-validation plus actual backend JSON schemas; valid lowercase enums accepted, uppercase/129-character passwords rejected before handler. Actual loyalty repository with inert Prisma returns an empty unbounded page accepted by the response schema. No DB/provider calls; Fastify instances close in finally.",
+    "checks": {
+      "root_tsc": "passed",
+      "validation_package_tsc": "passed",
+      "storefront_tsc": "passed without frontend changes",
+      "admin_tsc": "passed without frontend changes",
+      "inferred_contract_fixture": "passed under strict root options; wire types/subpaths, profile equality, numeric parsed output and typed response items checked",
+      "eslint": "passed without warnings after exporting a compiler-only fixture value initially reported as type-only unused",
+      "prettier": "passed for entire package"
+    },
+    "commands": [
+      "node node_modules/vitest/vitest.mjs run packages/validation/test apps/api/test/unit/shared-foundation.spec.ts --coverage --coverage.include=packages/validation/src/**/*.ts --coverage.reportsDirectory=coverage/p01-validation",
+      "Full default Vitest unit subset excluding test/integration and test/e2e",
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "node node_modules/typescript/bin/tsc --project packages/validation/tsconfig.json --noEmit",
+      "node node_modules/typescript/bin/tsc --project apps/web/tsconfig.json --noEmit",
+      "node node_modules/typescript/bin/tsc --project apps/admin/tsconfig.json --noEmit",
+      "Focused strict compiler-only fixture recheck after lint-only export change",
+      "ESLint --ext .ts for validation/src and validation/test; Prettier entire package"
+    ]
+  },
+  "verified_source_sha256": {
+    "packages/validation/package.json": "23139d2821db6548b52ceb4fc5d04350fc0f07d0bc768e36bb4e3c660a6bc201",
+    "packages/validation/tsconfig.json": "7388fd85a5cad9d62441d9fbfb5538fc3a375c8851e0c0ccb2981b23b80d2250",
+    "packages/validation/src/index.ts": "7c42603e5cd937bd885e9091dd841ee569ab4327e4ec2e1bd153760c9aed57fb",
+    "packages/validation/src/common/index.ts": "d22b4d082da25a04b03c341705a814310ebeab905c9b9eaaef58135bbd8db79c",
+    "packages/validation/src/auth/index.ts": "87b403f015fc26642efb639dca48a3c4c53a645d5487640e69ae3603077c57f3",
+    "packages/validation/src/user/index.ts": "dfc436f84fafc1baaf4be77277eef1ed5a197896ebdcf4771a3a79e5a6d97b2f",
+    "packages/validation/test/schema-cases.ts": "788d4cba59fbe031b1e7ec9484d89cd56b0b1a85977d32ceb0dc1848b2bf1e45",
+    "packages/validation/test/schemas.spec.ts": "77b9f98b91d664c376d5aaec5ae4720c43fe15b24c659ed1a4ac1ed9f97aea14",
+    "packages/validation/test/boundaries.spec.ts": "e62abd12ca40b5bc3ca0d22aefc941694904dea3bc39ea48f7861a7e4c7f6b4c",
+    "packages/validation/test/contracts.typecheck.ts": "aa1cbf1487a6f3b1227f7e08b236fa38980fd468459809dc03bb31d2570eb613"
+  },
+  "dependency_sha256": {
+    "apps/api/src/shared/http/validation.ts": "f59e1546fa67f1b7fa95d43ee6bf24a8ef9ba7648e33355c29cc64c90c2c7881",
+    "modules/user-management/infra/http/validation/auth.schema.ts": "7306bdd7db177cda1aefa1a4bd60502013f21c94389b8c2fb621dd4951ad4e1f",
+    "modules/user-management/infra/http/validation/profile.schema.ts": "439e561decbb9886e3ea6132ba46017de6d3509d606466113b0ffc74ddc4ac1c",
+    "modules/user-management/infra/http/validation/address.schema.ts": "285c2df01c5e11e63d3570d51e8eb5cb990a2f8324cc312b82cd2862c8b77759",
+    "modules/user-management/infra/http/validation/payment-method.schema.ts": "317cb683fcda53ab1f447d2ce2648de7e4e825ea15dfd3d7cf7fe2023c258975",
+    "modules/user-management/domain/constants/user-management.constants.ts": "0ec8c5380a56ce047c02ecb8d91e24fce0a738e9581a759e095dd81ec0734afc",
+    "modules/user-management/domain/value-objects/address-type.vo.ts": "0615e5d34065ec7c5e8f2ae02ef322f49eae3d83466b3e17cd4f9e465b225cbd",
+    "modules/user-management/domain/value-objects/payment-method-type.vo.ts": "ea170ed6ab9d06bcdc4c5de8815f45e75abc6b0a21c4935892f1f753c6d5f455",
+    "modules/loyalty/infra/persistence/repositories/loyalty-account.repository.impl.ts": "0a3da3b7d6735cdb1516bd1439d7ba60cf501fb86d8e4eb723a97b3af25b7a2d",
+    "apps/web/features/user-management/types.ts": "d5fcb2eaf102416d0660d12f95991bc224a0d09173d9a75b98103fbc2de36212",
+    "apps/web/features/user-management/components/PaymentMethodsList.tsx": "67182458907827ac56103d672dc29b1ec782e0c3bdc76367ab83942c91d55ff4"
+  },
+  "remaining_findings": [
+    {
+      "id": "P03-BCRYPT-BYTE-LIMIT",
+      "status": "open",
+      "scope": "Preserved 128-character transport contract does not resolve existing bcrypt 72-byte truncation/legacy credential policy. Keep shared auth source open for strict audit closure pending P03 integration review."
+    },
+    {
+      "id": "P14-PAYMENT-VOCABULARY",
+      "status": "open",
+      "scope": "Storefront local types still use CARD/PAYPAL/STRIPE_IDEAL and PaymentMethodsList checks CARD, whereas server wire uses lowercase values. No shared enum consumers changed and no complete frontend-flow correction is claimed."
+    }
+  ],
+  "limits": [
+    "All package declarations and tests read/reviewed; nine target files close, shared auth source stays open for its password-policy integration dependency. P01 and the full backend audit remain open.",
+    "Passing parity/schema cases prove the current transport contract; they do not certify authentication, token verification, authorization, reference ownership, expiry-in-the-past policy or database transactions.",
+    "Profile currency syntax versus core allowlist, broad UUID syntax versus domain support and other domain constraints remain owning-module validation concerns. No currency, age, country-membership, provider or UUID-version policy invented.",
+    "Existing permissive query coercion, defaultlessness and unknown-key stripping are preserved; no runtime maximum/default policy was globally changed.",
+    "New boundary tests are synthetic/inert. No claim of a demonstrated live endpoint exploit or end-to-end storefront fix.",
+    "No schema/migration/dependency/persistence/provider changes. DB/provider suites not repeated; prior PostgreSQL 47-group baseline remains historical. Broad backend coverage not remeasured; P15 build/bootstrap checks remain open."
+  ]
+}

@@ -38,7 +38,7 @@ export const updateProfileRequestSchema = z.object({
 
 // ─── Address ────────────────────────────────────────────────────────────────
 
-export const addressTypeEnum = z.enum(["SHIPPING", "BILLING"]);
+export const addressTypeEnum = z.enum(["billing", "shipping"]);
 
 export const addAddressRequestSchema = z.object({
   type: addressTypeEnum,
@@ -59,7 +59,7 @@ export const updateAddressRequestSchema = addAddressRequestSchema.partial();
 
 // ─── Payment method ─────────────────────────────────────────────────────────
 
-export const paymentMethodTypeEnum = z.enum(["CARD", "WALLET", "BANK_TRANSFER", "COD"]);
+export const paymentMethodTypeEnum = z.enum(["card", "wallet", "bank", "cod", "gift_card"]);
 
 export const addPaymentMethodRequestSchema = z.object({
   type: paymentMethodTypeEnum,

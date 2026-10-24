@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { updateProfileRequestSchema } from "../user";
 
 const PASSWORD_MIN = 8;
 const PASSWORD_MAX = 128;
@@ -82,16 +83,15 @@ export const resendVerificationRequestSchema = z.object({
   email: z.string().email(),
 });
 
-export { updateProfileRequestSchema } from "../user";
-import { updateProfileRequestSchema } from "../user";
+export { updateProfileRequestSchema };
 
 export const changeEmailRequestSchema = z.object({
   newEmail: z.string().email(),
-  password: z.string().min(1),
+  password: z.string().min(1).max(PASSWORD_MAX),
 });
 
 export const deleteAccountRequestSchema = z.object({
-  password: z.string().min(1),
+  password: z.string().min(1).max(PASSWORD_MAX),
 });
 
 // ─── Form-level schemas (extend wire schemas with UI-only fields) ───────────

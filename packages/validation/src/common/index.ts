@@ -17,7 +17,8 @@ export const paginatedResponseShape = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     items: z.array(item),
     total: z.number().int().nonnegative(),
-    limit: z.number().int().positive(),
+    // Unbounded repository queries report a zero limit when no rows match.
+    limit: z.number().int().nonnegative(),
     offset: z.number().int().nonnegative(),
     hasMore: z.boolean(),
   });
