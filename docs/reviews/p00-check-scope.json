@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1386
+      "localSourceFiles": 1387
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1296,6 +1296,15 @@
     },
     {
       "file": "apps/api/test/unit/expiry-restock-clis.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/http-contracts.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],

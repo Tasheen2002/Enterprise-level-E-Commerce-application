@@ -153,5 +153,10 @@
     "evidence": "p01-uuid-nominal-verification.json",
     "result": "246 focused/950 full unit cases pass; all 42 wrappers nominally separated; historical source hashes/coverage above retained, not rewritten",
     "remaining": "HTTP field-detail policy and full consumer/module review remain open"
+  },
+  "latest_http_field_revalidation": {
+    "date": "2026-10-26",
+    "evidence": "p01-http-verification.json",
+    "result": "Canonical DomainValidationError nonempty field metadata now reaches optional details through helper/plugin response schemas; prior report retained as historical baseline. Whole-route policy remains open."
   }
 }

@@ -1,0 +1,287 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "3d0208fe58f4745892c12355906868eedd72d3d3",
+  "findings": [
+    {
+      "id": "P01-24",
+      "severity": "P2",
+      "problem": "Zod issue paths matching inherited Object properties caused .push failures; unknown Prisma codes matching inherited properties produced envelopes with missing status/message.",
+      "change": "Use a prototype-free field accumulator and own-property-only Prisma lookup. Preserve repeated messages, nested/root path convention, known database mappings and generic server redaction.",
+      "limit": "Synthetic reserved-field and Prisma-code reproducers. No claim of Object.prototype mutation, client-controlled Prisma codes or a demonstrated real endpoint exploit."
+    },
+    {
+      "id": "P01-25",
+      "severity": "P2",
+      "problem": "Canonical DomainValidationError.field was discarded by the generic HTTP serializer.",
+      "change": "Expose nonempty canonical domain fields as details[field]=[message] only for client errors. Keep existing public message/code; do not copy arbitrary error fields or server-error metadata.",
+      "compatibility": "Additive optional details field, matching the existing error envelope and API-client detail contract. No DTO, status or message changes."
+    },
+    {
+      "id": "P01-26",
+      "severity": "P3",
+      "problem": "Async Fastify validation hooks accepted general Zod schemas but used synchronous parse; async refinements threw instead of validating. Three hooks and command/query failure responses duplicated logic.",
+      "change": "One shared parseAsync hook selected by body/query/params; preserve parsed output replacement, 400 envelopes and propagation of non-validation exceptions. One private command/query failure mapper retains log labels/status/redaction/detail behavior.",
+      "limit": "No current async refinement caller found. This extends helper capability rather than repairing a demonstrated existing endpoint. JSON Schema remains a structural approximation; documentation now states this explicitly."
+    }
+  ],
+  "baseline": {
+    "passed": 31,
+    "failed": 12,
+    "cases": 43,
+    "failed_cases": [
+      "shared error serialization retains validation messages under the field __proto__ without inherited-property collisions",
+      "shared error serialization retains validation messages under the field constructor without inherited-property collisions",
+      "shared error serialization retains validation messages under the field toString without inherited-property collisions",
+      "shared error serialization retains validation messages under the field hasOwnProperty without inherited-property collisions",
+      "shared error serialization redacts unmapped Prisma code __proto__ as a valid server envelope",
+      "shared error serialization redacts unmapped Prisma code constructor as a valid server envelope",
+      "shared error serialization redacts unmapped Prisma code toString as a valid server envelope",
+      "shared error serialization retains canonical domain field details: 'EMPTY_FIELD'",
+      "shared error serialization retains canonical domain field details: 'INVALID_FORMAT'",
+      "body/query/parameter validation hooks supports asynchronous body schema refinement",
+      "body/query/parameter validation hooks supports asynchronous query schema refinement",
+      "body/query/parameter validation hooks supports asynchronous params schema refinement"
+    ],
+    "additional_after_baseline": "Two later cases verify reserved field names through actual response serialization and message-less result failure defaults; total new runtime cases 45. First post-fix focused run passed 85 with one uncovered message fallback branch; final 87 focused pass with 100% targeted branches."
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/shared/http/error-response.ts",
+      "apps/api/src/shared/http/validation.ts",
+      "apps/api/src/shared/http/response-schemas.ts",
+      "apps/api/src/shared/response.helper.ts",
+      "apps/api/src/plugins/error.ts",
+      "apps/api/test/unit/http-contracts.spec.ts"
+    ],
+    "supporting_reads": "Existing core-error HTTP, CQRS-result HTTP and shared-foundation suites; canonical domain and command/query/result-error definitions; shared pagination schema; helper/client wire contracts. Static validation/schema/helper callers traced, with representative newsletter route/schema/validator, checkout schema/controller and webhook unauthorized usage inspected. This is not every owning module or endpoint review.",
+    "preserved": "Known Prisma P2002=409, P2025=404, P2003=400; existing sanitized Prisma validation error=400; default client result failure=400; server message/details redaction; query null=>404 only when a not-found message is supplied, otherwise payload-free acknowledgement; false/zero payloads and 204 empty responses; existing success/error/action/pagination schema shapes.",
+    "deduplication": "Body/query/params use one validation implementation. Command/query failed results use one private response implementation, retaining separate log labels. Error plugin and ResponseHelper.error already share serializeError; their logging responsibilities remain."
+  },
+  "verification": {
+    "new_runtime_cases": 45,
+    "focused_cases": 87,
+    "focused_files": 4,
+    "full_unit_cases": 1286,
+    "full_unit_files": 100,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 70,
+          "covered": 70,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 74,
+          "covered": 74,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 27,
+          "covered": 27,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 80,
+          "covered": 80,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/plugins/error.ts": {
+        "lines": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/response.helper.ts": {
+        "lines": {
+          "total": 27,
+          "covered": 27,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 12,
+          "covered": 12,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 29,
+          "covered": 29,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 37,
+          "covered": 37,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/http/error-response.ts": {
+        "lines": {
+          "total": 15,
+          "covered": 15,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 16,
+          "covered": 16,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 37,
+          "covered": 37,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/http/response-schemas.ts": {
+        "lines": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/http/validation.ts": {
+        "lines": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Five exact targets only: 70 lines, 74 statements, 27 functions and 80 branches at 100%. No whole-backend or per-endpoint coverage claim.",
+    "cases": "Prototype-named/repeated/nested/root issues; known/unmapped Prisma errors; unexpected ordinary thrown values and client defaults; canonical domain field transport through both helper/plugin with response schemas; three hooks normalizing/stripping input, validation failures stopping handlers, programming failures propagating, async refinements; representative generated schema with preValidation/preHandler/default/coercion paths; created/action/data/page/204/error serializers; default/client/server command/query failures, absent query results and zero payload; convenience helpers and plugin not-found.",
+    "checks": {
+      "root_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Focused four suites with --testTimeout=15000 and five exact coverage include paths",
+      "Full unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "Root tsc --noEmit",
+      "Focused ESLint and Prettier; diff --check",
+      "Static test/route candidate and compiler membership refresh; maps are not execution proof"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/shared/http/error-response.ts": "4f23d312de6e08b7924f1a7e21419ef373dc40753816a08e8682cc9d33404f9a",
+    "apps/api/src/shared/http/validation.ts": "1de533779636021b62b5e091c92821b225e7477301c26c1ff8d5be749b47150f",
+    "apps/api/src/shared/http/response-schemas.ts": "84c92a539c38c404416271eb0caacbf075b8794f4c69afe5a8e1cbab5df358bd",
+    "apps/api/src/shared/response.helper.ts": "cbfa01b47096ff9d883d6a5024df176492af3feb7ba87e0efc750e5f8af591e3",
+    "apps/api/src/plugins/error.ts": "0002211a85fa586f584cf26df138be600a3f7ddfc97291d32a8f13f4693a352e",
+    "apps/api/test/unit/http-contracts.spec.ts": "70d42382c734054ed0a7ea7ac09018557ec6055b92e1bda63c1472a705a5df43"
+  },
+  "dependency_sha256": {
+    "packages/core/src/domain/domain-error.ts": "aaca075a1e3cf4bc59ad14488349d7727056621668681daee11098d5e37c3c8c",
+    "packages/core/src/application/command-result.ts": "f30c0a000579a4e2778dbb4903abf9632004aa41925f6707b077dc2611de3595",
+    "packages/core/src/application/query-result.ts": "1a1ad319201a68164b20bd225b13a608e9a790751224e2839fa8bd9b803184e2",
+    "packages/core/src/application/result-error.ts": "f623a8c297ada95068900cb9ed601b0e26ef99816f7574aea5a1f062a6126a83",
+    "packages/validation/src/common/index.ts": "d22b4d082da25a04b03c341705a814310ebeab905c9b9eaaef58135bbd8db79c",
+    "modules/cart/infra/http/validation/checkout.schema.ts": "0b96542f3438b9079660098ff4d1d3e4a0118cf00cdaa3147264a0d4d23f5aa2",
+    "modules/cart/infra/http/controllers/checkout.controller.ts": "cc949480bd9557dc5116c25e59d8804c358e6657339a7a037bf491f10b45573f",
+    "modules/engagement/infra/http/routes/newsletter.routes.ts": "239b3ecdde83615be11e817af8fff5a4165678b60fb387efd84a77fc67eeeb89",
+    "modules/engagement/infra/http/validation/newsletter.schema.ts": "e5026a1bdc7639aa1bc6901aa82b73390f588d6b3b3272a6d7d7f907c279d5c6",
+    "modules/engagement/infra/http/validation/validator.ts": "593bcb82a993a83e4607ead5503486a2a552bd089d3600dabeddcb4f282b7f6b",
+    "modules/payment/infra/http/controllers/stripe-webhook.controller.ts": "e2a6587840a15d395219449c15bb929517867143677f94f9f78551c73b088336"
+  },
+  "open_followups": [
+    {
+      "id": "P01-HTTP-ROUTE-PARITY",
+      "scope": "Every route still needs actual schema/hook/DTO/serializer/authorization and database-backed behavior verification. Generated JSON Schema omits custom refinement semantics and may see transformed input or AJV-coerced/stripped input depending on hook ordering. Representative schemas do not certify every conversion."
+    },
+    {
+      "id": "P01-HTTP-401-CALLERS",
+      "scope": "Generic unauthorized/result/error helpers do not select an authentication challenge. Checkout bearer and webhook-signature callers have different mechanisms; determine scheme/status/challenge in the owning route/module review. Prior required-auth middleware challenge fix is retained."
+    },
+    {
+      "id": "P01-HTTP-ERROR-POLICY",
+      "scope": "PrismaClientValidationError retains current sanitized 400 behavior; review owning persistence boundaries before reclassifying. Generic fallback and unknown exception objects with hostile getters/proxies, log-field redaction and global not-found reflected URL policy require further hardening review. Ordinary error redaction is verified here; arbitrary hostile object safety is not certified."
+    }
+  ],
+  "limits": [
+    "No live SQL, provider or full application bootstrap executed. Prisma exception instances are constructed synthetic fixtures; there is no database-operation proof.",
+    "Targeted 100% coverage does not close endpoint parity, operational logging, arbitrary untrusted exception objects or owning authentication policies. P01 remains open.",
+    "Only response-schema factories and new fixture close at current hashes. Error serializer, validation, response helper and error plugin remain open for listed policy/integration gates."
+  ]
+}

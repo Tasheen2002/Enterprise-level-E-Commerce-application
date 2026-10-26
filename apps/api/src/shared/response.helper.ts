@@ -70,17 +70,7 @@ export class ResponseHelper {
       }
       return ResponseHelper.success(reply, statusCode ?? 200, successMessage, result.data);
     }
-    const failureStatus = result.statusCode === undefined ? 400 : errorStatus(result.statusCode);
-    if (failureStatus >= 500) reply.log.error({ message: result.error }, "Command failed");
-    return reply.status(failureStatus).send({
-      success: false,
-      statusCode: failureStatus,
-      message:
-        failureStatus >= 500 ? "An unexpected error occurred" : (result.error ?? "Request failed"),
-      ...(failureStatus < 500 && result.errors && result.errors.length > 0
-        ? { details: { _root: result.errors } }
-        : {}),
-    });
+    return ResponseHelper.resultFailure(reply, result, "Command failed");
   }
 
   // Handles QueryResult directly — maps success/failure to the correct HTTP response
@@ -96,8 +86,16 @@ export class ResponseHelper {
       }
       return ResponseHelper.ok(reply, successMessage, result.data ?? undefined);
     }
+    return ResponseHelper.resultFailure(reply, result, "Query failed");
+  }
+
+  private static resultFailure(
+    reply: FastifyReply,
+    result: CommandResult<unknown> | QueryResult<unknown>,
+    logMessage: string,
+  ): FastifyReply {
     const failureStatus = result.statusCode === undefined ? 400 : errorStatus(result.statusCode);
-    if (failureStatus >= 500) reply.log.error({ message: result.error }, "Query failed");
+    if (failureStatus >= 500) reply.log.error({ message: result.error }, logMessage);
     return reply.status(failureStatus).send({
       success: false,
       statusCode: failureStatus,

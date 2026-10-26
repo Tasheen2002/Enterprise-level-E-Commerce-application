@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { DomainValidationError } from "../../../../../packages/core/src/domain/domain-error";
 
 export interface ErrorEnvelope {
   success: false;
@@ -17,7 +18,7 @@ export function errorStatus(value: unknown, fallback = 500): number {
 
 export function serializeError(error: unknown): ErrorEnvelope {
   if (error instanceof ZodError) {
-    const details: Record<string, string[]> = {};
+    const details: Record<string, string[]> = Object.create(null);
     for (const issue of error.issues)
       (details[issue.path.join(".") || "_root"] ??= []).push(issue.message);
     return {
@@ -34,7 +35,9 @@ export function serializeError(error: unknown): ErrorEnvelope {
       P2025: [404, "Resource not found"],
       P2003: [400, "Invalid reference to related resource"],
     } as const;
-    const known = mapped[error.code as keyof typeof mapped];
+    const known = Object.hasOwn(mapped, error.code)
+      ? mapped[error.code as keyof typeof mapped]
+      : undefined;
     if (known) return { success: false, statusCode: known[0], message: known[1], code: error.code };
   }
   if (error instanceof Prisma.PrismaClientValidationError)
@@ -64,5 +67,11 @@ export function serializeError(error: unknown): ErrorEnvelope {
         : typeof candidate.code === "string"
           ? candidate.code
           : undefined,
+    ...(statusCode < 500 &&
+    error instanceof DomainValidationError &&
+    typeof error.field === "string" &&
+    error.field.length > 0
+      ? { details: { [error.field]: [error.message] } }
+      : {}),
   };
 }

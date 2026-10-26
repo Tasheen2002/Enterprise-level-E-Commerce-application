@@ -1,9 +1,9 @@
 {
   "date": "2026-10-26",
-  "passed_tests": 1241,
+  "passed_tests": 1286,
   "failed_tests": 0,
-  "passed_files": 99,
-  "coverage_scope": "Full default-timeout unit subset after rate-limiter changes. Broad coverage not remeasured; rate-limiter-only coverage recorded separately.",
+  "passed_files": 100,
+  "coverage_scope": "Full default-timeout unit subset after shared HTTP changes; broad coverage not remeasured. Five-target coverage separate.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -3262,6 +3262,192 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/http-contracts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "shared error serialization retains validation messages under the field __proto__ without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains validation messages under the field constructor without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains validation messages under the field toString without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains validation messages under the field hasOwnProperty without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains validation messages under the field _root without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains validation messages under the field items.0.name without inherited-property collisions",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization groups nested array and root issues without exposing inputs",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unmapped Prisma code __proto__ as a valid server envelope",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unmapped Prisma code constructor as a valid server envelope",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unmapped Prisma code toString as a valid server envelope",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unmapped Prisma code P9999 as a valid server envelope",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization maps Prisma code P2002 without database metadata",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization maps Prisma code P2025 without database metadata",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization maps Prisma code P2003 without database metadata",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains the current sanitized Prisma validation-error policy",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value null",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value undefined",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value \"private\"",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value 12",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value {}",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value {\"statusCode\":200}",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization redacts unexpected thrown value {\"statusCode\":500,\"code\":\"private\",\"message\":\"private\"}",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization uses safe client defaults and retains explicit client codes",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains canonical domain field details: 'EMPTY_FIELD'",
+          "status": "passed"
+        },
+        {
+          "title": "shared error serialization retains canonical domain field details: 'INVALID_FORMAT'",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks parses and replaces body with normalized output",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks parses and replaces query with normalized output",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks parses and replaces params with normalized output",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks returns a structured 400 and stops the handler for invalid body",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks returns a structured 400 and stops the handler for invalid query",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks returns a structured 400 and stops the handler for invalid params",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks propagates programming failures in body transforms",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks propagates programming failures in query transforms",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks propagates programming failures in params transforms",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks supports asynchronous body schema refinement",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks supports asynchronous query schema refinement",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks supports asynchronous params schema refinement",
+          "status": "passed"
+        },
+        {
+          "title": "body/query/parameter validation hooks keeps representative generated schemas compatible with Zod before and after Fastify validation",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers serializes reserved validation field names through the error response schema",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers uses the safe fallback when a failure result has no message or details",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers preserves payloads, action acknowledgements, pagination and empty responses",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers retains client failure details and redacts command server failures",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers retains client failure details and redacts query server failures",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers retains query absence semantics and falsy payloads",
+          "status": "passed"
+        },
+        {
+          "title": "response helpers through Fastify serializers preserves convenience error helpers and canonical plugin not-found handling",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/inventory-stock-inspection.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5186,6 +5372,68 @@
       ]
     },
     {
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should update product title successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5352,63 +5600,55 @@
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "title": "User Aggregate Root should create a standard customer user successfully",
           "status": "passed"
         },
         {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should update product title successfully",
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "title": "User Aggregate Root should throw an error if names exceed max length",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should archive a product and record archived event",
+          "title": "User Aggregate Root should not record email changed event if email is the same",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "title": "User Aggregate Root should set email verified and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
+          "status": "passed"
+        },
+        {
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
@@ -5505,60 +5745,6 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
