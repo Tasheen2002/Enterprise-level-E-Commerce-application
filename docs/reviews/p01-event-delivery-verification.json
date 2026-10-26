@@ -214,5 +214,10 @@
     "Database commit and delivery remain separate. Real PostgreSQL proves the documented failure boundary, not atomic outbox/reliable messaging or whole-cart integration.",
     "The stock.added subscriber catches its own failures, so the bus can only treat the resolved handler as success. Existing P10 restock/simulated-provider review remains open.",
     "Missing-bus discard behavior is retained; composition must verify required buses/subscribers are actually wired. Full file/module closure remains pending these dependent checks."
-  ]
+  ],
+  "latest_persistence_revalidation": {
+    "date": "2026-10-26",
+    "evidence": "p01-persistence-verification.json",
+    "result": "Unchanged base/event/aggregate implementation revalidated in 47-case focused unit subset; no new real PostgreSQL execution. Historical 47-group DB evidence above remains separate."
+  }
 }

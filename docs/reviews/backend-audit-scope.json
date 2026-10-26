@@ -1,12 +1,12 @@
 {
   "date": "2026-10-26",
-  "commit": "3d0208fe58f4745892c12355906868eedd72d3d3",
+  "commit": "74704fdb687662fdac9e5b51820db908e7635a13",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1841,
-  "backend_review_scope_files": 1519,
+  "candidate_files": 1844,
+  "backend_review_scope_files": 1521,
   "scope_counts": {
-    "audit-record": 77,
-    "backend": 1393,
+    "audit-record": 78,
+    "backend": 1395,
     "backend-support": 65,
     "excluded-frontend": 245,
     "frontend-boundary": 61
@@ -14,7 +14,7 @@
   "area_counts": {
     ".github": 1,
     "apps/admin": 18,
-    "apps/api": 56,
+    "apps/api": 58,
     "apps/web": 43,
     "modules/analytics": 23,
     "modules/cart": 109,
@@ -40,7 +40,7 @@
   },
   "phase_counts": {
     "P00": 65,
-    "P01": 121,
+    "P01": 123,
     "P02": 13,
     "P03": 155,
     "P04": 226,
@@ -63,11 +63,11 @@
     "migration-or-sql": 13,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1204,
-    "test": 140
+    "test": 142
   },
   "closure_counts": {
-    "open": 1382,
-    "closed": 137
+    "open": 1381,
+    "closed": 140
   },
   "removed_files_requiring_verification": [],
   "unclassified_files": [],

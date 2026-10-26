@@ -1,0 +1,196 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "74704fdb687662fdac9e5b51820db908e7635a13",
+  "findings": [
+    {
+      "id": "P01-27",
+      "severity": "P2",
+      "problem": "Pagination helper forwarded zero/negative/fractional/nonfinite/unsafe integer pagination values to delegates.",
+      "change": "Require positive safe-integer limit and nonnegative safe-integer offset before either query starts; retain defaults limit=50, offset=0.",
+      "limit": "No active helper callers found, so this is a latent exported-helper contract defect, not a demonstrated exposed endpoint failure. No maximum page size or business repository policy was invented."
+    },
+    {
+      "id": "P01-28",
+      "severity": "P3",
+      "problem": "The helper used any for model and query fields, so model/query/mapper mismatches compiled. Shared PaginationOptions also exposed sorting fields that this helper ignored.",
+      "change": "Typed delegate/query contract with PromiseLike support, query literal inference and mapper record shape checked against the selected result. Narrow options to limit/offset; ordering stays in queryOptions.orderBy.",
+      "verification": "Generated user delegate with id projection/status filter/order and inventoryStock delegate compile. Three negative contracts require rejection of nonexistent mapper fields, nonexistent select fields and an existing email field omitted by select. No client is instantiated."
+    }
+  ],
+  "baseline": {
+    "passed": 10,
+    "failed": 11,
+    "cases": 21,
+    "failed_cases": [
+      "shared pagination helper rejects 'limit=0' before executing either query",
+      "shared pagination helper rejects 'limit=-1' before executing either query",
+      "shared pagination helper rejects 'limit=1.5' before executing either query",
+      "shared pagination helper rejects 'limit=NaN' before executing either query",
+      "shared pagination helper rejects 'limit=Infinity' before executing either query",
+      "shared pagination helper rejects 'limit=9007199254740992' before executing either query",
+      "shared pagination helper rejects 'offset=-1' before executing either query",
+      "shared pagination helper rejects 'offset=1.5' before executing either query",
+      "shared pagination helper rejects 'offset=NaN' before executing either query",
+      "shared pagination helper rejects 'offset=Infinity' before executing either query",
+      "shared pagination helper rejects 'offset=9007199254740992' before executing either query"
+    ],
+    "type_iteration": "Initial fixture used incorrect isActive, stock and stockId names; corrected after inspecting actual schema to status=active, inventoryStock and variantId. Initial generic inference widened projected user records and treated absent where as unknown. Final contract uses mapper-driven record inference and conditional where typing, and both focused/root compilers pass. No pre-change compiler-failure count is claimed."
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/shared/infrastructure/persistence/index.ts",
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts",
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.helper.ts",
+      "apps/api/test/unit/persistence-helper.spec.ts",
+      "apps/api/test/unit/persistence-helper.typecheck.ts"
+    ],
+    "dependency_reads": "Complete prior repository-event-dispatch fixture, aggregate root and pagination interfaces; representative reservation save and loyalty-program save/list snippets, not full repository files. Static base import callers traced across business modules. Whole-repository search finds helper declaration/export and new tests only, no active application call.",
+    "preserved": "Default page size/offset, findMany projection/filter/order/include forwarding, count filter, Promise.all concurrency, mapper order and failure propagation; facade identities. Base dispatch code unchanged: no-bus discard, success snapshot clear, failure retention and events appended during delivery remain as previously documented.",
+    "scope_decision": "Do not replace module-specific pagination implementations blindly. Their ordering/filtering/limit conventions and transaction contexts belong to owning-module reviews. Query/count are independent reads, not a consistent snapshot; no transactions/outbox or business quotas added."
+  },
+  "verification": {
+    "new_runtime_cases": 21,
+    "focused_cases": 47,
+    "focused_files": 4,
+    "full_unit_cases": 1307,
+    "full_unit_files": 101,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 16,
+          "covered": 16,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": "Unknown"
+        }
+      },
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts": {
+        "lines": {
+          "total": 9,
+          "covered": 9,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/infrastructure/persistence/prisma-repository.helper.ts": {
+        "lines": {
+          "total": 7,
+          "covered": 7,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 7,
+          "covered": 7,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only pagination helper and repository base: 16 lines, 17 statements, 4 functions, 14 branches at 100%. Index verified by facade identity; type fixture not counted as runtime cases.",
+    "cases": "11 invalid input cases assert neither query executes; defaults, filtering/projection immutability, boundary/empty/offset hasMore results, independent query rejection with no partial mapping, mapper rejection, receiver preservation and facade identities. Existing base/event suites revalidate persistence-before-dispatch, failure retention/retry and events appended during delivery using inert Prisma and actual in-memory bus.",
+    "checks": {
+      "root_tsc": "passed",
+      "focused_type_contract": "passed including three negative projections/model contracts",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Four focused Vitest suites with two exact coverage targets, default timeout",
+      "Full unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "Root tsc --noEmit and focused strict program under root options",
+      "Focused lint/format across three source and two new fixture files",
+      "Static candidate/compiler membership refresh; not execution proof"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/shared/infrastructure/persistence/index.ts": "8f5f1ff84f9b1121c49134fe4ae6deb04c35b17aeca52cfad7c21cf9ca8cb6d5",
+    "apps/api/src/shared/infrastructure/persistence/prisma-repository.base.ts": "a6b985d05cdb0cba952f87923edf9d22bfdc57b35b2f9b2c666452352a6b234f",
+    "apps/api/src/shared/infrastructure/persistence/prisma-repository.helper.ts": "c81b746c97f54f80fea6703af11180f74689b6fff7a21c35a063ee21f32f82a1",
+    "apps/api/test/unit/persistence-helper.spec.ts": "e6d218e38d273897378200c593fd0178dea69624a0764d577cb24a65c4c23f87",
+    "apps/api/test/unit/persistence-helper.typecheck.ts": "41dcdaa4a3ab15cfae70422e4556d048847597571c4b0076a73deb7233cf624b"
+  },
+  "dependency_sha256": {
+    "packages/core/src/domain/aggregate-root.ts": "d41eaec554d621471e09eff67bd1f2a0db050ae7e379143bb72c7ff5f5d0191c",
+    "packages/core/src/domain/events/domain-event.ts": "8d351f9eff071dfd10f2aa9500b918c1265d5ad888f39fe27bbb8e7067171545",
+    "packages/core/src/domain/events/in-memory-event-bus.ts": "2aefc48cd900f6492abb685eec8388bc718896c1f9da2211b76ad2a9943dfd22",
+    "packages/core/src/domain/interfaces/paginated-result.interface.ts": "f2d230c4deaa0ffe55b3e04278bd7acd45ce9e5e8837dfa2164b2db50b914265",
+    "apps/api/test/unit/repository-event-dispatch.spec.ts": "2182b5242d76eef4ce7603147f10b45482304e218826cdb65caa7647d82b211c",
+    "modules/cart/infra/persistence/repositories/reservation.repository.impl.ts": "f2faf01647ef31fd5a92776accc5d57d51c4d5ab2f39259a76634c27d82efcaf",
+    "modules/loyalty/infra/persistence/repositories/loyalty-program.repository.impl.ts": "f6e29913d27af04244b7e5114f863e97c08beeafe20ff2df0bf6a65047d11312"
+  },
+  "open_followups": [
+    {
+      "id": "P01-PERSISTENCE-REAL-DB",
+      "scope": "Helper currently has no active application caller. Validate a real model/filter/projection/count and failure boundary in an owned PostgreSQL lane before integration closure. Delegate fixtures and generated-client compilation do not prove actual SQL behavior."
+    },
+    {
+      "id": "P01-PERSISTENCE-CONSISTENCY",
+      "scope": "Separate page/count reads can observe concurrent changes; deterministic sort and transaction/snapshot needs belong to caller policy. No guarantee added here; no broad migration of business repositories."
+    },
+    {
+      "id": "P01-PERSISTENCE-EVENT-COMPOSITION",
+      "scope": "Required bus/subscriber wiring, missing-bus discard policy and non-atomic persistence/delivery remain open for composition and owning modules. In-memory retry is not durable/exactly-once. Prior 47-group PostgreSQL event boundary evidence remains historical and was not rerun."
+    }
+  ],
+  "limits": [
+    "No real database/provider execution or schema/data changes in this batch. Existing actual repository unit path uses inert Prisma.",
+    "Source helper and base remain open for real persistence/composition gates. Only facade and two fixtures close at current hashes; P01 remains open.",
+    "No change to base/event bus/aggregate implementation, no transaction/outbox, no automatic consolidation of different business repository list methods. Broad coverage not remeasured."
+  ]
+}
