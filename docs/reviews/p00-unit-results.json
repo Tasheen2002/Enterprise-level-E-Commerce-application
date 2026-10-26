@@ -1,9 +1,9 @@
 {
   "date": "2026-10-26",
-  "passed_tests": 1358,
+  "passed_tests": 1368,
   "failed_tests": 0,
-  "passed_files": 104,
-  "coverage_scope": "Full default-timeout unit subset after process lifecycle changes. Four child-process cases are separate; broad coverage not remeasured.",
+  "passed_files": 105,
+  "coverage_scope": "Full default-timeout unit subset after DB plugin changes; six live plugin result groups recorded separately; broad coverage not remeasured.",
   "results": [
     {
       "file": "modules/analytics/test/track-begin-checkout.spec.ts",
@@ -3222,6 +3222,52 @@
       ]
     },
     {
+      "file": "apps/api/test/unit/database-plugin.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "database plugin ownership and datasource uses validated datasource and development logging without eager connection",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource uses validated datasource and test logging without eager connection",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource uses validated datasource and production logging without eager connection",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource refuses missing config plugin dependency before construction",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource refuses an existing client without creating or disconnecting another owner's resource",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource disconnects its client if decoration fails and preserves the registration failure",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource preserves registration failure when disconnect also rejects",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource propagates constructor failure without a decorated client",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource keeps independent server clients isolated",
+          "status": "passed"
+        },
+        {
+          "title": "database plugin ownership and datasource propagates normal close failure without retrying disconnect or logging success",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "apps/api/test/unit/database-test-safety.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5404,6 +5450,26 @@
       ]
     },
     {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5486,83 +5552,179 @@
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
+          "status": "passed"
+        },
+        {
+          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "file": "modules/order-management/test/unit/domain/order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should update order item quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support marking as notified only after release date",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
           "status": "passed"
         },
         {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should support correct transitions",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
           "status": "passed"
-        },
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
+      "status": "passed",
+      "assertions": [
         {
-          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
           "status": "passed"
-        },
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
+      "status": "passed",
+      "assertions": [
         {
-          "title": "Product Aggregate Root should update product title successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should publish a product successfully and record published event",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should unpublish a published product successfully",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should archive a product and record archived event",
-          "status": "passed"
-        },
-        {
-          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
           "status": "passed"
         }
       ]
@@ -5734,179 +5896,117 @@
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should update product title successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
+      "file": "modules/user-management/test/unit/domain/User.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
+          "title": "User Aggregate Root should create a standard customer user successfully",
           "status": "passed"
         },
         {
-          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
+          "title": "User Aggregate Root should create a guest user successfully without a password hash",
           "status": "passed"
         },
         {
-          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
+          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
           "status": "passed"
         },
         {
-          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
+          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
           "status": "passed"
         },
         {
-          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
+          "title": "User Aggregate Root should throw an error if first name or last name is empty",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
+          "title": "User Aggregate Root should throw an error if names exceed max length",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
+          "title": "User Aggregate Root should update email, reset verification status, and record event",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
+          "title": "User Aggregate Root should not record email changed event if email is the same",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
+          "title": "User Aggregate Root should set email verified and emit verified event",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should update order item quantity",
+          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
+          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
           "status": "passed"
         },
         {
-          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support marking as notified only after release date",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should support correct transitions",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
+          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]
@@ -6003,60 +6103,6 @@
         },
         {
           "title": "VerifyEmailHandler should throw InvalidVerificationTokenError when verification token is invalid",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/user-management/test/unit/domain/User.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "User Aggregate Root should create a standard customer user successfully",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should create a guest user successfully without a password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw InvalidPasswordError when creating standard user with empty password hash",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error for invalid email formats on creation",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if first name or last name is empty",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should throw an error if names exceed max length",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should update email, reset verification status, and record event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should not record email changed event if email is the same",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set email verified and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should set phone verified, update number, and emit verified event",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should enable and disable 2FA, recording appropriate events",
-          "status": "passed"
-        },
-        {
-          "title": "User Aggregate Root should change password hash and record password changed event",
           "status": "passed"
         }
       ]

@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1394
+      "localSourceFiles": 1396
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,11 +35,11 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 937
+      "localSourceFiles": 938
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 937
+      "localSourceFiles": 938
     }
   ],
   "commands": {
@@ -1314,6 +1314,15 @@
     },
     {
       "file": "apps/api/test/unit/database-operation.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/database-plugin.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],
@@ -16926,6 +16935,17 @@
     },
     {
       "file": "scripts/review/check-audit-database.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "scripts/review/check-db-plugin.ts",
       "compilerPrograms": [
         "tsconfig.json",
         "tsconfig.tooling.json",

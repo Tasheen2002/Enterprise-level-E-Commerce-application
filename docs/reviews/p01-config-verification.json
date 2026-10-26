@@ -205,5 +205,10 @@
     "date": "2026-10-26",
     "evidence": "p01-process-verification.json",
     "result": "Listen cleanup, single-flight signal ownership and process exit fixtures verified separately; original config/factory evidence retained. Native delivery/full real composition remain open."
+  },
+  "latest_datasource_revalidation": {
+    "date": "2026-10-26",
+    "evidence": "p01-db-verification.json",
+    "result": "Plugin now explicitly consumes config.DATABASE_URL; real owned-DB query defeats conflicting ambient URL and confirms session cleanup. Other config/deployment/full-composition gates remain open."
   }
 }

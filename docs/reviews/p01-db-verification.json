@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "24d4ca72723e395e074f26e79a4fb10ab0b29ba8",
+  "findings": [
+    {
+      "id": "P01-35",
+      "severity": "P2",
+      "problem": "PrismaClient lacked an explicit datasource and could consume ambient DATABASE_URL rather than validated Fastify configuration.",
+      "change": "Pass fastify.config.DATABASE_URL through the generated client datasources.db.url option.",
+      "verification": "Constructor contract across three modes and real SQL against an owned empty database despite a conflicting refused-port ambient URL. This resolves the previously recorded plugin datasource snapshot gap, not every raw process.env consumer."
+    },
+    {
+      "id": "P01-36",
+      "severity": "P2",
+      "problem": "Construction preceded decoration and cleanup-hook registration; failed decoration could leave the created client without its cleanup owner.",
+      "change": "Install cleanup first, use one disconnect promise for registration failure and onClose, log secondary cleanup failure while preserving the original registration rejection.",
+      "verification": "Injected decoration and disconnect failures assert one cleanup attempt and primary-error retention; real sessions disappear after normal close. No claim that a live connection was always opened by constructor, which remains lazy."
+    },
+    {
+      "id": "P01-37",
+      "severity": "P3",
+      "problem": "Config ordering was implicit and existing Prisma decorators were rejected only after another client was constructed.",
+      "change": "Declare Fastify config dependency/decorator metadata and reject an existing client before allocation without disconnecting another owner.",
+      "limit": "Normal server registration already ordered config before DB. This makes the plugin contract explicit; no exposed endpoint exploit is claimed."
+    }
+  ],
+  "baseline": {
+    "passed": 3,
+    "failed": 7,
+    "cases": 10,
+    "failed_cases": [
+      "database plugin ownership and datasource uses validated datasource and development logging without eager connection",
+      "database plugin ownership and datasource uses validated datasource and test logging without eager connection",
+      "database plugin ownership and datasource uses validated datasource and production logging without eager connection",
+      "database plugin ownership and datasource refuses missing config plugin dependency before construction",
+      "database plugin ownership and datasource refuses an existing client without creating or disconnecting another owner's resource",
+      "database plugin ownership and datasource disconnects its client if decoration fails and preserves the registration failure",
+      "database plugin ownership and datasource preserves registration failure when disconnect also rejects"
+    ],
+    "iterations": "First post-fix focused run 30 pass/1 fail because Fastify reports its missing decorator check before its dependency check; test now accepts either explicit config contract error. Initial probe depended on a missing legacy audit_test role and failed creation (P2010/42704); three attempts were restored to the original stopped container state, with no successful new DB creation. Final probe creates/removes its own restricted role and DB. Initial new-probe lint flagged throw statements inside finally; cleanup now records failures without unsafe-finally throws. Final checks pass."
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/plugins/db.ts",
+      "apps/api/test/unit/database-plugin.spec.ts",
+      "scripts/review/check-db-plugin.ts"
+    ],
+    "caller_trace": "Actual server config-before-DB registration and factory failure cleanup traced; config parser and existing operational-database guards inspected; representative existing disposable-container harness setup/cleanup inspected. Sole application db plugin registration is server.ts. This is not a full container/service/repository review.",
+    "preserved": "Prisma remains lazy: no eager connect/query during plugin registration. Development error/warn versus other-mode error log selection retained. Readiness still owns availability checking. No schema, pool, timeout, retry, migration, TLS or business query behavior changed.",
+    "ownership": "One client per registered server; inherited/existing prisma decorator rejected before allocation. Independent servers have independent clients. Disconnect rejection propagates through normal Fastify close; registration cleanup preserves primary failure and does not retry a failed disconnect."
+  },
+  "verification": {
+    "new_runtime_cases": 10,
+    "focused_cases": 31,
+    "focused_files": 3,
+    "full_unit_cases": 1368,
+    "full_unit_files": 105,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": "Unknown"
+        }
+      },
+      "apps/api/src/plugins/db.ts": {
+        "lines": {
+          "total": 14,
+          "covered": 14,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "db.ts only: 14 lines, 17 statements, 4 functions, 4 branches at 100%. No entire DB/repository/composition coverage claim.",
+    "cases": "Three config/log modes, explicit datasource under ambient drift, no eager $connect, missing config, duplicate external client, decoration/cleanup failure ordering, constructor failure, independent clients and normal close rejection. Existing server/process lifecycle suites revalidated.",
+    "postgres": {
+      "date": "2026-10-26",
+      "passed": true,
+      "results": {
+        "lazyBeforeFirstQuery": true,
+        "explicitValidatedDatasourceDespiteAmbient": true,
+        "independentClientOwnership": true,
+        "disconnectReleasesAllTargetSessions": true,
+        "temporaryDatabaseRemoved": true,
+        "temporaryRoleRemoved": true
+      },
+      "initial_container_running": false,
+      "container_state_restored": true,
+      "production_data": "not accessed",
+      "providers": "not called",
+      "scope": "New empty disposable database; actual Prisma plugin raw-query/session lifecycle, no schema migration or business data",
+      "verified_source_sha256": {
+        "apps/api/src/plugins/db.ts": "97746521dd742fa3960f5c93a3be5392e8f8eb1c6ef730d273a3ee3517ac1547",
+        "apps/api/src/plugins/config.ts": "36640889e66a1308a803105d50477ec9c15c41648ef60e591a4a4bdfe2b0ae16",
+        "scripts/review/check-db-plugin.ts": "95f7de0a3a551881b636d47fe94c2134108a2009546abab68fce1e46fb1217aa"
+      }
+    },
+    "checks": {
+      "root_tsc": "passed",
+      "tooling_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Three focused suites --testTimeout=15000 with db.ts-only coverage",
+      "node --import tsx scripts/review/check-db-plugin.ts",
+      "Full unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "Root and tooling tsc --noEmit; focused lint/format",
+      "Static candidate/compiler membership refresh; not execution proof"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/plugins/db.ts": "97746521dd742fa3960f5c93a3be5392e8f8eb1c6ef730d273a3ee3517ac1547",
+    "apps/api/test/unit/database-plugin.spec.ts": "0a8284514d5fbd8cb96e55dcded46c4dbe417f70808aee4f92c55d02c5b0e204",
+    "scripts/review/check-db-plugin.ts": "95f7de0a3a551881b636d47fe94c2134108a2009546abab68fce1e46fb1217aa"
+  },
+  "dependency_sha256": {
+    "apps/api/src/plugins/config.ts": "36640889e66a1308a803105d50477ec9c15c41648ef60e591a4a4bdfe2b0ae16",
+    "apps/api/src/server.ts": "69df7d33f2a6a440a8a6cba97fc0f7da1e99432ef55fdd27de5b36b31ad1c06a",
+    "scripts/testing/operational-database.ts": "b437f37074f9b1cd5c7a717eaef1e263cd95335c508ea0a0f2b5e215e82b7a0c",
+    "scripts/testing/database-safety.ts": "753fa8d660bfe0aacd5c5136333a520901e9e3c0d31280c0fddbdfb6cf40fe49"
+  },
+  "open_followups": [
+    {
+      "id": "P01-DB-PROBE-REFUSAL-MATRIX",
+      "scope": "New guarded audit probe happy path and actual missing-role diagnostic were executed; full malicious/missing-label/mismatched-port/cleanup-failure refusal matrix is not unit-tested. Probe file remains open in audit inventory."
+    },
+    {
+      "id": "P01-COMPOSITION-REAL-INFRA",
+      "scope": "Actual default server/container/module/background/provider composition, database outages through real business routes and lingering references after shutdown remain open. Two direct plugin apps are not full application bootstrap."
+    },
+    {
+      "id": "P02/P15-DATABASE-DEPLOYMENT",
+      "scope": "Migration replay, model constraints/transactions, production grants, TLS, pool sizing/timeouts/retries, deployment drain and provider behavior remain owning-phase work. No new schema synchronization performed."
+    }
+  ],
+  "limits": [
+    "Actual PostgreSQL proof covers raw-query datasource/role selection, lazy session creation, per-instance ownership and session release in a new empty database only. Six result groups are separate from historical 47-group operational checks.",
+    "Temporary restricted role/database removed; originally stopped labelled loopback container restored to stopped. No existing role permissions, production data, schema migrations or providers modified.",
+    "Plugin and unit fixture close at current hashes for bounded plugin behavior; audit probe remains open for refusal-path matrix. P01 and full backend review remain open."
+  ]
+}
