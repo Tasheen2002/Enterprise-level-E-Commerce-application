@@ -7,9 +7,7 @@ import {
   NewsletterSubscription,
   SubscriptionDTO,
 } from "../../domain/entities/newsletter-subscription.entity";
-import {
-  SubscriptionId,
-} from "../../domain/value-objects";
+import { SubscriptionId } from "../../domain/value-objects";
 import { SubscriptionStatusValue } from "../../domain/value-objects/subscription-status.vo";
 import {
   NewsletterSubscriptionNotFoundError,
@@ -17,7 +15,7 @@ import {
 } from "../../domain/errors/engagement.errors";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces";
 import { PrismaClient } from "@prisma/client";
-import { IEmailService } from "../../../user-management/application/services/iemail.service";
+import type { IEmailSender } from "../../../shared/domain/ports/email.service.port";
 
 export interface PaginatedSubscriptionResult {
   items: SubscriptionDTO[];
@@ -31,7 +29,7 @@ export class NewsletterService {
   constructor(
     private readonly subscriptionRepository: INewsletterSubscriptionRepository,
     private readonly prisma?: PrismaClient,
-    private readonly emailService?: IEmailService,
+    private readonly emailService?: IEmailSender,
   ) {}
 
   async subscribe(email: string, source?: string): Promise<SubscriptionDTO> {
@@ -132,7 +130,9 @@ export class NewsletterService {
           text,
           html,
         });
-        console.log(`[NewsletterService] Welcome email with promo code sent successfully to ${email}`);
+        console.log(
+          `[NewsletterService] Welcome email with promo code sent successfully to ${email}`,
+        );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[NewsletterService] Failed to send welcome email to ${email}:`, msg);

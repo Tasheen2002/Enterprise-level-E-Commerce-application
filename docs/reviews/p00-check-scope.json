@@ -1,9 +1,9 @@
 {
-  "date": "2026-10-24",
+  "date": "2026-10-26",
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1380
+      "localSourceFiles": 1382
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -14315,6 +14315,24 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "modules/shared/test/email-adapter.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "modules/shared/test/email-contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": false,
       "generated": false
     },

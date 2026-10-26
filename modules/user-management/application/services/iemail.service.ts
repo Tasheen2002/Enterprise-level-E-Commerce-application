@@ -1,1 +1,4 @@
-export type { IEmailService, SendEmailOptions } from '../../../shared/domain/ports/email.service.port';
+export type {
+  IEmailService,
+  SendEmailOptions,
+} from "../../../shared/domain/ports/email.service.port";

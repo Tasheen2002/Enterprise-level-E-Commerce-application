@@ -422,3 +422,7 @@
 "packages/validation/src/user/index.ts","packages/validation/test/schemas.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
 "packages/validation/test/schema-cases.ts","packages/validation/test/schemas.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
 "apps/api/src/shared/http/validation.ts","packages/validation/test/schemas.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"modules/user-management/infra/security/nodemailer-email.adapter.ts","modules/shared/test/email-adapter.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"modules/user-management/application/commands/resend-verification.command.ts","modules/shared/test/email-adapter.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"modules/user-management/application/services/authentication.service.ts","modules/shared/test/email-adapter.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
+"modules/user-management/application/services/itoken-blacklist.service.ts","modules/shared/test/email-adapter.spec.ts","direct-import-only-not-proof-of-behavior-coverage"
