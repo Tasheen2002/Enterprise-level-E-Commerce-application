@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1385
+      "localSourceFiles": 1386
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1328,6 +1328,15 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/rate-limiter.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {
