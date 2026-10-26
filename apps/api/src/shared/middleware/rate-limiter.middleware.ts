@@ -1,5 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import type { FastifyInstance } from "fastify";
+import { isUnauthorizedError } from "../http/authentication";
 
 export interface RateLimitOptions {
   windowMs: number;
@@ -72,10 +73,7 @@ export function createRateLimiter(options: RateLimitOptions, storeOwner?: Fastif
       try {
         await request.server.authenticate(request);
       } catch (error) {
-        if (
-          !(error && typeof error === "object" && "statusCode" in error && error.statusCode === 401)
-        )
-          throw error;
+        if (!isUnauthorizedError(error)) throw error;
       }
     }
     const owner = storeOwner ?? request.server;

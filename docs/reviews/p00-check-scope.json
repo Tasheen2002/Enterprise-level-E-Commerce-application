@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1382
+      "localSourceFiles": 1385
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -35,11 +35,11 @@
     },
     {
       "config": "tsconfig.tooling.json",
-      "localSourceFiles": 936
+      "localSourceFiles": 937
     },
     {
       "config": "scratch/tsconfig.json",
-      "localSourceFiles": 936
+      "localSourceFiles": 937
     }
   ],
   "commands": {
@@ -983,6 +983,17 @@
       "generated": false
     },
     {
+      "file": "apps/api/src/shared/http/authentication.ts",
+      "compilerPrograms": [
+        "tsconfig.json",
+        "tsconfig.tooling.json",
+        "scratch/tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
       "file": "apps/api/src/shared/http/error-response.ts",
       "compilerPrograms": [
         "tsconfig.json",
@@ -1127,6 +1138,24 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/access-contracts.typecheck.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/access-middleware.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": false,
       "generated": false
     },

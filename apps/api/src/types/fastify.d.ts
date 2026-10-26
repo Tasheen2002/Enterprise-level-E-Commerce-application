@@ -1,12 +1,9 @@
 import "fastify";
+import type { AuthenticatedUser } from "../shared/interfaces/authenticated-request.interface";
 
 declare module "fastify" {
   interface FastifyRequest {
-    user: {
-      userId: string;
-      email: string;
-      role?: string;
-    } | null;
+    user: AuthenticatedUser | null;
     rawBody?: Buffer;
   }
 

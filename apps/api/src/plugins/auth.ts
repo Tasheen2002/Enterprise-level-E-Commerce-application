@@ -4,15 +4,9 @@ import { JwtService } from "../../../../modules/user-management/infra/http/secur
 import { TokenBlacklistService } from "../../../../modules/user-management/infra/http/security/token-blacklist";
 import type { TokenPayload } from "../../../../modules/user-management/application/services/ijwt.service";
 import type { UserRole } from "@prisma/client";
+import type { JWTPayload } from "../shared/interfaces/authenticated-request.interface";
 
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  role?: string;
-  sessionId?: string;
-  updatedAt?: string;
-  createdAt?: string;
-}
+export type { JWTPayload };
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -54,14 +48,15 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.decorate("authenticate", async (request: FastifyRequest) => {
     try {
       const authHeader = request.headers.authorization;
-      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      const match = authHeader?.match(/^Bearer +([A-Za-z0-9._~+/-]+=*)$/i);
+      if (!match) {
         const err = new Error("Missing or invalid authorization header") as Error & {
           statusCode: number;
         };
         err.statusCode = 401;
         throw err;
       }
-      const token = authHeader.substring(7);
+      const token = match[1];
       const payload = fastify.verifyToken(token) as TokenPayload;
       if (fastify.hasDecorator("prisma")) {
         if (!payload.sessionId) throw unauthorized();
