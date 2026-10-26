@@ -200,5 +200,10 @@
     "No real database, provider or full registered-module bootstrap. No schema/data/secret migrations. Broad coverage not remeasured.",
     "Both production files remain partially reviewed/open for listed semantic/real-infrastructure/process gates; only two fixtures close. P01 remains open.",
     "Incomplete Firebase configuration now fails early rather than silently disabling support; all optional values absent still preserves disabled-provider behavior."
-  ]
+  ],
+  "latest_process_revalidation": {
+    "date": "2026-10-26",
+    "evidence": "p01-process-verification.json",
+    "result": "Listen cleanup, single-flight signal ownership and process exit fixtures verified separately; original config/factory evidence retained. Native delivery/full real composition remain open."
+  }
 }

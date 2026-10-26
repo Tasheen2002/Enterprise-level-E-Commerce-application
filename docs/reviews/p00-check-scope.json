@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1391
+      "localSourceFiles": 1394
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1131,6 +1131,15 @@
       "generated": false
     },
     {
+      "file": "apps/api/src/startup.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
       "file": "apps/api/src/types/fastify.d.ts",
       "compilerPrograms": [
         "tsconfig.json",
@@ -1138,6 +1147,15 @@
         "scratch/tsconfig.json"
       ],
       "inRecordedBackendLintRun": true,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/fixtures/api-process.fixture.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": false,
       "generated": false
     },
@@ -1166,6 +1184,15 @@
       ],
       "inRecordedBackendLintRun": false,
       "inConfiguredFormatRoots": true,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/api-process.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
       "generated": false
     },
     {

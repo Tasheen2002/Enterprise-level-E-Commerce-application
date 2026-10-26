@@ -1,10 +1,174 @@
 {
   "date": "2026-10-26",
-  "passed_tests": 1347,
+  "passed_tests": 1358,
   "failed_tests": 0,
-  "passed_files": 103,
-  "coverage_scope": "Full default-timeout unit subset after configuration/server factory changes; broad coverage not remeasured. Two-target coverage separate.",
+  "passed_files": 104,
+  "coverage_scope": "Full default-timeout unit subset after process lifecycle changes. Four child-process cases are separate; broad coverage not remeasured.",
   "results": [
+    {
+      "file": "modules/analytics/test/track-begin-checkout.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "TrackBeginCheckoutHandler should successfully track begin checkout using AnalyticsTrackingService",
+          "status": "passed"
+        },
+        {
+          "title": "TrackBeginCheckoutHandler should fail silently and return success: true even if service throws error",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/customer-care/test/close-ticket.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "CloseTicketHandler should successfully close a ticket using SupportTicketService",
+          "status": "passed"
+        },
+        {
+          "title": "CloseTicketHandler should fail validation if ticketId is missing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/fulfillment/test/remove-shipment-item.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "RemoveShipmentItemCommandHandler should successfully remove an item from a shipment",
+          "status": "passed"
+        },
+        {
+          "title": "RemoveShipmentItemCommandHandler should fail validation if fields are empty",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/shared/test/email-adapter.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "shared email adapter transport lifecycle does not initialize a provider during construction and reuses one SMTP transport",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle forwards configured SMTP settings and sender",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects delivery failures in production",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects delivery failures in test",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects delivery failures in development",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle shares first-use development initialization across concurrent sends",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle shares an initialization failure then allows a new attempt",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle retries transport construction after a synchronous constructor failure",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle keeps a delivery failure observable without automatically resending",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle permits transports without SMTP recipient metadata",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects a partial recipient rejection rather than reporting complete submission",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects an absent SMTP host (undefined) before constructing a transport",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects an absent SMTP host () before constructing a transport",
+          "status": "passed"
+        },
+        {
+          "title": "shared email adapter transport lifecycle rejects an absent SMTP host ( ) before constructing a transport",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries does not log reset messages or preview URLs in development",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries does not log verification messages or preview URLs in development",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries does not log invitation messages or preview URLs in development",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries does not log welcome messages or preview URLs in development",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries uses the primary frontend origin and encoded token for reset",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries uses the primary frontend origin and encoded token for verification",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries retains default frontend links and admin welcome without a security token",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries normalizes the admin welcome origin and escapes invitation HTML values",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries rejects unsupported invitation URLs: javascript:alert(1)",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries rejects unsupported invitation URLs: file:///private",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries rejects unsupported invitation URLs: not a url",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries rejects unsupported invitation URLs: https://user@example.test/path",
+          "status": "passed"
+        },
+        {
+          "title": "email template boundaries rejects unsupported invitation URLs: https://:password@example.test/path",
+          "status": "passed"
+        },
+        {
+          "title": "email failure at an actual command boundary keeps a development failure observable to the resend command caller",
+          "status": "passed"
+        },
+        {
+          "title": "email failure at an actual command boundary does not contact a transport for an already verified user",
+          "status": "passed"
+        }
+      ]
+    },
     {
       "file": "packages/core/test/cqrs-results.spec.ts",
       "status": "passed",
@@ -1576,170 +1740,6 @@
       ]
     },
     {
-      "file": "modules/analytics/test/track-begin-checkout.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "TrackBeginCheckoutHandler should successfully track begin checkout using AnalyticsTrackingService",
-          "status": "passed"
-        },
-        {
-          "title": "TrackBeginCheckoutHandler should fail silently and return success: true even if service throws error",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/customer-care/test/close-ticket.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CloseTicketHandler should successfully close a ticket using SupportTicketService",
-          "status": "passed"
-        },
-        {
-          "title": "CloseTicketHandler should fail validation if ticketId is missing",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/fulfillment/test/remove-shipment-item.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "RemoveShipmentItemCommandHandler should successfully remove an item from a shipment",
-          "status": "passed"
-        },
-        {
-          "title": "RemoveShipmentItemCommandHandler should fail validation if fields are empty",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/shared/test/email-adapter.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "shared email adapter transport lifecycle does not initialize a provider during construction and reuses one SMTP transport",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle forwards configured SMTP settings and sender",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects delivery failures in production",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects delivery failures in test",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects delivery failures in development",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle shares first-use development initialization across concurrent sends",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle shares an initialization failure then allows a new attempt",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle retries transport construction after a synchronous constructor failure",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle keeps a delivery failure observable without automatically resending",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle permits transports without SMTP recipient metadata",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects a partial recipient rejection rather than reporting complete submission",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects an absent SMTP host (undefined) before constructing a transport",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects an absent SMTP host () before constructing a transport",
-          "status": "passed"
-        },
-        {
-          "title": "shared email adapter transport lifecycle rejects an absent SMTP host ( ) before constructing a transport",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries does not log reset messages or preview URLs in development",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries does not log verification messages or preview URLs in development",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries does not log invitation messages or preview URLs in development",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries does not log welcome messages or preview URLs in development",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries uses the primary frontend origin and encoded token for reset",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries uses the primary frontend origin and encoded token for verification",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries retains default frontend links and admin welcome without a security token",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries normalizes the admin welcome origin and escapes invitation HTML values",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries rejects unsupported invitation URLs: javascript:alert(1)",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries rejects unsupported invitation URLs: file:///private",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries rejects unsupported invitation URLs: not a url",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries rejects unsupported invitation URLs: https://user@example.test/path",
-          "status": "passed"
-        },
-        {
-          "title": "email template boundaries rejects unsupported invitation URLs: https://:password@example.test/path",
-          "status": "passed"
-        },
-        {
-          "title": "email failure at an actual command boundary keeps a development failure observable to the resend command caller",
-          "status": "passed"
-        },
-        {
-          "title": "email failure at an actual command boundary does not contact a transport for an already verified user",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "apps/api/test/unit/access-middleware.spec.ts",
       "status": "passed",
       "assertions": [
@@ -2111,6 +2111,56 @@
         },
         {
           "title": "configured test administrator inspection retains query and disconnect failures together",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "apps/api/test/unit/api-process.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "API process lifecycle releases default process handlers through the returned idempotent owner",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle retains the configured bind address and preserves existing exit state on success",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle marks factory failure unsuccessful without leaving signal listeners",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle closes acquired resources and removes only its own listeners after listen failure",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle waits for failed-listen cleanup before completing",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle shares one shutdown for repeated SIGINT and the other signal",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle shares one shutdown for repeated SIGTERM and the other signal",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle records close failure and removes both owned signal listeners",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle preserves startup failure when cleanup rejects",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle honors a signal while the factory is pending without starting a listener",
+          "status": "passed"
+        },
+        {
+          "title": "API process lifecycle does not announce startup if shutdown starts while listen is pending",
           "status": "passed"
         }
       ]
@@ -5166,286 +5216,6 @@
       ]
     },
     {
-      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
-          "status": "passed"
-        },
-        {
-          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
-          "status": "passed"
-        },
-        {
-          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/order.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should update order item quantity",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
-          "status": "passed"
-        },
-        {
-          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
-          "status": "passed"
-        },
-        {
-          "title": "Preorder Entity should support marking as notified only after release date",
-          "status": "passed"
-        }
-      ]
-    },
-    {
-      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
-      "status": "passed",
-      "assertions": [
-        {
-          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should support correct transitions",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
-          "status": "passed"
-        },
-        {
-          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
-          "status": "passed"
-        }
-      ]
-    },
-    {
       "file": "modules/loyalty/test/unit/application/adjust-points.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5634,6 +5404,170 @@
       ]
     },
     {
+      "file": "modules/inventory-management/test/unit/domain/Stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should instantiate StockLevel successfully with valid properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand is below min quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if onHand exceeds max quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if reserved quantity exceeds onHand quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if lowStockThreshold is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should throw DomainValidationError if safetyStock is negative",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants StockLevel Value Object should compute isLowStock, isOutOfStock, and isBelowSafetyStock correctly",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should create Stock entity and record StockCreatedEvent / check base properties",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform addStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform removeStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject removeStock if quantity exceeds available or reduces onHand below reserved",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform reserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject reserveStock if available stock is insufficient",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform fulfillReservation operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject fulfillReservation if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should perform unreserveStock operation and dispatch event",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should reject unreserveStock if quantity exceeds reserved count",
+          "status": "passed"
+        },
+        {
+          "title": "Stock & StockLevel Domain Invariants Stock Aggregate Root should update thresholds and dispatch event",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/add-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AddStockHandler should successfully add stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/inventory-management/test/unit/application/adjust-stock.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "AdjustStockHandler should successfully adjust stock by calling StockManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
+          "status": "passed"
+        },
+        {
+          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should update product title successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should archive a product and record archived event",
+          "status": "passed"
+        },
+        {
+          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "status": "passed"
+        }
+      ]
+    },
+    {
       "file": "modules/payment/test/unit/application/create-payment-intent.spec.ts",
       "status": "passed",
       "assertions": [
@@ -5800,63 +5734,179 @@
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/delete-category.spec.ts",
+      "file": "modules/order-management/test/unit/application/cancel-order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "DeleteCategoryHandler should successfully delete a category using CategoryManagementService",
+          "title": "CancelOrderHandler should successfully cancel the order using OrderManagementService",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/application/SearchProducts.spec.ts",
+      "file": "modules/order-management/test/unit/application/create-order.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "SearchProductsHandler should successfully search products using ProductSearchService with defaults",
-          "status": "passed"
-        },
-        {
-          "title": "SearchProductsHandler should normalize page and limit boundaries to valid constants range",
+          "title": "CreateOrderHandler should successfully create an order and return successful CommandResult",
           "status": "passed"
         }
       ]
     },
     {
-      "file": "modules/product-catalog/test/unit/domain/Product.spec.ts",
+      "file": "modules/order-management/test/unit/application/create-shipment.spec.ts",
       "status": "passed",
       "assertions": [
         {
-          "title": "Product Aggregate Root should create a product in DRAFT state successfully with valid parameters",
+          "title": "CreateShipmentHandler should successfully create a shipment and return successful CommandResult",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/backorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Backorder Entity should successfully create a backorder and emit BackorderCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should throw DomainValidationError if product title is empty",
+          "title": "Backorder Entity should throw DomainValidationError if promisedEta is in the past or now",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should update product title successfully",
+          "title": "Backorder Entity should support updating promised ETA and emit BackorderEtaUpdatedEvent",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should enforce compareAtPrice invariants",
+          "title": "Backorder Entity should throw DomainValidationError if updating promised ETA to past",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should publish a product successfully and record published event",
+          "title": "Backorder Entity should support marking as notified and emit BackorderNotifiedEvent",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/order.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Aggregate Root should successfully create an order and emit OrderCreatedEvent",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should unpublish a published product successfully",
+          "title": "Order Aggregate Root should throw DomainValidationError if items is empty on creation",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should archive a product and record archived event",
+          "title": "Order Aggregate Root should throw DomainValidationError if both userId and guestToken are provided or if both are missing",
           "status": "passed"
         },
         {
-          "title": "Product Aggregate Root should schedule a publication date in the future",
+          "title": "Order Aggregate Root should support adding order items and recalculating totals when status is created",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support removing order items and throw error if empty or not found",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should update order item quantity",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should throw OrderAddressRequiredError on pay if no address is set",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should transition status successfully through paid, shipped/fulfilled, and emit events",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order cancellation and throw error if already fulfilled",
+          "status": "passed"
+        },
+        {
+          "title": "Order Aggregate Root should support order refund and throw error if order is not paid or fulfilled",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/preorder.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Preorder Entity should successfully create a preorder and emit PreorderCreatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should throw DomainValidationError if releaseDate is in the past or now on creation",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support updating release date and emit PreorderReleaseDateUpdatedEvent",
+          "status": "passed"
+        },
+        {
+          "title": "Preorder Entity should support marking as notified only after release date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "modules/order-management/test/unit/domain/value-objects.spec.ts",
+      "status": "passed",
+      "assertions": [
+        {
+          "title": "Order Management Value Objects IDs should generate valid unique OrderId, OrderItemId, and ShipmentId",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should generate order number with prefix, timestamp, and random",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderNumber should throw DomainValidationError if value is empty or exceeds 50 chars",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should maintain reference equality for same statuses",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should support correct transitions",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderStatus should throw DomainValidationError on invalid status",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should create valid totals and prevent negative values",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderTotals should throw DomainValidationError on negative totals",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects OrderSource should support valid sources and throw for invalid ones",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should validate and create address snapshot",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects AddressSnapshot should throw DomainValidationError on missing required fields",
+          "status": "passed"
+        },
+        {
+          "title": "Order Management Value Objects ProductSnapshot should validate and create product snapshot",
           "status": "passed"
         }
       ]
