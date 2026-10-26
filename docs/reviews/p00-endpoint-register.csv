@@ -1,6 +1,6 @@
 "file","line","area","method","local_path","full_path_candidate","registration","preHandler_declared","preValidation_declared","effective_authorization","runtime_verified","http_test_candidates"
-"apps/api/src/server.ts","103","api-host","GET","/health","/health","declared-under-registered-module","","","unverified-inherited-hooks-and-controller-policy","no",""
-"apps/api/src/server.ts","107","api-host","GET","/ready","/ready","declared-under-registered-module","","","unverified-inherited-hooks-and-controller-policy","no",""
+"apps/api/src/server.ts","99","api-host","GET","/health","/health","declared-under-registered-module","","","unverified-inherited-hooks-and-controller-policy","no","apps/api/test/unit/server-bootstrap.spec.ts"
+"apps/api/src/server.ts","103","api-host","GET","/ready","/ready","declared-under-registered-module","","","unverified-inherited-hooks-and-controller-policy","no","apps/api/test/unit/server-bootstrap.spec.ts"
 "modules/analytics/infra/http/routes.ts","42","analytics","POST","/events/capture-view","/events/capture-view","unregistered-or-needs-tracing","","","unverified-inherited-hooks-and-controller-policy","no",""
 "modules/analytics/infra/http/routes.ts","97","analytics","POST","/events/capture-purchase","/events/capture-purchase","unregistered-or-needs-tracing","","","unverified-inherited-hooks-and-controller-policy","no",""
 "modules/analytics/infra/http/routes.ts","153","analytics","POST","/events/capture-add-to-cart","/events/capture-add-to-cart","unregistered-or-needs-tracing","","","unverified-inherited-hooks-and-controller-policy","no",""

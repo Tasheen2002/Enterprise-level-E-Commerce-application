@@ -3,7 +3,7 @@
   "projects": [
     {
       "config": "tsconfig.json",
-      "localSourceFiles": 1389
+      "localSourceFiles": 1391
     },
     {
       "config": "apps/admin/tsconfig.json",
@@ -1241,6 +1241,15 @@
       "generated": false
     },
     {
+      "file": "apps/api/test/unit/config-startup.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
       "file": "apps/api/test/unit/core-error-http.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
@@ -1395,6 +1404,15 @@
     },
     {
       "file": "apps/api/test/unit/seed-admin-cli.spec.ts",
+      "compilerPrograms": [
+        "tsconfig.json"
+      ],
+      "inRecordedBackendLintRun": false,
+      "inConfiguredFormatRoots": false,
+      "generated": false
+    },
+    {
+      "file": "apps/api/test/unit/server-bootstrap.spec.ts",
       "compilerPrograms": [
         "tsconfig.json"
       ],

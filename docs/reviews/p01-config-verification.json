@@ -1,0 +1,204 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "9b9104577b21089efd85b5cfe1e74ff59531b9a9",
+  "findings": [
+    {
+      "id": "P01-29",
+      "severity": "P2",
+      "problem": "Fastify logger/proxy construction consumed raw environment values before the config plugin ran; defaults could differ between construction and validated config.",
+      "change": "Shared readConfig performs path-only validation before construction. Use validated logger/mode/proxy values and pass a captured environment to the config plugin. Deduplicate repeated issue paths without exposing values.",
+      "limit": "Snapshot covers factory/config inputs, not every process.env consumer. Actual database plugin still constructs Prisma from its ambient datasource configuration; broader datasource/composition review remains next."
+    },
+    {
+      "id": "P01-30",
+      "severity": "P2",
+      "problem": "LOG_LEVEL accepted unsupported values; duration regex accepted oversized/nonfinite arithmetic; partial/blank Firebase credentials could disable the adapter silently or fail later.",
+      "change": "Restrict logging to the supported standard levels; share duration conversion and require safe duration/expiry arithmetic; trim/check Firebase fields, validate client-email syntax and require all three credentials together. Optional absence still disables the adapter.",
+      "limit": "Existing defaults, numerical request quota and credential policy otherwise unchanged. No real PEM parsing, service-account authorization, FedEx/Firebase calls or secret-strength policy certification."
+    },
+    {
+      "id": "P01-31",
+      "severity": "P2",
+      "problem": "Server factory did not explicitly close acquired resources after database-plugin, container or module initialization failure.",
+      "change": "Close the acquired Fastify instance on initialization failure, log cleanup failure separately and preserve the original rejection. Await readiness before returning the factory result.",
+      "limit": "Real Fastify lifecycle with inert dependencies demonstrates hook execution, not actual Prisma disconnect or background/provider cleanup. Process-entry listen failure/signal ownership remains a separate next task."
+    }
+  ],
+  "baseline": {
+    "passed": 10,
+    "failed": 14,
+    "cases": 24,
+    "failed_cases": [
+      "API configuration contract rejects invalid settings {\"LOG_LEVEL\":\"verbose\"}",
+      "API configuration contract rejects invalid settings {\"LOG_LEVEL\":\"\"}",
+      "API configuration contract rejects invalid settings {\"RATE_LIMIT_TIMEWINDOW\":\"999999999999999999999d\"}",
+      "API configuration contract rejects invalid settings {\"JWT_EXPIRES_IN\":\"999999999999999999999d\"}",
+      "API configuration contract rejects invalid settings {\"FIREBASE_ADMIN_PROJECT_ID\":\"synthetic-project\"}",
+      "API configuration contract rejects invalid settings {\"FIREBASE_ADMIN_CLIENT_EMAIL\":\"service@example.test\"}",
+      "API configuration contract rejects invalid settings {\"FIREBASE_ADMIN_PRIVATE_KEY\":\"synthetic-private-key\"}",
+      "API configuration contract rejects invalid settings {\"FIREBASE_ADMIN_PROJECT_ID\":\" \"}",
+      "API configuration contract rejects invalid settings {\"FIREBASE_ADMIN_PROJECT_ID\":\"project\",\"FIREBASE_ADMIN_CLIENT_EMAIL\":\"invalid\",\"FIREBASE_ADMIN_PRIVATE_KEY\":\"key\"}",
+      "API configuration contract retains defaults and normalizes configured origins, proxies and provider credentials",
+      "actual Fastify server bootstrap with inert database/composition rejects invalid configuration before constructing Fastify",
+      "actual Fastify server bootstrap with inert database/composition closes acquired server resources after database initialization fails",
+      "actual Fastify server bootstrap with inert database/composition closes acquired server resources after container initialization fails",
+      "actual Fastify server bootstrap with inert database/composition closes acquired server resources after modules initialization fails"
+    ],
+    "iterations": "First focused run passed 43 cases. Expanded run had 58 pass/1 failure because invalid URL validation repeated the same field path; readConfig now deduplicates paths and final 59 pass. Initial compiler rejected the intentionally incomplete Prisma decorator double; explicit unknown-to-PrismaClient fixture cast documents inert persistence. Final compiler passes. RATE_LIMIT_MAX unsafe input was already rejected by Zod int and is retained as a passing regression, not claimed as a new defect."
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/plugins/config.ts",
+      "apps/api/src/server.ts",
+      "apps/api/test/unit/config-startup.spec.ts",
+      "apps/api/test/unit/server-bootstrap.spec.ts"
+    ],
+    "supporting_reads": "Complete process index, DB/security plugins, JWT service and Firebase adapter; auth plugin through its authentication boundary. Module loader initial registration sections and configuration consumers traced; container provider/config registration references inspected, not full container/module review. Local installed Pino level implementation inspected.",
+    "new_runtime_cases": 40,
+    "preserved": "Port/mode/JWT/rate defaults, frontend-origin normalization, comma-separated trusted proxies, all-or-none FedEx policy, no-provider defaults, Firebase escaped-newline conversion, CORS/auth/rate/error registration order, health/readiness shapes. Rate duration conversion shares config implementation.",
+    "factory_boundary": "No instance exists when configuration validation rejects. Once created, failure cleanup covers awaited initialization and readiness. Cleanup error does not replace original error. Factory returns ready server; process listen/signals are not exercised by this harness."
+  },
+  "verification": {
+    "new_runtime_cases": 40,
+    "focused_cases": 59,
+    "focused_files": 3,
+    "full_unit_cases": 1347,
+    "full_unit_files": 103,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 64,
+          "covered": 64,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 67,
+          "covered": 67,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 18,
+          "covered": 18,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 35,
+          "covered": 35,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/server.ts": {
+        "lines": {
+          "total": 34,
+          "covered": 34,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 5,
+          "covered": 5,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 36,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 18,
+          "covered": 18,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/plugins/config.ts": {
+        "lines": {
+          "total": 30,
+          "covered": 30,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 13,
+          "covered": 13,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 31,
+          "covered": 31,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only config.ts and server.ts: 64 lines, 67 statements, 18 functions and 35 branches at 100%. No full container/module/provider/process-entry coverage claim.",
+    "cases": "Invalid log levels, oversized/malformed durations, existing safe rate counter bound, incomplete/blank/invalid-email Firebase settings; supported logs/defaults/origin/proxy/credential normalization; duration units; redacted/deduplicated errors; construction ordering and captured settings; database/container/module failure cleanup and cleanup failure precedence; actual Fastify development transport branch, configured provider forwarding, health/readiness success/failure and JSON-schema formatter branches.",
+    "dependencies": "Actual Fastify/config/security/auth/error/rate helpers; database plugin, container, module loader and Swagger replaced with inert fixtures. Actual pino-pretty transport branch is constructed with silent logging. No network listener is opened.",
+    "checks": {
+      "root_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Three focused suites with --testTimeout=15000 and two exact coverage targets",
+      "Full unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "Root tsc --noEmit; focused lint/format",
+      "Static baseline/compiler membership refresh; maps do not prove execution"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/plugins/config.ts": "36640889e66a1308a803105d50477ec9c15c41648ef60e591a4a4bdfe2b0ae16",
+    "apps/api/src/server.ts": "69df7d33f2a6a440a8a6cba97fc0f7da1e99432ef55fdd27de5b36b31ad1c06a",
+    "apps/api/test/unit/config-startup.spec.ts": "7f878a65f72d9c8674d01e20b5543c2021695d795df859cd8b71f9c00c548d81",
+    "apps/api/test/unit/server-bootstrap.spec.ts": "f4ba1a3ad6606a0d91faff5b9b9c4ed049eff80d98db1b1629e241f155600654"
+  },
+  "dependency_sha256": {
+    "apps/api/src/index.ts": "362c43bd37a27f4c2356ba301518f47e01316ddd22b6728fd38975dd448bd672",
+    "apps/api/src/plugins/db.ts": "e592f577287969b1eb18ce82118db0c418260b7dcdd644bab40e3e51f2d2a0fb",
+    "apps/api/src/plugins/security.ts": "c6abb2739050fac2d65b58aba3d1b6bb7cfed7a8c76c094f3f5634562c24f9c3",
+    "apps/api/src/plugins/auth.ts": "86d7a6cb71ae2bae138bf0bf56d1c42f223dcffc60486a49821def29328165c2",
+    "apps/api/src/shared/middleware/rate-limiter.middleware.ts": "b52b7ed8a0cc8829db1fd38fb59f694a26135d2a3853c53a93f86f9afd532a6c",
+    "modules/user-management/infra/http/security/jwt.service.ts": "a9f34080fc01a22c53930e74dda4443f7e2c1b7aea480635359ea8246ae0a4fb",
+    "modules/user-management/infra/security/firebase-auth-verifier.adapter.ts": "e6ea9b1dc0813cccb86df0507baf2a1ee76c2643cda47e0280b036e8eb4172a8"
+  },
+  "open_followups": [
+    {
+      "id": "P01-PROCESS-ENTRY-LIFECYCLE",
+      "scope": "index.ts still needs listen-failure resource cleanup, signal listener ownership/idempotence and process-level exit verification. This batch closes factory failure ownership only; next bounded task."
+    },
+    {
+      "id": "P01-CONFIG-SEMANTICS",
+      "scope": "Trusted-proxy address/CIDR semantics, database URL/Prisma datasource consistency, secret strength/logging, full JWT expiration policy and Firebase key/project authorization need owning plugin/module/deployment review."
+    },
+    {
+      "id": "P01-COMPOSITION-REAL-INFRA",
+      "scope": "Actual DB/plugin/container/module/background/provider initialization, shutdown and repeated-server lifecycle remain unverified by this inert composition harness. Real PostgreSQL 47-group evidence remains historical; no new provider execution."
+    }
+  ],
+  "limits": [
+    "No real database, provider or full registered-module bootstrap. No schema/data/secret migrations. Broad coverage not remeasured.",
+    "Both production files remain partially reviewed/open for listed semantic/real-infrastructure/process gates; only two fixtures close. P01 remains open.",
+    "Incomplete Firebase configuration now fails early rather than silently disabling support; all optional values absent still preserves disabled-provider behavior."
+  ]
+}
