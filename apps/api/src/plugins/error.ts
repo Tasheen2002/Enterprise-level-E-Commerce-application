@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import { FastifyPluginAsync, FastifyError, FastifyReply, FastifyRequest } from "fastify";
-import { serializeError } from "../shared/http/error-response";
+import { serializeError, type ErrorEnvelope } from "../shared/http/error-response";
 
 const errorPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.setErrorHandler((error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
@@ -15,12 +15,15 @@ const errorPlugin: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.setNotFoundHandler((request, reply) => {
-    reply.status(404).send({
+    // Same envelope as every other error; the query string may carry tokens, so omit it.
+    const path = request.url.split("?", 1)[0];
+    const response: ErrorEnvelope = {
       success: false,
       statusCode: 404,
-      error: "Not Found",
-      message: `Route ${request.method}:${request.url} not found`,
-    });
+      message: `Route ${request.method}:${path} not found`,
+      code: "ROUTE_NOT_FOUND",
+    };
+    reply.status(404).send(response);
   });
 
   fastify.log.info("Error handler plugin registered");

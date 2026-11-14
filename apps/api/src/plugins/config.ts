@@ -1,7 +1,26 @@
 import fp from "fastify-plugin";
+import { isIP } from "node:net";
 import { z } from "zod";
 
 const durationUnits = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+// RFC 7518 section 3.2: HS256 keys must be at least the 256-bit hash output size.
+const MIN_PRODUCTION_JWT_SECRET_BYTES = 32;
+// Named ranges understood by Fastify's proxy-addr trust compiler.
+const trustedProxyNames = new Set(["loopback", "linklocal", "uniquelocal"]);
+
+/**
+ * proxy-addr silently reads bare integers such as "1" as legacy IPv4
+ * addresses (0.0.0.1), so only explicit addresses, CIDR ranges and named
+ * ranges are accepted. Hop counts and "trust everything" are not supported.
+ */
+export function isTrustedProxyEntry(entry: string): boolean {
+  if (trustedProxyNames.has(entry)) return true;
+  const [address, prefix, ...rest] = entry.split("/");
+  const family = isIP(address);
+  if (family === 0 || rest.length > 0) return false;
+  if (prefix === undefined) return true;
+  return /^\d{1,3}$/.test(prefix) && Number(prefix) <= (family === 4 ? 32 : 128);
+}
 
 export function durationToMilliseconds(value: string): number {
   const match = /^([1-9]\d*)([smhd])$/.exec(value);
@@ -59,7 +78,13 @@ export const envSchema = z
               .map((host) => host.trim())
               .filter(Boolean)
           : [],
+      )
+      .refine(
+        (entries) => entries.every(isTrustedProxyEntry),
+        "Expected comma-separated IP addresses, CIDR ranges, loopback, linklocal or uniquelocal",
       ),
+    // Documentation routes publish the full API surface; production opts in explicitly.
+    API_DOCS_ENABLED: z.enum(["true", "false"]).optional(),
     FEDEX_API_KEY: z.string().trim().min(1).optional(),
     FEDEX_SECRET_KEY: z.string().trim().min(1).optional(),
     FEDEX_ACCOUNT_NUMBER: z.string().trim().min(1).optional(),
@@ -76,6 +101,16 @@ export const envSchema = z
     FIREBASE_ADMIN_PRIVATE_KEY: z.string().trim().min(1).optional(),
   })
   .superRefine((config, context) => {
+    if (
+      config.NODE_ENV === "production" &&
+      Buffer.byteLength(config.JWT_SECRET, "utf8") < MIN_PRODUCTION_JWT_SECRET_BYTES
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["JWT_SECRET"],
+        message: `Production JWT secret must be at least ${MIN_PRODUCTION_JWT_SECRET_BYTES} bytes`,
+      });
+    }
     const credentials = [
       config.FEDEX_API_KEY,
       config.FEDEX_SECRET_KEY,
@@ -100,7 +135,14 @@ export const envSchema = z
         message: "Configure all three Firebase Admin credentials together",
       });
     }
-  });
+  })
+  .transform((config) => ({
+    ...config,
+    API_DOCS_ENABLED:
+      config.API_DOCS_ENABLED === undefined
+        ? config.NODE_ENV !== "production"
+        : config.API_DOCS_ENABLED === "true",
+  }));
 
 export type Config = z.infer<typeof envSchema>;
 

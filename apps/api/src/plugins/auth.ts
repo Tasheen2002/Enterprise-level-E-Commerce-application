@@ -10,29 +10,20 @@ export type { JWTPayload };
 
 declare module "fastify" {
   interface FastifyInstance {
-    signToken: (payload: JWTPayload) => string;
     verifyToken: (token: string) => JWTPayload;
     authenticate: (request: FastifyRequest) => Promise<void>;
   }
 }
 
 const authPlugin: FastifyPluginAsync = async (fastify) => {
-  const JWT_SECRET = fastify.config?.JWT_SECRET ?? process.env.JWT_SECRET;
-  if (!JWT_SECRET) {
-    throw new Error("JWT_SECRET environment variable is required");
-  }
-
+  // Verification only: tokens are issued by the user-management JwtService with a session.
   const verifier = new JwtService({
-    accessTokenSecret: JWT_SECRET,
-    refreshTokenSecret: JWT_SECRET,
-    accessTokenExpiresIn: fastify.config?.JWT_EXPIRES_IN,
+    accessTokenSecret: fastify.config.JWT_SECRET,
+    refreshTokenSecret: fastify.config.JWT_SECRET,
   });
   const unauthorized = () =>
     Object.assign(new Error("Invalid or expired access token"), { statusCode: 401 });
   fastify.decorateRequest("user", null);
-  fastify.decorate("signToken", (payload: JWTPayload): string =>
-    verifier.signAccess({ ...payload, role: payload.role ?? "CUSTOMER" }),
-  );
 
   fastify.decorate("verifyToken", (token: string): JWTPayload => {
     try {
@@ -58,20 +49,19 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
       }
       const token = match[1];
       const payload = fastify.verifyToken(token) as TokenPayload;
-      if (fastify.hasDecorator("prisma")) {
-        if (!payload.sessionId) throw unauthorized();
-        const session = await fastify.prisma.memberSession.findFirst({
-          where: {
-            id: payload.sessionId,
-            userId: payload.userId,
-            isRevoked: false,
-            expiresAt: { gt: new Date() },
-            user: { status: "active", role: payload.role as UserRole },
-          },
-          select: { id: true },
-        });
-        if (!session) throw unauthorized();
-      }
+      // Every access token must map to a live session so logout/revocation take effect.
+      if (!payload.sessionId) throw unauthorized();
+      const session = await fastify.prisma.memberSession.findFirst({
+        where: {
+          id: payload.sessionId,
+          userId: payload.userId,
+          isRevoked: false,
+          expiresAt: { gt: new Date() },
+          user: { status: "active", role: payload.role as UserRole },
+        },
+        select: { id: true },
+      });
+      if (!session) throw unauthorized();
       (request as FastifyRequest & { user: JWTPayload }).user = payload;
     } catch (error) {
       request.user = null;
@@ -83,4 +73,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
   fastify.log.info("Authentication plugin registered");
 };
 
-export default fp(authPlugin, { name: "auth-plugin" });
+// Fail at registration rather than silently skipping session checks or reading
+// an unvalidated ambient secret.
+export default fp(authPlugin, {
+  name: "auth-plugin",
+  decorators: { fastify: ["config", "prisma"] },
+});

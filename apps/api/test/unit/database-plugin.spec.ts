@@ -24,7 +24,11 @@ const url = "postgresql://synthetic:synthetic@localhost/selected_test";
 async function configured(mode = "test") {
   const app = Fastify();
   await app.register(configPlugin, {
-    environment: { DATABASE_URL: url, JWT_SECRET: "synthetic-secret", NODE_ENV: mode },
+    environment: {
+      DATABASE_URL: url,
+      JWT_SECRET: "synthetic-database-plugin-secret-0123456789",
+      NODE_ENV: mode,
+    },
   });
   return app;
 }

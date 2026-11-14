@@ -51,7 +51,7 @@ export async function startApi(
     }
     const port = server.config.PORT;
     await server.listen({ port, host: "::" });
-    if (!shutdownRequested)
+    if (!shutdownRequested && server.config.API_DOCS_ENABLED)
       server.log.info(`Swagger docs available at http://localhost:${port}/docs`);
     return { close };
   } catch (err) {

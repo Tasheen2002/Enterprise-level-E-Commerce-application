@@ -39,8 +39,8 @@ afterEach(() => {
 });
 
 async function application() {
-  vi.stubEnv("JWT_SECRET", secret);
   const app = Fastify();
+  app.decorate("config", { JWT_SECRET: secret } as never);
   const findFirst = vi.fn().mockResolvedValue({ id: "session" });
   app.decorate("prisma", { memberSession: { findFirst } } as never);
   await app.register(authPlugin);
@@ -55,34 +55,21 @@ async function application() {
 }
 
 describe("required and optional authentication transport", () => {
-  it("rejects missing auth configuration and supports configured stateless verifier compatibility", async () => {
-    vi.stubEnv("JWT_SECRET", undefined);
+  it("rejects missing auth configuration or session store and verifies issued roles", async () => {
+    vi.stubEnv("JWT_SECRET", secret);
     const missing = Fastify();
+    missing.decorate("prisma", { memberSession: { findFirst: vi.fn() } } as never);
     try {
-      await expect(missing.register(authPlugin)).rejects.toThrow(
-        "JWT_SECRET environment variable is required",
-      );
+      await expect(missing.register(authPlugin)).rejects.toThrow(/config/);
     } finally {
       await missing.close();
     }
-    const app = Fastify();
-    app.decorate("config", { JWT_SECRET: secret, JWT_EXPIRES_IN: "1m" } as never);
-    await app.register(authPlugin);
-    app.get("/stateless", { preHandler: authenticate }, async (request) => request.user);
+    const { app } = await application();
     const user = claims();
     try {
-      const defaultRole = app.signToken({ userId: user.userId, email: user.email });
-      expect(app.verifyToken(defaultRole).role).toBe("CUSTOMER");
-      const admin = app.signToken({ ...user, role: "ADMIN" });
+      const admin = signer().signAccess({ ...user, role: "ADMIN" });
       expect(app.verifyToken(admin).role).toBe("ADMIN");
-      expect(
-        (
-          await app.inject({
-            url: "/stateless",
-            headers: { authorization: `Bearer ${defaultRole}` },
-          })
-        ).statusCode,
-      ).toBe(200);
+      expect(app.verifyToken(signer().signAccess(user)).role).toBe("CUSTOMER");
     } finally {
       await app.close();
     }

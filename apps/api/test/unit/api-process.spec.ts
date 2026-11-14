@@ -20,7 +20,12 @@ function fixture() {
   const listen = vi.fn().mockResolvedValue("http://localhost:3001");
   const close = vi.fn().mockResolvedValue(undefined);
   const log = { info: vi.fn(), error: vi.fn() };
-  const server = { config: { PORT: 3001 }, listen, close, log } as unknown as FastifyInstance;
+  const server = {
+    config: { PORT: 3001, API_DOCS_ENABLED: true },
+    listen,
+    close,
+    log,
+  } as unknown as FastifyInstance;
   return { runtime, server, listen, close, log, create: vi.fn().mockResolvedValue(server) };
 }
 beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => {}));
@@ -51,6 +56,13 @@ describe("API process lifecycle", () => {
     expect(h.log.info).toHaveBeenCalledTimes(1);
     expect(h.close).not.toHaveBeenCalled();
     expect(h.runtime.exitCode).toBe(2);
+  });
+  it("does not advertise documentation routes that are disabled", async () => {
+    const h = fixture();
+    (h.server.config as { API_DOCS_ENABLED: boolean }).API_DOCS_ENABLED = false;
+    await startApi(h.create, h.runtime);
+    expect(h.listen).toHaveBeenCalledOnce();
+    expect(h.log.info).not.toHaveBeenCalled();
   });
   it("marks factory failure unsuccessful without leaving signal listeners", async () => {
     const h = fixture();

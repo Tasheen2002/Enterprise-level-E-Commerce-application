@@ -54,8 +54,11 @@ describe("access authentication boundary", () => {
     );
   });
   it("rejects wrong token kinds, malformed claims and blacklisted tokens", async () => {
-    vi.stubEnv("JWT_SECRET", secret);
     const app = Fastify();
+    app.decorate("config", { JWT_SECRET: secret } as never);
+    app.decorate("prisma", {
+      memberSession: { findFirst: vi.fn().mockResolvedValue({ id: claims.sessionId }) },
+    } as never);
     await app.register(authPlugin);
     app.get("/private", { preHandler: authenticate }, async () => ({ ok: true }));
     const service = new JwtService({ accessTokenSecret: secret, refreshTokenSecret: secret });
@@ -81,8 +84,8 @@ describe("access authentication boundary", () => {
   });
 
   it("checks persisted session state for every protected application request", async () => {
-    vi.stubEnv("JWT_SECRET", secret);
     const app = Fastify();
+    app.decorate("config", { JWT_SECRET: secret } as never);
     const findFirst = vi.fn().mockResolvedValue({ id: claims.sessionId });
     app.decorate("prisma", { memberSession: { findFirst } } as never);
     await app.register(authPlugin);

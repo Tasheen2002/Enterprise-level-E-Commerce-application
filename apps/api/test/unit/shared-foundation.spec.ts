@@ -82,9 +82,12 @@ describe("rate limit boundaries", () => {
 
   it("resolves verified user identity before an early user limiter", async () => {
     const secret = "synthetic-rate-limiter-secret";
-    vi.stubEnv("JWT_SECRET", secret);
     const service = new JwtService({ accessTokenSecret: secret, refreshTokenSecret: secret });
     const app = Fastify();
+    app.decorate("config", { JWT_SECRET: secret } as never);
+    app.decorate("prisma", {
+      memberSession: { findFirst: vi.fn().mockResolvedValue({ id: "session" }) },
+    } as never);
     await app.register(authPlugin);
     app.addHook(
       "onRequest",
@@ -97,6 +100,7 @@ describe("rate limit boundaries", () => {
           userId: randomUUID(),
           email: "test@example.com",
           role: "CUSTOMER",
+          sessionId: randomUUID(),
         });
         expect(
           (

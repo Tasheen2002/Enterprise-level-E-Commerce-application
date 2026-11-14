@@ -1,0 +1,113 @@
+{
+  "date": "2026-11-15",
+  "phase": "P01",
+  "baseline_commit": "794cdba02ed990e200977f4f608605bbce399359",
+  "scope": [
+    "apps/api/src/plugins/security.ts",
+    "apps/api/src/plugins/swagger.ts",
+    "apps/api/src/plugins/error.ts",
+    "apps/api/src/plugins/auth.ts",
+    "apps/api/src/plugins/config.ts",
+    "apps/api/src/plugins/db.ts (re-read; unchanged, remains closed)",
+    "apps/api/src/startup.ts (docs log gate only)",
+    "apps/api/src/server.ts (registration order traced; unchanged)",
+    "docker-compose.yml, .env.example (configuration contract consumers)"
+  ],
+  "findings": [
+    {
+      "id": "P01-38",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/security.ts",
+      "problem": "CORS origins used optional chaining with a hard-coded fallback list (localhost 3000-3002, 127.0.0.1) that differed from the validated FRONTEND_URL default, and the plugin declared no config dependency, so it registered silently with the drifted list when config was absent.",
+      "change": "Use fastify.config.FRONTEND_URL only; declare dependencies ['config'] and decorators { fastify: ['config'] }.",
+      "verification": "Registration without config rejects; configured origins are allowed with credentials and former fallback origins/unknown origins receive no Access-Control-Allow-Origin."
+    },
+    {
+      "id": "P01-39",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/security.ts",
+      "problem": "The global Helmet CSP allowed 'unsafe-inline' for script-src and script-src-attr on every response to accommodate Swagger UI. This removed script-injection mitigation for API-served HTML, e.g. the newsletter unsubscribe page that interpolates request input without escaping.",
+      "change": "Use Helmet's default CSP (script-src 'self', script-src-attr 'none', object-src 'none'); Swagger UI uses its own hash-based staticCSP on documentation routes.",
+      "verification": "Unit CSP directive parsing on a probe route and on /docs/; real createServer composition shows strict global CSP and the swagger-ui policy on /docs/. Browser rendering of Swagger UI under the new policy was not exercised."
+    },
+    {
+      "id": "P01-40",
+      "severity": "P3",
+      "file": "apps/api/src/plugins/security.ts",
+      "problem": "Retry-After, WWW-Authenticate and X-RateLimit-* response headers set by the rate limiter and auth helpers are not CORS-safelisted, so cross-origin browser clients could not read them.",
+      "change": "Add exposedHeaders for those five headers.",
+      "verification": "Access-Control-Expose-Headers asserted in unit and real composition."
+    },
+    {
+      "id": "P01-41",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/swagger.ts",
+      "problem": "Swagger UI and /docs/json were published unconditionally, exposing the complete route/schema surface (including administrative routes) in production. The document title also named a different product ('Athletic Shoes E-Commerce API').",
+      "change": "New validated API_DOCS_ENABLED ('true'|'false'); default enabled outside production and disabled in production. @fastify/swagger still collects the document (fastify.swagger()); only UI/JSON routes are gated. Title set to 'Slipperze API'. startup.ts advertises /docs only when enabled. Plugin now declares its config dependency.",
+      "verification": "Five default/override resolution cases plus ambiguous-value rejection; /docs, /docs/, /docs/json and static assets 404 in production and 200 when opted in; real composition registers 279 OpenAPI paths in both modes."
+    },
+    {
+      "id": "P01-42",
+      "severity": "P3",
+      "file": "apps/api/src/plugins/error.ts",
+      "problem": "The not-found response used a different envelope from ErrorEnvelope/ApiError (extra 'error' field, no 'code') and reflected the full request URL including query string, which can carry reset/verification tokens.",
+      "change": "Return { success, statusCode, message, code: 'ROUTE_NOT_FOUND' } typed as ErrorEnvelope; message includes method and path without the query string.",
+      "verification": "Exact envelope equality and absence of a synthetic query token in the body. No repository consumer depended on the removed 'error' field."
+    },
+    {
+      "id": "P01-43",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/auth.ts",
+      "problem": "JWT_SECRET fell back to ambient process.env when config was absent, bypassing validated configuration (same class as P01-35).",
+      "change": "Read fastify.config.JWT_SECRET only; declare decorators { fastify: ['config', 'prisma'] } so registration fails before use.",
+      "verification": "Registration with an ambient secret but no config rejects."
+    },
+    {
+      "id": "P01-44",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/auth.ts",
+      "problem": "Persisted session validation (revocation, expiry, active user, role) was skipped whenever no prisma decorator existed, so a plugin-order change would silently fail open; the signToken decorator issued session-less tokens that only that mode accepted and had no production caller.",
+      "change": "Always require sessionId and a live memberSession; require the prisma decorator at registration; remove signToken and its FastifyInstance declaration. Verification-only JwtService no longer receives an unused expiry.",
+      "verification": "Registration without prisma rejects; signToken absent; session-less token rejected with 401 without querying the store; valid session token accepted. Existing access/boundary/rate-limiter suites migrated from stateless mode to explicit config + session-store doubles."
+    },
+    {
+      "id": "P01-45",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/config.ts",
+      "problem": "TRUST_PROXY entries were not validated. Fastify/proxy-addr reads bare integers such as '1' as legacy IPv4 (0.0.0.1), so a hop-count intention silently trusted nothing and all proxied clients shared one rate-limit identity; 'true'/'*' crashed at Fastify construction with an unnamed 'invalid IP address' error.",
+      "change": "Accept only IP addresses (node:net isIP), CIDR ranges with valid prefix length, or loopback/linklocal/uniquelocal; report the TRUST_PROXY path.",
+      "verification": "Nine rejection cases (true, *, 1, 2, yes, /33, /129, localhost, 127.0.0) and seven acceptance forms; baseline Fastify behaviour for '1' and 'true' reproduced directly."
+    },
+    {
+      "id": "P01-46",
+      "severity": "P2",
+      "file": "apps/api/src/plugins/config.ts; docker-compose.yml",
+      "problem": "JWT_SECRET required only one character in every environment, below the RFC 7518 section 3.2 HS256 key-size requirement; docker-compose ran NODE_ENV=production with a committed placeholder secret.",
+      "change": "Production requires at least 32 UTF-8 bytes; development/test unchanged. docker-compose requires JWT_SECRET from the invoking environment (${JWT_SECRET:?...}). .env.example documents the rule.",
+      "verification": "31/32-byte production boundary and development acceptance cases; existing production-mode DB plugin fixture updated to a 43-byte synthetic secret. docker compose itself was not executed.",
+      "reference": "https://www.rfc-editor.org/rfc/rfc7518#section-3.2"
+    }
+  ],
+  "baseline": {
+    "new_cases": 29,
+    "passed": 3,
+    "failed": 26,
+    "note": "One initial docs case targeted /docs/static/index.html, which swagger-ui redirects (302); corrected to /docs/ before the fix. The security-without-config baseline failure surfaced as a Vitest formatting TypeError because registration resolved instead of rejecting."
+  },
+  "final": {
+    "new_cases": "29 in apps/api/test/unit/plugin-hardening.spec.ts plus 1 in api-process.spec.ts",
+    "focused": "188 cases in 8 files",
+    "full_unit": "1398 tests in 106 files passed",
+    "coverage": "apps/api/src/plugins/*.ts + startup.ts: 100% statements (151), branches (63), functions (35), lines (136)",
+    "compilers": "root tsc and tsconfig.tooling.json pass",
+    "lint_format": "focused ESLint and Prettier pass for all changed sources/tests",
+    "composition_smoke": "Real createServer with all 8 modules, unreachable datasource and synthetic FedEx values, NODE_ENV production and development: health 200, CORS/expose headers, strict CSP, docs 404/200, ROUTE_NOT_FOUND envelope; no DB query or provider call made."
+  },
+  "follow_ups": [
+    "P10: newsletter unsubscribeViaLink interpolates email and result.error into HTML without escaping, allows unauthenticated unsubscribe by email, and builds its link from the raw comma-separated FRONTEND_URL.",
+    "P01 container: Stripe, ImageKit, SMTP, webhook secrets, DEFAULT_STOCK_LOCATION and ADMIN_APP_URL are read from process.env outside validated config.",
+    "P01/P03: container JwtService uses the same secret for access and refresh tokens; token type claims are checked, but separate secrets need an owner decision.",
+    "Environment: importing @prisma/client loads the root .env into process.env, so the factory environment snapshot already contains .env values. The owner's local .env has two of three FedEx credentials and is rejected by the P01-30 completeness rule until FEDEX_ACCOUNT_NUMBER is added or the partial keys removed.",
+    "Not certified: Swagger UI browser rendering under staticCSP, docker compose execution, native process-manager behaviour."
+  ]
+}
