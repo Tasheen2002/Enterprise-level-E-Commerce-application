@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-15",
+  "phase": "P01",
+  "baseline_commit": "71af00f0",
+  "scope": [
+    "apps/api/src/container.ts (all 1,838 original lines read in four consecutive chunks)",
+    "apps/api/src/modules.ts",
+    "apps/api/src/server.ts (container construction/configuration mapping)",
+    "apps/api/src/plugins/config.ts (provider settings)",
+    "modules/payment/infra/config/stripe.config.ts, payment route null handling, catalog service getters and not-found errors (traced, unchanged)",
+    "scratch/test-expiry-renewal.ts, scratch/verify-restock-dispatcher.ts (singleton consumers, unchanged)"
+  ],
+  "findings": [
+    {
+      "id": "P01-47",
+      "severity": "P1",
+      "file": "apps/api/src/container.ts",
+      "problem": "Container.get() treated any falsy value as missing. Optional Stripe controllers are deliberately registered as null when Stripe is not configured, so getPaymentServices() threw 'Service \"stripeController\" not found in container' and the API could not start without STRIPE_SECRET_KEY, although payment routes already skip null controllers.",
+      "change": "get() checks key presence (Map.has); genuinely unknown names still throw.",
+      "verification": "Reproduced against HEAD with STRIPE_SECRET_KEY unset. Regression registers a real container with an inert client and reads every module's services; real createServer boots without Stripe (no Stripe routes) and with Stripe (Stripe routes present)."
+    },
+    {
+      "id": "P01-48",
+      "severity": "P2",
+      "file": "apps/api/src/container.ts; apps/api/src/server.ts; apps/api/src/modules.ts",
+      "problem": "Every server registered into one process-wide singleton. A second register() silently replaced live services, and servers created in the same process could read each other's controllers bound to another Prisma client/event bus.",
+      "change": "createServer creates a new Container and passes it to the module loader through plugin options; register() refuses a second call on the same instance. getInstance() remains for standalone operational utilities. The module loader declares config/db/auth plugin dependencies.",
+      "verification": "Double registration rejects; two containers have distinct event buses and provider wiring; two concurrently created real servers both serve /health."
+    },
+    {
+      "id": "P01-49",
+      "severity": "P2",
+      "file": "apps/api/src/container.ts; apps/api/src/plugins/config.ts; apps/api/src/server.ts",
+      "problem": "The composition root read Stripe, ImageKit, webhook secrets and DEFAULT_STOCK_LOCATION from process.env outside validated configuration. Prisma's import-time .env loading could enable Stripe independently of the validated snapshot; one ImageKit key silently disabled uploads; malformed currency/location values reached runtime; DEFAULT_STOCK_LOCATION had two different fallbacks.",
+      "change": "Validate STRIPE_SECRET_KEY/WEBHOOK_SECRET/CURRENCY (ISO-4217 shape, default usd, lowercased), PAYPAL/RAZORPAY webhook secrets, paired ImageKit keys and UUID DEFAULT_STOCK_LOCATION in envSchema. server.ts maps validated config to an exported ContainerConfig; the container no longer reads process.env.",
+      "verification": "Configuration acceptance/rejection cases; ambient-only Stripe key no longer enables Stripe controllers; bootstrap forwards complete and absent provider settings."
+    },
+    {
+      "id": "P01-50",
+      "severity": "P2",
+      "file": "apps/api/src/container.ts",
+      "problem": "Six cross-module catalog adapters (cart variant/product/product-media/media-asset, order variant/product) caught every error and returned null or []. Database outages and unexpected failures were therefore reported as missing products/variants or empty media rather than server errors.",
+      "change": "Extracted createCartCatalogPorts/createOrderCatalogPorts; only ProductVariantNotFoundError, ProductNotFoundError and MediaAssetNotFoundError map to absence; all other errors propagate.",
+      "verification": "Not-found mapping, outage propagation and full field adaptation tested for every port."
+    },
+    {
+      "id": "P01-51",
+      "severity": "P3",
+      "file": "apps/api/src/container.ts; apps/api/src/plugins/config.ts; .env.example",
+      "problem": "Unused getPaymentLoyaltyServices with a stale ownership comment; JWT_EXPIRES_IN actually controls refresh-token lifetime (access fixed at 15 minutes) without documentation; untestable inline Firebase 503 stub.",
+      "change": "Removed dead getter; documented JWT_EXPIRES_IN and new provider settings; exported unconfiguredFirebaseVerifier.",
+      "verification": "Compiler/consumer search; 503 contract test for both Firebase operations."
+    }
+  ],
+  "baseline": {
+    "new_cases": 15,
+    "passed": 1,
+    "failed": 14,
+    "note": "Initial fixture imported non-existent cart value-object files; replaced with structural identifiers before the fix. One optional-call compiler diagnostic in the new fixture was corrected."
+  },
+  "final": {
+    "new_cases": "16 in apps/api/test/unit/composition-root.spec.ts; server-bootstrap provider/default assertions extended",
+    "full_unit": "1414 tests in 107 files passed",
+    "coverage": "server.ts 100% lines/branches/functions; config.ts 100%; container.ts 82.38% lines, 32.5% branches, 85.36% functions",
+    "uncovered": "Inline stock-service and order-query delegations (cart stock adapter, order stock adapter, payment order-owner port) and the restock listener body.",
+    "compilers": "root tsc and tsconfig.tooling.json pass",
+    "lint_format": "ESLint: 0 errors; 2 pre-existing unused-variable warnings in the restock listener. Prettier applied to files clean at HEAD; container.ts/modules.ts were not Prettier-clean at HEAD and are outside format:check scope, so they were not reformatted.",
+    "composition_smoke": "Real createServer, unreachable datasource, synthetic FedEx: concurrent servers 200/200; with Stripe 288 route lines including Stripe routes; without Stripe 283 without them."
+  },
+  "follow_ups": [
+    "P10 / P00-07: the restock 'stock.added' subscriber lives in the composition root, uses hard-coded http://localhost:3000 links, logs recipient email/phone to the console, walks categories with N+1 queries and marks simulated deliveries sent. It should move to the engagement module with real delivery semantics.",
+    "Module internals still read process.env: StripeWebhookController via getStripeConfig, checkout-order.service and calculate-checkout-tax (STRIPE_SECRET_KEY), nodemailer adapter (SMTP_*, FRONTEND_URL, ADMIN_APP_URL), invite-admin and admin-invitation controller, newsletter controller.",
+    "Container stock/order-query delegations need tests during P05/P07/P08 or extraction like the catalog ports.",
+    "Access and refresh tokens share one secret (owner decision).",
+    "Container.getInstance remains for two scratch utilities; consider migrating them to new Container()."
+  ]
+}

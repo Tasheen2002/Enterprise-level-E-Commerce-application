@@ -23,7 +23,11 @@ vi.mock("fastify", async (original) => {
     },
   };
 });
-vi.mock("../../src/container", () => ({ container: { register: state.register } }));
+vi.mock("../../src/container", () => ({
+  Container: class {
+    register = state.register;
+  },
+}));
 vi.mock("../../src/plugins/db", async () => {
   const { default: fp } = await import("fastify-plugin");
   return {
@@ -78,6 +82,14 @@ beforeEach(() => {
     "FIREBASE_ADMIN_PROJECT_ID",
     "FIREBASE_ADMIN_CLIENT_EMAIL",
     "FIREBASE_ADMIN_PRIVATE_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_CURRENCY",
+    "PAYPAL_WEBHOOK_SECRET",
+    "RAZORPAY_WEBHOOK_SECRET",
+    "IMAGEKIT_PUBLIC_KEY",
+    "IMAGEKIT_PRIVATE_KEY",
+    "DEFAULT_STOCK_LOCATION",
     "JWT_EXPIRES_IN",
     "RATE_LIMIT_TIMEWINDOW",
     "RATE_LIMIT_MAX",
@@ -120,6 +132,11 @@ describe("actual Fastify server bootstrap with inert database/composition", () =
     vi.stubEnv("FIREBASE_ADMIN_PROJECT_ID", "synthetic-project");
     vi.stubEnv("FIREBASE_ADMIN_CLIENT_EMAIL", "service@example.test");
     vi.stubEnv("FIREBASE_ADMIN_PRIVATE_KEY", "synthetic\\nkey");
+    vi.stubEnv("STRIPE_SECRET_KEY", "sk_test_synthetic");
+    vi.stubEnv("STRIPE_WEBHOOK_SECRET", "whsec_synthetic");
+    vi.stubEnv("IMAGEKIT_PUBLIC_KEY", "public_synthetic");
+    vi.stubEnv("IMAGEKIT_PRIVATE_KEY", "private_synthetic");
+    vi.stubEnv("DEFAULT_STOCK_LOCATION", "6f1c2c5e-9b1a-4c3d-8e2f-1a2b3c4d5e6f");
     await createServer();
     expect(state.constructed.mock.calls[0][0].trustProxy).toEqual(["127.0.0.1"]);
     expect(state.register.mock.calls[0][1]).toMatchObject({
@@ -133,6 +150,10 @@ describe("actual Fastify server bootstrap with inert database/composition", () =
         clientEmail: "service@example.test",
         privateKey: "synthetic\nkey",
       },
+      stripe: { secretKey: "sk_test_synthetic", webhookSecret: "whsec_synthetic", currency: "usd" },
+      imageKit: { publicKey: "public_synthetic", privateKey: "private_synthetic" },
+      webhookSecrets: { stripe: "whsec_synthetic" },
+      defaultStockLocation: "6f1c2c5e-9b1a-4c3d-8e2f-1a2b3c4d5e6f",
     });
   });
   it("constructs the development logger branch", async () => {
@@ -178,6 +199,12 @@ describe("actual Fastify server bootstrap with inert database/composition", () =
       logger: { level: "silent" },
     });
     expect(app.config.RATE_LIMIT_TIMEWINDOW).toBe("1m");
+    expect(state.register.mock.calls[0][1]).toMatchObject({
+      stripe: undefined,
+      imageKit: undefined,
+      fedex: undefined,
+      firebaseAdmin: undefined,
+    });
     expect((await app.inject("/health")).statusCode).toBe(200);
     expect((await app.inject("/ready")).json()).toEqual({ status: "ok" });
     await app.close();

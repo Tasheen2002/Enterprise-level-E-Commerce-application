@@ -526,7 +526,7 @@ import {
 } from "../../../modules/payment/infra/http/controllers";
 import { StripeCardSetupService } from "../../../modules/payment/application/services/stripe-card-setup.service";
 import { createStripeProvider } from "../../../modules/payment/infra/payment-providers/stripe.provider";
-import { getStripeConfig, isStripeConfigured } from "../../../modules/payment/infra/config/stripe.config";
+import type { StripeConfig } from "../../../modules/payment/infra/config/stripe.config";
 import type { IExternalOrderQueryPort } from "../../../modules/payment/domain/external-services";
 
 // ============================================================
@@ -615,6 +615,189 @@ import { NotificationService } from "../../../modules/engagement/application/ser
 import { AppointmentService } from "../../../modules/engagement/application/services/appointment.service";
 import { ProductReviewService } from "../../../modules/engagement/application/services/product-review.service";
 import { NewsletterService } from "../../../modules/engagement/application/services/newsletter.service";
+import {
+  MediaAssetNotFoundError,
+  ProductNotFoundError,
+  ProductVariantNotFoundError,
+} from "../../../modules/product-catalog/domain/errors/product-catalog.errors";
+import type { FedExConfig } from "../../../modules/order-management/infra/shipping/fedex-shipping.service";
+
+/**
+ * Everything the composition root needs from the environment. The server builds
+ * it from validated configuration; the container never reads process.env.
+ */
+export interface ContainerConfig {
+  jwtSecret: string;
+  /** Refresh-token lifetime (access tokens are fixed at 15 minutes). */
+  jwtExpiresIn: string;
+  fedex?: FedExConfig;
+  firebaseAdmin?: {
+    projectId: string;
+    clientEmail: string;
+    privateKey: string;
+  };
+  stripe?: StripeConfig;
+  imageKit?: { publicKey: string; privateKey: string };
+  webhookSecrets?: { stripe?: string; paypal?: string; razorpay?: string };
+  defaultStockLocation?: string;
+}
+
+const serviceUnavailable = (message: string) =>
+  Object.assign(new Error(message), { statusCode: 503 });
+
+/** Used when Firebase Admin credentials are absent: dependent endpoints answer 503. */
+export const unconfiguredFirebaseVerifier: IFirebaseAuthVerifier = {
+  async verifyIdToken() {
+    throw serviceUnavailable("Google sign-in is not configured on this server");
+  },
+  async verifyPhoneIdToken() {
+    throw serviceUnavailable("Phone verification is not configured on this server");
+  },
+};
+
+type ErrorClass = abstract new (...args: never[]) => Error;
+
+/** Resolve a lookup's documented not-found error to a fallback; rethrow everything else. */
+async function unlessNotFound<T, F>(
+  lookup: () => Promise<T>,
+  notFound: ErrorClass,
+  fallback: F,
+): Promise<T | F> {
+  try {
+    return await lookup();
+  } catch (error) {
+    if (error instanceof notFound) return fallback;
+    throw error;
+  }
+}
+
+interface CatalogLookups {
+  variantManagementService: Pick<VariantManagementService, "getVariantById">;
+  productManagementService: Pick<ProductManagementService, "getProductById">;
+  productMediaManagementService: Pick<ProductMediaManagementService, "getProductMedia">;
+  mediaManagementService: Pick<MediaManagementService, "getAssetById">;
+}
+
+/**
+ * Cart's catalog ports. Only catalog not-found errors mean "absent"; database
+ * and other failures propagate instead of being reported as missing products.
+ */
+export function createCartCatalogPorts(catalog: CatalogLookups): {
+  variants: IExternalProductVariantRepository;
+  products: IExternalProductRepository;
+  productMedia: IExternalProductMediaRepository;
+  mediaAssets: IExternalMediaAssetRepository;
+} {
+  return {
+    variants: {
+      findById: (variantId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.variantManagementService.getVariantById(variantId.getValue());
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getProductId: () => ({ getValue: () => dto.productId }),
+              getSku: () => ({ getValue: () => dto.sku }),
+              getSize: () => dto.size,
+              getColor: () => dto.color,
+              getWeightG: () => dto.weightG,
+              getAllowPreorder: () => dto.allowPreorder,
+              getAllowBackorder: () => dto.allowBackorder,
+              getRestockEta: () => (dto.restockEta ? new Date(dto.restockEta) : null),
+              getInventory: () => dto.inventory ?? 0,
+            };
+          },
+          ProductVariantNotFoundError,
+          null,
+        ),
+    },
+    products: {
+      findById: (productId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.productManagementService.getProductById(productId.getValue());
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getTitle: () => dto.title,
+              getSlug: () => ({ getValue: () => dto.slug }),
+              getPrice: () => ({ getValue: () => dto.price }),
+              getCategoryIds: () => dto.categoryIds || [],
+            };
+          },
+          ProductNotFoundError,
+          null,
+        ),
+    },
+    productMedia: {
+      findByProductId: (productId) =>
+        unlessNotFound(
+          async () => {
+            const summary = await catalog.productMediaManagementService.getProductMedia(
+              productId.getValue(),
+            );
+            return summary.mediaAssets.map((asset) => ({
+              getAssetId: () => ({ getValue: () => asset.assetId }),
+            }));
+          },
+          ProductNotFoundError,
+          [],
+        ),
+    },
+    mediaAssets: {
+      findById: (assetId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.mediaManagementService.getAssetById(assetId.getValue());
+            return { getStorageKey: () => dto.storageKey, getAltText: () => dto.altText ?? null };
+          },
+          MediaAssetNotFoundError,
+          null,
+        ),
+    },
+  };
+}
+
+/** Order management's catalog ports, with the same not-found-only mapping. */
+export function createOrderCatalogPorts(
+  catalog: Pick<CatalogLookups, "variantManagementService" | "productManagementService">,
+): { variants: IExternalVariantService; products: IExternalProductService } {
+  return {
+    variants: {
+      getVariantById: (variantId: string) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.variantManagementService.getVariantById(variantId);
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getProductId: () => ({ getValue: () => dto.productId }),
+              getSku: () => ({ getValue: () => dto.sku }),
+              getSize: () => dto.size,
+              getColor: () => dto.color,
+              getWeightG: () => dto.weightG,
+              getDims: () => dto.dims as Record<string, unknown> | null,
+            };
+          },
+          ProductVariantNotFoundError,
+          null,
+        ),
+    },
+    products: {
+      getProductById: (productId: string) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.productManagementService.getProductById(productId);
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getTitle: () => dto.title,
+              getPrice: () => ({ getValue: () => dto.price }),
+            };
+          },
+          ProductNotFoundError,
+          null,
+        ),
+    },
+  };
+}
 
 /**
  * Dependency Injection Container
@@ -622,13 +805,15 @@ import { NewsletterService } from "../../../modules/engagement/application/servi
  * Modules are registered in dependency order:
  *   User Management → Product Catalog → Inventory Management →
  *   Cart → Order Management → Payment → Loyalty → Engagement
+ *
+ * Each server creates its own container; `register` runs once per instance.
  */
 export class Container {
   private static instance: Container;
   private services: Map<string, unknown> = new Map();
+  private registered = false;
 
-  private constructor() {}
-
+  /** Process-wide instance kept for standalone operational utilities. */
   static getInstance(): Container {
     if (!Container.instance) {
       Container.instance = new Container();
@@ -636,19 +821,11 @@ export class Container {
     return Container.instance;
   }
 
-  register(
-    prisma: PrismaClient,
-    config: {
-      jwtSecret: string;
-      jwtExpiresIn: string;
-      fedex?: import('../../../modules/order-management/infra/shipping/fedex-shipping.service').FedExConfig;
-      firebaseAdmin?: {
-        projectId: string;
-        clientEmail: string;
-        privateKey: string;
-      };
-    },
-  ): void {
+  register(prisma: PrismaClient, config: ContainerConfig): void {
+    if (this.registered) {
+      throw new Error("Container is already registered; create a new Container per server");
+    }
+    this.registered = true;
 
     // ============================================================
     // Shared Infrastructure — Event Bus
@@ -725,22 +902,7 @@ export class Container {
     // When unset, /auth/google returns 503 via the unconfigured stub below.
     const firebaseVerifier: IFirebaseAuthVerifier = config.firebaseAdmin
       ? new FirebaseAuthVerifierAdapter(config.firebaseAdmin)
-      : {
-          async verifyIdToken() {
-            const err: Error & { statusCode?: number } = new Error(
-              "Google sign-in is not configured on this server",
-            );
-            err.statusCode = 503;
-            throw err;
-          },
-          async verifyPhoneIdToken() {
-            const err: Error & { statusCode?: number } = new Error(
-              "Phone verification is not configured on this server",
-            );
-            err.statusCode = 503;
-            throw err;
-          },
-        };
+      : unconfiguredFirebaseVerifier;
 
     const authController = new AuthController(
       new RegisterUserHandler(authService, TokenBlacklistService, emailService),
@@ -766,13 +928,9 @@ export class Container {
     // ImageKit upload-token issuer — only wired when both server-side
     // ImageKit credentials are present. The avatar-upload route returns
     // 503 when this is null.
-    const imageKitUploadAuth =
-      process.env.IMAGEKIT_PUBLIC_KEY && process.env.IMAGEKIT_PRIVATE_KEY
-        ? new ImageKitUploadAuthService({
-            publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-            privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-          })
-        : null;
+    const imageKitUploadAuth = config.imageKit
+      ? new ImageKitUploadAuthService(config.imageKit)
+      : null;
 
     const profileController = new ProfileController(
       new GetUserProfileHandler(profileService),
@@ -1134,68 +1292,17 @@ export class Container {
 
     const reservationRepository = new ReservationRepositoryImpl(prisma, stockServiceAdapter, eventBus);
 
-    const externalProductVariantRepository: IExternalProductVariantRepository = {
-      findById: async (variantId) => {
-        try {
-          const dto = await variantManagementService.getVariantById(variantId.getValue());
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getProductId: () => ({ getValue: () => dto.productId }),
-            getSku: () => ({ getValue: () => dto.sku }),
-            getSize: () => dto.size,
-            getColor: () => dto.color,
-            getWeightG: () => dto.weightG,
-            getAllowPreorder: () => dto.allowPreorder,
-            getAllowBackorder: () => dto.allowBackorder,
-            getRestockEta: () => dto.restockEta ? new Date(dto.restockEta) : null,
-            getInventory: () => dto.inventory ?? 0,
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductRepository: IExternalProductRepository = {
-      findById: async (productId) => {
-        try {
-          const dto = await productManagementService.getProductById(productId.getValue());
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getTitle: () => dto.title,
-            getSlug: () => ({ getValue: () => dto.slug }),
-            getPrice: () => ({ getValue: () => dto.price }),
-            getCategoryIds: () => dto.categoryIds || [],
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductMediaRepository: IExternalProductMediaRepository = {
-      findByProductId: async (productId) => {
-        try {
-          const summary = await productMediaManagementService.getProductMedia(productId.getValue());
-          return summary.mediaAssets.map((asset) => ({
-            getAssetId: () => ({ getValue: () => asset.assetId }),
-          }));
-        } catch {
-          return [];
-        }
-      },
-    };
-
-    const externalMediaAssetRepository: IExternalMediaAssetRepository = {
-      findById: async (assetId) => {
-        try {
-          const dto = await mediaManagementService.getAssetById(assetId.getValue());
-          return dto ? { getStorageKey: () => dto.storageKey, getAltText: () => dto.altText ?? null } : null;
-        } catch {
-          return null;
-        }
-      },
-    };
+    const {
+      variants: externalProductVariantRepository,
+      products: externalProductRepository,
+      productMedia: externalProductMediaRepository,
+      mediaAssets: externalMediaAssetRepository,
+    } = createCartCatalogPorts({
+      variantManagementService,
+      productManagementService,
+      productMediaManagementService,
+      mediaManagementService,
+    });
 
     const reservationOrchestrator = new ReservationOrchestrator(reservationRepository);
     const cartManagementService = new CartManagementService(
@@ -1220,7 +1327,7 @@ export class Container {
       externalProductRepository,
       externalProductVariantRepository,
       { create: (data) => ProductSnapshot.create(data) } satisfies IProductSnapshotFactory,
-      { defaultStockLocation: process.env.DEFAULT_STOCK_LOCATION },
+      { defaultStockLocation: config.defaultStockLocation },
       loyaltyService,
     );
 
@@ -1292,39 +1399,8 @@ export class Container {
     const preorderRepository = new PreorderRepositoryImpl(prisma, eventBus);
 
     // Cross-module port adapters: bridge product-catalog & inventory into order's external port interfaces
-    const externalVariantService: IExternalVariantService = {
-      getVariantById: async (variantId: string) => {
-        try {
-          const dto = await variantManagementService.getVariantById(variantId);
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getProductId: () => ({ getValue: () => dto.productId }),
-            getSku: () => ({ getValue: () => dto.sku }),
-            getSize: () => dto.size,
-            getColor: () => dto.color,
-            getWeightG: () => dto.weightG,
-            getDims: () => dto.dims as Record<string, unknown> | null,
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductService: IExternalProductService = {
-      getProductById: async (productId: string) => {
-        try {
-          const dto = await productManagementService.getProductById(productId);
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getTitle: () => dto.title,
-            getPrice: () => ({ getValue: () => dto.price }),
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
+    const { variants: externalVariantService, products: externalProductService } =
+      createOrderCatalogPorts({ variantManagementService, productManagementService });
 
     const externalStockService: IOrderExternalStockService = {
       getStock: async (variantId: string, locationId: string) => {
@@ -1348,7 +1424,7 @@ export class Container {
       externalVariantService,
       externalProductService,
       externalStockService,
-      process.env.DEFAULT_STOCK_LOCATION ?? "",
+      config.defaultStockLocation ?? "",
       fedexShippingService,
       loyaltyService,
     );
@@ -1452,11 +1528,10 @@ export class Container {
     const bnplTransactionService = new BnplTransactionService(paymentIntentRepository, orderQueryPort, bnplTransactionRepository);
     const giftCardService = new GiftCardService(orderQueryPort, giftCardRepository, giftCardTransactionRepository);
     const promotionService = new PromotionService(promotionRepository, promotionUsageRepository);
-    const paymentWebhookService = new PaymentWebhookService(paymentWebhookEventRepository, {
-      stripe: process.env.STRIPE_WEBHOOK_SECRET,
-      paypal: process.env.PAYPAL_WEBHOOK_SECRET,
-      razorpay: process.env.RAZORPAY_WEBHOOK_SECRET,
-    });
+    const paymentWebhookService = new PaymentWebhookService(
+      paymentWebhookEventRepository,
+      config.webhookSecrets ?? {},
+    );
 
     const paymentIntentController = new PaymentIntentController(
       new CreatePaymentIntentHandler(paymentService),
@@ -1488,18 +1563,18 @@ export class Container {
       new RecordPromotionUsageHandler(promotionService),
       new GetPromotionUsageHandler(promotionService),
     );
-    const stripeController = isStripeConfigured()
+    const stripeController = config.stripe
       ? new StripeWebhookController(paymentService)
       : null;
 
     // Stripe card-setup feature: SetupIntent flow + persisting confirmed
     // PaymentMethods. Only wires up when Stripe is configured; otherwise
     // the corresponding routes are skipped at registration.
-    const stripeCardSetupController = isStripeConfigured()
+    const stripeCardSetupController = config.stripe
       ? new StripeCardSetupController(
           new StripeCardSetupService(
             prisma,
-            createStripeProvider(getStripeConfig()),
+            createStripeProvider(config.stripe),
             paymentMethodService,
           ),
         )
@@ -1725,11 +1800,11 @@ export class Container {
   }
 
   get<T>(name: string): T {
-    const service = this.services.get(name);
-    if (!service) {
+    // Optional features are registered as null; only an absent key is an error.
+    if (!this.services.has(name)) {
       throw new Error(`Service "${name}" not found in container`);
     }
-    return service as T;
+    return this.services.get(name) as T;
   }
 
   getUserManagementServices() {
@@ -1809,14 +1884,6 @@ export class Container {
   getLoyaltyServices() {
     return {
       loyaltyController: this.get<LoyaltyController>("loyaltyController"),
-    };
-  }
-
-  /** Combined getter for registerPaymentRoutes — which owns both payment and loyalty routes. */
-  getPaymentLoyaltyServices() {
-    return {
-      ...this.getPaymentServices(),
-      ...this.getLoyaltyServices(),
     };
   }
 

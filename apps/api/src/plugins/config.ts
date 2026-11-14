@@ -45,6 +45,7 @@ export const envSchema = z
       .url()
       .refine((value) => /^postgres(?:ql)?:/.test(value), "Expected PostgreSQL URL"),
     JWT_SECRET: z.string().trim().min(1),
+    // Refresh-token (session) lifetime; access tokens are fixed at 15 minutes by the container.
     JWT_EXPIRES_IN: durationSchema.default("7d"),
     FRONTEND_URL: z
       .string()
@@ -85,6 +86,20 @@ export const envSchema = z
       ),
     // Documentation routes publish the full API surface; production opts in explicitly.
     API_DOCS_ENABLED: z.enum(["true", "false"]).optional(),
+    // Optional providers: absent disables the feature; partial configuration is rejected.
+    STRIPE_SECRET_KEY: z.string().trim().min(1).optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
+    STRIPE_CURRENCY: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z]{3}$/, "Expected a three-letter ISO 4217 currency code")
+      .default("usd"),
+    PAYPAL_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
+    RAZORPAY_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
+    IMAGEKIT_PUBLIC_KEY: z.string().trim().min(1).optional(),
+    IMAGEKIT_PRIVATE_KEY: z.string().trim().min(1).optional(),
+    DEFAULT_STOCK_LOCATION: z.string().trim().uuid().optional(),
     FEDEX_API_KEY: z.string().trim().min(1).optional(),
     FEDEX_SECRET_KEY: z.string().trim().min(1).optional(),
     FEDEX_ACCOUNT_NUMBER: z.string().trim().min(1).optional(),
@@ -133,6 +148,13 @@ export const envSchema = z
         code: "custom",
         path: ["FIREBASE_ADMIN_PROJECT_ID"],
         message: "Configure all three Firebase Admin credentials together",
+      });
+    }
+    if (Boolean(config.IMAGEKIT_PUBLIC_KEY) !== Boolean(config.IMAGEKIT_PRIVATE_KEY)) {
+      context.addIssue({
+        code: "custom",
+        path: ["IMAGEKIT_PUBLIC_KEY"],
+        message: "Configure both ImageKit keys together",
       });
     }
   })
