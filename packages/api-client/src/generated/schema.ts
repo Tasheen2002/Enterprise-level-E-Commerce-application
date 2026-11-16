@@ -3734,6 +3734,7 @@ export interface paths {
                                     allowPreorder?: boolean;
                                     /** Format: date-time */
                                     restockEta?: string | null;
+                                    inventory?: number;
                                     /** Format: date-time */
                                     createdAt?: string;
                                     /** Format: date-time */
@@ -3818,6 +3819,7 @@ export interface paths {
                                 allowPreorder?: boolean;
                                 /** Format: date-time */
                                 restockEta?: string | null;
+                                inventory?: number;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -3888,6 +3890,7 @@ export interface paths {
                                 allowPreorder?: boolean;
                                 /** Format: date-time */
                                 restockEta?: string | null;
+                                inventory?: number;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -3992,6 +3995,7 @@ export interface paths {
                                 allowPreorder?: boolean;
                                 /** Format: date-time */
                                 restockEta?: string | null;
+                                inventory?: number;
                                 /** Format: date-time */
                                 createdAt?: string;
                                 /** Format: date-time */
@@ -12066,6 +12070,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -12281,6 +12290,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -12422,6 +12436,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -12590,6 +12609,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -12731,6 +12755,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -12922,6 +12951,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -13104,6 +13138,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -13256,6 +13295,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -13515,6 +13559,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -13670,6 +13719,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -13841,6 +13895,11 @@ export interface paths {
                                         size?: string | null;
                                         color?: string | null;
                                         sku?: string;
+                                        allowPreorder?: boolean;
+                                        allowBackorder?: boolean;
+                                        /** Format: date-time */
+                                        restockEta?: string | null;
+                                        inventory?: number;
                                     };
                                 }[];
                                 summary: {
@@ -14183,6 +14242,8 @@ export interface paths {
                             postalCode?: string;
                             country: string;
                             phone?: string;
+                            /** Format: email */
+                            email?: string;
                         };
                         billingAddress?: {
                             firstName: string;
@@ -14194,7 +14255,10 @@ export interface paths {
                             postalCode?: string;
                             country: string;
                             phone?: string;
+                            /** Format: email */
+                            email?: string;
                         };
+                        promoCode?: string;
                     };
                 };
             };
@@ -14287,6 +14351,76 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkout/{checkoutId}/calculate-tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate Checkout Tax & Shipping
+         * @description Calculate tax and shipping cost based on shipping address.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        shippingAddress: {
+                            firstName: string;
+                            lastName: string;
+                            addressLine1: string;
+                            addressLine2?: string;
+                            city: string;
+                            state?: string;
+                            postalCode?: string;
+                            country: string;
+                            phone?: string;
+                            /** Format: email */
+                            email?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                tax?: number;
+                                shipping?: number;
+                                total?: number;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -15326,19 +15460,81 @@ export interface paths {
                                 orderNumber?: string;
                                 status?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 totals?: {
                                     [key: string]: unknown;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 billingAddress?: {
-                                    [key: string]: unknown;
+                                    firstName?: string;
+                                    lastName?: string;
+                                    addressLine1?: string;
+                                    addressLine2?: string;
+                                    city?: string;
+                                    state?: string;
+                                    postalCode?: string;
+                                    country?: string;
+                                    phone?: string;
+                                    email?: string;
                                 };
                                 shippingAddress?: {
-                                    [key: string]: unknown;
+                                    firstName?: string;
+                                    lastName?: string;
+                                    addressLine1?: string;
+                                    addressLine2?: string;
+                                    city?: string;
+                                    state?: string;
+                                    postalCode?: string;
+                                    country?: string;
+                                    phone?: string;
+                                    email?: string;
                                 };
                                 /** Format: date-time */
                                 createdAt?: string;
@@ -15371,15 +15567,15 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    limit: number;
-                    offset: number;
+                query?: {
+                    limit?: number;
+                    offset?: number;
                     userId?: string;
                     status?: string;
                     startDate?: unknown;
                     endDate?: unknown;
-                    sortBy: "createdAt" | "updatedAt" | "orderNumber";
-                    sortOrder: "asc" | "desc";
+                    sortBy?: "createdAt" | "updatedAt" | "orderNumber";
+                    sortOrder?: "asc" | "desc";
                 };
                 header?: never;
                 path?: never;
@@ -15411,13 +15607,83 @@ export interface paths {
                                     source?: string;
                                     currency?: string;
                                     items?: {
-                                        [key: string]: unknown;
+                                        /** Format: uuid */
+                                        orderItemId?: string;
+                                        /** Format: uuid */
+                                        orderId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        quantity?: number;
+                                        productSnapshot?: {
+                                            /** Format: uuid */
+                                            productId?: string;
+                                            /** Format: uuid */
+                                            variantId?: string;
+                                            sku?: string;
+                                            name?: string;
+                                            variantName?: string;
+                                            price?: number;
+                                            imageUrl?: string;
+                                            weight?: number;
+                                            dimensions?: {
+                                                length?: number;
+                                                width?: number;
+                                                height?: number;
+                                            };
+                                            attributes?: {
+                                                [key: string]: unknown;
+                                            };
+                                        };
+                                        isGift?: boolean;
+                                        giftMessage?: string;
+                                        subtotal?: number;
                                     }[];
                                     address?: {
-                                        [key: string]: unknown;
+                                        /** Format: uuid */
+                                        orderId?: string;
+                                        billingAddress?: {
+                                            firstName?: string;
+                                            lastName?: string;
+                                            addressLine1?: string;
+                                            addressLine2?: string;
+                                            city?: string;
+                                            state?: string;
+                                            postalCode?: string;
+                                            country?: string;
+                                            phone?: string;
+                                            email?: string;
+                                        };
+                                        shippingAddress?: {
+                                            firstName?: string;
+                                            lastName?: string;
+                                            addressLine1?: string;
+                                            addressLine2?: string;
+                                            city?: string;
+                                            state?: string;
+                                            postalCode?: string;
+                                            country?: string;
+                                            phone?: string;
+                                            email?: string;
+                                        };
+                                        isSameAddress?: boolean;
                                     };
                                     shipments?: {
-                                        [key: string]: unknown;
+                                        /** Format: uuid */
+                                        shipmentId?: string;
+                                        /** Format: uuid */
+                                        orderId?: string;
+                                        carrier?: string;
+                                        service?: string;
+                                        trackingNumber?: string;
+                                        giftReceipt?: boolean;
+                                        /** Format: uuid */
+                                        pickupLocationId?: string;
+                                        /** Format: date-time */
+                                        shippedAt?: string;
+                                        /** Format: date-time */
+                                        deliveredAt?: string;
+                                        isShipped?: boolean;
+                                        isDelivered?: boolean;
                                     }[];
                                     totals?: {
                                         subtotal?: number;
@@ -15525,13 +15791,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -15601,13 +15937,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -15679,13 +16085,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -15793,13 +16269,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -15881,13 +16427,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -15955,13 +16571,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -16033,13 +16719,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -16111,13 +16867,83 @@ export interface paths {
                                 source?: string;
                                 currency?: string;
                                 items?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderItemId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    /** Format: uuid */
+                                    variantId?: string;
+                                    quantity?: number;
+                                    productSnapshot?: {
+                                        /** Format: uuid */
+                                        productId?: string;
+                                        /** Format: uuid */
+                                        variantId?: string;
+                                        sku?: string;
+                                        name?: string;
+                                        variantName?: string;
+                                        price?: number;
+                                        imageUrl?: string;
+                                        weight?: number;
+                                        dimensions?: {
+                                            length?: number;
+                                            width?: number;
+                                            height?: number;
+                                        };
+                                        attributes?: {
+                                            [key: string]: unknown;
+                                        };
+                                    };
+                                    isGift?: boolean;
+                                    giftMessage?: string;
+                                    subtotal?: number;
                                 }[];
                                 address?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    billingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    shippingAddress?: {
+                                        firstName?: string;
+                                        lastName?: string;
+                                        addressLine1?: string;
+                                        addressLine2?: string;
+                                        city?: string;
+                                        state?: string;
+                                        postalCode?: string;
+                                        country?: string;
+                                        phone?: string;
+                                        email?: string;
+                                    };
+                                    isSameAddress?: boolean;
                                 };
                                 shipments?: {
-                                    [key: string]: unknown;
+                                    /** Format: uuid */
+                                    shipmentId?: string;
+                                    /** Format: uuid */
+                                    orderId?: string;
+                                    carrier?: string;
+                                    service?: string;
+                                    trackingNumber?: string;
+                                    giftReceipt?: boolean;
+                                    /** Format: uuid */
+                                    pickupLocationId?: string;
+                                    /** Format: date-time */
+                                    shippedAt?: string;
+                                    /** Format: date-time */
+                                    deliveredAt?: string;
+                                    isShipped?: boolean;
+                                    isDelivered?: boolean;
                                 }[];
                                 totals?: {
                                     subtotal?: number;
@@ -17247,9 +18073,9 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    limit: number;
-                    offset: number;
+                query?: {
+                    limit?: number;
+                    offset?: number;
                 };
                 header?: never;
                 path: {
@@ -17357,12 +18183,12 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
+                query?: {
                     eventType?: string;
-                    limit: number;
-                    offset: number;
-                    sortBy: "createdAt" | "eventId";
-                    sortOrder: "asc" | "desc";
+                    limit?: number;
+                    offset?: number;
+                    sortBy?: "createdAt" | "eventId";
+                    sortOrder?: "asc" | "desc";
                 };
                 header?: never;
                 path: {
@@ -17534,12 +18360,12 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    limit: number;
-                    offset: number;
-                    sortBy: "releaseDate" | "notifiedAt";
-                    sortOrder: "asc" | "desc";
-                    filterType: "all" | "notified" | "unnotified" | "released";
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    sortBy?: "releaseDate" | "notifiedAt";
+                    sortOrder?: "asc" | "desc";
+                    filterType?: "all" | "notified" | "unnotified" | "released";
                 };
                 header?: never;
                 path?: never;
@@ -17853,12 +18679,12 @@ export interface paths {
          */
         get: {
             parameters: {
-                query: {
-                    limit: number;
-                    offset: number;
-                    sortBy: "promisedEta" | "notifiedAt";
-                    sortOrder: "asc" | "desc";
-                    filterType: "all" | "notified" | "unnotified" | "overdue";
+                query?: {
+                    limit?: number;
+                    offset?: number;
+                    sortBy?: "promisedEta" | "notifiedAt";
+                    sortOrder?: "asc" | "desc";
+                    filterType?: "all" | "notified" | "unnotified" | "overdue";
                 };
                 header?: never;
                 path?: never;
@@ -18142,6 +18968,164 @@ export interface paths {
                                 notifiedAt?: string;
                                 hasPromisedEta?: boolean;
                                 isCustomerNotified?: boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description Get recent administrative audit notifications (Staff/Admin only)
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                type?: string;
+                                title?: string;
+                                message?: string;
+                                targetUrl?: string | null;
+                                isRead?: boolean;
+                                /** Format: date-time */
+                                createdAt?: string;
+                                /** Format: date-time */
+                                updatedAt?: string;
+                            }[];
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Mark Notification as Read
+         * @description Mark a specific notification as read (Staff/Admin only)
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                /** Format: uuid */
+                                id?: string;
+                                isRead?: boolean;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark All Notifications as Read
+         * @description Mark all unread administrative notifications as read (Staff/Admin only)
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {boolean} */
+                            success: true;
+                            /** @enum {number} */
+                            statusCode: 200;
+                            message: string;
+                            data: {
+                                success?: boolean;
                             };
                         };
                     };
@@ -19132,6 +20116,10 @@ export interface paths {
                         currency?: string;
                         products?: string[];
                         categories?: string[];
+                        /** Format: uuid */
+                        userId?: string;
+                        /** Format: email */
+                        email?: string;
                     };
                 };
             };
@@ -22394,6 +23382,39 @@ export interface paths {
         trace?: never;
     };
     "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ready": {
         parameters: {
             query?: never;
             header?: never;

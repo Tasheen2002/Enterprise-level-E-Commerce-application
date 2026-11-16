@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isSameOriginRequest } from "@/lib/same-origin";
 
 /**
- * Mirrors the client-side auth tokens into httpOnly cookies. Called from
+ * Mirrors the client-side access token into an httpOnly cookie. Called from
  * `setAuthToken` after every successful login / register / refresh so the
  * Next.js middleware (which can't read localStorage) can gate `/account/*`
  * at the edge — eliminating the spinner-then-redirect flicker — and so
@@ -10,15 +11,16 @@ import { cookies } from "next/headers";
  *
  * The actual API still authenticates via the `Authorization: Bearer …`
  * header from localStorage on client requests; the cookie is purely a
- * server-side mirror.
+ * server-side mirror. The refresh token stays client-side: nothing on the
+ * server reads it, so it is not stored in a cookie.
+ *
+ * Only same-origin JSON requests are accepted. Without this, a cross-site
+ * form could plant another account's token (login CSRF) and Server
+ * Components would render that account's data.
  */
 const TOKEN_COOKIE = "tasheen.access_token";
-const REFRESH_COOKIE = "tasheen.refresh_token";
-
-interface SyncBody {
-  accessToken?: string;
-  refreshToken?: string;
-}
+// Browsers cap a cookie (name + value + attributes) at about 4 KB.
+const MAX_TOKEN_LENGTH = 4096;
 
 /**
  * Decide whether to set the `Secure` flag on auth cookies. We can't trust
@@ -33,17 +35,27 @@ function isSecureRequest(request: Request): boolean {
   return request.headers.get("x-forwarded-proto") === "https";
 }
 
-export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as SyncBody | null;
-  const accessToken = body?.accessToken;
-  const refreshToken = body?.refreshToken;
+function isJsonRequest(request: Request): boolean {
+  const type = request.headers.get("content-type") ?? "";
+  return (type.split(";", 1)[0] ?? "").trim().toLowerCase() === "application/json";
+}
 
-  if (!accessToken) {
+export async function POST(request: Request) {
+  if (!isSameOriginRequest(request) || !isJsonRequest(request)) {
+    return NextResponse.json({ ok: false }, { status: 403 });
+  }
+
+  const body = (await request.json().catch(() => null)) as { accessToken?: unknown } | null;
+  const accessToken = body?.accessToken;
+  if (
+    typeof accessToken !== "string" ||
+    accessToken.length === 0 ||
+    accessToken.length > MAX_TOKEN_LENGTH
+  ) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
   const cookieStore = await cookies();
-  const secure = isSecureRequest(request);
 
   // The access token JWT itself expires server-side after ~15m, but we
   // keep the cookie alive for the full refresh-token window so the
@@ -56,20 +68,10 @@ export async function POST(request: Request) {
   cookieStore.set(TOKEN_COOKIE, accessToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isSecureRequest(request),
     path: "/",
     maxAge: 60 * 60 * 24 * 7,
   });
-
-  if (refreshToken) {
-    cookieStore.set(REFRESH_COOKIE, refreshToken, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure,
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30d
-    });
-  }
 
   return NextResponse.json({ ok: true });
 }

@@ -10,6 +10,8 @@
   ],
   "scripts": {
     "dev:api": "npx tsx watch apps/api/src/index.ts",
+    "generate:api-client": "tsx scripts/maintenance/generate-api-client.ts",
+    "check:api-client": "tsx scripts/maintenance/generate-api-client.ts --check",
     "start:api": "npx tsx apps/api/src/index.ts",
     "dev:web": "turbo run dev --filter=@tasheen/web",
     "dev:admin": "turbo run dev --filter=@tasheen/admin",
@@ -41,7 +43,6 @@
   },
   "homepage": "https://github.com/Tasheen2002/Enterprise-level-E-Commerce-application#readme",
   "devDependencies": {
-    "@prisma/client": "^6.16.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.3",
@@ -68,9 +69,11 @@
     "@fastify/jwt": "^10.0.0",
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
+    "@prisma/client": "^6.16.1",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "fastify": "^5.6.2",
+    "fastify-plugin": "^5.1.0",
     "firebase-admin": "^13.9.0",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.7",

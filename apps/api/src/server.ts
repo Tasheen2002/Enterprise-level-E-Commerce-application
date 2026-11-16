@@ -54,8 +54,14 @@ export function containerConfig(config: Config): ContainerConfig {
   };
 }
 
-export const createServer = async (): Promise<FastifyInstance> => {
-  const environment = { ...process.env };
+/**
+ * Build the API. The environment is snapshotted once; tooling (e.g. OpenAPI
+ * generation) passes an explicit environment instead of process.env.
+ */
+export const createServer = async (
+  source: NodeJS.ProcessEnv = process.env,
+): Promise<FastifyInstance> => {
+  const environment = { ...source };
   const config = readConfig(environment);
   const server = Fastify({
     trustProxy: config.TRUST_PROXY.length > 0 ? config.TRUST_PROXY : false,

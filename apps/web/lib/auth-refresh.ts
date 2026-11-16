@@ -84,7 +84,7 @@ async function doRefresh(): Promise<string | null> {
   if (body.data.refreshToken) {
     setRefreshToken(body.data.refreshToken);
   }
-  void syncAuthCookies(body.data.accessToken, body.data.refreshToken);
+  void syncAuthCookies(body.data.accessToken);
   return body.data.accessToken;
 }
 
