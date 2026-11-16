@@ -1,12 +1,12 @@
 {
   "date": "2026-11-16",
-  "commit": "38d4528dd4b42fa856d717880e681699462fcf89",
+  "commit": "e4a403a4ff4e060c1f6fabba77f523d5704d52ab",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1864,
-  "backend_review_scope_files": 1532,
+  "candidate_files": 1866,
+  "backend_review_scope_files": 1533,
   "scope_counts": {
-    "audit-record": 85,
-    "backend": 1404,
+    "audit-record": 86,
+    "backend": 1405,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -20,7 +20,7 @@
     "modules/cart": 109,
     "modules/customer-care": 132,
     "modules/engagement": 130,
-    "modules/fulfillment": 25,
+    "modules/fulfillment": 24,
     "modules/inventory-management": 144,
     "modules/loyalty": 53,
     "modules/order-management": 143,
@@ -33,7 +33,7 @@
     "packages/core": 32,
     "packages/types": 5,
     "packages/validation": 10,
-    "prisma": 13,
+    "prisma": 15,
     "root": 19,
     "scratch": 19,
     "scripts": 28
@@ -41,7 +41,7 @@
   "phase_counts": {
     "P00": 67,
     "P01": 131,
-    "P02": 13,
+    "P02": 15,
     "P03": 155,
     "P04": 226,
     "P05": 144,
@@ -50,7 +50,7 @@
     "P08": 123,
     "P09": 53,
     "P10": 130,
-    "P11": 25,
+    "P11": 24,
     "P12": 132,
     "P13": 23,
     "P14": 58
@@ -60,18 +60,20 @@
     "documentation-or-data": 2,
     "exports-or-declarations": 156,
     "generated-contract": 1,
-    "migration-or-sql": 13,
+    "migration-or-sql": 14,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1207,
     "test": 151
   },
   "closure_counts": {
-    "open": 1374,
-    "closed": 158
+    "open": 1372,
+    "closed": 161
   },
   "removed_files_requiring_verification": [
     "apps/api/src/shared/application/index.ts",
-    "packages/config/eslint.preset.cjs"
+    "modules/fulfillment/infra/persistence/migrations/20251014000100_fulfillment_add_timestamps/migration.sql",
+    "packages/config/eslint.preset.cjs",
+    "prisma/indexes-to-add.sql"
   ],
   "unclassified_files": [],
   "note": "Inventory is not semantic review or a test run. Prior findings are historical evidence; no current file is automatically closed. Environment files are hashed locally but their contents/values are never displayed or exported. Frontend candidates are a starting point, not proof of complete transitive contract discovery."

@@ -56,8 +56,12 @@ jobs:
       - name: Check generated API client matches registered routes
         run: pnpm run check:api-client
 
+      # Apply the committed migration history exactly as a deployment does, then
+      # fail if it does not produce the database described by schema.prisma.
       - name: Migrate Database Schema
-        run: npx prisma db push
+        run: |
+          npx prisma migrate deploy
+          pnpm run check:migrations
         env:
           DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"
           TEST_DATABASE_URL: "postgresql://postgres:test_password@localhost:5432/ecommerce_test"

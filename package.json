@@ -12,6 +12,7 @@
     "dev:api": "npx tsx watch apps/api/src/index.ts",
     "generate:api-client": "tsx scripts/maintenance/generate-api-client.ts",
     "check:api-client": "tsx scripts/maintenance/generate-api-client.ts --check",
+    "check:migrations": "prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code",
     "start:api": "npx tsx apps/api/src/index.ts",
     "dev:web": "turbo run dev --filter=@tasheen/web",
     "dev:admin": "turbo run dev --filter=@tasheen/admin",

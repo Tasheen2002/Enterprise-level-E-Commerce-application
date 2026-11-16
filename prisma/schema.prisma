@@ -199,6 +199,8 @@ model UserProfile {
   defaultPaymentMethod   PaymentMethod? @relation("DefaultPaymentMethod", fields: [defaultPaymentMethodId], references: [id], onUpdate: NoAction)
   user                   User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([defaultAddressId])
+  @@index([defaultPaymentMethodId])
   @@map("user_profiles")
   @@schema("user_management")
 }
@@ -359,6 +361,7 @@ model VariantMedia {
   variant      ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([variantId, assetId])
+  @@index([assetId])
   @@map("variant_media")
   @@schema("product_catalog")
 }
@@ -413,6 +416,7 @@ model EditorialLook {
   products    EditorialLookProduct[]
   heroAsset   MediaAsset?            @relation(fields: [heroAssetId], references: [id], onUpdate: NoAction)
 
+  @@index([heroAssetId])
   @@map("editorial_looks")
   @@schema("product_catalog")
 }
@@ -424,6 +428,7 @@ model EditorialLookProduct {
   product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([lookId, productId])
+  @@index([productId])
   @@map("editorial_look_products")
   @@schema("product_catalog")
 }
@@ -691,14 +696,14 @@ model OrderEvent {
 }
 
 model AdminNotification {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @map("notification_id") @db.Uuid
-  type        String
-  title       String
-  message     String
-  targetUrl   String?  @map("target_url")
-  isRead      Boolean  @default(false) @map("is_read")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @map("notification_id") @db.Uuid
+  type      String
+  title     String
+  message   String
+  targetUrl String?  @map("target_url")
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([isRead, createdAt])
   @@map("admin_notifications")
@@ -723,7 +728,6 @@ model Shipment {
   @@index([orderId], map: "idx_fulfillment_shipments_order_id")
   @@index([status], map: "idx_fulfillment_shipments_status")
   @@index([createdAt], map: "idx_fulfillment_shipments_created_at")
-  @@index([orderId], map: "idx_shipments_order_id")
   @@index([carrier])
   @@index([service])
   @@index([shippedAt])
@@ -1059,7 +1063,6 @@ model LoyaltyAccount {
   users               User                 @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   transactions        LoyaltyTransaction[]
 
-  @@index([userId])
   @@index([tier])
   @@index([currentBalance])
   @@map("loyalty_accounts")
