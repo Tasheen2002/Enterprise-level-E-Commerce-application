@@ -1564,7 +1564,7 @@ export class Container {
       new GetPromotionUsageHandler(promotionService),
     );
     const stripeController = config.stripe
-      ? new StripeWebhookController(paymentService)
+      ? new StripeWebhookController(paymentService, config.stripe)
       : null;
 
     // Stripe card-setup feature: SetupIntent flow + persisting confirmed

@@ -5,6 +5,7 @@ import dbPlugin from "./plugins/db";
 import authPlugin from "./plugins/auth";
 import errorPlugin from "./plugins/error";
 import securityPlugin from "./plugins/security";
+import rawBodyPlugin from "./plugins/raw-body";
 import moduleLoader from "./modules";
 import { Container, type ContainerConfig } from "./container";
 import { createRateLimiter, disposeRateLimits } from "./shared/middleware/rate-limiter.middleware";
@@ -99,6 +100,7 @@ export const createServer = async (
   try {
     // Core plugins — order matters
     await server.register(configPlugin, { environment });
+    await server.register(rawBodyPlugin);
     await server.register(securityPlugin);
     await server.register(dbPlugin);
     await server.register(authPlugin);

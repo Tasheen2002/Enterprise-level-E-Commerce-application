@@ -448,7 +448,10 @@ describe("response helpers through Fastify serializers", () => {
       ResponseHelper.badRequest(reply, "Invalid", []),
     );
     try {
-      expect((await app.inject("/unauthorized")).statusCode).toBe(401);
+      const unauthorized = await app.inject("/unauthorized");
+      expect(unauthorized.statusCode).toBe(401);
+      // RFC 9110 section 15.5.2: a 401 response must carry a WWW-Authenticate challenge.
+      expect(unauthorized.headers["www-authenticate"]).toBe('Bearer realm="api"');
       expect((await app.inject("/forbidden")).statusCode).toBe(403);
       expect((await app.inject("/bad")).json().details).toEqual({ _root: ["Field"] });
       expect((await app.inject("/bad-empty")).json()).not.toHaveProperty("details");

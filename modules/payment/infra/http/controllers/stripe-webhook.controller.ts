@@ -1,7 +1,7 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { StripeProvider } from "../../payment-providers/stripe.provider";
-import { getStripeConfig } from "../../config/stripe.config";
+import type { StripeConfig } from "../../config/stripe.config";
 import { PaymentService } from "../../../application/services/payment.service";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import { CreateStripeIntentBody } from "../validation/payment-intent.schema";
@@ -12,13 +12,16 @@ type StripeEventObject = { id?: string; last_payment_error?: { message?: string 
 type StripeWebhookEvent = { type: string; data: { object: StripeEventObject } };
 
 export class StripeWebhookController {
-  private stripeProvider: StripeProvider;
-  private webhookSecret: string;
+  private readonly stripeProvider: StripeProvider;
+  private readonly webhookSecret: string | undefined;
 
-  constructor(private readonly paymentService: PaymentService) {
-    const config = getStripeConfig();
+  /** Configuration comes from validated server config; nothing is read from process.env. */
+  constructor(
+    private readonly paymentService: PaymentService,
+    config: StripeConfig,
+  ) {
     this.stripeProvider = new StripeProvider(config);
-    this.webhookSecret = config.webhookSecret || "";
+    this.webhookSecret = config.webhookSecret;
   }
 
   async createIntent(
@@ -72,32 +75,38 @@ export class StripeWebhookController {
 
   async handleWebhook(req: RawBodyRequest, reply: FastifyReply) {
     try {
-      const signature = req.headers["stripe-signature"] as string;
-      const rawBody = req.rawBody;
+      // Fail closed: an unsigned event could mark any payment captured.
+      if (!this.webhookSecret) {
+        req.log.error("Stripe webhook rejected: STRIPE_WEBHOOK_SECRET is not configured");
+        return reply.status(503).send({
+          success: false,
+          statusCode: 503,
+          message: "Stripe webhook signing secret is not configured",
+          code: "WEBHOOK_NOT_CONFIGURED",
+        });
+      }
 
-      if (!signature) {
+      const signature = req.headers["stripe-signature"];
+      if (typeof signature !== "string" || signature.length === 0) {
         return ResponseHelper.badRequest(reply, "Missing Stripe-Signature header");
+      }
+      if (!req.rawBody) {
+        return ResponseHelper.badRequest(reply, "Webhook payload must be JSON");
       }
 
       let event: StripeWebhookEvent;
-      if (this.webhookSecret) {
-        try {
-          event = this.stripeProvider.constructWebhookEvent(
-            rawBody,
-            signature,
-            this.webhookSecret,
-          ) as unknown as StripeWebhookEvent;
-        } catch (err: unknown) {
-          req.log.warn(
-            `Stripe webhook signature validation failed: ${err instanceof Error ? err.message : String(err)}`,
-          );
-          return ResponseHelper.unauthorized(reply, "Invalid webhook signature");
-        }
-      } else {
+      try {
+        event = this.stripeProvider.constructWebhookEvent(
+          req.rawBody,
+          signature,
+          this.webhookSecret,
+        ) as unknown as StripeWebhookEvent;
+      } catch (err: unknown) {
         req.log.warn(
-          "Stripe webhook signature validation skipped (STRIPE_WEBHOOK_SECRET not configured)",
+          `Stripe webhook signature validation failed: ${err instanceof Error ? err.message : String(err)}`,
         );
-        event = req.body as StripeWebhookEvent;
+        // Stripe expects 400 for signature verification failures (not an HTTP auth challenge).
+        return ResponseHelper.badRequest(reply, "Invalid webhook signature");
       }
 
       req.log.info(`Stripe webhook received: ${event.type}`);
@@ -109,9 +118,8 @@ export class StripeWebhookController {
           const stripeIntentId = stripeObject?.id;
           if (!stripeIntentId) break;
 
-          const paymentIntent = await this.paymentService.getPaymentIntentByClientSecret(
-            stripeIntentId,
-          );
+          const paymentIntent =
+            await this.paymentService.getPaymentIntentByClientSecret(stripeIntentId);
 
           if (!paymentIntent) {
             req.log.error(
@@ -130,7 +138,9 @@ export class StripeWebhookController {
                 pspReference: stripeIntentId,
               });
             } catch (err: unknown) {
-              req.log.warn(`Authorize step skipped: ${err instanceof Error ? err.message : String(err)}`);
+              req.log.warn(
+                `Authorize step skipped: ${err instanceof Error ? err.message : String(err)}`,
+              );
             }
 
             await this.paymentService.capturePayment(intentId, stripeIntentId);
@@ -142,9 +152,8 @@ export class StripeWebhookController {
           const stripeIntentId = stripeObject?.id;
           if (!stripeIntentId) break;
 
-          const paymentIntent = await this.paymentService.getPaymentIntentByClientSecret(
-            stripeIntentId,
-          );
+          const paymentIntent =
+            await this.paymentService.getPaymentIntentByClientSecret(stripeIntentId);
 
           if (paymentIntent) {
             const reason = stripeObject?.last_payment_error?.message || "Payment failed";

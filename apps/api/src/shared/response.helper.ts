@@ -2,6 +2,7 @@ import { FastifyReply } from "fastify";
 import { CommandResult } from "../../../../packages/core/src/application/command-result";
 import { QueryResult } from "../../../../packages/core/src/application/query-result";
 import { serializeError, errorStatus, type ErrorEnvelope } from "./http/error-response";
+import { BEARER_AUTH_CHALLENGE } from "./http/authentication";
 
 export interface SuccessResponse<T = any> {
   success: true;
@@ -32,11 +33,15 @@ export class ResponseHelper {
     return reply.status(response.statusCode).send(response);
   }
 
+  /** Missing/invalid bearer credentials. Not for signature failures (use badRequest). */
   static unauthorized(
     reply: FastifyReply,
     message: string = "User not authenticated",
   ): FastifyReply {
-    return reply.status(401).send({ success: false, statusCode: 401, message });
+    return reply
+      .header("WWW-Authenticate", BEARER_AUTH_CHALLENGE)
+      .status(401)
+      .send({ success: false, statusCode: 401, message });
   }
 
   static forbidden(reply: FastifyReply, message: string = "Access forbidden"): FastifyReply {

@@ -1,12 +1,12 @@
 {
   "date": "2026-11-16",
-  "commit": "864198f0f211e5df9003e59f20b867ea9fd01180",
+  "commit": "38d4528dd4b42fa856d717880e681699462fcf89",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1860,
-  "backend_review_scope_files": 1529,
+  "candidate_files": 1864,
+  "backend_review_scope_files": 1532,
   "scope_counts": {
-    "audit-record": 84,
-    "backend": 1401,
+    "audit-record": 85,
+    "backend": 1404,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -14,7 +14,7 @@
   "area_counts": {
     ".github": 1,
     "apps/admin": 18,
-    "apps/api": 65,
+    "apps/api": 67,
     "apps/web": 43,
     "modules/analytics": 23,
     "modules/cart": 109,
@@ -24,7 +24,7 @@
     "modules/inventory-management": 144,
     "modules/loyalty": 53,
     "modules/order-management": 143,
-    "modules/payment": 122,
+    "modules/payment": 123,
     "modules/product-catalog": 226,
     "modules/shared": 3,
     "modules/user-management": 155,
@@ -40,14 +40,14 @@
   },
   "phase_counts": {
     "P00": 67,
-    "P01": 129,
+    "P01": 131,
     "P02": 13,
     "P03": 155,
     "P04": 226,
     "P05": 144,
     "P06": 109,
     "P07": 143,
-    "P08": 122,
+    "P08": 123,
     "P09": 53,
     "P10": 130,
     "P11": 25,
@@ -62,12 +62,12 @@
     "generated-contract": 1,
     "migration-or-sql": 13,
     "sensitive-environment-metadata-only": 1,
-    "source-or-configuration": 1206,
-    "test": 149
+    "source-or-configuration": 1207,
+    "test": 151
   },
   "closure_counts": {
-    "open": 1384,
-    "closed": 145
+    "open": 1374,
+    "closed": 158
   },
   "removed_files_requiring_verification": [
     "apps/api/src/shared/application/index.ts",
