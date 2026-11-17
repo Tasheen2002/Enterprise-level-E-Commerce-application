@@ -55,6 +55,20 @@ describe("Catalog storefront visibility", () => {
       })
     ).id;
     ids.draftLook = (await prisma.editorialLook.create({ data: { title: "Draft look" } })).id;
+    await prisma.editorialLookProduct.createMany({
+      data: [
+        { lookId: ids.liveLook!, productId: ids.published! },
+        { lookId: ids.liveLook!, productId: ids.draft! },
+        { lookId: ids.draftLook!, productId: ids.published! },
+      ],
+    });
+    ids.tag = (await prisma.productTag.create({ data: { tag: `vis-${randomUUID()}` } })).id;
+    await prisma.productTagAssociation.createMany({
+      data: [
+        { tagId: ids.tag!, productId: ids.published! },
+        { tagId: ids.tag!, productId: ids.draft! },
+      ],
+    });
 
     const email = `catalog-admin-${randomUUID()}@example.com`;
     await prisma.user.create({
@@ -136,5 +150,28 @@ describe("Catalog storefront visibility", () => {
     expect(seen).not.toContain(ids.draftLook);
     expect((await get(`/editorial-looks/${ids.draftLook}`)).statusCode).toBe(404);
     expect((await get(`/editorial-looks/${ids.draftLook}`, true)).statusCode).toBe(200);
+  });
+
+  it("never reveals unreleased products or looks through association routes", async () => {
+    const data = async (url: string, staff = false) => {
+      const res = await get(url, staff);
+      expect(res.statusCode, url).toBe(200);
+      return res.json().data;
+    };
+    expect(await data(`/editorial-looks/${ids.liveLook}/products`)).toEqual([ids.published]);
+    expect((await get(`/editorial-looks/${ids.draftLook}/products`)).statusCode).toBe(404);
+    expect(await data(`/products/${ids.published}/editorial-looks`)).toEqual([ids.liveLook]);
+    expect((await get(`/products/${ids.draft}/editorial-looks`)).statusCode).toBe(404);
+    expect((await data(`/tags/${ids.tag}/products`)).items).toEqual([ids.published]);
+    const popular = (await data("/editorial-looks/popular-products")) as Array<{
+      productId: string;
+    }>;
+    expect(popular.map((p) => p.productId)).not.toContain(ids.draft);
+
+    // Staff still see every association.
+    expect(await data(`/editorial-looks/${ids.draftLook}/products`, true)).toEqual([ids.published]);
+    expect((await data(`/tags/${ids.tag}/products`, true)).items.sort()).toEqual(
+      [ids.draft, ids.published].sort(),
+    );
   });
 });

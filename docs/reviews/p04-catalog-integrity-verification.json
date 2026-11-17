@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-17",
+  "phase": "P04 (batch 2: HTML safety, product persistence, association visibility, categories, size guides, media)",
+  "baseline_commit": "9bc88a9b",
+  "scope": [
+    "infra/security/sanitize-html.adapter.ts and every HTML-bearing write path (product longDescHtml and text fields, editorial look story/title, size guide body/title); storefront rendering of product HTML",
+    "infra/persistence/repositories/product.repository.impl.ts save",
+    "category-management.service hierarchy updates",
+    "Public association reads: /editorial-looks/:id/products, /products/:productId/editorial-looks, /editorial-looks/popular-products, /tags/:tagId/products",
+    "Product create/update schemas"
+  ],
+  "reviewed_without_change": [
+    "HTML sanitiser: strict tag/attribute allow-list, scripts/styles/iframes removed, links limited to http/https/mailto/tel, images to http/https, no protocol-relative URLs, rel=noopener on links. Product descriptions, look stories and size-guide bodies are sanitised on create and update; titles and SEO fields are stripped to text. The storefront only injects the sanitised product description.",
+    "Category moves reject self-parenting and cycles; categories with subcategories cannot be deleted.",
+    "Catalog writes, media management, tags, size guides and variants remain admin-only (batch 1)."
+  ],
+  "findings": [
+    {
+      "id": "P04-04",
+      "severity": "P2",
+      "file": "modules/product-catalog/infra/persistence/repositories/product.repository.impl.ts",
+      "problem": "Product save wrote the product row, deleted its image links and recreated them as separate statements. A failure part-way (e.g. a dropped connection) committed the new product fields and left the product with no or partial images.",
+      "change": "The product row and image list are written in one transaction.",
+      "verification": "ProductSaveAtomicity integration spec with an injected failure on the second image insert: baseline committed the new title and partial images; fixed the product keeps its original title and both original images."
+    },
+    {
+      "id": "P04-05",
+      "severity": "P3",
+      "file": "modules/product-catalog/infra/http/controllers/{editorial-look,product-tag}.controller.ts; routes; application/services/product-visibility.policy.ts",
+      "problem": "Follow-on to P04-01: four public association routes returned the ids of draft products and draft looks (look products, a product's looks, popular products, tag products), revealing that unreleased items exist.",
+      "change": "For shoppers, a look that is not live returns 404 for its product list, a product that is not live returns 404 for its looks, and only live product/look ids are returned elsewhere; staff still see every association.",
+      "verification": "catalog-visibility E2E association case: baseline returned draft ids; fixed only live ids for shoppers, all ids for staff."
+    },
+    {
+      "id": "P04-06",
+      "severity": "P3",
+      "file": "modules/product-catalog/infra/persistence/repositories/product.repository.impl.ts; infra/http/validation/product.schema.ts",
+      "problem": "Media assets created from product image URLs were always recorded as image/png, and product image URLs accepted any string although they are rendered on the storefront.",
+      "change": "Image MIME type derived from the file extension (jpeg/png/webp/gif/avif/svg, otherwise application/octet-stream); product image URLs must be https.",
+      "verification": "Integration case records image/jpeg, image/webp and image/png for matching URLs (query strings ignored)."
+    }
+  ],
+  "tests": {
+    "new": "integration ProductSaveAtomicity (2), E2E catalog-visibility association case (1)",
+    "baseline": "Rollback case failed on the old repository ('Changed title' committed); association case failed on the old controllers (draft ids returned).",
+    "database_suites": "All E2E and integration suites: 124 tests in 40 files pass",
+    "final": "1502 unit tests in 116 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check"
+  },
+  "follow_ups": [
+    "Tag product totals still count hidden products for shoppers (items are filtered); exact totals need the visibility filter inside the association query.",
+    "Product create/update fields have no length limits (admin-only input); prices of 0 are accepted.",
+    "Rows written before the HTML sanitiser existed are not re-sanitised; consider a one-off migration that re-sanitises stored HTML."
+  ]
+}

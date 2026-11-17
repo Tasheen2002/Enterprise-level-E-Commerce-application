@@ -36,6 +36,23 @@ function liveOnStorefront(): Prisma.ProductWhereInput {
   };
 }
 
+// MIME type of an image referenced by URL, from its file extension.
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  avif: "image/avif",
+  svg: "image/svg+xml",
+};
+
+export function imageMimeType(url: string): string {
+  const path = url.split(/[?#]/)[0] ?? "";
+  const extension = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
+  return IMAGE_MIME_BY_EXTENSION[extension] ?? "application/octet-stream";
+}
+
 function requireLive(where: Record<string, unknown>): void {
   const existing = Array.isArray(where.AND) ? (where.AND as unknown[]) : [];
   where.AND = [...existing, liveOnStorefront()];
@@ -146,40 +163,31 @@ export class ProductRepositoryImpl
       compareAtPrice: product.compareAtPrice?.getAmount() ?? null,
       updatedAt: product.updatedAt,
     };
-    await this.prisma.product.upsert({
-      where: { id: product.id.getValue() },
-      create: {
-        id: product.id.getValue(),
-        createdAt: product.createdAt,
-        ...updateData,
-      },
-      update: updateData,
-    });
-
-    if (product.images !== undefined) {
-      // Sync images in DB
-      await this.prisma.productMedia.deleteMany({
-        where: { productId: product.id.getValue() },
+    // Product row and image list are written atomically: a failure part-way
+    // must not leave the product with no or partial images.
+    await this.prisma.$transaction(async (tx) => {
+      await tx.product.upsert({
+        where: { id: product.id.getValue() },
+        create: {
+          id: product.id.getValue(),
+          createdAt: product.createdAt,
+          ...updateData,
+        },
+        update: updateData,
       });
 
+      if (product.images === undefined) return;
+      await tx.productMedia.deleteMany({ where: { productId: product.id.getValue() } });
+
       for (let i = 0; i < product.images.length; i++) {
-        const imageUrl = product.images[i];
-        
-        let asset = await this.prisma.mediaAsset.findFirst({
-          where: { storageKey: imageUrl },
-        });
+        const imageUrl = product.images[i]!;
+        const asset =
+          (await tx.mediaAsset.findFirst({ where: { storageKey: imageUrl } })) ??
+          (await tx.mediaAsset.create({
+            data: { id: randomUUID(), storageKey: imageUrl, mime: imageMimeType(imageUrl) },
+          }));
 
-        if (!asset) {
-          asset = await this.prisma.mediaAsset.create({
-            data: {
-              id: randomUUID(),
-              storageKey: imageUrl,
-              mime: "image/png",
-            },
-          });
-        }
-
-        await this.prisma.productMedia.create({
+        await tx.productMedia.create({
           data: {
             id: randomUUID(),
             productId: product.id.getValue(),
@@ -189,7 +197,7 @@ export class ProductRepositoryImpl
           },
         });
       }
-    }
+    });
 
     await this.dispatchEvents(product);
   }

@@ -143,6 +143,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/popular-products",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(popularProductsQuerySchema)],
       schema: {
         description: "Get products most frequently featured in editorial looks",
@@ -182,6 +183,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/:id/products",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(editorialLookParamsSchema)],
       schema: {
         description: "Get all products featured in an editorial look",
@@ -201,6 +203,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/products/:productId/editorial-looks",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(productLooksParamsSchema)],
       schema: {
         description: "Get editorial looks that feature a specific product",

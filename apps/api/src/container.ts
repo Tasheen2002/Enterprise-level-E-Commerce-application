@@ -1077,6 +1077,7 @@ export class Container {
       new ValidateProductTagHandler(productTagManagementService),
       new GetProductTagsHandler(productTagManagementService),
       new GetTagProductsHandler(productTagManagementService),
+      productVisibility,
     );
     const searchController = new SearchController(
       new SearchProductsHandler(productSearchService),
@@ -1133,6 +1134,7 @@ export class Container {
       new GetEditorialLookStatsHandler(editorialLookManagementService),
       new GetPopularEditorialLookProductsHandler(editorialLookManagementService),
       new ValidateEditorialLookForPublicationHandler(editorialLookManagementService),
+      productVisibility,
     );
     const variantMediaController = new VariantMediaController(
       new AddMediaToVariantHandler(variantMediaManagementService),

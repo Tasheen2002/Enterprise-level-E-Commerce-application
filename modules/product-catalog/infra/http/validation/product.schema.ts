@@ -42,6 +42,12 @@ export const listProductsSchema = z.object({
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
+// Product images are rendered on the storefront; only https URLs are accepted.
+const productImageUrl = z
+  .string()
+  .url()
+  .refine((value) => value.startsWith("https://"), "Image URLs must use https");
+
 export const createProductSchema = z.object({
   title: z.string().min(1),
   slug: z.string().optional(),
@@ -60,7 +66,7 @@ export const createProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(productImageUrl).optional(),
 });
 
 export const updateProductSchema = z.object({
@@ -81,7 +87,7 @@ export const updateProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(productImageUrl).optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

@@ -18,6 +18,8 @@ import {
   GetTagProductsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { ProductVisibilityPolicy } from "../../../application/services/product-visibility.policy";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   TagParams,
   TagNameParams,
@@ -52,6 +54,7 @@ export class ProductTagController {
     private readonly validateProductTagHandler: ValidateProductTagHandler,
     private readonly getProductTagsHandler: GetProductTagsHandler,
     private readonly getTagProductsHandler: GetTagProductsHandler,
+    private readonly productVisibility: ProductVisibilityPolicy,
   ) {}
 
   // ── Reads ──────────────────────────────────────────────────────────────
@@ -154,11 +157,20 @@ export class ProductTagController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.getTagProductsHandler.handle({
+      const page = await this.getTagProductsHandler.handle({
         tagId: request.params.tagId,
         page: request.query.page,
         limit: request.query.limit,
       });
+      // Shoppers only get ids of live products (the total still counts all
+      // associations; see the P04 follow-ups).
+      const result = {
+        ...page,
+        items: await this.productVisibility.filterVisible(
+          page.items,
+          canViewUnpublished(request),
+        ),
+      };
       return ResponseHelper.ok(reply, "Tag products retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

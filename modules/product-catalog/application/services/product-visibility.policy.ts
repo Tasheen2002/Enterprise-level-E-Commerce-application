@@ -18,4 +18,18 @@ export class ProductVisibilityPolicy {
       throw new ProductNotFoundError(productId);
     }
   }
+
+  /** Keeps only the ids of live products (order preserved) unless staff. */
+  async filterVisible(productIds: string[], includeUnpublished: boolean): Promise<string[]> {
+    if (includeUnpublished || productIds.length === 0) return productIds;
+    const products = await this.productRepository.findByIds(
+      productIds.map((id) => ProductId.fromString(id)),
+    );
+    const live = new Set(
+      products
+        .filter((product) => isProductLive(product.status, product.publishAt))
+        .map((product) => product.id.getValue()),
+    );
+    return productIds.filter((id) => live.has(id));
+  }
 }
