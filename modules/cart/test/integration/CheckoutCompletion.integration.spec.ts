@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { CheckoutCompletionPortImpl } from "@modules/cart/infra/persistence/repositories/checkout-completion.port.impl";
@@ -82,5 +82,86 @@ describe("Checkout completion persistence", () => {
       port.persistCheckoutOrder(completion(`ORD-${randomUUID()}`)),
     ).rejects.toBeInstanceOf(InvalidCheckoutStateError);
     expect(await prisma.order.count({ where: { checkoutId } })).toBe(0);
+  });
+
+  describe("stock leaves with the order", () => {
+    const withStock = async (onHand: number) => {
+      const locationId = (
+        await prisma.location.create({ data: { type: "warehouse", name: "Main" } })
+      ).id;
+      await prisma.inventoryStock.create({ data: { variantId, locationId, onHand, reserved: 0 } });
+      return locationId;
+    };
+    const order = (qty: number, locationId: string): PersistCheckoutOrderData => ({
+      ...completion(`ORD-STOCK-${randomUUID()}`),
+      items: [{ variantId, qty, productSnapshot: { variantId, price: 20 }, isGift: false }],
+      stockAdjustments: [{ variantId, warehouseId: locationId, quantity: -qty }],
+    });
+    const onHand = async (locationId: string) =>
+      (
+        await prisma.inventoryStock.findUnique({
+          where: { variantId_locationId: { variantId, locationId } },
+        })
+      )?.onHand;
+
+    it("deducts stock and records the ledger entry in the order transaction", async () => {
+      const locationId = await withStock(5);
+      const result = await port.persistCheckoutOrder(order(2, locationId));
+      expect(await onHand(locationId)).toBe(3);
+      const ledger = await prisma.inventoryTransaction.findMany({
+        where: { variantId, locationId },
+      });
+      expect(ledger.map((row) => [row.qtyDelta, row.reason, row.referenceId])).toEqual([
+        [-2, "order", result.orderId],
+      ]);
+    });
+
+    it("keeps a paid order when stock ran out and records the shortage as a backorder", async () => {
+      const locationId = await withStock(1);
+      const result = await port.persistCheckoutOrder(order(3, locationId));
+      expect(await onHand(locationId)).toBe(0);
+      const item = await prisma.orderItem.findFirst({ where: { orderId: result.orderId } });
+      expect(await prisma.backorder.count({ where: { orderItemId: item!.id } })).toBe(1);
+    });
+
+    it("rolls the stock back when the order cannot be saved", async () => {
+      const locationId = await withStock(5);
+      const failing = new CheckoutCompletionPortImpl(
+        prisma.$extends({
+          query: {
+            orderStatusHistory: {
+              async create() {
+                throw new Error("simulated failure after stock deduction");
+              },
+            },
+          },
+        }) as unknown as PrismaClient,
+      );
+      await expect(failing.persistCheckoutOrder(order(2, locationId))).rejects.toThrow(
+        "simulated failure",
+      );
+      expect(await onHand(locationId)).toBe(5);
+      expect(await prisma.order.count({ where: { checkoutId } })).toBe(0);
+      expect(await prisma.inventoryTransaction.count({ where: { variantId } })).toBe(0);
+    });
+
+    it("keeps the order when analytics or notifications fail", async () => {
+      const locationId = await withStock(5);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const flaky = new CheckoutCompletionPortImpl(
+        prisma.$extends({
+          query: {
+            analyticsEvent: {
+              async create() {
+                throw new Error("analytics unavailable");
+              },
+            },
+          },
+        }) as unknown as PrismaClient,
+      );
+      const result = await flaky.persistCheckoutOrder(order(1, locationId));
+      expect(await prisma.order.count({ where: { id: result.orderId } })).toBe(1);
+      expect(await onHand(locationId)).toBe(4);
+    });
   });
 });

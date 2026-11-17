@@ -401,16 +401,7 @@ export class CheckoutOrderService {
 
     // ---- Phase 6: Post-persistence side effects ----
 
-    // Adjust stock (external service, not part of the order transaction)
-    for (const item of cartSnapshot.items || []) {
-      await this.stockService.adjustStock(
-        item.variantId,
-        warehouseId,
-        -item.quantity,
-        "order",
-        result.orderId,
-      );
-    }
+    // Stock was deducted inside the order transaction (see the completion port).
 
     // Clean up reservations
     await this.reservationRepository.deleteByCartId(checkout.cartId);

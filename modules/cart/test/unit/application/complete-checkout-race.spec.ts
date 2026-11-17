@@ -90,7 +90,8 @@ describe("concurrent checkout completion", () => {
     await expect(h.service.completeCheckoutWithOrder(h.dto as never)).resolves.toEqual({
       orderId: "created-order",
     });
-    expect(h.stock.adjustStock).toHaveBeenCalledOnce();
+    // Stock is deducted inside the order transaction, never afterwards.
+    expect(h.stock.adjustStock).not.toHaveBeenCalled();
     expect(h.reservations.deleteByCartId).toHaveBeenCalledOnce();
     expect(h.loyalty.earnPointsFromPurchase).toHaveBeenCalledOnce();
   });

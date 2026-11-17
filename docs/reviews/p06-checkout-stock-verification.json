@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-18",
+  "phase": "P06 (batch 2: stock and side effects of checkout completion)",
+  "baseline_commit": "db692046",
+  "scope": [
+    "modules/cart/infra/persistence/repositories/checkout-completion.port.impl.ts persistCheckoutOrder",
+    "modules/cart/application/services/checkout-order.service.ts post-persistence phase",
+    "Cart reservations versus inventory reservations (cart reservations never reserve inventory stock)"
+  ],
+  "findings": [
+    {
+      "id": "P06-05",
+      "severity": "P1",
+      "file": "checkout-completion.port.impl.ts; checkout-order.service.ts",
+      "problem": "Stock was deducted after the order transaction committed, through a separate service call. A failure there left a paid order with no stock deducted and no ledger entry, and since P05 an oversell failed at that point with the order already saved. Preorder/backorder rows were only created from a whole-catalogue estimate and only when the variant allowed backorders, so a real shortage on a normal variant left a paid order nobody could fulfil without any record.",
+      "change": "Stock leaves inside the order transaction: the warehouse row is locked, the available quantity is decremented and an inventory-ledger row (reason order, reference the order) is written. A paid order is never dropped: any shortage at the warehouse becomes a preorder (if the variant allows preorders) or a backorder for staff. A failure anywhere in the transaction rolls the stock back with the order. The post-commit stock call was removed.",
+      "verification": "CheckoutCompletion integration: baseline stock unchanged after an order and no backorder for a shortage; fixed stock 5 -> 3 with a matching ledger row referencing the order, shortage recorded as a backorder with stock at 0, and an injected failure after deduction leaves stock, orders and ledger untouched."
+    },
+    {
+      "id": "P06-06",
+      "severity": "P2",
+      "file": "checkout-completion.port.impl.ts",
+      "problem": "The purchase analytics event and admin notifications (order created, low stock) were written inside the order transaction and wrapped in try/catch. A database error there still aborts the PostgreSQL transaction (the P02-01 failure mode), so a notification problem could make a paid checkout fail. Failures were also appended to a log file inside the application directory.",
+      "change": "Analytics and notifications run after the commit; their failures are logged and never affect the order. The on-disk log file write was removed.",
+      "verification": "Integration case: with analytics writes failing, the order is still created and stock deducted."
+    }
+  ],
+  "tests": {
+    "new": "CheckoutCompletion integration stock cases (4)",
+    "updated": "complete-checkout-race unit: stock is no longer adjusted after the order transaction",
+    "baseline": "With the old completion port: the deduction, shortage and analytics cases failed (stock never left in the transaction); the rollback case passed only because nothing was deducted.",
+    "database_suites": "All E2E and integration suites: 133 tests in 41 files pass",
+    "final": "1511 unit tests in 117 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check"
+  },
+  "follow_ups": [
+    "Stock is taken from the single resolved warehouse (DEFAULT_STOCK_LOCATION or the first warehouse); multi-warehouse allocation is not implemented.",
+    "Backorders created for variants that do not allow backorders should be surfaced to staff (they currently appear in the backorder list only)."
+  ]
+}
