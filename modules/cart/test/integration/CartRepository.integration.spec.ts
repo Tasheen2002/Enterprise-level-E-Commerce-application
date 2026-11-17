@@ -192,4 +192,74 @@ describe("CartRepositoryImpl Integration Tests", () => {
     const checkGuestDeleted = await repository.findById(guestCart.cartId);
     expect(checkGuestDeleted).toBeNull();
   });
+
+  it("never deletes carts whose checkout completed (checkouts cascade from carts)", async () => {
+    const expired = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000);
+    const guestCartWithCheckout = async (status: "completed" | "pending") => {
+      const cart = ShoppingCart.createForGuest({
+        guestToken: `guest_${randomUUID().replace(/-/g, "").substring(0, 20)}`,
+        currency: "USD",
+      });
+      await repository.save(cart);
+      const cartId = cart.cartId.getValue();
+      const checkout = await prisma.checkout.create({
+        data: {
+          cartId,
+          status,
+          totalAmount: 10,
+          currency: "USD",
+          expiresAt: expired,
+          completedAt: status === "completed" ? expired : null,
+        },
+      });
+      await prisma.shoppingCart.update({ where: { id: cartId }, data: { updatedAt: expired } });
+      return { cartId, checkoutId: checkout.id };
+    };
+    const completed = await guestCartWithCheckout("completed");
+    const abandoned = await guestCartWithCheckout("pending");
+
+    await repository.cleanupExpiredGuestCarts();
+    await repository.cleanupAbandonedCarts(30);
+    await repository.deleteEmptyCarts(30);
+
+    expect(await prisma.shoppingCart.count({ where: { id: completed.cartId } })).toBe(1);
+    expect(await prisma.checkout.count({ where: { id: completed.checkoutId } })).toBe(1);
+    expect(await prisma.shoppingCart.count({ where: { id: abandoned.cartId } })).toBe(0);
+  });
+
+  it("retires instead of deleting a merged guest cart whose checkout completed", async () => {
+    const token = `guest_${randomUUID().replace(/-/g, "").substring(0, 20)}`;
+    const guestCart = ShoppingCart.createForGuest({ guestToken: token, currency: "USD" });
+    guestCart.addItem({ variantId: variantIdStr, quantity: 1, unitPrice: 150 });
+    await repository.save(guestCart);
+    const checkout = await prisma.checkout.create({
+      data: {
+        cartId: guestCart.cartId.getValue(),
+        status: "completed",
+        totalAmount: 150,
+        currency: "USD",
+        expiresAt: new Date(),
+        completedAt: new Date(),
+      },
+    });
+    const userCart = ShoppingCart.createForUser({ userId: userIdStr, currency: "USD" });
+    await repository.save(userCart);
+
+    await repository.mergeGuestCartIntoUserCart(
+      GuestToken.fromString(token),
+      CartOwnerId.fromString(userIdStr),
+    );
+
+    expect(await prisma.checkout.count({ where: { id: checkout.id } })).toBe(1);
+    expect(await repository.findActiveCartByGuestToken(GuestToken.fromString(token))).toBeNull();
+    expect(await prisma.cartItem.count({ where: { cartId: guestCart.cartId.getValue() } })).toBe(0);
+    const merged = await repository.findById(userCart.cartId);
+    expect(merged?.toSnapshot().items).toHaveLength(1);
+
+    // A guest cart without a completed checkout is still deleted outright.
+    const plain = ShoppingCart.createForGuest({ guestToken: `${token}x`, currency: "USD" });
+    await repository.save(plain);
+    await repository.delete(plain.cartId);
+    expect(await repository.findById(plain.cartId)).toBeNull();
+  });
 });

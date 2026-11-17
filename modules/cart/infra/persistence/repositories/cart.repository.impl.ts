@@ -13,6 +13,12 @@ import { CartOwnerId } from "../../../domain/value-objects/cart-owner-id.vo";
 import { GuestToken } from "../../../domain/value-objects/guest-token.vo";
 import { Currency } from "../../../../../packages/core/src/domain/value-objects/currency.vo";
 
+// Checkouts reference carts with ON DELETE CASCADE, and orders/payment intents
+// reference checkouts. A cart whose checkout completed must never be deleted.
+const WITHOUT_COMPLETED_CHECKOUT = {
+  checkouts: { none: { status: "completed" } },
+} satisfies Prisma.ShoppingCartWhereInput;
+
 export class CartRepositoryImpl
   extends PrismaRepository<ShoppingCart>
   implements ICartRepository
@@ -149,8 +155,23 @@ export class CartRepositoryImpl
   }
 
   async delete(cartId: CartId): Promise<void> {
-    await this.prisma.shoppingCart.delete({
-      where: { id: cartId.getValue() },
+    await this.prisma.$transaction((tx) => this.removeCart(tx, cartId.getValue()));
+  }
+
+  // Deletes the cart, or - when one of its checkouts completed - retires it
+  // instead: items and reservations are removed and the guest token released,
+  // but the row stays so the completed checkout and its order/payment links survive.
+  private async removeCart(tx: Prisma.TransactionClient, cartId: string): Promise<void> {
+    const completed = await tx.checkout.count({ where: { cartId, status: "completed" } });
+    if (completed === 0) {
+      await tx.shoppingCart.delete({ where: { id: cartId } });
+      return;
+    }
+    await tx.cartItem.deleteMany({ where: { cartId } });
+    await tx.reservation.deleteMany({ where: { cartId } });
+    await tx.shoppingCart.update({
+      where: { id: cartId },
+      data: { guestToken: null, updatedAt: new Date() },
     });
   }
 
@@ -444,7 +465,7 @@ export class CartRepositoryImpl
 
     const result = await this.prisma.shoppingCart.deleteMany({
       where: {
-        AND: [{ updatedAt: { lt: cutoffDate } }, { items: { none: {} } }],
+        AND: [{ updatedAt: { lt: cutoffDate } }, { items: { none: {} } }, WITHOUT_COMPLETED_CHECKOUT],
       },
     });
 
@@ -457,7 +478,11 @@ export class CartRepositoryImpl
 
     const result = await this.prisma.shoppingCart.deleteMany({
       where: {
-        AND: [{ guestToken: { not: null } }, { updatedAt: { lt: cutoffDate } }],
+        AND: [
+          { guestToken: { not: null } },
+          { updatedAt: { lt: cutoffDate } },
+          WITHOUT_COMPLETED_CHECKOUT,
+        ],
       },
     });
 
@@ -638,6 +663,7 @@ export class CartRepositoryImpl
         AND: [
           { updatedAt: { lt: cutoffDate } },
           { guestToken: { not: null } }, // Only clean up guest carts
+          WITHOUT_COMPLETED_CHECKOUT,
         ],
       },
     });
@@ -856,9 +882,7 @@ export class CartRepositoryImpl
     transactionContext?: Prisma.TransactionClient,
   ): Promise<void> {
     if (transactionContext) {
-      await transactionContext.shoppingCart.delete({
-        where: { id: cartId.getValue() },
-      });
+      await this.removeCart(transactionContext, cartId.getValue());
     } else {
       await this.delete(cartId);
     }

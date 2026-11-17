@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-17",
+  "phase": "P02 (batch 2: model-by-model constraint, cascade, uniqueness and enum-vocabulary review against repository usage)",
+  "baseline_commit": "de82f121",
+  "environment": "Disposable postgres:15-alpine container on a loopback-only random port with synthetic credentials; databases ecom_test (upgraded through each new migration) and fresh_test (built from all 15 migrations); container removed afterwards. Integration tests ran through the existing requireTestDatabase guard (ALLOW_DATABASE_TEST_CLEANUP=1, *_test database on localhost). No existing database touched.",
+  "method": [
+    "Listed all 90 relations with their effective onDelete action (explicit or Prisma default: Restrict for required, SetNull for optional) and matched each against every repository delete/deleteMany call site and delete-then-recreate sync pattern.",
+    "Listed all unique constraints and composite keys and checked them against repository lookups and service-level check-then-act sequences.",
+    "Compared every status/type value object in the domain with the corresponding PostgreSQL enum."
+  ],
+  "findings": [
+    {
+      "id": "P02-06",
+      "severity": "P0",
+      "file": "modules/order-management/infra/persistence/repositories/order.repository.impl.ts",
+      "problem": "Every order save deleted all order_items and recreated them. Backorders, preorders, fulfillment shipment items, return items and repairs reference order_items with ON DELETE CASCADE, so any status change (markAsPaid, cancel, refund, fulfil; 14 save call sites) silently deleted all of them. An existing FLAG comment named only backorders/preorders.",
+      "change": "Items are synced by diff inside the same transaction: delete only items no longer in the aggregate, update persisted items scoped by (id, orderId), create new ones.",
+      "verification": "New OrderItemDependents integration spec: baseline 3/3 failed (after markAsPaid all five dependent rows were 0); fixed 3/3 pass, including in-place quantity edit and removal of a single item."
+    },
+    {
+      "id": "P02-07",
+      "severity": "P1",
+      "file": "modules/cart/infra/persistence/repositories/checkout-completion.port.impl.ts; modules/cart/application/services/checkout-order.service.ts",
+      "problem": "Checkout completion verified 'pending' and the idempotency check outside the transaction, then made network calls (Stripe Tax) before persisting; the transaction marked the checkout completed unconditionally. Two concurrent completions (double submit/retry) both created an order for one payment, and post-commit stock adjustment, reservation cleanup and loyalty awards ran twice.",
+      "change": "The transaction first claims the checkout with a conditional update (status pending -> completed); the row lock serializes concurrent attempts and the loser matches no row and rolls back with InvalidCheckoutStateError. The service returns the winner's order to the loser and skips post-persistence side effects.",
+      "verification": "New CheckoutCompletion integration spec: baseline concurrent completions produced 2 orders and an expired checkout was completed; fixed exactly 1 order and the expired checkout is refused. New unit spec complete-checkout-race (4 cases): baseline loser repeated side effects; fixed loser returns winner without stock/reservation/loyalty calls, unrelated errors propagate."
+    },
+    {
+      "id": "P02-08",
+      "severity": "P1",
+      "file": "modules/cart/infra/persistence/repositories/cart.repository.impl.ts",
+      "problem": "Checkouts cascade from carts, and orders/payment intents reference checkouts. Completed carts are kept (items cleared, guest token retained), so the admin cleanup (guest carts older than 30 days), abandoned/empty cart cleanups and the guest-to-user cart merge deleted carts together with their completed checkouts, nulling orders.checkout_id and payment_intents.checkout_id.",
+      "change": "Bulk cleanups exclude carts with a completed checkout. Single-cart delete (merge paths, deleteWithTransaction) retires such a cart instead: items and reservations removed, guest token released, row kept. Carts without a completed checkout are still deleted.",
+      "verification": "Two new CartRepository integration cases: baseline both failed (completed checkout deleted by cleanup and by merge); fixed both pass and an abandoned cart is still removed. 11/11 cart integration tests pass."
+    },
+    {
+      "id": "P02-09",
+      "severity": "P1",
+      "file": "prisma/schema.prisma; migration 20261117090000_align_inventory_enums_with_domain",
+      "problem": "Domain/API vocabulary missing from PostgreSQL enums: inventory transaction reasons 'return' and 'theft' (accepted by the public stock add/adjust schemas) and purchase-order status 'cancelled' (accepted by the PO status API and domain transitions). Stock adjustments with those reasons saved the stock change, then failed to insert the ledger row (500, stock changed without audit); purchase orders could not be cancelled.",
+      "change": "Additive idempotent migration (ADD VALUE IF NOT EXISTS) for return, theft and cancelled; schema enums updated. No code writes the DB-only values (rma, reservation, release, loss, found, audit, shrinkage, correction, closed).",
+      "verification": "New InventoryStatusVocabulary integration spec iterates every domain TransactionReason plus cancelled PO: baseline 3/7 failed with Prisma enum validation errors; fixed 7/7 pass."
+    },
+    {
+      "id": "P02-10",
+      "severity": "P3",
+      "file": "prisma/schema.prisma; migration 20261117091000_scope_social_login_uniqueness_to_provider",
+      "problem": "social_logins.provider_user_id was globally unique, although identifiers are issued independently by each provider; a second provider issuing the same identifier could not be linked. Lookups already filter by provider and identifier, so there was no account-takeover path.",
+      "change": "Unique key moved to (provider, provider_user_id), created before the old index is dropped; redundant plain provider index removed.",
+      "verification": "New SocialLoginUniqueness integration spec: baseline cross-provider case failed; fixed both pass and same-provider duplicates still raise P2002."
+    },
+    {
+      "id": "P02-11",
+      "severity": "P3",
+      "file": "prisma/schema.prisma",
+      "problem": "Deprecated multiSchema preview flag produced a Prisma schema warning on every command.",
+      "change": "Removed the flag (GA in Prisma 6.19.3); client regenerated, no generated API change.",
+      "verification": "prisma validate reports no warnings; all compilers and suites pass."
+    }
+  ],
+  "reviewed_without_change": [
+    "Product delete is a soft archive; variant, location and supplier deletes are blocked by Restrict/NoAction references once history exists and surface as P2003 (409), i.e. fail closed.",
+    "User delete keeps orders (SetNull), cascades sessions/addresses/reviews/appointments/loyalty; Restrict on admin_invitations.invited_by blocks deleting an inviting admin (fail closed).",
+    "Cart, wishlist, purchase-order, editorial-look and product-category child syncs use diff or recreate rows with no dependents.",
+    "Email uniqueness is effective: Email value object trims and lowercases before persistence.",
+    "Domain value objects match PostgreSQL enums for order, checkout, payment intent, payment transaction type, shipment, RMA, notification type, reminder status and order source."
+  ],
+  "final": {
+    "databases": "ecom_test upgraded through both new migrations and fresh_test built from all 15 migrations: deploy ok, drift exit 0, enum orders and social_logins indexes as expected",
+    "integration": "Full integration suite on the disposable database: 68 of 69 passed in the combined run; the remaining case (ProductRepository findAll pagination, untouched code) exceeded the 10 s timeout under full-suite load and passes alone in 4.5 s",
+    "unit": "1455 unit tests in 111 files pass; root/tooling tsc, 7/7 workspace type-checks, focused ESLint (one pre-existing unused-import warning), Prettier on new files and API client drift check pass"
+  },
+  "follow_ups": [
+    "P07 (P1): admin DELETE /orders/:orderId hard-deletes any order, cascading promotion usage, return requests, pickup reservations and order items, and orphaning payment intents, gift-card and loyalty transactions. Needs an owner policy (e.g. only unpaid created/cancelled orders, or soft delete).",
+    "P06: checkout completion writes analytics and admin notifications inside the transaction with try/catch; any failure still aborts the PostgreSQL transaction. Move best-effort writes after commit and remove the on-disk checkout-notification-error.log write.",
+    "P05: stock adjustment and transfer persist stock and ledger rows in separate writes (not atomic).",
+    "P06: one cart per user and one wishlist/review per user are enforced only by application lookups (findFirst), not constraints; review for races.",
+    "P07/P11: orders.payment_intent_id duplicates payment_intents.order_id without a foreign key; fulfillment.shipments.order_id has no foreign key, so deleted orders leave orphan shipments.",
+    "Existing db-push databases still need `prisma migrate resolve --applied` baselining before deployments switch to migrate deploy (owner/deployment decision, carried from batch 1).",
+    "Test harness: per-test truncation of all tables makes database tests slow (about 3.5 s setup each); ProductRepository pagination test is timing-sensitive under full-suite load (P15)."
+  ]
+}

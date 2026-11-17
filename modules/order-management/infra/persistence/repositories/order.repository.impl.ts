@@ -137,10 +137,6 @@ export class OrderRepositoryImpl
 
   // ─── Writes ───────────────────────────────────────────────────────────────
 
-  // FLAG: items and shipments are synced by delete-then-recreate. With
-  // `Backorder`/`Preorder` referencing OrderItem.id via `onDelete: Cascade`,
-  // saving an order will silently drop their satellite rows. Long-term: use
-  // diff-based upsert/delete instead of wholesale recreation.
   async save(order: Order): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.persistOrderInTransaction(tx, order);
@@ -201,19 +197,33 @@ export class OrderRepositoryImpl
       update: orderData,
     });
 
-    await tx.orderItem.deleteMany({ where: { orderId } });
-    if (items.length > 0) {
-      await tx.orderItem.createMany({
-        data: items.map((item) => ({
-          id: item.orderItemId.getValue(),
-          orderId,
-          variantId: item.variantId,
-          qty: item.quantity,
-          productSnapshot: item.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
-          isGift: item.isGift,
-          giftMessage: item.giftMessage,
-        })),
-      });
+    // Items are synced by diff, never delete-then-recreate: backorders,
+    // preorders, fulfillment shipment items, return items and repairs
+    // reference order_items with ON DELETE CASCADE and would be lost.
+    const itemRows = items.map((item) => ({
+      id: item.orderItemId.getValue(),
+      variantId: item.variantId,
+      qty: item.quantity,
+      productSnapshot: item.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
+      isGift: item.isGift,
+      giftMessage: item.giftMessage ?? null,
+    }));
+    const keptIds = itemRows.map((row) => row.id);
+    await tx.orderItem.deleteMany({ where: { orderId, id: { notIn: keptIds } } });
+    const persistedIds = new Set(
+      (
+        await tx.orderItem.findMany({ where: { orderId }, select: { id: true } })
+      ).map((row) => row.id),
+    );
+    for (const { id, ...data } of itemRows) {
+      if (persistedIds.has(id)) {
+        // Scoped to this order so an item id can never touch another order.
+        await tx.orderItem.updateMany({ where: { id, orderId }, data });
+      }
+    }
+    const newRows = itemRows.filter((row) => !persistedIds.has(row.id));
+    if (newRows.length > 0) {
+      await tx.orderItem.createMany({ data: newRows.map((row) => ({ ...row, orderId })) });
     }
 
     if (address) {

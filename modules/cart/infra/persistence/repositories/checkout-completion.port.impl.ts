@@ -19,6 +19,7 @@ import {
   CheckoutOrderResult,
   PersistCheckoutOrderData,
 } from "../../../domain/ports/external-services";
+import { InvalidCheckoutStateError } from "../../../domain/errors/cart.errors";
 
 export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
   constructor(private readonly prisma: PrismaClient) {}
@@ -140,6 +141,22 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
     data: PersistCheckoutOrderData,
   ): Promise<CheckoutOrderResult> {
     return await this.prisma.$transaction(async (tx) => {
+      // 0. Claim the checkout. The conditional update takes the row lock, so a
+      // concurrent completion of the same checkout waits, then matches no row
+      // and rolls back instead of creating a second order for one payment.
+      const claimed = await tx.checkout.updateMany({
+        where: { id: data.checkoutId, status: "pending" },
+        data: {
+          status: "completed",
+          totalAmount: data.totals.total,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new InvalidCheckoutStateError("Checkout is not in pending state");
+      }
+
       // 1. Create order
       const order = await tx.order.create({
         data: {
@@ -269,16 +286,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         });
       }
 
-      // 5. Complete checkout
-      await tx.checkout.update({
-        where: { id: data.checkoutId },
-        data: {
-          status: "completed",
-          totalAmount: data.totals.total,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+      // 5. Checkout completion is claimed in step 0.
 
       // 6. Mark order as paid
       await tx.order.update({

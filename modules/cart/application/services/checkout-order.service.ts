@@ -12,6 +12,7 @@ import {
   IProductSnapshotFactory,
   ICheckoutCompletionPort,
   CheckoutOrderResult,
+  PersistCheckoutOrderData,
 } from "../../domain/ports/external-services";
 import {
   CartNotFoundError,
@@ -58,6 +59,24 @@ interface CompleteCheckoutWithOrderDto {
 export type OrderResult = CheckoutOrderResult;
 
 export class CheckoutOrderService {
+  // Concurrent completions of one checkout race to claim it inside the
+  // persistence transaction. The loser gets the winner's order back (and must
+  // skip post-persistence side effects, which the winner performs) so the
+  // operation stays idempotent.
+  private async persistOrFindWinner(
+    data: PersistCheckoutOrderData,
+  ): Promise<{ order: OrderResult; created: boolean }> {
+    try {
+      return { order: await this.completionPort.persistCheckoutOrder(data), created: true };
+    } catch (error) {
+      if (error instanceof InvalidCheckoutStateError) {
+        const winner = await this.completionPort.findExistingOrder(data.checkoutId);
+        if (winner) return { order: winner, created: false };
+      }
+      throw error;
+    }
+  }
+
   constructor(
     private readonly completionPort: ICheckoutCompletionPort,
     private readonly checkoutRepository: ICheckoutRepository,
@@ -292,7 +311,7 @@ export class CheckoutOrderService {
 
     // ---- Phase 5: Atomic persistence via port ----
 
-    const result = await this.completionPort.persistCheckoutOrder({
+    const persisted = await this.persistOrFindWinner({
       orderNo,
       userId: checkout.cartOwnerId?.getValue(),
       guestToken: checkout.guestToken?.getValue(),
@@ -318,6 +337,9 @@ export class CheckoutOrderService {
         quantity: -item.quantity,
       })),
     });
+
+    const result = persisted.order;
+    if (!persisted.created) return result;
 
     // ---- Phase 6: Post-persistence side effects ----
 
