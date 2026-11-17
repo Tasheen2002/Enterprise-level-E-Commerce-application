@@ -185,6 +185,18 @@ export class PurchaseOrderNotDeletableError extends DomainError {
   }
 }
 
+// A location's stock rows cascade with it, so deleting a location that still
+// holds or reserves stock would silently erase inventory.
+export class LocationInUseError extends DomainError {
+  constructor(reason: string) {
+    super(
+      `Cannot delete location: ${reason}. Move or write off its stock first.`,
+      "LOCATION_IN_USE",
+      409,
+    );
+  }
+}
+
 export class InvalidPurchaseOrderStatusTransitionError extends DomainError {
   constructor(from: string, to: string) {
     super(

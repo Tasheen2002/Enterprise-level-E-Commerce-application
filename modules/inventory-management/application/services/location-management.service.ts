@@ -4,13 +4,20 @@ import { LocationName } from "../../domain/value-objects/location-name.vo";
 import { LocationTypeVO } from "../../domain/value-objects/location-type.vo";
 import { LocationAddress, LocationAddressProps } from "../../domain/value-objects/location-address.vo";
 import { ILocationRepository } from "../../domain/repositories/location.repository";
+import { IStockRepository } from "../../domain/repositories/stock.repository";
+import { IPickupReservationRepository } from "../../domain/repositories/pickup-reservation.repository";
 import {
   LocationAlreadyExistsError,
+  LocationInUseError,
   LocationNotFoundError,
 } from "../../domain/errors/inventory-management.errors";
 
 export class LocationManagementService {
-  constructor(private readonly locationRepository: ILocationRepository) {}
+  constructor(
+    private readonly locationRepository: ILocationRepository,
+    private readonly stockRepository: IStockRepository,
+    private readonly pickupReservationRepository: IPickupReservationRepository,
+  ) {}
 
   async createLocation(
     type: string,
@@ -69,6 +76,15 @@ export class LocationManagementService {
 
     if (!location) {
       throw new LocationNotFoundError(locationId);
+    }
+
+    const stock = await this.stockRepository.findByLocation(id);
+    if (stock.some((s) => s.stockLevel.onHand > 0 || s.stockLevel.reserved > 0)) {
+      throw new LocationInUseError("it still holds or reserves stock");
+    }
+    const reservations = await this.pickupReservationRepository.findByLocation(id);
+    if (reservations.some((r) => r.isActive())) {
+      throw new LocationInUseError("it has active pickup reservations");
     }
 
     await this.locationRepository.delete(id);

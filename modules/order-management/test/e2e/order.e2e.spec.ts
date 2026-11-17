@@ -254,4 +254,91 @@ describe("Order Management Module E2E API Tests", () => {
       expect(getOrderRes.json().data.status).toBe("delivered");
     });
   });
+
+  describe("Order deletion policy (orders are financial records)", () => {
+    const placeOrder = async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/v1/orders",
+        headers: { authorization: `Bearer ${customerToken}` },
+        payload: {
+          items: [{ variantId, quantity: 1, isGift: false }],
+          shippingAddress: {
+            firstName: "Jane",
+            lastName: "Doe",
+            addressLine1: "1 Example Street",
+            city: "New York",
+            state: "NY",
+            postalCode: "10001",
+            country: "US",
+            phone: "1234567890",
+            email: customerEmail,
+          },
+          source: "web",
+          currency: "USD",
+        },
+      });
+      expect(res.statusCode).toBe(201);
+      return res.json().data.id as string;
+    };
+    const deleteOrder = (orderId: string) =>
+      app.inject({
+        method: "DELETE",
+        url: `/api/v1/orders/${orderId}`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+
+    it("deletes an unpaid order that is still in created status", async () => {
+      const orderId = await placeOrder();
+      expect((await deleteOrder(orderId)).statusCode).toBe(204);
+      expect(await prisma.order.count({ where: { id: orderId } })).toBe(0);
+    });
+
+    it("refuses to delete a paid order and keeps it", async () => {
+      const orderId = await placeOrder();
+      const paid = await app.inject({
+        method: "POST",
+        url: `/api/v1/orders/${orderId}/mark-paid`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      expect(paid.statusCode).toBe(200);
+
+      const res = await deleteOrder(orderId);
+      expect(res.statusCode).toBe(409);
+      expect(res.json().code).toBe("ORDER_NOT_DELETABLE");
+      expect(res.json().message).toContain("Cancel or refund");
+      expect(await prisma.order.count({ where: { id: orderId } })).toBe(1);
+    });
+
+    it("refuses to delete a created order that already has a payment or a return", async () => {
+      const withPayment = await placeOrder();
+      await prisma.paymentIntent.create({
+        data: {
+          orderId: withPayment,
+          provider: "stripe",
+          status: "authorized",
+          amount: 150,
+          currency: "USD",
+        },
+      });
+      const paymentRes = await deleteOrder(withPayment);
+      expect(paymentRes.statusCode).toBe(409);
+      expect(paymentRes.json().message).toContain("it has a payment");
+
+      const withReturn = await placeOrder();
+      await prisma.returnRequest.create({ data: { orderId: withReturn, type: "return" } });
+      const returnRes = await deleteOrder(withReturn);
+      expect(returnRes.statusCode).toBe(409);
+      expect(returnRes.json().message).toContain("it has return requests");
+      expect(await prisma.order.count({ where: { id: { in: [withPayment, withReturn] } } })).toBe(2);
+    });
+
+    it("still allows deletion when the only payment attempt failed", async () => {
+      const orderId = await placeOrder();
+      await prisma.paymentIntent.create({
+        data: { orderId, provider: "stripe", status: "failed", amount: 150, currency: "USD" },
+      });
+      expect((await deleteOrder(orderId)).statusCode).toBe(204);
+    });
+  });
 });

@@ -122,6 +122,14 @@ export class EmailAlreadyVerifiedError extends DomainError {
 // Business Rule Errors (422)
 // ============================================================================
 
+// Administrators cannot remove their own access or the last remaining active
+// administrator; the account would otherwise be locked out of the admin panel.
+export class AdminSafetyError extends DomainError {
+  constructor(message: string) {
+    super(message, 'ADMIN_SAFETY_VIOLATION', 409);
+  }
+}
+
 export class InvalidOperationError extends DomainError {
   constructor(message: string) {
     super(message, 'INVALID_OPERATION', 422);

@@ -1,12 +1,12 @@
 {
   "date": "2026-11-17",
-  "commit": "de82f121abad3613078881254af182698386d764",
+  "commit": "d26d518d3ce816a06f3e22842e78b6c54331078d",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1874,
-  "backend_review_scope_files": 1540,
+  "candidate_files": 1878,
+  "backend_review_scope_files": 1543,
   "scope_counts": {
-    "audit-record": 87,
-    "backend": 1412,
+    "audit-record": 88,
+    "backend": 1415,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -21,13 +21,13 @@
     "modules/customer-care": 132,
     "modules/engagement": 130,
     "modules/fulfillment": 24,
-    "modules/inventory-management": 145,
+    "modules/inventory-management": 146,
     "modules/loyalty": 53,
     "modules/order-management": 144,
     "modules/payment": 123,
     "modules/product-catalog": 226,
     "modules/shared": 3,
-    "modules/user-management": 156,
+    "modules/user-management": 158,
     "packages/api-client": 5,
     "packages/config": 6,
     "packages/core": 32,
@@ -42,9 +42,9 @@
     "P00": 67,
     "P01": 131,
     "P02": 17,
-    "P03": 156,
+    "P03": 158,
     "P04": 226,
-    "P05": 145,
+    "P05": 146,
     "P06": 111,
     "P07": 144,
     "P08": 123,
@@ -63,11 +63,11 @@
     "migration-or-sql": 16,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1207,
-    "test": 156
+    "test": 159
   },
   "closure_counts": {
-    "open": 1365,
-    "closed": 175
+    "open": 1366,
+    "closed": 177
   },
   "removed_files_requiring_verification": [
     "apps/api/src/shared/application/index.ts",

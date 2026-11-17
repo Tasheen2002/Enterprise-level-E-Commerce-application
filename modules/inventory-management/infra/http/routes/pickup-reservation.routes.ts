@@ -47,7 +47,7 @@ export async function pickupReservationRoutes(
     "/pickup-reservations",
     {
       preValidation: [validateQuery(listPickupReservationsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "List pickup reservations",
         tags: ["Pickup Reservations"],
@@ -67,7 +67,7 @@ export async function pickupReservationRoutes(
     "/pickup-reservations/:reservationId",
     {
       preValidation: [validateParams(reservationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Get reservation by ID",
         tags: ["Pickup Reservations"],
@@ -86,7 +86,7 @@ export async function pickupReservationRoutes(
   fastify.post(
     "/pickup-reservations",
     {
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createPickupReservationSchema)],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createPickupReservationSchema)],
       schema: {
         description: "Create pickup reservation",
         tags: ["Pickup Reservations"],
@@ -106,7 +106,7 @@ export async function pickupReservationRoutes(
     "/pickup-reservations/:reservationId",
     {
       preValidation: [validateParams(reservationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
       schema: {
         description: "Cancel pickup reservation",
         tags: ["Pickup Reservations"],

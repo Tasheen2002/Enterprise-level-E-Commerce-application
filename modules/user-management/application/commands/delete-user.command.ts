@@ -3,13 +3,15 @@ import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/c
 
 export interface DeleteUserCommand extends ICommand {
   readonly userId: string;
+  /** Administrator performing the change (from the verified token). */
+  readonly actingUserId: string;
 }
 
 export class DeleteUserHandler implements ICommandHandler<DeleteUserCommand, CommandResult<void>> {
   constructor(private readonly userService: UserService) { }
 
   async handle(command: DeleteUserCommand): Promise<CommandResult<void>> {
-    await this.userService.deleteUser(command.userId);
+    await this.userService.deleteUser(command.userId, command.actingUserId);
     return CommandResult.success();
   }
 }

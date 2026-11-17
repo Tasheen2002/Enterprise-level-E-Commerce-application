@@ -183,4 +183,52 @@ describe("Inventory Management E2E API Tests", () => {
     expect(getStockRes.statusCode).toBe(200);
     expect(getStockRes.json().data.onHand).toBe(85);
   });
+
+  it("restricts pickup reservations to staff", async () => {
+    for (const [method, url] of [
+      ["GET", "/api/v1/pickup-reservations"],
+      ["GET", `/api/v1/pickup-reservations/${randomUUID()}`],
+      ["DELETE", `/api/v1/pickup-reservations/${randomUUID()}`],
+    ] as const) {
+      const res = await app.inject({
+        method,
+        url,
+        headers: { authorization: `Bearer ${customerToken}` },
+      });
+      expect(res.statusCode, `${method} ${url}`).toBe(403);
+    }
+    const create = await app.inject({
+      method: "POST",
+      url: "/api/v1/pickup-reservations",
+      headers: { authorization: `Bearer ${customerToken}` },
+      payload: { orderId: randomUUID(), variantId, locationId, qty: 1 },
+    });
+    expect(create.statusCode).toBe(403);
+    const staffList = await app.inject({
+      method: "GET",
+      url: "/api/v1/pickup-reservations",
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(staffList.statusCode).toBe(200);
+  });
+
+  it("refuses to delete a location that still holds stock", async () => {
+    await prisma.inventoryStock.create({ data: { variantId, locationId, onHand: 5, reserved: 0 } });
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/locations/${locationId}`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().code).toBe("LOCATION_IN_USE");
+    expect(await prisma.inventoryStock.count({ where: { locationId } })).toBe(1);
+
+    const empty = await prisma.location.create({ data: { name: "Empty", type: "warehouse" } });
+    const emptyRes = await app.inject({
+      method: "DELETE",
+      url: `/api/v1/locations/${empty.id}`,
+      headers: { authorization: `Bearer ${adminToken}` },
+    });
+    expect(emptyRes.statusCode).toBe(204);
+  });
 });

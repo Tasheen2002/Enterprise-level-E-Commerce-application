@@ -256,9 +256,41 @@ export class OrderRepositoryImpl
     }
   }
 
-  async delete(orderId: OrderId): Promise<void> {
-    await this.prisma.order.delete({
-      where: { id: orderId.getValue() },
+  async deleteIfUnprocessed(orderId: OrderId): Promise<string[]> {
+    const id = orderId.getValue();
+    return this.prisma.$transaction(async (tx) => {
+      // Lock the order row so a concurrent status change cannot slip in
+      // between the checks and the delete.
+      const locked = await tx.$queryRaw<Array<{ status: string }>>`
+        SELECT status::text AS status FROM order_management.orders
+        WHERE order_id = ${id}::uuid FOR UPDATE`;
+      if (locked.length === 0) return [];
+      if (locked[0]!.status !== "created") return [`order status is '${locked[0]!.status}'`];
+
+      const where = { orderId: id };
+      const checks: Array<[string, Promise<number>]> = [
+        [
+          "it has a payment",
+          tx.paymentIntent.count({
+            where: { orderId: id, status: { notIn: ["failed", "cancelled"] } },
+          }),
+        ],
+        ["it has gift card transactions", tx.giftCardTransaction.count({ where })],
+        ["it has loyalty transactions", tx.loyaltyTransaction.count({ where })],
+        ["it has BNPL transactions", tx.bnplTransaction.count({ where })],
+        ["it has return requests", tx.returnRequest.count({ where })],
+        ["it has shipments", tx.orderShipment.count({ where })],
+        ["it has fulfillment shipments", tx.shipment.count({ where })],
+        ["it has pickup reservations", tx.pickupReservation.count({ where })],
+        ["it has support tickets", tx.supportTicket.count({ where })],
+        ["it has goodwill records", tx.goodwillRecord.count({ where })],
+      ];
+      const blockers: string[] = [];
+      for (const [reason, count] of checks) if ((await count) > 0) blockers.push(reason);
+      if (blockers.length > 0) return blockers;
+
+      await tx.order.delete({ where: { id } });
+      return [];
     });
   }
 

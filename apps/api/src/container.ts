@@ -1189,7 +1189,11 @@ export class Container {
     const pickupReservationRepository = new PickupReservationRepositoryImpl(prisma, eventBus);
 
     const stockManagementService = new StockManagementService(stockRepository, inventoryTransactionRepository);
-    const locationManagementService = new LocationManagementService(locationRepository);
+    const locationManagementService = new LocationManagementService(
+      locationRepository,
+      stockRepository,
+      pickupReservationRepository,
+    );
     const supplierManagementService = new SupplierManagementService(supplierRepository);
     const purchaseOrderManagementService = new PurchaseOrderManagementService(purchaseOrderRepository, stockRepository, inventoryTransactionRepository);
     const stockAlertService = new StockAlertService(stockAlertRepository, stockRepository);

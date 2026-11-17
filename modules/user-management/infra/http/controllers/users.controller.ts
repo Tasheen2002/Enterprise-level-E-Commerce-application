@@ -87,6 +87,7 @@ export class UsersController {
       const result = await this.updateUserStatusHandler.handle({
         userId: request.params.userId,
         status: request.body.status as UserStatus,
+        actingUserId: request.user.userId,
       });
       return ResponseHelper.fromCommand(reply, result, 'User status updated');
     } catch (error: unknown) {
@@ -102,6 +103,7 @@ export class UsersController {
       const result = await this.updateUserRoleHandler.handle({
         userId: request.params.userId,
         role: request.body.role as UserRole,
+        actingUserId: request.user.userId,
       });
       return ResponseHelper.fromCommand(reply, result, 'User role updated');
     } catch (error: unknown) {
@@ -131,6 +133,7 @@ export class UsersController {
     try {
       const result = await this.deleteUserHandler.handle({
         userId: request.params.userId,
+        actingUserId: request.user.userId,
       });
       return ResponseHelper.fromCommand(reply, result, 'User deleted', undefined, 204);
     } catch (error: unknown) {

@@ -54,6 +54,7 @@ import {
 } from "../../domain/value-objects";
 import {
   OrderNotFoundError,
+  OrderDeletionError,
   OrderItemNotFoundError,
   OrderShipmentNotFoundError,
   DomainValidationError,
@@ -496,7 +497,11 @@ export class OrderManagementService {
     const orderId = OrderId.fromString(id);
     const order = await this.orderRepository.findById(orderId);
     if (!order) throw new OrderNotFoundError(id);
-    await this.orderRepository.delete(orderId);
+    if (!order.status.isCreated()) {
+      throw new OrderDeletionError(`order status is '${order.status.getValue()}'`);
+    }
+    const blockers = await this.orderRepository.deleteIfUnprocessed(orderId);
+    if (blockers.length > 0) throw new OrderDeletionError(blockers.join(", "));
   }
 
   // ─── Address Management ────────────────────────────────────────────────────

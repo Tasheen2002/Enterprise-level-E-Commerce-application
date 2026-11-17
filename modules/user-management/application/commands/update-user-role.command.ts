@@ -6,13 +6,15 @@ import { ICommand, ICommandHandler, CommandResult } from '../../../../packages/c
 export interface UpdateUserRoleCommand extends ICommand {
   readonly userId: string;
   readonly role: UserRole;
+  /** Administrator performing the change (from the verified token). */
+  readonly actingUserId: string;
 }
 
 export class UpdateUserRoleHandler implements ICommandHandler<UpdateUserRoleCommand, CommandResult<UserDTO>> {
   constructor(private readonly userService: UserService) { }
 
   async handle(command: UpdateUserRoleCommand): Promise<CommandResult<UserDTO>> {
-    const dto = await this.userService.updateUserRole(command.userId, command.role);
+    const dto = await this.userService.updateUserRole(command.userId, command.role, command.actingUserId);
     return CommandResult.success(dto);
   }
 }
