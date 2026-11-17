@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-17",
+  "phase": "P03 (batch 2: account management - email change/verification, addresses, payment methods, sessions, admin invitations, avatar and upload authorization)",
+  "baseline_commit": "60d9b4a1",
+  "scope": [
+    "application/services: address-management, payment-method, user-profile, imagekit-upload-auth; authentication.service changeEmail/verifyEmail",
+    "application/commands: change-email, verify-email, revoke-session, invite-admin, accept-admin-invitation, revoke-admin-invitation, payment-method commands",
+    "infra/http controllers and routes for addresses, payment methods, profile/sessions, admin invitations; validation schemas; shared packages/validation user schemas",
+    "modules/payment Stripe card setup (providerRef origin) and storefront callers"
+  ],
+  "reviewed_without_change": [
+    "Every address, payment-method and session route takes the user id from the verified token; update, delete and set-default check ownership; billing addresses must belong to the user.",
+    "Session revocation only revokes the caller's own live sessions; session listings never expose token hashes.",
+    "The Stripe card attach flow re-reads the card from Stripe and refuses cards attached to another Stripe customer; saved cards are never charged off-session today.",
+    "Admin invitations: admin-only, single active invitation per email, token stored hashed, invitation route rate limited, invitations can grant staff roles only after acceptance through the emailed link. The invitation token is not sent to the inviter: the route's response schema already strips it (an E2E guard confirmed this on the old code); the dead controller line returning it outside production was removed.",
+    "Address delivery-estimate helpers that skip ownership checks have no route or caller."
+  ],
+  "findings": [
+    {
+      "id": "P03-08",
+      "severity": "P1",
+      "file": "application/services/authentication.service.ts; application/commands/{change-email,verify-email,accept-admin-invitation}.command.ts; infra/http/controllers/auth.controller.ts; apps/api/src/container.ts",
+      "problem": "Changing email switched the account to the new address immediately without proving ownership and without telling the old address. Separately, opening any verification link marked the account's current address as verified, whatever address the link was issued for. Together: register with your own address, keep its link, change the email to someone else's address, open the old link, and the account shows a verified address you do not own (address squatting; order and reset emails go to that address; its owner cannot register).",
+      "change": "Two-step change: change-email (still password-gated) sends a confirmation link to the new address and a notice to the current one, and changes nothing. Verification tokens confirm only the address they were issued for: the current address is verified, or a pending change to that address is applied (refused if another account now holds it).",
+      "verification": "account-management-security E2E: baseline the email switched immediately and a token for another address verified the victim's address; fixed the email is unchanged until the link sent to the new address is opened, the old address is notified, and a mismatched token never verifies a different address."
+    },
+    {
+      "id": "P03-09",
+      "severity": "P3",
+      "file": "infra/http/validation/payment-method.schema.ts; infra/http/controllers/payment-methods.controller.ts; packages/validation/src/user/index.ts; apps/web/features/user-management/types.ts; packages/api-client generated schema",
+      "problem": "The generic payment-method routes let customers create card records with self-declared brand/last4/expiry and set any processor reference (providerRef, e.g. a Stripe pm_ id) on their records. Real card details and processor references must come from the processor; no storefront component uses the generic add route.",
+      "change": "Generic add refuses type 'card' (cards come only through the Stripe setup flow) and neither add nor update accepts providerRef (unknown keys are stripped). Shared schemas, web request type and generated API client aligned.",
+      "verification": "E2E: baseline card record created and providerRef stored; fixed card 400, wallet created with providerRef null. Shared-schema parity and boundary tests updated and passing."
+    },
+    {
+      "id": "P03-10",
+      "severity": "P3",
+      "file": "packages/validation/src/user/index.ts",
+      "problem": "Avatar URLs accepted any URL scheme, including http:, data: and javascript:.",
+      "change": "Avatar URLs must use https.",
+      "verification": "E2E and boundary tests: baseline javascript: and http: accepted; fixed 400, https accepted."
+    }
+  ],
+  "tests": {
+    "new": "E2E account-management-security (5 cases), validation boundary case for cards/providerRef and https avatars",
+    "updated": "change-email and verify-email unit specs (new two-step contract), shared validation boundary specs (card no longer accepted generically)",
+    "baseline": "With source changes stashed: 4 of 5 E2E cases failed (email change x2, payment methods, avatar); the invitation-token guard passed on the old code, showing that path was already safe.",
+    "database_suites": "All E2E and integration suites: 116 tests in 38 files pass. A first run hit Vitest's 10 s setup-hook default in the inventory E2E (setup truncates all tables and registers users with production bcrypt cost); vitest.config.ts now sets hookTimeout 30 s (per-test limit unchanged) and the rerun passed fully.",
+    "final": "1483 unit tests in 114 files; root/tooling tsc; 7/7 workspace type-checks; API client regenerated and drift check passes; focused ESLint (pre-existing container warnings only); Prettier"
+  },
+  "follow_ups": [
+    "ImageKit upload signatures cover only token and expiry, not the folder: a holder of an upload token can upload any file to any folder of the account for 5 minutes. Restrict uploads in ImageKit (allowed folders/file types) or move to signed upload parameters; provider-side verification needed.",
+    "Avatar URLs are limited to https but not to the ImageKit host; restricting to the configured CDN endpoint needs that endpoint in validated config.",
+    "Pending email-change and verification tokens live in process memory (same multi-instance limitation as P03 batch 1).",
+    "The admin welcome email reuses sendVerificationEmail with a placeholder token; give it its own email method.",
+    "Invitation links use process.env.ADMIN_APP_URL with a localhost fallback (module process.env reads recorded in P01-49)."
+  ]
+}

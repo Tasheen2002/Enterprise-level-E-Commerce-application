@@ -1,12 +1,12 @@
 {
   "date": "2026-11-17",
-  "commit": "ce164a079f49219831cea6b278904561a19a379d",
+  "commit": "60d9b4a1b6b076b02eab816b2628a4e069d5d427",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1881,
-  "backend_review_scope_files": 1545,
+  "candidate_files": 1883,
+  "backend_review_scope_files": 1546,
   "scope_counts": {
-    "audit-record": 89,
-    "backend": 1417,
+    "audit-record": 90,
+    "backend": 1418,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -27,7 +27,7 @@
     "modules/payment": 123,
     "modules/product-catalog": 226,
     "modules/shared": 3,
-    "modules/user-management": 160,
+    "modules/user-management": 161,
     "packages/api-client": 5,
     "packages/config": 6,
     "packages/core": 32,
@@ -42,7 +42,7 @@
     "P00": 67,
     "P01": 131,
     "P02": 17,
-    "P03": 160,
+    "P03": 161,
     "P04": 226,
     "P05": 146,
     "P06": 111,
@@ -63,11 +63,11 @@
     "migration-or-sql": 16,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1207,
-    "test": 161
+    "test": 162
   },
   "closure_counts": {
-    "open": 1368,
-    "closed": 177
+    "open": 1372,
+    "closed": 174
   },
   "removed_files_requiring_verification": [
     "apps/api/src/shared/application/index.ts",

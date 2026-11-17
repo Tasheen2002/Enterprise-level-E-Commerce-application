@@ -659,11 +659,17 @@ export class AuthenticationService {
     await this.sessionRepository.revokeAllForUser(user.id, currentSessionId);
   }
 
-  async changeEmail(
+  /**
+   * Starts an email change. Nothing changes yet: the new address only takes
+   * effect when its owner opens the confirmation link sent to it (see
+   * verifyEmail), so nobody can move an account onto an address they do not
+   * control.
+   */
+  async requestEmailChange(
     userId: string,
     newEmail: string,
     password: string,
-  ): Promise<void> {
+  ): Promise<{ verificationToken: string; currentEmail: string; newEmail: string }> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
     if (user.isGuest) {
@@ -680,13 +686,19 @@ export class AuthenticationService {
     if (!isPasswordValid) throw new InvalidCredentialsError();
 
     const emailVo = Email.create(newEmail);
+    if (user.email.equals(emailVo)) {
+      throw new InvalidOperationError("This is already your email address");
+    }
     const existingUser = await this.userRepository.findByEmail(emailVo);
     if (existingUser && existingUser.id.getValue() !== userId) {
       throw new UserAlreadyExistsError(newEmail);
     }
 
-    user.updateEmail(newEmail);
-    await this.userRepository.save(user);
+    return {
+      verificationToken: crypto.randomBytes(32).toString("hex"),
+      currentEmail: user.email.getValue(),
+      newEmail: emailVo.getValue(),
+    };
   }
 
   async initiatePasswordReset(
@@ -731,10 +743,32 @@ export class AuthenticationService {
 
   // --- Email verification & lookups ---
 
-  async verifyEmail(userId: string): Promise<void> {
+  /**
+   * Confirms that the holder of a verification token controls `email`, the
+   * address the token was issued for. Verifies the account's current address,
+   * or completes a requested change to a new one. A token never verifies any
+   * other address.
+   */
+  async verifyEmail(userId: string, email: string): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.emailVerified) throw new EmailAlreadyVerifiedError();
+    const confirmed = Email.create(email);
+
+    if (user.email.equals(confirmed)) {
+      if (user.emailVerified) throw new EmailAlreadyVerifiedError();
+      user.verifyEmail();
+      await this.userRepository.save(user);
+      return;
+    }
+
+    if (user.isGuest) {
+      throw new InvalidOperationError("Guest users cannot change email");
+    }
+    const owner = await this.userRepository.findByEmail(confirmed);
+    if (owner && owner.id.getValue() !== user.id.getValue()) {
+      throw new UserAlreadyExistsError(confirmed.getValue());
+    }
+    user.updateEmail(confirmed.getValue());
     user.verifyEmail();
     await this.userRepository.save(user);
   }

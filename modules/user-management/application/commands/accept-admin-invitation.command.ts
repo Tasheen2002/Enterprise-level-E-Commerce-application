@@ -80,7 +80,7 @@ export class AcceptAdminInvitationHandler implements ICommandHandler<
     // 5. Auto-verify the email (trusted — admin invited them)
     // We use the existing resendEmailVerification + verifyEmail path,
     // but since we trust the invitation, we just mark verified directly.
-    await this.authService.verifyEmail(authResult.user.id).catch(() => {
+    await this.authService.verifyEmail(authResult.user.id, invitation.email.getValue()).catch(() => {
       // If already verified or any issue, swallow — not critical
     });
 

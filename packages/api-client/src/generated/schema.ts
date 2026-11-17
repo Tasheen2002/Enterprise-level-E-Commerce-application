@@ -1910,7 +1910,6 @@ export interface paths {
                         expYear?: number;
                         /** Format: uuid */
                         billingAddressId?: string;
-                        providerRef?: string;
                         isDefault?: boolean;
                     };
                 };
@@ -2016,7 +2015,6 @@ export interface paths {
                         billingAddressId?: string;
                         expMonth?: number;
                         expYear?: number;
-                        providerRef?: string;
                         isDefault?: boolean;
                     };
                 };

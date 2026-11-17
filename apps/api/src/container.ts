@@ -910,7 +910,7 @@ export class Container {
       new LogoutHandler(authService, TokenBlacklistService),
       new RefreshTokenHandler(authService, TokenBlacklistService),
       new ChangePasswordHandler(authService),
-      new ChangeEmailHandler(authService),
+      new ChangeEmailHandler(authService, TokenBlacklistService, emailService),
       new InitiatePasswordResetHandler(authService, TokenBlacklistService, emailService),
       new ResetPasswordHandler(authService, TokenBlacklistService),
       new VerifyEmailHandler(authService, TokenBlacklistService),

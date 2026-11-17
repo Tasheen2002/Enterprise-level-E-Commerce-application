@@ -32,7 +32,7 @@ describe("VerifyEmailHandler", () => {
 
     // Assert
     expect(mockTokenBlacklistService.getVerificationToken).toHaveBeenCalledWith("valid-verify-token");
-    expect(mockAuthService.verifyEmail).toHaveBeenCalledWith("user-123");
+    expect(mockAuthService.verifyEmail).toHaveBeenCalledWith("user-123", mockTokenData.email);
     expect(result).toBeInstanceOf(CommandResult);
     expect(result.success).toBe(true);
   });

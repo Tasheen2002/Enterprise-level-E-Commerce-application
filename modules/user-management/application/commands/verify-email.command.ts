@@ -22,7 +22,7 @@ export class VerifyEmailHandler
       throw new InvalidVerificationTokenError();
     }
 
-    await this.authService.verifyEmail(tokenData.userId);
+    await this.authService.verifyEmail(tokenData.userId, tokenData.email);
     return CommandResult.success();
   }
 }

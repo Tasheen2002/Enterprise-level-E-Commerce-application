@@ -11,6 +11,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    // Database suites truncate every table and register users with production
+    // bcrypt cost in their setup hooks; under full-suite load that exceeds the
+    // 10 s default and fails setups spuriously. Per-test limits stay default.
+    hookTimeout: 30_000,
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "lcov"],

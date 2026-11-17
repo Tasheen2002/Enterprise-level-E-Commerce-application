@@ -41,10 +41,10 @@ describe("profile/address/payment field boundaries", () => {
       field,
       max,
     })),
-    ...Object.entries({ brand: 50, providerRef: 100 }).map(([field, max]) => ({
+    ...Object.entries({ brand: 50 }).map(([field, max]) => ({
       name: "payment",
       schema: user.addPaymentMethodRequestSchema,
-      base: { type: "card" },
+      base: { type: "wallet" },
       field,
       max,
     })),
@@ -88,6 +88,8 @@ describe("profile/address/payment field boundaries", () => {
       { defaultAddressId: "bad" },
       { defaultPaymentMethodId: "bad" },
       { avatarUrl: "bad" },
+      { avatarUrl: "http://example.com/avatar.png" },
+      { avatarUrl: "javascript:alert(1)" },
       { prefs: [] },
       { preferredSizes: { shirt: 12 } },
     ])
@@ -104,12 +106,17 @@ describe("profile/address/payment field boundaries", () => {
     ).toBe(type);
     expect(user.updateAddressRequestSchema.parse({ type })).toEqual({ type });
   });
-  it.each(["card", "wallet", "bank", "cod", "gift_card"])(
-    "accepts wire payment type %s",
-    (type) => {
-      expect(user.addPaymentMethodRequestSchema.parse({ type }).type).toBe(type);
-    },
-  );
+  it.each(["wallet", "bank", "cod", "gift_card"])("accepts wire payment type %s", (type) => {
+    expect(user.addPaymentMethodRequestSchema.parse({ type }).type).toBe(type);
+  });
+  it("refuses cards and drops processor references on the generic payment request", () => {
+    // Cards and Stripe `pm_` references come only from the Stripe setup flow.
+    expect(user.addPaymentMethodRequestSchema.safeParse({ type: "card" }).success).toBe(false);
+    expect(
+      user.addPaymentMethodRequestSchema.parse({ type: "wallet", providerRef: "pm_x" }),
+    ).toEqual({ type: "wallet" });
+    expect(user.updatePaymentMethodRequestSchema.parse({ providerRef: "pm_x" })).toEqual({});
+  });
   it("checks country length, booleans, card suffix, expiry ranges and UUID references", () => {
     const address = { type: "billing", addressLine1: "Main St", city: "Colombo", country: "LK" };
     expect(user.addAddressRequestSchema.safeParse({ ...address, isDefault: true }).success).toBe(
@@ -121,7 +128,7 @@ describe("profile/address/payment field boundaries", () => {
     expect(user.addAddressRequestSchema.safeParse({ ...address, isDefault: "true" }).success).toBe(
       false,
     );
-    const card = { type: "card", last4: "1234", expMonth: 1, expYear: 2000, isDefault: true };
+    const card = { type: "wallet", last4: "1234", expMonth: 1, expYear: 2000, isDefault: true };
     expect(user.addPaymentMethodRequestSchema.parse(card)).toEqual(card);
     expect(user.updatePaymentMethodRequestSchema.parse({ expMonth: 12, expYear: 2100 })).toEqual({
       expMonth: 12,
