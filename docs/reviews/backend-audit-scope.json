@@ -1,12 +1,12 @@
 {
   "date": "2026-11-18",
-  "commit": "398976e1a4a7805a6df960173132684d9145bb24",
+  "commit": "941014960564caa46d8b9d2b1fd353929b4faefa",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1896,
-  "backend_review_scope_files": 1555,
+  "candidate_files": 1898,
+  "backend_review_scope_files": 1556,
   "scope_counts": {
-    "audit-record": 94,
-    "backend": 1427,
+    "audit-record": 95,
+    "backend": 1428,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -17,7 +17,7 @@
     "apps/api": 67,
     "apps/web": 43,
     "modules/analytics": 23,
-    "modules/cart": 111,
+    "modules/cart": 112,
     "modules/customer-care": 132,
     "modules/engagement": 130,
     "modules/fulfillment": 24,
@@ -45,7 +45,7 @@
     "P03": 162,
     "P04": 232,
     "P05": 147,
-    "P06": 111,
+    "P06": 112,
     "P07": 144,
     "P08": 123,
     "P09": 53,
@@ -63,11 +63,11 @@
     "migration-or-sql": 17,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1210,
-    "test": 167
+    "test": 168
   },
   "closure_counts": {
-    "open": 1381,
-    "closed": 174
+    "open": 1383,
+    "closed": 173
   },
   "removed_files_requiring_verification": [
     "apps/api/src/shared/application/index.ts",

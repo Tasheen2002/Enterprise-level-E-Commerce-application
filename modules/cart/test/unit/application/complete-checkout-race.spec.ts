@@ -60,6 +60,10 @@ function fixture() {
     { create: () => ({ toJSON: () => ({}) }) } as unknown as Args[7],
     { defaultStockLocation: "warehouse" },
     loyalty as unknown as Args[9],
+    {
+      confirm: vi.fn().mockResolvedValue({ succeeded: true, amount: 100, currency: "USD" }),
+    } as unknown as Args[10],
+    { promotionDiscount: vi.fn(), loyaltyBalance: vi.fn() } as unknown as Args[11],
   );
   const dto = {
     checkoutId,

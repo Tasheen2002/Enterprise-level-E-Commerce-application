@@ -1,4 +1,5 @@
 import { PrismaClient, Category } from "@prisma/client";
+import type { IPaymentConfirmationPort } from "../../../modules/cart/domain/ports/external-services";
 import { ProductVisibilityPolicy } from "../../../modules/product-catalog/application/services/product-visibility.policy";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
 import { DomainEvent } from "../../../packages/core/src/domain/events/domain-event";
@@ -809,6 +810,34 @@ export function createOrderCatalogPorts(
  *
  * Each server creates its own container; `register` runs once per instance.
  */
+/**
+ * Confirms checkout payments with Stripe itself: the intent must have
+ * succeeded (or be authorised for capture) and the amount reported is what
+ * Stripe will settle. Without Stripe configuration nothing is confirmed.
+ */
+function createStripePaymentConfirmation(
+  stripe: StripeConfig | undefined,
+): IPaymentConfirmationPort {
+  const provider = stripe ? createStripeProvider(stripe) : null;
+  return {
+    async confirm(payment) {
+      const unconfirmed = { succeeded: false, amount: 0, currency: "" };
+      if (!provider || payment.provider !== "stripe" || !payment.providerReference) {
+        return unconfirmed;
+      }
+      const intent = await provider.retrievePaymentIntent(payment.providerReference);
+      if (!intent.success) return unconfirmed;
+      const succeeded = intent.status === "succeeded" || intent.status === "requires_capture";
+      const amount = intent.status === "succeeded" ? intent.amountReceived : intent.amount;
+      return {
+        succeeded,
+        amount: succeeded ? (amount ?? 0) : 0,
+        currency: intent.currency ?? "",
+      };
+    },
+  };
+}
+
 export class Container {
   private static instance: Container;
   private services: Map<string, unknown> = new Map();
@@ -1339,6 +1368,22 @@ export class Container {
       { create: (data) => ProductSnapshot.create(data) } satisfies IProductSnapshotFactory,
       { defaultStockLocation: config.defaultStockLocation },
       loyaltyService,
+      createStripePaymentConfirmation(config.stripe),
+      {
+        // Resolved at request time; both services are created later in register().
+        promotionDiscount: async ({ promoCode, subtotal, productIds, userId, email }) => {
+          const result = await promotionService.applyPromotion({
+            promoCode,
+            orderAmount: subtotal,
+            products: productIds,
+            userId,
+            email,
+          });
+          return result.valid ? (result.discountAmount ?? 0) : 0;
+        },
+        loyaltyBalance: async (userId) =>
+          (await loyaltyService.getAccountDetails(userId)).currentBalance,
+      },
     );
 
     const cartController = new CartController(

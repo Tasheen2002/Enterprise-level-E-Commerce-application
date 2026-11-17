@@ -49,6 +49,8 @@ export interface CompleteCheckoutWithOrderRequest {
   shippingAddress: AddressSnapshot;
   billingAddress?: AddressSnapshot;
   promoCode?: string;
+  /** Loyalty points to redeem; the server validates and deducts them with the order. */
+  pointsToRedeem?: number;
 }
 
 export interface CompleteCheckoutWithOrderResponse {

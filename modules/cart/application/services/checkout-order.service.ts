@@ -13,13 +13,19 @@ import {
   ICheckoutCompletionPort,
   CheckoutOrderResult,
   PersistCheckoutOrderData,
+  IPaymentConfirmationPort,
+  ICheckoutPricingPort,
 } from "../../domain/ports/external-services";
+import { LOYALTY_POINT_REDEMPTION_VALUE } from "../../../loyalty/domain/constants/loyalty.constants";
+import { LoyaltyTransactionReasonValue } from "../../../loyalty/domain/value-objects/loyalty-reason.vo";
 import {
   CartNotFoundError,
   CheckoutNotFoundError,
   CartOwnershipError,
   InvalidCheckoutStateError,
   InvalidCartStateError,
+  PaymentNotConfirmedError,
+  PaymentMismatchError,
   DomainValidationError,
 } from "../../domain/errors/cart.errors";
 import { LoyaltyService } from "../../../loyalty/application/services/loyalty.service";
@@ -30,6 +36,8 @@ interface CompleteCheckoutWithOrderDto {
   userId?: string;
   guestToken?: string;
   promoCode?: string;
+  /** Loyalty points to redeem against this order (validated and deducted by the server). */
+  pointsToRedeem?: number;
   shippingAddress: {
     firstName: string;
     lastName: string;
@@ -87,7 +95,9 @@ export class CheckoutOrderService {
     private readonly productVariantRepository: IExternalProductVariantRepository,
     private readonly snapshotFactory: IProductSnapshotFactory,
     private readonly config: { defaultStockLocation?: string },
-    private readonly loyaltyService?: LoyaltyService,
+    private readonly loyaltyService: LoyaltyService | undefined,
+    private readonly paymentConfirmation: IPaymentConfirmationPort,
+    private readonly pricing: ICheckoutPricingPort,
   ) {}
 
   async completeCheckoutWithOrder(
@@ -131,11 +141,13 @@ export class CheckoutOrderService {
       throw new DomainValidationError("Payment intent not found");
     }
 
-    const validStatuses = ["authorized", "captured", "requires_action"];
-    if (!validStatuses.includes(paymentIntent.status)) {
-      throw new InvalidCheckoutStateError(
-        `Payment intent is not authorized. Current status: ${paymentIntent.status}`,
-      );
+    // A payment pays for exactly one checkout: it must be this checkout's
+    // payment and not already attached to an order.
+    if (paymentIntent.checkoutId && paymentIntent.checkoutId !== dto.checkoutId) {
+      throw new PaymentMismatchError("Payment belongs to a different checkout");
+    }
+    if (paymentIntent.orderId) {
+      throw new PaymentMismatchError("Payment has already been used for an order");
     }
 
     if (dto.userId && checkout.cartOwnerId?.getValue() !== dto.userId) {
@@ -215,11 +227,56 @@ export class CheckoutOrderService {
       tax = parseFloat((subtotal * 0.08).toFixed(2));
     }
 
-    // The final total settled is the actual amount paid via the PaymentIntent
-    const total = paymentIntent.amount;
+    // ---- Server-side total: never derived from what the client paid ----
+    const round2 = (value: number) => Math.round(value * 100) / 100;
+    const promoDiscount = dto.promoCode
+      ? round2(
+          await this.pricing.promotionDiscount({
+            promoCode: dto.promoCode,
+            subtotal,
+            productIds: (cartSnapshot.items || []).map((item) => item.variantId),
+            userId: checkout.cartOwnerId?.getValue(),
+            email: dto.shippingAddress.email ?? undefined,
+          }),
+        )
+      : 0;
+    const beforeLoyalty = round2(subtotal + shipping + tax - promoDiscount);
 
-    // Calculate discount based on the final paid total (subtotal + shipping + tax - paidTotal)
-    discount = Math.max(0, parseFloat((subtotal + shipping + tax - total).toFixed(2)));
+    const pointsToRedeem = dto.pointsToRedeem ?? 0;
+    if (!Number.isInteger(pointsToRedeem) || pointsToRedeem < 0) {
+      throw new DomainValidationError("Points to redeem must be a non-negative whole number");
+    }
+    let loyaltyDiscount = 0;
+    if (pointsToRedeem > 0) {
+      const ownerId = checkout.cartOwnerId?.getValue();
+      if (!ownerId || !this.loyaltyService) {
+        throw new DomainValidationError("Loyalty points can only be redeemed by signed-in customers");
+      }
+      if (pointsToRedeem > (await this.pricing.loyaltyBalance(ownerId))) {
+        throw new DomainValidationError("Not enough loyalty points");
+      }
+      loyaltyDiscount = round2(pointsToRedeem * LOYALTY_POINT_REDEMPTION_VALUE);
+      if (loyaltyDiscount > beforeLoyalty) {
+        throw new DomainValidationError("Loyalty points exceed the order total");
+      }
+    }
+
+    discount = round2(promoDiscount + loyaltyDiscount);
+    const total = round2(beforeLoyalty - loyaltyDiscount);
+
+    // ---- Payment must be confirmed by the provider and cover the total ----
+    const payment = await this.paymentConfirmation.confirm(paymentIntent);
+    if (!payment.succeeded) {
+      throw new PaymentNotConfirmedError();
+    }
+    if (payment.currency.toLowerCase() !== checkout.currency.getValue().toLowerCase()) {
+      throw new PaymentMismatchError("Payment currency does not match the checkout");
+    }
+    if (payment.amount + 0.005 < total) {
+      throw new PaymentMismatchError(
+        `Payment of ${payment.amount.toFixed(2)} does not cover the order total of ${total.toFixed(2)}`,
+      );
+    }
 
     const totals = {
       subtotal,
@@ -330,7 +387,8 @@ export class CheckoutOrderService {
       },
       email: resolvedEmail,
       cartId: checkout.cartId.getValue(),
-      promoCode: dto.promoCode,
+      promoCode: promoDiscount > 0 ? dto.promoCode : undefined,
+      promoDiscount,
       stockAdjustments: (cartSnapshot.items || []).map((item) => ({
         variantId: item.variantId,
         warehouseId,
@@ -356,6 +414,23 @@ export class CheckoutOrderService {
 
     // Clean up reservations
     await this.reservationRepository.deleteByCartId(checkout.cartId);
+
+    // Redeem the loyalty points that were credited against this order.
+    if (pointsToRedeem > 0 && checkout.cartOwnerId && this.loyaltyService) {
+      try {
+        await this.loyaltyService.redeemPoints({
+          userId: checkout.cartOwnerId.getValue(),
+          points: pointsToRedeem,
+          reason: LoyaltyTransactionReasonValue.DISCOUNT_REDEMPTION,
+          orderId: result.orderId,
+          description: `Redeemed at checkout for order ${result.orderNo}`,
+        });
+      } catch (err: unknown) {
+        // The balance was checked before payment confirmation; a failure
+        // here means a concurrent redemption and needs manual follow-up.
+        console.error("Failed to redeem loyalty points for checkout order:", result.orderId, err);
+      }
+    }
 
     // Award loyalty points for authenticated user checkout
     if (checkout.cartOwnerId && this.loyaltyService) {

@@ -83,6 +83,21 @@ export class InvalidCartStateError extends DomainError {
   }
 }
 
+// The provider did not confirm that the payment succeeded (or is authorised).
+export class PaymentNotConfirmedError extends DomainError {
+  constructor(message = "Payment has not been completed") {
+    super(message, "PAYMENT_NOT_CONFIRMED", 402);
+  }
+}
+
+// The confirmed payment does not cover the server-computed order total, or
+// the payment belongs to another checkout or order.
+export class PaymentMismatchError extends DomainError {
+  constructor(message: string) {
+    super(message, "PAYMENT_MISMATCH", 409);
+  }
+}
+
 export class InvalidCheckoutStateError extends DomainError {
   constructor(message: string) {
     super(message, "INVALID_CHECKOUT_STATE", 422);

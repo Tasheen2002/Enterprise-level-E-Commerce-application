@@ -14257,6 +14257,7 @@ export interface paths {
                             email?: string;
                         };
                         promoCode?: string;
+                        pointsToRedeem?: number;
                     };
                 };
             };

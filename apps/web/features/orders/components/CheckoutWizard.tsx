@@ -15,7 +15,7 @@ import { ShieldCheck, Coins } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { initializeCheckout, createStripePaymentIntent, completeCheckoutWithOrder, calculateCheckoutTax } from "../api";
 import { useCurrentIdentity } from "../../user-management/hooks/useCurrentIdentity";
-import { useLoyaltyAccount, useRedeemLoyaltyPoints } from "../../user-management/hooks/useLoyalty";
+import { useLoyaltyAccount } from "../../user-management/hooks/useLoyalty";
 
 const addressSchema = z.object({
   firstName: z.string().min(1, "First name is required").max(100),
@@ -908,7 +908,6 @@ function StripePaymentFormInner({
   const router = useRouter();
 
   const { data: identity } = useCurrentIdentity();
-  const { mutateAsync: redeemPoints } = useRedeemLoyaltyPoints();
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [stripeIntentId, setStripeIntentId] = useState<string | null>(null);
@@ -1045,21 +1044,10 @@ function StripePaymentFormInner({
         shippingAddress: cleanShippingAddress,
         billingAddress: cleanBillingAddress,
         promoCode: promoCode || undefined,
+        // Points are validated and redeemed by the server as part of completion.
+        pointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       });
 
-      // 4. Deduct loyalty points if used
-      if (pointsToRedeem && pointsToRedeem > 0 && identity?.userId) {
-        try {
-          await redeemPoints({
-            userId: identity.userId,
-            points: pointsToRedeem,
-            orderId: result.orderId,
-            reason: `Redeemed ${pointsToRedeem} points at checkout for order #${result.orderNo}`,
-          });
-        } catch (err: unknown) {
-          console.error("Failed to deduct loyalty points:", err);
-        }
-      }
 
       toast.success("Order placed successfully!");
       localStorage.removeItem("applied_promo_code");

@@ -21,6 +21,16 @@ import {
 } from "../../../domain/ports/external-services";
 import { InvalidCheckoutStateError } from "../../../domain/errors/cart.errors";
 
+const PAYMENT_INTENT_FIELDS = {
+  intentId: true,
+  status: true,
+  amount: true,
+  provider: true,
+  clientSecret: true,
+  checkoutId: true,
+  orderId: true,
+} as const;
+
 export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -31,7 +41,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
     // Try by checkoutId first (common during checkout flow)
     let pi = await this.prisma.paymentIntent.findUnique({
       where: { checkoutId },
-      select: { intentId: true, status: true, amount: true },
+      select: PAYMENT_INTENT_FIELDS,
     });
 
     // Fallback to intentId or clientSecret
@@ -40,12 +50,12 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       if (isUuid) {
         pi = await this.prisma.paymentIntent.findUnique({
           where: { intentId: paymentIntentId },
-          select: { intentId: true, status: true, amount: true },
+          select: PAYMENT_INTENT_FIELDS,
         });
       } else {
         pi = await this.prisma.paymentIntent.findFirst({
           where: { clientSecret: paymentIntentId },
-          select: { intentId: true, status: true, amount: true },
+          select: PAYMENT_INTENT_FIELDS,
         });
       }
     }
@@ -56,6 +66,10 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       intentId: pi.intentId,
       status: pi.status,
       amount: Number(pi.amount),
+      provider: pi.provider,
+      providerReference: pi.clientSecret,
+      checkoutId: pi.checkoutId,
+      orderId: pi.orderId,
     };
   }
 
@@ -182,7 +196,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
             data: {
               promoId: promotion.promoId,
               orderId: order.id,
-              discountAmount: new Prisma.Decimal(data.totals.discount || 0),
+              discountAmount: new Prisma.Decimal(data.promoDiscount ?? data.totals.discount ?? 0),
               currency: data.currency,
             },
           });

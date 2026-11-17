@@ -1,0 +1,62 @@
+{
+  "date": "2026-11-18",
+  "phase": "P06 (batch 1: checkout payment verification and server-side totals)",
+  "baseline_commit": "94101496",
+  "scope": [
+    "modules/cart/application/services/checkout-order.service.ts (completion flow) and its command, schema and controller",
+    "modules/cart/domain/ports/external-services.ts and infra checkout-completion.port.impl.ts (payment intent lookup, promotion usage)",
+    "modules/payment Stripe provider, create-intent controller and payment service (amount origin)",
+    "modules/payment promotion.service applyPromotion; modules/loyalty redemption and constants",
+    "apps/web CheckoutWizard total calculation, promo handling and loyalty redemption"
+  ],
+  "reviewed_without_change": [
+    "Cart item prices come from the product on the server; the client cannot set them."
+  ],
+  "findings": [
+    {
+      "id": "P06-01",
+      "severity": "P0",
+      "file": "modules/cart/application/services/checkout-order.service.ts",
+      "problem": "Checkout completion never confirmed payment with Stripe. It accepted a payment intent whose local status was 'requires_action' (the status every new intent starts with), so an order could be completed and marked paid without paying anything.",
+      "change": "Completion confirms the payment with the provider (a new IPaymentConfirmationPort implemented with the Stripe API): the Stripe intent must be 'succeeded' or 'requires_capture'; without Stripe configuration nothing is confirmed. Unconfirmed payments are refused with 402 PAYMENT_NOT_CONFIRMED before anything is persisted.",
+      "verification": "Unit checkout-payment-verification: baseline order completed with an unconfirmed payment; fixed 402 and no order persisted."
+    },
+    {
+      "id": "P06-02",
+      "severity": "P0",
+      "file": "modules/cart/application/services/checkout-order.service.ts; modules/payment create-intent (client-supplied amount)",
+      "problem": "The payment amount was chosen by the client (create-intent takes amount from the request body) and checkout completion set the order total to that amount and recorded the difference as a 'discount'. A customer could pay 1.00 for any cart.",
+      "change": "The server computes the total itself (cart subtotal + shipping + tax - server-validated promotion discount - server-validated loyalty credit) and refuses with 409 PAYMENT_MISMATCH when the amount the provider will settle is lower or in another currency. Orders record the server-computed totals; promotion usage records only the promotion discount.",
+      "verification": "Unit: baseline underpayment accepted and totals taken from the payment; fixed underpayment and wrong currency refused, totals computed on the server, promotion recomputed via the promotion service."
+    },
+    {
+      "id": "P06-03",
+      "severity": "P1",
+      "file": "modules/cart/application/services/checkout-order.service.ts; checkout-completion.port.impl.ts",
+      "problem": "When no payment was linked to the checkout, completion accepted any payment intent id supplied by the client, so one paid intent (or another customer's) could complete several checkouts.",
+      "change": "A payment must belong to this checkout (or be unlinked) and must not already be attached to an order.",
+      "verification": "Unit: another checkout's payment and a payment already used for an order are refused (baseline accepted both)."
+    },
+    {
+      "id": "P06-04",
+      "severity": "P1",
+      "file": "modules/cart (completion), apps/web/features/orders (CheckoutWizard, api), modules/loyalty constants",
+      "problem": "Loyalty discounts were applied by the browser and the points were deducted by a separate client call after the order existed; the call's failure was ignored, so the discount could be kept without spending points (or the call skipped entirely).",
+      "change": "Completion accepts pointsToRedeem; the server checks the balance, credits 100 points = 1.00 (LOYALTY_POINT_REDEMPTION_VALUE), refuses guests and redemptions above the order total, and deducts the points itself with the order id. The storefront sends the points with completion and no longer makes its own redemption call.",
+      "verification": "Unit: insufficient balance refused, valid redemption reduces the total and deducts points with the order id, guests refused (baseline ignored points). Storefront and API client type-check with the new field."
+    }
+  ],
+  "tests": {
+    "new": "unit checkout-payment-verification (9)",
+    "updated": "checkout-stripe-initialization and complete-checkout-race fixtures supply the new payment-confirmation and pricing ports",
+    "baseline": "With the old checkout service: 9 of 9 cases failed.",
+    "database_suites": "All E2E and integration suites: 129 tests in 41 files pass",
+    "final": "1511 unit tests in 117 files; root/tooling tsc; 7/7 workspace type-checks (storefront included); API client regenerated and drift check passes"
+  },
+  "follow_ups": [
+    "Next P06 batch: deduct stock inside the checkout transaction (currently after commit) and move best-effort analytics/admin-notification writes and the on-disk error log out of the transaction.",
+    "Tax falls back to a simulated 8% when Stripe Tax fails or returns 0; production should fail or use a configured rate instead of inventing tax.",
+    "Loyalty points are deducted after the order commits; a concurrent redemption between the balance check and deduction is logged for manual follow-up.",
+    "P08: create-intent still accepts a client amount and does not check the checkout belongs to the caller; completion now refuses underpayment, but the intent amount should be set by the server."
+  ]
+}

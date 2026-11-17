@@ -52,6 +52,8 @@ function fixture() {
     }),
   };
   const variants = { findById: vi.fn().mockRejectedValue(stopped) };
+  // Payment confirmation runs right after tax; stopping there keeps these tests focused on tax.
+  const confirmation = { confirm: vi.fn().mockRejectedValue(stopped) };
   type Args = ConstructorParameters<typeof CheckoutOrderService>;
   const service = new CheckoutOrderService(
     port as unknown as Args[0],
@@ -63,6 +65,9 @@ function fixture() {
     variants as unknown as Args[6],
     {} as Args[7],
     {},
+    undefined,
+    confirmation as unknown as Args[10],
+    { promotionDiscount: vi.fn(), loyaltyBalance: vi.fn() } as unknown as Args[11],
   );
   const dto = {
     checkoutId: "a11cfa10-457b-48ba-981d-5fa424f82388",
@@ -77,7 +82,7 @@ function fixture() {
       phone: "0000000000",
     },
   };
-  return { service, port, checkoutRepository, variants, stopped, dto };
+  return { service, port, checkoutRepository, variants, confirmation, stopped, dto };
 }
 
 describe("checkout Stripe initialization boundary", () => {
@@ -122,7 +127,8 @@ describe("checkout Stripe initialization boundary", () => {
     expect(stripe.construct).toHaveBeenCalledOnce();
     expect(stripe.calculate).not.toHaveBeenCalled();
     expect(console.error).toHaveBeenCalledOnce();
-    expect(h.variants.findById).toHaveBeenCalledOnce();
+    // The fallback tax was used and completion continued to payment confirmation.
+    expect(h.confirmation.confirm).toHaveBeenCalledOnce();
   });
 
   it("does not initialize Stripe for the existing country-less fallback", async () => {

@@ -143,6 +143,7 @@ export class CheckoutController {
         shippingAddress: body.shippingAddress,
         billingAddress: body.billingAddress,
         promoCode: body.promoCode,
+        pointsToRedeem: body.pointsToRedeem,
       });
       return ResponseHelper.fromCommand(reply, result, "Order created successfully from checkout");
     } catch (error: unknown) {
