@@ -22,7 +22,11 @@ import {
   EmailAlreadyVerifiedError,
   DomainValidationError,
   InvalidOperationError,
+  EmailNotVerifiedError,
 } from "../../domain/errors/user-management.errors";
+
+// Lifetimes of the persisted session row; the refresh JWT carries the same choice.
+const SESSION_DAYS = { remembered: 30, standard: 7 } as const;
 
 // ============================================================================
 // Local param types
@@ -224,6 +228,19 @@ export class AuthenticationService {
     return await this.buildAuthResult(user, payload.rememberMe, sessionMeta);
   }
 
+  /**
+   * The user a 2FA pending token belongs to, or null when the token is
+   * invalid or expired. Lets the command handler apply per-user attempt
+   * limits before any code is checked.
+   */
+  twoFactorPendingUserId(pendingToken: string): string | null {
+    try {
+      return this.jwtService.verifyTwoFactorPending(pendingToken).userId;
+    } catch {
+      return null;
+    }
+  }
+
   // --- Two-factor enrolment lifecycle ---
 
   /**
@@ -407,6 +424,11 @@ export class AuthenticationService {
     emailVerified: boolean;
     name: string | null;
   }, sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }): Promise<AuthResult> {
+    // Only a provider-verified address proves ownership. Firebase also issues
+    // tokens for unverified addresses (e.g. email/password sign-ups); trusting
+    // those would let anyone sign in to, or pre-create, another person's account.
+    if (!identity.emailVerified) throw new EmailNotVerifiedError();
+
     const emailVo = Email.create(identity.email);
     let user = await this.userRepository.findByEmail(emailVo);
 
@@ -435,9 +457,7 @@ export class AuthenticationService {
       }
 
       // Google has already verified the email; skip our own verification flow.
-      if (identity.emailVerified) {
-        user.setEmailVerified(true);
-      }
+      user.setEmailVerified(true);
 
       await this.userRepository.save(user);
     }
@@ -525,6 +545,7 @@ export class AuthenticationService {
     );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
     const base = {
       userId: user.id.getValue(),
@@ -535,11 +556,16 @@ export class AuthenticationService {
     };
 
     const accessToken = this.jwtService.signAccess({ ...base, sessionId: session.id });
-    const newRefreshToken = this.jwtService.signRefresh({ ...base, sessionId: session.id }, true);
+    // Keep the lifetime chosen at sign-in (tokens issued before the claim
+    // existed are treated as standard sessions).
+    const rememberMe = payload.rememberMe === true;
+    const newRefreshToken = this.jwtService.signRefresh({ ...base, sessionId: session.id }, rememberMe);
     const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
     const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+    newExpiresAt.setDate(
+      newExpiresAt.getDate() + (rememberMe ? SESSION_DAYS.remembered : SESSION_DAYS.standard),
+    );
 
     session.rotateToken(newTokenHash, newExpiresAt);
     
@@ -580,6 +606,7 @@ export class AuthenticationService {
     );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
     return User.toDTO(user);
   }
@@ -590,10 +617,15 @@ export class AuthenticationService {
 
   // --- Credential management ---
 
+  /**
+   * Changes the password and signs out every other session, so a session
+   * an attacker may hold does not survive the user securing their account.
+   */
   async changePassword(
     userId: string,
     currentPassword: string,
     newPassword: string,
+    currentSessionId?: string,
   ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
@@ -624,6 +656,7 @@ export class AuthenticationService {
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
+    await this.sessionRepository.revokeAllForUser(user.id, currentSessionId);
   }
 
   async changeEmail(
@@ -667,10 +700,14 @@ export class AuthenticationService {
     return { exists: true, resetToken, userId: user.id.getValue() };
   }
 
-  async resetPassword(email: string, newPassword: string): Promise<void> {
-    const emailVo = Email.create(email);
-    const user = await this.userRepository.findByEmail(emailVo);
-    if (!user) throw new UserNotFoundError(email);
+  /**
+   * Completes a password reset for the account the reset token was issued
+   * to (by id, so a later change of email ownership cannot redirect it) and
+   * signs out all of that account's sessions.
+   */
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
     if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot reset password");
     }
@@ -689,6 +726,7 @@ export class AuthenticationService {
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
+    await this.sessionRepository.revokeAllForUser(user.id);
   }
 
   // --- Email verification & lookups ---
@@ -842,7 +880,9 @@ export class AuthenticationService {
     // Refresh tokens typically live for 30 days (or 7 days if not rememberMe, based on your jwtService)
     // We'll use a standard 30-day expiry for the DB record for simplicity, the JWT signature enforces the exact expiry.
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (rememberMe ? 30 : 7));
+    expiresAt.setDate(
+      expiresAt.getDate() + (rememberMe ? SESSION_DAYS.remembered : SESSION_DAYS.standard),
+    );
 
     const uaInfo = parseUserAgent(sessionMeta?.userAgent);
 

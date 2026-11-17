@@ -40,7 +40,10 @@ export class JwtService implements IJwtService {
 
   signRefresh(payload: Omit<TokenPayload, "type">, rememberMe?: boolean): string {
     const expiresIn = rememberMe ? "30d" : this.refreshTokenExpiresIn;
-    return jwt.sign({ ...payload, type: "refresh" }, this.refreshTokenSecret, {
+    // The remember-me choice travels with the token so rotation keeps the
+    // lifetime the user chose instead of silently extending it.
+    const claims = { ...payload, rememberMe: rememberMe === true, type: "refresh" };
+    return jwt.sign(claims, this.refreshTokenSecret, {
       algorithm: "HS256",
       jwtid: randomUUID(),
       expiresIn,
@@ -55,7 +58,7 @@ export class JwtService implements IJwtService {
 
   verifyRefresh(token: string): TokenPayload {
     return identityClaims
-      .extend({ type: z.literal("refresh") })
+      .extend({ type: z.literal("refresh"), rememberMe: z.boolean().optional() })
       .parse(jwt.verify(token, this.refreshTokenSecret, { algorithms: ["HS256"] }));
   }
 

@@ -206,10 +206,19 @@ export const userOrIpKeyGenerator = userKeyGenerator;
 
 // Preset configurations for athletic shoes e-commerce
 export const RateLimitPresets = Object.freeze({
+  // Per IP and per route. Per-account lockouts (login, 2FA) provide the
+  // targeted protection; this caps bulk guessing from one address while
+  // leaving headroom for users behind shared NAT.
   auth: Object.freeze({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 1000,
+    maxRequests: 100,
     message: "Too many authentication attempts. Please try again in 15 minutes.",
+  }),
+  // Endpoints that send email (password reset, verification resend).
+  authEmail: Object.freeze({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 10,
+    message: "Too many email requests. Please try again in 15 minutes.",
   }),
   api: Object.freeze({
     windowMs: 60 * 1000,

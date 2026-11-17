@@ -291,6 +291,7 @@ export class AuthController {
         userId: request.user.userId,
         currentPassword: request.body.currentPassword,
         newPassword: request.body.newPassword,
+        currentSessionId: request.user.sessionId,
       });
 
       if (!result.success) {

@@ -25,7 +25,8 @@ describe("ChangePasswordHandler", () => {
     expect(mockAuthService.changePassword).toHaveBeenCalledWith(
       "user-123",
       "old-password",
-      "new-password"
+      "new-password",
+      undefined, // no current session supplied: every session is revoked
     );
     expect(result).toBeInstanceOf(CommandResult);
     expect(result.success).toBe(true);

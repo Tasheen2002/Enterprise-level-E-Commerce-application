@@ -24,6 +24,8 @@ interface PasswordResetTokenEntry {
 
 interface FailedAttemptEntry {
   count: number;
+  /** Failures older than the lockout window are forgotten. */
+  windowStartedAt: number;
   lockedUntil?: number;
 }
 
@@ -40,6 +42,7 @@ const blacklistedTokens = new Map<string, TokenEntry>();
 const verificationTokens = new Map<string, VerificationTokenEntry>();
 const passwordResetTokens = new Map<string, PasswordResetTokenEntry>();
 const failedAttempts = new Map<string, FailedAttemptEntry>();
+const usedOneTimeCodes = new Map<string, TokenEntry>();
 
 // Periodically clean up expired entries
 setInterval(() => {
@@ -52,6 +55,13 @@ setInterval(() => {
   }
   for (const [token, entry] of passwordResetTokens) {
     if (entry.expiresAt < now) passwordResetTokens.delete(token);
+  }
+  for (const [key, entry] of usedOneTimeCodes) {
+    if (entry.expiresAt < now) usedOneTimeCodes.delete(key);
+  }
+  for (const [key, entry] of failedAttempts) {
+    const expiresAt = entry.lockedUntil ?? entry.windowStartedAt + LOCKOUT_DURATION_MS;
+    if (expiresAt < now) failedAttempts.delete(key);
   }
 }, 60 * 1000).unref();
 
@@ -115,11 +125,16 @@ export const TokenBlacklistService: ITokenBlacklistService & {
     return { userId: entry.userId, email: entry.email };
   },
 
-  recordFailedAttempt(identifier: string): void {
-    const entry = failedAttempts.get(identifier) ?? { count: 0 };
+  recordFailedAttempt(identifier: string, maxAttempts = MAX_LOGIN_ATTEMPTS): void {
+    const now = Date.now();
+    const existing = failedAttempts.get(identifier);
+    const entry =
+      existing && (existing.lockedUntil || existing.windowStartedAt + LOCKOUT_DURATION_MS > now)
+        ? existing
+        : { count: 0, windowStartedAt: now };
     entry.count += 1;
-    if (entry.count >= MAX_LOGIN_ATTEMPTS) {
-      entry.lockedUntil = Date.now() + LOCKOUT_DURATION_MS;
+    if (entry.count >= maxAttempts) {
+      entry.lockedUntil = now + LOCKOUT_DURATION_MS;
     }
     failedAttempts.set(identifier, entry);
   },
@@ -136,6 +151,20 @@ export const TokenBlacklistService: ITokenBlacklistService & {
 
   clearFailedAttempts(identifier: string): void {
     failedAttempts.delete(identifier);
+  },
+
+  markOneTimeCodeUsed(key: string, ttlMs: number): void {
+    usedOneTimeCodes.set(key, { expiresAt: Date.now() + ttlMs });
+  },
+
+  isOneTimeCodeUsed(key: string): boolean {
+    const entry = usedOneTimeCodes.get(key);
+    if (!entry) return false;
+    if (entry.expiresAt < Date.now()) {
+      usedOneTimeCodes.delete(key);
+      return false;
+    }
+    return true;
   },
 
   __getVerificationTokens() {

@@ -23,7 +23,7 @@ export class ResetPasswordHandler
       throw new DomainValidationError('Invalid or expired reset token');
     }
 
-    await this.authService.resetPassword(tokenData.email, command.newPassword);
+    await this.authService.resetPassword(tokenData.userId, command.newPassword);
     return CommandResult.success();
   }
 }

@@ -922,7 +922,7 @@ export class Container {
       new Enable2FAHandler(authService),
       new Disable2FAHandler(authService),
       new RegenerateBackupCodesHandler(authService),
-      new Verify2FALoginHandler(authService),
+      new Verify2FALoginHandler(authService, TokenBlacklistService),
       authService,
     );
     // ImageKit upload-token issuer — only wired when both server-side

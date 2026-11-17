@@ -33,7 +33,7 @@ describe("ResetPasswordHandler", () => {
 
     // Assert
     expect(mockTokenBlacklistService.getPasswordResetToken).toHaveBeenCalledWith("valid-token-123");
-    expect(mockAuthService.resetPassword).toHaveBeenCalledWith("test@example.com", "new-secure-password");
+    expect(mockAuthService.resetPassword).toHaveBeenCalledWith("user-123", "new-secure-password");
     expect(result).toBeInstanceOf(CommandResult);
     expect(result.success).toBe(true);
   });

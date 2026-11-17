@@ -116,7 +116,7 @@ describe("Google Authentication E2E API Tests", () => {
     expect(allMatchingUsers[0].id).toBe(createdUser.id);
   });
 
-  it("should not mark email as verified if Google token asserts emailVerified as false", async () => {
+  it("should refuse sign-in and account creation when Google does not assert a verified email", async () => {
     const userEmail = "unverified-google-user@example.com";
     const idToken = `token-${userEmail}`; // "unverified" is in email, so mock emailVerified will be false
 
@@ -126,15 +126,24 @@ describe("Google Authentication E2E API Tests", () => {
       payload: { idToken },
     });
 
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body.success).toBe(true);
+    expect(res.statusCode).toBe(403);
+    expect(res.json().code).toBe("EMAIL_NOT_VERIFIED");
+    expect(await prisma.user.count({ where: { email: userEmail } })).toBe(0);
+  });
 
-    const dbUser = await prisma.user.findFirst({
-      where: { email: userEmail },
+  it("should refuse an unverified Google identity for an existing account", async () => {
+    const userEmail = "unverified-existing@example.com";
+    await prisma.user.create({
+      data: { email: userEmail, passwordHash: "existing-hash", emailVerified: true },
     });
 
-    expect(dbUser).not.toBeNull();
-    expect(dbUser?.emailVerified).toBe(false);
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/v1/auth/google",
+      payload: { idToken: `token-${userEmail}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(await prisma.memberSession.count({ where: { user: { email: userEmail } } })).toBe(0);
   });
 });

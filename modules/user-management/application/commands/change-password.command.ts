@@ -5,6 +5,8 @@ export interface ChangePasswordCommand extends ICommand {
   readonly userId: string;
   readonly currentPassword: string;
   readonly newPassword: string;
+  /** Session making the change; it stays signed in, all others are revoked. */
+  readonly currentSessionId?: string;
 }
 
 export class ChangePasswordHandler
@@ -17,7 +19,8 @@ export class ChangePasswordHandler
     await this.authService.changePassword(
       command.userId,
       command.currentPassword,
-      command.newPassword
+      command.newPassword,
+      command.currentSessionId,
     );
     return CommandResult.success();
   }
