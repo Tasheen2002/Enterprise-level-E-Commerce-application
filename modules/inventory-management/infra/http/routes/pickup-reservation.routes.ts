@@ -86,7 +86,7 @@ export async function pickupReservationRoutes(
   fastify.post(
     "/pickup-reservations",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createPickupReservationSchema)],
+      preHandler: [authenticate, RolePermissions.STORE_OPERATIONS, validateBody(createPickupReservationSchema)],
       schema: {
         description: "Create pickup reservation",
         tags: ["Pickup Reservations"],
@@ -106,7 +106,7 @@ export async function pickupReservationRoutes(
     "/pickup-reservations/:reservationId",
     {
       preValidation: [validateParams(reservationParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.STORE_OPERATIONS],
       schema: {
         description: "Cancel pickup reservation",
         tags: ["Pickup Reservations"],

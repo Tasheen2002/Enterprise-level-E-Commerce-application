@@ -36,6 +36,14 @@ export const STAFF_ROLES = Object.freeze([
   "ANALYST",
 ] as const);
 export const CUSTOMER_CARE_ROLES = Object.freeze(["ADMIN", "CUSTOMER_SERVICE"] as const);
+// Changes to purchasing and stock-affecting records (analysts are read-only).
+export const INVENTORY_ROLES = Object.freeze(["ADMIN", "INVENTORY_STAFF"] as const);
+// In-store operations such as pickup holds, which customer service also handles.
+export const STORE_OPERATIONS_ROLES = Object.freeze([
+  "ADMIN",
+  "INVENTORY_STAFF",
+  "CUSTOMER_SERVICE",
+] as const);
 export const VENDOR_ROLES = Object.freeze(["ADMIN", "VENDOR"] as const);
 export const AUTHENTICATED_ROLES = Object.freeze([
   "ADMIN",
@@ -51,6 +59,8 @@ export const RolePermissions = Object.freeze({
   ADMIN_ONLY: requireRole(ADMIN_ROLES),
   STAFF_LEVEL: requireRole(STAFF_ROLES),
   CUSTOMER_CARE: requireRole(CUSTOMER_CARE_ROLES),
+  INVENTORY_MANAGEMENT: requireRole(INVENTORY_ROLES),
+  STORE_OPERATIONS: requireRole(STORE_OPERATIONS_ROLES),
   VENDOR_ACCESS: requireRole(VENDOR_ROLES),
   AUTHENTICATED: requireRole(AUTHENTICATED_ROLES),
 });

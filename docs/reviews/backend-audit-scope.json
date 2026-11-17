@@ -1,12 +1,12 @@
 {
-  "date": "2026-11-17",
-  "commit": "9bc88a9b1a5f871b701387bf1b1bf26a0b61ef39",
+  "date": "2026-11-18",
+  "commit": "398976e1a4a7805a6df960173132684d9145bb24",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1893,
-  "backend_review_scope_files": 1553,
+  "candidate_files": 1896,
+  "backend_review_scope_files": 1555,
   "scope_counts": {
-    "audit-record": 93,
-    "backend": 1425,
+    "audit-record": 94,
+    "backend": 1427,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -21,7 +21,7 @@
     "modules/customer-care": 132,
     "modules/engagement": 130,
     "modules/fulfillment": 24,
-    "modules/inventory-management": 146,
+    "modules/inventory-management": 147,
     "modules/loyalty": 53,
     "modules/order-management": 144,
     "modules/payment": 123,
@@ -33,7 +33,7 @@
     "packages/core": 32,
     "packages/types": 5,
     "packages/validation": 10,
-    "prisma": 17,
+    "prisma": 18,
     "root": 19,
     "scratch": 19,
     "scripts": 28
@@ -41,10 +41,10 @@
   "phase_counts": {
     "P00": 67,
     "P01": 131,
-    "P02": 17,
+    "P02": 18,
     "P03": 162,
     "P04": 232,
-    "P05": 146,
+    "P05": 147,
     "P06": 111,
     "P07": 144,
     "P08": 123,
@@ -60,13 +60,13 @@
     "documentation-or-data": 2,
     "exports-or-declarations": 156,
     "generated-contract": 1,
-    "migration-or-sql": 16,
+    "migration-or-sql": 17,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1210,
-    "test": 166
+    "test": 167
   },
   "closure_counts": {
-    "open": 1379,
+    "open": 1381,
     "closed": 174
   },
   "removed_files_requiring_verification": [

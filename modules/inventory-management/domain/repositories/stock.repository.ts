@@ -1,3 +1,4 @@
+import { InventoryTransaction } from "../entities/inventory-transaction.entity";
 import { PaginatedResult } from "../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 import { VariantId } from "../../../product-catalog/domain/value-objects/variant-id.vo";
 import { Stock } from "../entities/stock.entity";
@@ -6,6 +7,11 @@ import { StockId } from "../value-objects/stock-id.vo";
 
 export interface IStockRepository {
   save(stock: Stock): Promise<void>;
+  /**
+   * Persists stock changes and their ledger entries in one database
+   * transaction, so stock never changes without a matching ledger row.
+   */
+  saveWithTransactions(stocks: Stock[], transactions: InventoryTransaction[]): Promise<void>;
   findByStockId(stockId: StockId): Promise<Stock | null>;
   findByVariantAndLocation(
     variantId: VariantId,

@@ -10471,7 +10471,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         supplierId: string;
-                        eta: unknown;
+                        eta?: unknown;
                     };
                 };
             };
@@ -10740,7 +10740,7 @@ export interface paths {
                     "application/json": {
                         /** Format: uuid */
                         supplierId: string;
-                        eta: unknown;
+                        eta?: unknown;
                         items: {
                             /** Format: uuid */
                             variantId: string;

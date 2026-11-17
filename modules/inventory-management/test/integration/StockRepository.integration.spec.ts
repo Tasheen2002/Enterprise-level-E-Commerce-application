@@ -128,12 +128,14 @@ describe("StockRepositoryImpl Database Integration Tests", () => {
     const lowStockItems = await repository.findLowStockItems();
     expect(lowStockItems.some((s) => s.variantId === variantId)).toBe(true);
 
-    // 2. Out of stock: onHand = 0
-    const outOfStock = Stock.create({
-      variantId,
-      locationId,
-      onHand: 0,
-    });
+    // 2. Out of stock: remove the remaining units from the stored stock.
+    // (Saving a freshly created Stock for an existing row adds its quantity,
+    // so concurrent "first stock" writes add up; it does not overwrite.)
+    const outOfStock = (await repository.findByVariantAndLocation(
+      VariantId.fromString(variantId),
+      LocationId.fromString(locationId),
+    ))!;
+    outOfStock.removeStock(5);
     await repository.save(outOfStock);
 
     const outOfStockItems = await repository.findOutOfStockItems();

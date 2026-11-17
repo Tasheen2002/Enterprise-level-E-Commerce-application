@@ -155,6 +155,18 @@ export class InvalidOperationError extends DomainError {
   }
 }
 
+// Raised when the database refuses a stock change because, after concurrent
+// changes, it would make stock negative or reserve more than is on hand.
+export class StockUnavailableError extends DomainError {
+  constructor(variantId: string, locationId: string) {
+    super(
+      `Not enough stock for variant '${variantId}' at location '${locationId}'`,
+      "STOCK_UNAVAILABLE",
+      409,
+    );
+  }
+}
+
 export class InsufficientStockError extends DomainError {
   constructor(variantId: string, locationId: string, requested: number, available: number) {
     super(

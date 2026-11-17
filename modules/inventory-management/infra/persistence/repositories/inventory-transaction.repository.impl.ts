@@ -13,6 +13,18 @@ import {
   InventoryTransactionQueryOptions,
 } from "../../../domain/repositories/inventory-transaction.repository";
 
+export function inventoryTransactionData(transaction: InventoryTransaction) {
+  return {
+    invTxnId: transaction.invTxnId.getValue(),
+    variantId: transaction.variantId,
+    locationId: transaction.locationId,
+    qtyDelta: transaction.qtyDelta,
+    reason: transaction.reason.getValue() as InvTxnReasonEnum,
+    referenceId: transaction.referenceId ?? null,
+    createdAt: transaction.createdAt,
+  };
+}
+
 export class InventoryTransactionRepositoryImpl
   extends PrismaRepository<InventoryTransaction>
   implements IInventoryTransactionRepository
@@ -36,17 +48,7 @@ export class InventoryTransactionRepositoryImpl
   }
 
   async save(transaction: InventoryTransaction): Promise<void> {
-    await this.prisma.inventoryTransaction.create({
-      data: {
-        invTxnId: transaction.invTxnId.getValue(),
-        variantId: transaction.variantId,
-        locationId: transaction.locationId,
-        qtyDelta: transaction.qtyDelta,
-        reason: transaction.reason.getValue() as InvTxnReasonEnum,
-        referenceId: transaction.referenceId ?? null,
-        createdAt: transaction.createdAt,
-      },
-    });
+    await this.prisma.inventoryTransaction.create({ data: inventoryTransactionData(transaction) });
 
     await this.dispatchEvents(transaction);
   }

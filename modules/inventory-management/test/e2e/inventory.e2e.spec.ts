@@ -3,6 +3,7 @@ import { createServer } from "@/api/src/server";
 import { PrismaClient } from "@prisma/client";
 import { FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
+import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -230,5 +231,54 @@ describe("Inventory Management E2E API Tests", () => {
       headers: { authorization: `Bearer ${adminToken}` },
     });
     expect(emptyRes.statusCode).toBe(204);
+  });
+
+  it("lets analysts read but not change purchase orders or pickup holds", async () => {
+    const tokenFor = async (role: "ANALYST" | "INVENTORY_STAFF") => {
+      const email = `${role.toLowerCase()}-${randomUUID()}@example.com`;
+      await prisma.user.create({
+        data: { email, passwordHash: await bcrypt.hash(password, 4), role, emailVerified: true },
+      });
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/v1/auth/login",
+        payload: { email, password, ipAddress: "127.0.0.1" },
+      });
+      return res.json().data.accessToken as string;
+    };
+    const supplierId = (await prisma.supplier.create({ data: { name: "Roles supplier" } }))
+      .supplierId;
+    const analyst = await tokenFor("ANALYST");
+    const inventoryStaff = await tokenFor("INVENTORY_STAFF");
+    const as = (token: string) => ({ authorization: `Bearer ${token}` });
+
+    const analystCreate = await app.inject({
+      method: "POST",
+      url: "/api/v1/purchase-orders",
+      headers: as(analyst),
+      payload: { supplierId },
+    });
+    expect(analystCreate.statusCode, analystCreate.body).toBe(403);
+    const analystHold = await app.inject({
+      method: "POST",
+      url: "/api/v1/pickup-reservations",
+      headers: as(analyst),
+      payload: { orderId: randomUUID(), variantId, locationId, qty: 1 },
+    });
+    expect(analystHold.statusCode, analystHold.body).toBe(403);
+    const analystRead = await app.inject({
+      method: "GET",
+      url: "/api/v1/purchase-orders",
+      headers: as(analyst),
+    });
+    expect(analystRead.statusCode, analystRead.body).toBe(200);
+
+    const staffCreate = await app.inject({
+      method: "POST",
+      url: "/api/v1/purchase-orders",
+      headers: as(inventoryStaff),
+      payload: { supplierId },
+    });
+    expect(staffCreate.statusCode, staffCreate.body).toBe(201);
   });
 });

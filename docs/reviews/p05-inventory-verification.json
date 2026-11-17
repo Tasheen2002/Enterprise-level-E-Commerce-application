@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-18",
+  "phase": "P05 (inventory: stock concurrency and ledger integrity, route roles, purchase-order schema)",
+  "baseline_commit": "398976e1",
+  "scope": [
+    "domain/entities/stock.entity.ts, value-objects/stock-level.vo.ts",
+    "application/services/stock-management, purchase-order-management, pickup-reservation (every stock write path)",
+    "infra/persistence/repositories/stock.repository.impl.ts and inventory-transaction.repository.impl.ts",
+    "All 49 inventory routes and their role guards; apps/api/src/shared/middleware/role-authorization.middleware.ts",
+    "infra/http/validation/purchase-order.schema.ts and the generated route JSON schema"
+  ],
+  "reviewed_without_change": [
+    "Every inventory route requires authentication; stock writes (add/adjust/transfer/reserve/fulfil/thresholds), locations, suppliers, alerts and ledger reads are admin-only.",
+    "Purchase-order deletion is limited to drafts and item edits go through the aggregate's edit guard (P07 sweep)."
+  ],
+  "findings": [
+    {
+      "id": "P05-01",
+      "severity": "P0",
+      "file": "infra/persistence/repositories/stock.repository.impl.ts; domain/entities/stock.entity.ts; migration 20261117100000_enforce_stock_level_invariants",
+      "problem": "Every stock change (checkout deductions, staff adjustments, transfers, purchase-order receipts, reservations) read the stock, changed it in memory and wrote the absolute values back, so concurrent changes overwrote each other. Reproduced on PostgreSQL: of 10 simultaneous additions only 2 were kept; the last unit in stock was sold 5 times; simultaneous transfers created a unit out of nothing.",
+      "change": "The repository persists the change since the stock was read as an atomic increment (concurrent writers add up) and refreshes the entity with the stored values. Database CHECK constraints (on_hand >= 0, reserved >= 0, reserved <= on_hand) reject a change that concurrent activity has made impossible; the repository reports it as 409 STOCK_UNAVAILABLE. The migration adds the constraints NOT VALID (enforced for new writes immediately) and validates existing rows, warning instead of failing if historical rows already violate them.",
+      "verification": "StockConcurrency integration spec: baseline 3/4 failed (2 of 11 counted, 5 sales of 1 unit, 4 units after transfers of 3); fixed all additions counted, at most one sale of the last unit, transfers conserve stock and the ledger always equals the stock level. Constraints validated on the test database; migration drift check passes."
+    },
+    {
+      "id": "P05-02",
+      "severity": "P1",
+      "file": "application/services/{stock-management,purchase-order-management,pickup-reservation}.service.ts; stock repository saveWithTransactions",
+      "problem": "Stock rows and their inventory-ledger entries were written separately, so a failure in between changed stock with no audit record (and transfers could move stock out of one location without arriving at the other).",
+      "change": "Stock changes and their ledger rows are written in one transaction (addStock, adjustStock, transferStock, fulfillReservation, purchase-order receipts, pickup fulfilment). Rows are locked in a fixed order so opposite transfers cannot deadlock.",
+      "verification": "Concurrency spec asserts ledger totals equal stock levels after every scenario, including transfers between two locations."
+    },
+    {
+      "id": "P05-03",
+      "severity": "P2",
+      "file": "infra/http/routes/{purchase-order,purchase-order-item,pickup-reservation}.routes.ts; role-authorization.middleware.ts",
+      "problem": "Purchase-order and pickup-hold writes allowed STAFF_LEVEL, which includes the ANALYST role: an analyst could create, change, delete and receive purchase orders (receiving adds stock) and place or cancel pickup holds (reserving stock).",
+      "change": "New presets: purchase-order and PO-item writes require ADMIN or INVENTORY_STAFF; pickup-hold writes require ADMIN, INVENTORY_STAFF or CUSTOMER_SERVICE. Reads stay available to all staff.",
+      "verification": "inventory E2E: with the old role rules an analyst created a purchase order (201); fixed analyst writes 403, analyst reads 200, inventory staff create 201."
+    },
+    {
+      "id": "P05-04",
+      "severity": "P2",
+      "file": "infra/http/validation/purchase-order.schema.ts; packages/api-client generated schema",
+      "problem": "The optional purchase-order ETA was declared as optional().transform(...), which the generated route JSON schema treats as required, so every purchase order created without an ETA was rejected with 400 before reaching the service.",
+      "change": "Transform applied before optional(); route schema and generated API client now treat eta as optional.",
+      "verification": "E2E create without eta returns 201 (baseline 400 'body must have required property eta')."
+    }
+  ],
+  "tests": {
+    "new": "integration StockConcurrency (4), inventory E2E role case (1)",
+    "updated": "StockRepository integration: the out-of-stock case now loads and reduces the stored stock (saving a freshly created Stock for an existing row adds its quantity, which is what makes concurrent first-stock writes add up)",
+    "database_suites": "All E2E and integration suites: 129 tests in 41 files pass",
+    "final": "1502 unit tests in 116 files; all 46 inventory unit/integration/E2E tests; root/tooling tsc; 7/7 workspace type-checks; API client regenerated and drift check passes"
+  },
+  "follow_ups": [
+    "P06: checkout adjusts stock after the order transaction commits; with the new constraints an oversell now fails at that point instead of silently driving stock negative. Stock should be reserved/decremented inside the checkout transaction so an order is never created without stock.",
+    "Purchase-order receipt updates the purchase order after the stock/ledger transaction; a failure between them can record stock without marking the PO item received.",
+    "Owner decision: stock add/adjust/transfer are admin-only, so INVENTORY_STAFF cannot adjust stock; widening that is a permission change."
+  ]
+}

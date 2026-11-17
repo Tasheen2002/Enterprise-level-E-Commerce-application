@@ -172,7 +172,6 @@ export class PurchaseOrderManagementService {
       } else {
         stock.addStock(receivedQty);
       }
-      await this.stockRepository.save(stock);
 
       const transaction = InventoryTransaction.create({
         variantId,
@@ -180,7 +179,7 @@ export class PurchaseOrderManagementService {
         qtyDelta: receivedQty,
         reason: "po",
       });
-      await this.transactionRepository.save(transaction);
+      await this.stockRepository.saveWithTransactions([stock], [transaction]);
     }
 
     await this.purchaseOrderRepository.save(purchaseOrder);

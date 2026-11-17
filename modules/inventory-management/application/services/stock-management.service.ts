@@ -33,16 +33,13 @@ export class StockManagementService {
       stock.addStock(quantity);
     }
 
-    await this.stockRepository.save(stock);
-
     const transaction = InventoryTransaction.create({
       variantId,
       locationId,
       qtyDelta: quantity,
       reason,
     });
-
-    await this.transactionRepository.save(transaction);
+    await this.stockRepository.saveWithTransactions([stock], [transaction]);
 
     return Stock.toDTO(stock);
   }
@@ -78,19 +75,19 @@ export class StockManagementService {
       }
     }
 
-    await this.stockRepository.save(stock);
-
-    if (actualDelta !== 0) {
-      const transaction = InventoryTransaction.create({
-        variantId,
-        locationId,
-        qtyDelta: actualDelta,
-        reason,
-        referenceId,
-      });
-
-      await this.transactionRepository.save(transaction);
-    }
+    const transactions =
+      actualDelta === 0
+        ? []
+        : [
+            InventoryTransaction.create({
+              variantId,
+              locationId,
+              qtyDelta: actualDelta,
+              reason,
+              referenceId,
+            }),
+          ];
+    await this.stockRepository.saveWithTransactions([stock], transactions);
 
     return Stock.toDTO(stock);
   }
@@ -112,7 +109,6 @@ export class StockManagementService {
     }
 
     fromStock.removeStock(quantity);
-    await this.stockRepository.save(fromStock);
 
     const outboundTxn = InventoryTransaction.create({
       variantId,
@@ -121,7 +117,6 @@ export class StockManagementService {
       reason: "adjustment",
       referenceId: toLocationId,
     });
-    await this.transactionRepository.save(outboundTxn);
 
     let toStock = await this.stockRepository.findByVariantAndLocation(
       variantVo,
@@ -134,8 +129,6 @@ export class StockManagementService {
       toStock.addStock(quantity);
     }
 
-    await this.stockRepository.save(toStock);
-
     const inboundTxn = InventoryTransaction.create({
       variantId,
       locationId: toLocationId,
@@ -143,7 +136,11 @@ export class StockManagementService {
       reason: "adjustment",
       referenceId: fromLocationId,
     });
-    await this.transactionRepository.save(inboundTxn);
+    // Both locations and both ledger rows commit together.
+    await this.stockRepository.saveWithTransactions(
+      [fromStock, toStock],
+      [outboundTxn, inboundTxn],
+    );
 
     return { fromStock: Stock.toDTO(fromStock), toStock: Stock.toDTO(toStock) };
   }
@@ -207,7 +204,6 @@ export class StockManagementService {
     }
 
     stock.fulfillReservation(quantity);
-    await this.stockRepository.save(stock);
 
     const transaction = InventoryTransaction.create({
       variantId,
@@ -215,7 +211,7 @@ export class StockManagementService {
       qtyDelta: -quantity,
       reason: "order",
     });
-    await this.transactionRepository.save(transaction);
+    await this.stockRepository.saveWithTransactions([stock], [transaction]);
 
     return Stock.toDTO(stock);
   }
