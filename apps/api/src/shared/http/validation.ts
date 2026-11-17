@@ -5,6 +5,17 @@ export { paginationQuerySchema } from "../../../../../packages/validation/src/co
 export type { PaginationQuery } from "../../../../../packages/validation/src/common";
 
 /**
+ * Boolean query-string parameter. `z.coerce.boolean()` treats any non-empty
+ * string as true, so `?flag=false` would mean true; this accepts only "true"
+ * and "false" (or real booleans) and rejects anything else.
+ */
+export const queryBoolean = () =>
+  z.preprocess(
+    (value) => (value === "true" ? true : value === "false" ? false : value),
+    z.boolean(),
+  );
+
+/**
  * Convert a Zod schema to a JSON Schema (draft-07) for use in Fastify
  * route schemas — `body`, `params`, `querystring` — and Swagger docs.
  *

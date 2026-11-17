@@ -1,0 +1,50 @@
+{
+  "date": "2026-11-17",
+  "phase": "P04 (batch 1: catalog route authorization and storefront visibility)",
+  "baseline_commit": "4de48209",
+  "scope": [
+    "All 124 product-catalog routes and their guards (products, variants, categories, media, product/variant media, tags, size guides, editorial looks, search)",
+    "application/queries get-product, list-products, list-editorial-looks; services product-management (list/count), product-search, editorial-look-management (findWithFilters)",
+    "infra/persistence/repositories/product.repository.impl.ts public-status filters and count",
+    "domain/entities product (publication/scheduling) and editorial-look (isPublished)",
+    "Query-string boolean parsing across product-catalog and user-management schemas"
+  ],
+  "reviewed_without_change": [
+    "Every catalog write route (create/update/delete, bulk, reorder, publish, media and tag assignment) is ADMIN_ONLY; statistics, validation and usage reads are STAFF_LEVEL."
+  ],
+  "findings": [
+    {
+      "id": "P04-01",
+      "severity": "P1",
+      "file": "modules/product-catalog/application/queries/{get-product,list-products}.query.ts; infra/http/controllers/{product,variant,product-media,search,editorial-look}.controller.ts; routes",
+      "problem": "Unreleased catalog content was public. Anyone could list drafts and archived products (?includeDrafts=true or ?status=draft, also through /search), fetch any product by id or slug regardless of status, read the variants (SKU, price) and media of unreleased products, and list or open draft and scheduled editorial looks (?draft=true). For a fashion store this leaks upcoming launches and pricing.",
+      "change": "One storefront rule: shoppers only see live content; staff (identified by an optional bearer token on the public routes) see everything. Product list and search ignore status/draft filters for shoppers; product detail and slug, variants, single variant and product media return 404 for products that are not live; editorial look lists are limited to published looks and unpublished looks return 404.",
+      "verification": "catalog-visibility E2E on a real database: baseline 5/5 failed; fixed shopper requests see exactly the live products and looks whatever filters they send, unreleased items return 404 on every detail route, and the admin token still sees drafts."
+    },
+    {
+      "id": "P04-02",
+      "severity": "P2",
+      "file": "modules/product-catalog/infra/persistence/repositories/product.repository.impl.ts; domain/policies/storefront-visibility.ts",
+      "problem": "The public status set included every 'scheduled' product, so scheduled launches appeared on the storefront before their publish time (nothing switches scheduled products to published). The public product count ignored visibility, so list totals counted hidden products and revealed how many existed.",
+      "change": "Live means published, or scheduled with publishAt reached, evaluated at query time in list, brand, category and search queries; storefront listings count with liveOnly so totals match (repository count stays all-status by default for staff callers).",
+      "verification": "E2E: future-scheduled product hidden, past-scheduled shown, shopper totals equal visible items. Unit storefront-visibility cases."
+    },
+    {
+      "id": "P04-03",
+      "severity": "P3",
+      "file": "apps/api/src/shared/http/validation.ts; product-catalog and user-management query schemas (14 fields)",
+      "problem": "Boolean query parameters used z.coerce.boolean(), which turns the string \"false\" into true because Zod runs before Fastify's own coercion; ?includeDrafts=false returned drafts and the admin filter ?emailVerified=false returned verified users.",
+      "change": "Shared queryBoolean() accepts only \"true\"/\"false\" (or real booleans) and rejects anything else; all 14 uses replaced.",
+      "verification": "Unit parsing cases; E2E staff list with includeDrafts=false excludes drafts."
+    }
+  ],
+  "tests": {
+    "new": "E2E catalog-visibility (5), unit storefront-visibility and query boolean (15)",
+    "baseline": "With source changes stashed: 5 of 5 E2E cases failed.",
+    "database_suites": "All E2E and integration suites: 121 tests in 39 files pass. The first full run caught two regressions from this change, both fixed: the repository count had been changed to exclude drafts by default (now opt-in liveOnly), and the existing product life-cycle E2E expected shoppers to read an archived product (now 404 for shoppers, 200 for the admin).",
+    "final": "1502 unit tests in 116 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check; ESLint (pre-existing warnings only); Prettier"
+  },
+  "follow_ups": [
+    "Next P04 batch: product save (images recreated outside a transaction with a fixed image/png MIME type), HTML sanitisation of product descriptions and look stories, tags and editorial-look association reads for unpublished items, size guides, categories and media management."
+  ]
+}

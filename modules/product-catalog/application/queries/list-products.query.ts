@@ -11,6 +11,8 @@ export interface ListProductsQuery extends IQuery {
   readonly brand?: string;
   readonly status?: "draft" | "published" | "scheduled" | "archived";
   readonly includeDrafts?: boolean;
+  /** Staff only: honour `status`/`includeDrafts`; shoppers always see live products. */
+  readonly includeUnpublished?: boolean;
   readonly sortBy?: "title" | "createdAt" | "updatedAt" | "publishAt";
   readonly sortOrder?: "asc" | "desc";
 }
@@ -26,8 +28,8 @@ export class ListProductsHandler implements IQueryHandler<ListProductsQuery, Pag
       limit,
       categoryId: query.categoryId,
       brand: query.brand,
-      status: query.status,
-      includeDrafts: query.includeDrafts,
+      status: query.includeUnpublished ? query.status : undefined,
+      includeDrafts: query.includeUnpublished ? query.includeDrafts : false,
       sortBy: query.sortBy,
       sortOrder: query.sortOrder,
     });

@@ -8,6 +8,7 @@ import {
   GetSearchStatsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   SearchQuery,
   SearchSuggestionsQuery,
@@ -38,7 +39,8 @@ export class SearchController {
         minPrice,
         maxPrice,
         tags,
-        status,
+        // Shoppers cannot search unpublished products by status.
+        status: canViewUnpublished(request) ? status : undefined,
         sortBy,
         sortOrder,
       });

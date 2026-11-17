@@ -152,6 +152,7 @@ export class ProductManagementService {
         brand,
         categoryId: categoryIdVo,
         status: statusVo,
+        liveOnly: !effectiveIncludeDrafts,
       }),
     ]);
 

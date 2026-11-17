@@ -31,6 +31,9 @@ import {
   ValidateEditorialLookForPublicationHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { isEditorialLookLive } from "../../../domain/policies/storefront-visibility";
+import { EditorialLookNotFoundError } from "../../../domain/errors/product-catalog.errors";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   EditorialLookParams,
   EditorialLookProductParams,
@@ -89,7 +92,17 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listEditorialLooksHandler.handle(request.query);
+      // Shoppers only see published looks; status filters are for staff.
+      const query = canViewUnpublished(request)
+        ? request.query
+        : {
+            page: request.query.page,
+            limit: request.query.limit,
+            sortBy: request.query.sortBy,
+            sortOrder: request.query.sortOrder,
+            published: true,
+          };
+      const result = await this.listEditorialLooksHandler.handle(query);
       return ResponseHelper.ok(reply, "Editorial looks retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -102,6 +115,9 @@ export class EditorialLookController {
   ) {
     try {
       const look = await this.getEditorialLookHandler.handle({ id: request.params.id });
+      if (!canViewUnpublished(request) && !isEditorialLookLive(look.publishedAt)) {
+        throw new EditorialLookNotFoundError(request.params.id);
+      }
       return ResponseHelper.ok(reply, "Editorial look retrieved successfully", look);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

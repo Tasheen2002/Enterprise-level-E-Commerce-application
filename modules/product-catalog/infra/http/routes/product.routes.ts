@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductController } from "../controllers/product.controller";
@@ -57,6 +58,7 @@ export async function productRoutes(
   fastify.get(
     "/products",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(listProductsSchema)],
       schema: {
         description: "Get paginated list of products with filtering options",
@@ -76,6 +78,7 @@ export async function productRoutes(
   fastify.get(
     "/products/slug/:slug",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(productSlugParamsSchema)],
       schema: {
         description: "Get product by slug",
@@ -95,6 +98,7 @@ export async function productRoutes(
   fastify.get(
     "/products/:productId",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(productParamsSchema)],
       schema: {
         description: "Get product by ID",

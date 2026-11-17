@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import {
   MIN_PAGE,
   MIN_LIMIT,
@@ -15,9 +16,9 @@ export const listMediaSchema = z.object({
   page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   mimeType: z.string().optional(),
-  isImage: z.coerce.boolean().optional(),
-  isVideo: z.coerce.boolean().optional(),
-  hasRenditions: z.coerce.boolean().optional(),
+  isImage: queryBoolean().optional(),
+  isVideo: queryBoolean().optional(),
+  hasRenditions: queryBoolean().optional(),
   minBytes: z.coerce.number().int().min(0).optional(),
   maxBytes: z.coerce.number().int().min(0).optional(),
   minWidth: z.coerce.number().int().min(0).optional(),

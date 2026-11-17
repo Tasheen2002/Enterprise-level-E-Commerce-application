@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { VariantController } from "../controllers/variant.controller";
@@ -56,6 +57,7 @@ export async function variantRoutes(
   fastify.get(
     "/products/:productId/variants",
     {
+      preHandler: [optionalAuth],
       preValidation: [
         validateParams(variantByProductParamsSchema),
         validateQuery(listVariantsSchema),
@@ -79,6 +81,7 @@ export async function variantRoutes(
   fastify.get(
     "/variants/:variantId",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(variantParamsSchema)],
       schema: {
         description: "Get variant by ID",

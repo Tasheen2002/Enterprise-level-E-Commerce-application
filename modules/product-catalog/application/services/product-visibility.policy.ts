@@ -1,0 +1,21 @@
+import { IProductRepository } from "../../domain/repositories/product.repository";
+import { ProductId } from "../../domain/value-objects/product-id.vo";
+import { ProductNotFoundError } from "../../domain/errors/product-catalog.errors";
+import { isProductLive } from "../../domain/policies/storefront-visibility";
+
+/**
+ * Guards product sub-resources (variants, media) on public routes: a product
+ * that is not live is reported as not found to shoppers, so drafts and
+ * upcoming launches are not revealed through their details.
+ */
+export class ProductVisibilityPolicy {
+  constructor(private readonly productRepository: IProductRepository) {}
+
+  async assertVisible(productId: string, includeUnpublished: boolean): Promise<void> {
+    if (includeUnpublished) return;
+    const product = await this.productRepository.findById(ProductId.fromString(productId));
+    if (!product || !isProductLive(product.status, product.publishAt)) {
+      throw new ProductNotFoundError(productId);
+    }
+  }
+}

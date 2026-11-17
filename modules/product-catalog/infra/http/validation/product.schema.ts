@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import { ProductStatus } from "../../../domain/value-objects";
 import {
   MIN_PAGE,
@@ -36,7 +37,7 @@ export const listProductsSchema = z.object({
   status: z.enum(ALL_PRODUCT_STATUSES).optional(),
   categoryId: z.uuid().optional(),
   brand: z.string().optional(),
-  includeDrafts: z.coerce.boolean().optional(),
+  includeDrafts: queryBoolean().optional(),
   sortBy: z.enum(["title", "createdAt", "updatedAt", "publishAt"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });

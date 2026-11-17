@@ -184,10 +184,16 @@ describe("Product Catalog E2E API Tests", () => {
     });
     expect(deleteRes.statusCode).toBe(204);
 
-    // Verify it is archived (status: archived)
+    // Archived products disappear from the storefront but staff still see them.
+    const shopperRes = await app.inject({
+      method: "GET",
+      url: `/api/v1/products/${productId}`,
+    });
+    expect(shopperRes.statusCode).toBe(404);
     const verifyArchivedRes = await app.inject({
       method: "GET",
       url: `/api/v1/products/${productId}`,
+      headers: { authorization: `Bearer ${adminToken}` },
     });
     expect(verifyArchivedRes.statusCode).toBe(200);
     expect(verifyArchivedRes.json().data.status).toBe("archived");

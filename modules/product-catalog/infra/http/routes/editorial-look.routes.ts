@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { EditorialLookController } from "../controllers/editorial-look.controller";
@@ -84,6 +85,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(listEditorialLooksSchema)],
       schema: {
         description: "Get paginated list of editorial looks with filtering options",
@@ -160,6 +162,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/:id",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(editorialLookParamsSchema)],
       schema: {
         description: "Get editorial look by ID",

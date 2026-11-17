@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import { Region } from "../../../domain/value-objects";
 import {
   MIN_PAGE,
@@ -23,7 +24,7 @@ export const listSizeGuidesSchema = z.object({
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
   region: z.enum(ALL_REGIONS).optional(),
   category: z.string().optional(),
-  hasContent: z.coerce.boolean().optional(),
+  hasContent: queryBoolean().optional(),
   sortBy: z.enum(["title", "region", "category"]).optional().default("title"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("asc"),
 });

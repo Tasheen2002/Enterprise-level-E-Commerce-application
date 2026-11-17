@@ -25,10 +25,21 @@ type ProductDomainRow = ProductRow & {
   categories?: Array<{ categoryId: string }>;
 };
 
-const PUBLIC_STATUSES: ProductStatusEnum[] = [
-  ProductStatusEnum.published,
-  ProductStatusEnum.scheduled,
-];
+// Live on the storefront: published, or scheduled with its launch time reached
+// (nothing flips scheduled products to published, so the time is checked here).
+function liveOnStorefront(): Prisma.ProductWhereInput {
+  return {
+    OR: [
+      { status: ProductStatusEnum.published },
+      { status: ProductStatusEnum.scheduled, publishAt: { lte: new Date() } },
+    ],
+  };
+}
+
+function requireLive(where: Record<string, unknown>): void {
+  const existing = Array.isArray(where.AND) ? (where.AND as unknown[]) : [];
+  where.AND = [...existing, liveOnStorefront()];
+}
 
 const ALL_STATUSES: ProductStatusEnum[] = [
   ProductStatusEnum.draft,
@@ -258,7 +269,7 @@ export class ProductRepositoryImpl
     if (status) {
       whereClause.status = status;
     } else if (!includeDrafts) {
-      whereClause.status = { in: PUBLIC_STATUSES };
+      requireLive(whereClause);
     } else {
       whereClause.status = { in: ALL_STATUSES };
     }
@@ -322,7 +333,7 @@ export class ProductRepositoryImpl
 
     const whereClause: Record<string, unknown> = { brand };
     if (!includeDrafts) {
-      whereClause.status = { in: PUBLIC_STATUSES };
+      requireLive(whereClause);
     }
 
     const products = await this.prisma.product.findMany({
@@ -359,7 +370,7 @@ export class ProductRepositoryImpl
     };
 
     if (!includeDrafts) {
-      whereClause.status = { in: PUBLIC_STATUSES };
+      requireLive(whereClause);
     }
 
     const products = await this.prisma.product.findMany({
@@ -437,7 +448,7 @@ export class ProductRepositoryImpl
     };
 
     if (!includeDrafts) {
-      whereClause.status = { in: PUBLIC_STATUSES };
+      requireLive(whereClause);
     }
 
     if (brands && brands.length > 0) {
@@ -514,6 +525,8 @@ export class ProductRepositoryImpl
 
     if (options?.status) {
       whereClause.status = this.mapStatusToPrisma(options.status);
+    } else if (options?.liveOnly) {
+      requireLive(whereClause);
     }
 
     if (options?.brand) {

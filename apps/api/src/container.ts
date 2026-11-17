@@ -1,4 +1,5 @@
 import { PrismaClient, Category } from "@prisma/client";
+import { ProductVisibilityPolicy } from "../../../modules/product-catalog/application/services/product-visibility.policy";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
 import { DomainEvent } from "../../../packages/core/src/domain/events/domain-event";
 import { ReminderStatusValue } from "../../../modules/engagement/domain/value-objects/reminder-status.vo";
@@ -1028,12 +1029,14 @@ export class Container {
       new ListCategoriesHandler(categoryManagementService),
       new GetCategoryHierarchyHandler(categoryManagementService),
     );
+    const productVisibility = new ProductVisibilityPolicy(productRepository);
     const variantController = new VariantController(
       new CreateProductVariantHandler(variantManagementService),
       new UpdateProductVariantHandler(variantManagementService),
       new DeleteProductVariantHandler(variantManagementService),
       new ListVariantsHandler(variantManagementService),
       new GetVariantHandler(variantManagementService),
+      productVisibility,
     );
     const mediaController = new MediaController(
       new CreateMediaAssetHandler(mediaManagementService),
@@ -1056,6 +1059,7 @@ export class Container {
       new GetProductMediaAssetUsageCountHandler(productMediaManagementService),
       new ValidateProductMediaHandler(productMediaManagementService),
       new GetProductMediaStatisticsHandler(productMediaManagementService),
+      productVisibility,
     );
     const productTagController = new ProductTagController(
       new CreateProductTagHandler(productTagManagementService),
