@@ -59,6 +59,9 @@ describe("profile/address/payment field boundaries", () => {
       expect(user.updateProfileRequestSchema.parse({ dateOfBirth })).toEqual({ dateOfBirth });
     },
   );
+  it.each(["2999-01-01", "1899-12-31"])("rejects implausible date of birth %s", (dateOfBirth) => {
+    expect(user.updateProfileRequestSchema.safeParse({ dateOfBirth }).success).toBe(false);
+  });
   it.each(["2023-02-29", "2024-13-01", "yesterday", "2000-01-01T12:00:00"])(
     "rejects malformed/nonexistent date %s",
     (dateOfBirth) => {

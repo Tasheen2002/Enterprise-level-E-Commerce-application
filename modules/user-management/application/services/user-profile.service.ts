@@ -81,6 +81,15 @@ export class UserProfileService {
     const userIdVo = UserId.fromString(userId);
     const user = await this.getUserEntity(userIdVo);
 
+    // Ownership of referenced defaults is checked before anything is written,
+    // for both a new and an existing profile.
+    if (params.defaultAddressId) {
+      await this.validateAddressBelongsToUser(params.defaultAddressId, userIdVo);
+    }
+    if (params.defaultPaymentMethodId) {
+      await this.validatePaymentMethodBelongsToUser(params.defaultPaymentMethodId, userIdVo);
+    }
+
     const hasUserFields =
       params.firstName !== undefined ||
       params.lastName !== undefined ||
@@ -123,7 +132,6 @@ export class UserProfileService {
     } else {
       if (params.defaultAddressId !== undefined) {
         if (params.defaultAddressId) {
-          await this.validateAddressBelongsToUser(params.defaultAddressId, userIdVo);
           profile.setDefaultAddress(params.defaultAddressId);
         } else {
           profile.removeDefaultAddress();
@@ -131,10 +139,6 @@ export class UserProfileService {
       }
       if (params.defaultPaymentMethodId !== undefined) {
         if (params.defaultPaymentMethodId) {
-          await this.validatePaymentMethodBelongsToUser(
-            params.defaultPaymentMethodId,
-            userIdVo,
-          );
           profile.setDefaultPaymentMethod(params.defaultPaymentMethodId);
         } else {
           profile.removeDefaultPaymentMethod();

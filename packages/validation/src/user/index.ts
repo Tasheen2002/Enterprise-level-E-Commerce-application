@@ -17,7 +17,14 @@ export const updateProfileRequestSchema = z.object({
   lastName: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   title: z.string().max(50).optional(),
-  dateOfBirth: z.iso.datetime({ offset: true }).or(z.iso.date()).optional(),
+  dateOfBirth: z.iso
+    .datetime({ offset: true })
+    .or(z.iso.date())
+    .refine((value) => {
+      const date = new Date(value);
+      return date.getTime() < Date.now() && date.getUTCFullYear() >= 1900;
+    }, "Date of birth must be in the past and after 1900")
+    .optional(),
   residentOf: z.string().max(100).optional(),
   nationality: z.string().max(100).optional(),
   locale: z

@@ -1,12 +1,12 @@
 {
   "date": "2026-11-17",
-  "commit": "60d9b4a1b6b076b02eab816b2628a4e069d5d427",
+  "commit": "06288cd4b91e5b1f3258b22c00dfe2f7dd7f223f",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1883,
-  "backend_review_scope_files": 1546,
+  "candidate_files": 1885,
+  "backend_review_scope_files": 1547,
   "scope_counts": {
-    "audit-record": 90,
-    "backend": 1418,
+    "audit-record": 91,
+    "backend": 1419,
     "backend-support": 67,
     "excluded-frontend": 247,
     "frontend-boundary": 61
@@ -27,7 +27,7 @@
     "modules/payment": 123,
     "modules/product-catalog": 226,
     "modules/shared": 3,
-    "modules/user-management": 161,
+    "modules/user-management": 162,
     "packages/api-client": 5,
     "packages/config": 6,
     "packages/core": 32,
@@ -42,7 +42,7 @@
     "P00": 67,
     "P01": 131,
     "P02": 17,
-    "P03": 161,
+    "P03": 162,
     "P04": 226,
     "P05": 146,
     "P06": 111,
@@ -63,10 +63,10 @@
     "migration-or-sql": 16,
     "sensitive-environment-metadata-only": 1,
     "source-or-configuration": 1207,
-    "test": 162
+    "test": 163
   },
   "closure_counts": {
-    "open": 1372,
+    "open": 1373,
     "closed": 174
   },
   "removed_files_requiring_verification": [
