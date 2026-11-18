@@ -35,6 +35,7 @@ function fixture() {
   const checkout = {
     isExpired: false,
     isPending: true,
+    cartOwnerId: { getValue: () => "member" },
     cartId: { getValue: () => "synthetic-cart" },
     currency: { getValue: () => "EUR" },
   };
@@ -71,6 +72,7 @@ function fixture() {
   );
   const dto = {
     checkoutId: "a11cfa10-457b-48ba-981d-5fa424f82388",
+    userId: "member",
     paymentIntentId: "synthetic-intent",
     shippingAddress: {
       firstName: "Synthetic",

@@ -67,6 +67,7 @@ function fixture() {
   );
   const dto = {
     checkoutId,
+    userId: "member",
     paymentIntentId: "intent",
     shippingAddress: {
       firstName: "Synthetic",

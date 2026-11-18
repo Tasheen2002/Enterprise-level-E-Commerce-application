@@ -96,6 +96,7 @@ function fixture(
   );
   const dto = {
     checkoutId: CHECKOUT,
+    ...(owner ? { userId: owner } : { guestToken: "guest" }),
     paymentIntentId: "intent",
     shippingAddress: {
       firstName: "Synthetic",

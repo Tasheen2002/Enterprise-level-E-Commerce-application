@@ -34,6 +34,29 @@ interface CompleteCheckoutDto {
   guestToken?: string;
 }
 
+/**
+ * Fail-closed ownership: a customer's cart or checkout needs that customer's
+ * session, a guest's needs that guest token, and anything else is refused
+ * (previously a request with neither identity skipped the check entirely).
+ */
+export function assertOwnership(
+  owned: { cartOwnerId?: { getValue(): string } | null; guestToken?: { getValue(): string } | null },
+  userId?: string,
+  guestToken?: string,
+): void {
+  const ownerId = owned.cartOwnerId?.getValue();
+  const ownerToken = owned.guestToken?.getValue();
+  if (ownerId) {
+    if (ownerId !== userId) throw new CartOwnershipError("Checkout does not belong to user");
+    return;
+  }
+  if (ownerToken) {
+    if (ownerToken !== guestToken) throw new CartOwnershipError("Checkout does not belong to guest");
+    return;
+  }
+  throw new CartOwnershipError("Checkout has no owner");
+}
+
 export class CheckoutService {
   constructor(
     private readonly checkoutRepository: ICheckoutRepository,
@@ -49,13 +72,7 @@ export class CheckoutService {
       throw new CartNotFoundError(dto.cartId);
     }
 
-    if (dto.userId && cart.cartOwnerId?.getValue() !== dto.userId) {
-      throw new CartOwnershipError("Cart does not belong to user");
-    }
-
-    if (dto.guestToken && cart.guestToken?.getValue() !== dto.guestToken) {
-      throw new CartOwnershipError("Cart does not belong to guest");
-    }
+    assertOwnership(cart, dto.userId, dto.guestToken);
 
     let totalAmount = cart.total;
     const currency = cart.currency.getValue();
@@ -115,13 +132,7 @@ export class CheckoutService {
       return null;
     }
 
-    if (userId && checkout.cartOwnerId?.getValue() !== userId) {
-      throw new CartOwnershipError("Checkout does not belong to user");
-    }
-
-    if (guestToken && checkout.guestToken?.getValue() !== guestToken) {
-      throw new CartOwnershipError("Checkout does not belong to guest");
-    }
+    assertOwnership(checkout, userId, guestToken);
 
     return Checkout.toDTO(checkout);
   }
@@ -134,13 +145,7 @@ export class CheckoutService {
       throw new CheckoutNotFoundError(dto.checkoutId);
     }
 
-    if (dto.userId && checkout.cartOwnerId?.getValue() !== dto.userId) {
-      throw new CartOwnershipError("Checkout does not belong to user");
-    }
-
-    if (dto.guestToken && checkout.guestToken?.getValue() !== dto.guestToken) {
-      throw new CartOwnershipError("Checkout does not belong to guest");
-    }
+    assertOwnership(checkout, dto.userId, dto.guestToken);
 
     if (checkout.isExpired) {
       throw new InvalidCheckoutStateError("Checkout has expired");
@@ -168,13 +173,7 @@ export class CheckoutService {
       throw new CheckoutNotFoundError(checkoutId);
     }
 
-    if (userId && checkout.cartOwnerId?.getValue() !== userId) {
-      throw new CartOwnershipError("Checkout does not belong to user");
-    }
-
-    if (guestToken && checkout.guestToken?.getValue() !== guestToken) {
-      throw new CartOwnershipError("Checkout does not belong to guest");
-    }
+    assertOwnership(checkout, userId, guestToken);
 
     checkout.markAsCancelled();
     await this.checkoutRepository.save(checkout);

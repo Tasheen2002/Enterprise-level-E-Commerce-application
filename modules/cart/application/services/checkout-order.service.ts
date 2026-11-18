@@ -1,3 +1,4 @@
+import { assertOwnership } from "./checkout.service";
 import { randomBytes } from "crypto";
 import Stripe from "stripe";
 import { ICheckoutRepository } from "../../domain/repositories/checkout.repository";
@@ -21,7 +22,6 @@ import { LoyaltyTransactionReasonValue } from "../../../loyalty/domain/value-obj
 import {
   CartNotFoundError,
   CheckoutNotFoundError,
-  CartOwnershipError,
   InvalidCheckoutStateError,
   InvalidCartStateError,
   PaymentNotConfirmedError,
@@ -150,13 +150,7 @@ export class CheckoutOrderService {
       throw new PaymentMismatchError("Payment has already been used for an order");
     }
 
-    if (dto.userId && checkout.cartOwnerId?.getValue() !== dto.userId) {
-      throw new CartOwnershipError("Checkout does not belong to user");
-    }
-
-    if (dto.guestToken && checkout.guestToken?.getValue() !== dto.guestToken) {
-      throw new CartOwnershipError("Checkout does not belong to guest");
-    }
+    assertOwnership(checkout, dto.userId, dto.guestToken);
 
     // ---- Phase 3: Idempotency check via port ----
 

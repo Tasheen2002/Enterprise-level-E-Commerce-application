@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-18",
+  "phase": "P06 (batch 3: cart, checkout and reservation ownership)",
+  "baseline_commit": "59691730",
+  "scope": [
+    "All 44 cart, checkout and reservation routes and their guards",
+    "modules/cart/infra/http/controllers/cart.controller.ts, reservation.controller.ts",
+    "application/services/cart-management.service.ts validateCartOwnership; checkout.service.ts and checkout-order.service.ts ownership checks",
+    "Storefront and admin use of the reservation API"
+  ],
+  "reviewed_without_change": [
+    "Every cart-by-id operation (read, summary, add, update, remove, clear, email, shipping, addresses) checks ownership in the service and fails closed.",
+    "Guest-token routes treat the token as a bearer secret; admin cart statistics and cleanup are admin-only."
+  ],
+  "findings": [
+    {
+      "id": "P06-07",
+      "severity": "P1",
+      "file": "modules/cart/infra/http/controllers/cart.controller.ts",
+      "problem": "GET/POST/DELETE /users/:userId/cart used the user id from the URL without comparing it to the signed-in user, so any customer could read, create or empty another customer's cart (contents, contact and address details) by user id.",
+      "change": "Customers may only address their own user id; admins may address any.",
+      "verification": "cart-ownership E2E: baseline another customer's cart readable and clearable; fixed 403, own cart 200."
+    },
+    {
+      "id": "P06-08",
+      "severity": "P2",
+      "file": "modules/cart/infra/http/controllers/cart.controller.ts",
+      "problem": "Guest-cart transfer only checked the target user when the caller was signed in, so an anonymous caller with a guest token could merge that cart into any account.",
+      "change": "Transfer requires a signed-in customer and always targets their own account (401 otherwise).",
+      "verification": "E2E: baseline anonymous transfer accepted; fixed 401 and no cart created for the victim."
+    },
+    {
+      "id": "P06-09",
+      "severity": "P2",
+      "file": "modules/cart/application/services/checkout.service.ts; checkout-order.service.ts",
+      "problem": "Checkout ownership checks only ran for the identity that was supplied ('if userId then compare; if guestToken then compare'), so a request with neither identity skipped them. GET /checkout/:checkoutId has no cart-auth guard, so anyone could read any checkout by id.",
+      "change": "One fail-closed rule (assertOwnership) for all checkout operations: a customer's checkout needs that customer's session, a guest's needs its token, anything else is refused.",
+      "verification": "E2E: baseline anonymous read returned the checkout; fixed refused, owner 200. Unit fixtures now supply the owner identity."
+    },
+    {
+      "id": "P06-10",
+      "severity": "P2",
+      "file": "modules/cart/infra/http/routes/reservation.routes.ts",
+      "problem": "The reservation API (create, bulk create, extend, renew, adjust, release, read by cart) was open to every customer with no ownership checks, so a customer could change other carts' reservations or reserve a product's whole stock to make it appear sold out. No storefront code uses it; the cart service manages reservations internally.",
+      "change": "Reservation routes require ADMIN; public availability and reserved-quantity reads are unchanged.",
+      "verification": "E2E: baseline customer reservation request accepted past authorisation; fixed 403."
+    }
+  ],
+  "tests": {
+    "new": "E2E cart-ownership (4)",
+    "updated": "Checkout unit fixtures (stripe-initialization, payment-verification, complete-checkout-race) now complete checkouts as their owner; the cart lifecycle E2E runs its reservation steps as an admin and asserts the customer is refused",
+    "baseline": "With the old controller, services and routes: 4 of 4 E2E cases failed.",
+    "database_suites": "All E2E and integration suites: 137 tests in 42 files pass. A first full run had two failures: the cart lifecycle E2E still used the reservation API as a customer (updated, see above) and the user-lifecycle E2E timed out starting the server under load (passes when rerun; the machine had also restarted during the run).",
+    "final": "1511 unit tests in 117 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check"
+  },
+  "follow_ups": [
+    "Owner decision: checkout tax falls back to a simulated 8% when Stripe Tax fails or returns 0 (production should fail or use configured rates).",
+    "CartOwnershipError responds 422; 403 would be the conventional status (left unchanged to avoid client-visible churn).",
+    "Promotion application endpoints belong to the payment module and are reviewed in P08."
+  ]
+}

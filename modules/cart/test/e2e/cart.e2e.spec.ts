@@ -334,17 +334,21 @@ describe("Cart Module E2E API Tests", () => {
       expect(completeCheckoutRes.statusCode).toBe(200);
       expect(completeCheckoutRes.json().data.status).toBe("completed");
 
-      // 6. Create Reservation for the same variant
-      const resRes = await app.inject({
+      // 6. Reservations are managed internally by the cart; the reservation
+      // API is for staff only (customers cannot hold stock directly).
+      const reservationPayload = { cartId, variantId, quantity: 1, durationMinutes: 10 };
+      const customerRes = await app.inject({
         method: "POST",
         url: "/api/v1/reservations",
         headers: { authorization: `Bearer ${customerToken}` },
-        payload: {
-          cartId,
-          variantId,
-          quantity: 1,
-          durationMinutes: 10,
-        },
+        payload: reservationPayload,
+      });
+      expect(customerRes.statusCode).toBe(403);
+      const resRes = await app.inject({
+        method: "POST",
+        url: "/api/v1/reservations",
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: reservationPayload,
       });
       expect(resRes.statusCode).toBe(201);
       const reservationId = resRes.json().data.reservationId;
@@ -354,7 +358,7 @@ describe("Cart Module E2E API Tests", () => {
       const extendRes = await app.inject({
         method: "POST",
         url: `/api/v1/reservations/${reservationId}/extend`,
-        headers: { authorization: `Bearer ${customerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
         payload: {
           additionalMinutes: 10,
         },
@@ -366,7 +370,7 @@ describe("Cart Module E2E API Tests", () => {
       const releaseRes = await app.inject({
         method: "DELETE",
         url: `/api/v1/reservations/${reservationId}`,
-        headers: { authorization: `Bearer ${customerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
       });
       expect(releaseRes.statusCode).toBe(204);
     });
