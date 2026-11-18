@@ -1,4 +1,5 @@
 import { PrismaClient, Category } from "@prisma/client";
+import type { IPaymentRefundGateway } from "../../../modules/payment/domain/external-services";
 import type { IPaymentConfirmationPort } from "../../../modules/cart/domain/ports/external-services";
 import { ProductVisibilityPolicy } from "../../../modules/product-catalog/application/services/product-visibility.policy";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
@@ -810,6 +811,24 @@ export function createOrderCatalogPorts(
  *
  * Each server creates its own container; `register` runs once per instance.
  */
+/** Issues refunds through Stripe; undefined when Stripe is not configured. */
+function createStripeRefundGateway(
+  stripe: StripeConfig | undefined,
+): IPaymentRefundGateway | undefined {
+  if (!stripe) return undefined;
+  const provider = createStripeProvider(stripe);
+  return {
+    async refund({ provider: name, providerReference, amount }) {
+      if (name !== "stripe") throw new Error(`No refund gateway for provider '${name}'`);
+      const result = await provider.refundPayment(providerReference, amount);
+      if (!result.success || !result.refundId) {
+        throw new Error(result.error ?? "Stripe refund failed");
+      }
+      return { reference: result.refundId };
+    },
+  };
+}
+
 /**
  * Confirms checkout payments with Stripe itself: the intent must have
  * succeeded (or be authorised for capture) and the amount reported is what
@@ -1580,7 +1599,12 @@ export class Container {
       },
     };
 
-    const paymentService = new PaymentService(orderQueryPort, paymentIntentRepository, paymentTransactionRepository);
+    const paymentService = new PaymentService(
+      orderQueryPort,
+      paymentIntentRepository,
+      paymentTransactionRepository,
+      createStripeRefundGateway(config.stripe),
+    );
     const bnplTransactionService = new BnplTransactionService(paymentIntentRepository, orderQueryPort, bnplTransactionRepository);
     const giftCardService = new GiftCardService(orderQueryPort, giftCardRepository, giftCardTransactionRepository);
     const promotionService = new PromotionService(promotionRepository, promotionUsageRepository);

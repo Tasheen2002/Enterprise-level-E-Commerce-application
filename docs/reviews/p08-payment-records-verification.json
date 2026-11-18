@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-19",
+  "phase": "P08 (batch 1: payment records, refunds and payment access)",
+  "baseline_commit": "a9c8ab33",
+  "scope": [
+    "All 23 payment routes and their guards",
+    "application/services/payment.service.ts (create, authorize, capture, refund, void, reads, ownership)",
+    "infra/http/controllers/payment-intent.controller.ts, routes/payment-intent.routes.ts",
+    "infra/payment-providers/stripe.provider.ts refundPayment; domain/entities/payment-intent.entity.ts transitions",
+    "Storefront and admin use of the payment-intent API (none)"
+  ],
+  "findings": [
+    {
+      "id": "P08-01",
+      "severity": "P1",
+      "file": "modules/payment/application/services/payment.service.ts (refundPayment)",
+      "problem": "Refunds never returned money: the service recorded a refund transaction and tried to cancel the payment, but never called Stripe. The cancel step is not allowed for captured payments, so every refund of a captured payment failed anyway; the refund amount was also unbounded.",
+      "change": "Refunds of online-provider payments go through the provider (Stripe via a new refund gateway port; other online providers are refused until a gateway exists), recording the provider's refund id; offline payments (cash, bank transfer) are recorded only. The amount is limited to what remains after earlier refunds; payments stay captured, as at the provider.",
+      "verification": "Unit refunds-and-access: baseline all refund cases failed; fixed Stripe refund issued with the Stripe payment id, partial refunds tracked and over-refunds refused, provider refusal or missing Stripe configuration records nothing, offline refunds recorded."
+    },
+    {
+      "id": "P08-02",
+      "severity": "P1",
+      "file": "payment.service.ts; payment-intent.controller.ts",
+      "problem": "Payment ownership checks were applied to staff (so staff could not record payments or refund for any customer's order) and were fail-open for customers (skipped for payments not yet attached to an order and for guest orders).",
+      "change": "Staff and internal callers act without a customer scope; customers may only see or act on payments of orders they own, and anything else is reported as not found.",
+      "verification": "payment-records E2E: baseline staff got 'Forbidden: you do not own this order' when recording a payment for a customer's order; fixed staff record, process and refund it, the owner reads it, another customer gets 404. Unit cases for own, foreign and guest-order payments."
+    },
+    {
+      "id": "P08-03",
+      "severity": "P2",
+      "file": "modules/payment/infra/http/routes/payment-intent.routes.ts",
+      "problem": "Any signed-in customer could create payment records for any amount and mark them authorised and captured with a self-supplied reference, fabricating financial records (no frontend uses these routes; customers pay through checkout and Stripe). Refund and void were open to all staff including analysts.",
+      "change": "Creating and processing payment records is admin-only (offline/manual payments); refunds and voids require ADMIN or CUSTOMER_SERVICE.",
+      "verification": "E2E: baseline customer created a payment record (201); fixed 403 for create and process."
+    }
+  ],
+  "tests": {
+    "new": "unit refunds-and-access (8), E2E payment-records (2)",
+    "baseline": "With the old service, controller, routes and container: 7 of 8 unit and 2 of 2 E2E cases failed.",
+    "database_suites": "All E2E and integration suites: 142 tests in 43 files pass",
+    "final": "1519 unit tests in 118 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check"
+  },
+  "follow_ups": [
+    "Next P08 batch: Stripe create-intent (client-supplied amount, no checkout ownership check), gift cards, promotion usage recording, BNPL, webhook replay protection.",
+    "Order refund status (P07) is still set independently of payment refunds; link order refunds to payment refunds."
+  ]
+}

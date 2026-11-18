@@ -1,3 +1,4 @@
+import type { IPaymentRefundGateway } from "../../domain/external-services";
 import { IPaymentIntentRepository } from "../../domain/repositories/payment-intent.repository";
 import { IPaymentTransactionRepository } from "../../domain/repositories/payment-transaction.repository";
 import { IExternalOrderQueryPort } from "../../domain/external-services";
@@ -43,18 +44,41 @@ interface VoidPaymentParams {
   userId?: string;
 }
 
+// Providers that hold the customer's money: refunds must be issued through them.
+const ONLINE_PAYMENT_PROVIDERS: ReadonlySet<string> = new Set([
+  "stripe",
+  "paypal",
+  "razorpay",
+  "klarna",
+  "afterpay",
+]);
+
 export class PaymentService {
   constructor(
     private readonly orderQueryPort: IExternalOrderQueryPort,
     private readonly paymentIntentRepository: IPaymentIntentRepository,
     private readonly paymentTransactionRepository: IPaymentTransactionRepository,
+    private readonly refundGateway?: IPaymentRefundGateway,
   ) {}
 
+  // Ownership is fail-closed for customers: `userId` is the signed-in
+  // customer. Staff and internal callers (webhooks, checkout) pass no userId.
   private async assertOrderOwnership(orderId: string, userId?: string): Promise<void> {
+    if (userId === undefined) return;
     const order = await this.orderQueryPort.findOrderOwner(orderId);
-    if (!order) return;
-    if (userId && order.userId && order.userId !== userId) {
+    if (!order || order.userId !== userId) {
       throw new InvalidOperationError("Forbidden: you do not own this order");
+    }
+  }
+
+  // A customer may only see or act on payments of orders they own; payments
+  // not yet attached to an order are reported as not found.
+  private async assertCustomerOwnsIntent(intent: PaymentIntent, userId?: string): Promise<void> {
+    if (userId === undefined) return;
+    if (!intent.orderId) throw new PaymentIntentNotFoundError(intent.id.getValue());
+    const order = await this.orderQueryPort.findOrderOwner(intent.orderId);
+    if (!order || order.userId !== userId) {
+      throw new PaymentIntentNotFoundError(intent.id.getValue());
     }
   }
 
@@ -129,9 +153,7 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderId && params.userId) {
-      await this.assertOrderOwnership(intent.orderId, params.userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, params.userId);
 
     intent.authorize();
 
@@ -155,9 +177,7 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
-    if (intent.orderId && userId) {
-      await this.assertOrderOwnership(intent.orderId, userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, userId);
 
     intent.capture();
 
@@ -181,9 +201,7 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderId && params.userId) {
-      await this.assertOrderOwnership(intent.orderId, params.userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, params.userId);
 
     if (!intent.isCaptured()) {
       throw new InvalidOperationError(
@@ -191,20 +209,49 @@ export class PaymentService {
       );
     }
 
-    const refundAmount = params.amount
-      ? Money.fromAmount(params.amount, intent.amount.getCurrency())
-      : intent.amount;
+    // Never refund more than was collected, including earlier partial refunds.
+    const round2 = (value: number) => Math.round(value * 100) / 100;
+    const previousRefunds = (await this.paymentTransactionRepository.findByIntentId(intent.id))
+      .filter((t) => t.type.getValue() === "refund" && t.status.getValue() === "succeeded")
+      .reduce((sum, t) => sum + t.amount.getAmount(), 0);
+    const remaining = round2(intent.amount.getAmount() - previousRefunds);
+    const amount = round2(params.amount ?? remaining);
+    if (amount <= 0 || amount > remaining) {
+      throw new InvalidOperationError(
+        `Refund amount must be between 0.01 and the remaining ${remaining.toFixed(2)}`,
+      );
+    }
+
+    // Money goes back through the provider that collected it. Payments taken
+    // offline (cash, bank transfer, manual) are recorded without a provider.
+    let providerRefundId: string | null = null;
+    if (ONLINE_PAYMENT_PROVIDERS.has(intent.provider.toLowerCase())) {
+      if (!this.refundGateway || !intent.clientSecret) {
+        throw new InvalidOperationError(
+          `Refunds for ${intent.provider} payments cannot be issued: provider not configured`,
+        );
+      }
+      providerRefundId = (
+        await this.refundGateway.refund({
+          provider: intent.provider,
+          providerReference: intent.clientSecret,
+          amount,
+          currency: intent.amount.getCurrency().getValue(),
+        })
+      ).reference;
+    }
 
     const transaction = PaymentTransaction.create({
       intentId: intent.id,
       type: PaymentTransactionType.refund(),
-      amount: refundAmount,
-      pspReference: null,
+      amount: Money.fromAmount(amount, intent.amount.getCurrency()),
+      pspReference: providerRefundId,
       failureReason: null,
     });
-    transaction.markAsSucceeded('');
+    transaction.markAsSucceeded(providerRefundId ?? '');
 
-    intent.cancel();
+    // The payment stays captured (as at the provider); refunds are recorded
+    // as transactions and the remaining refundable amount is derived from them.
     await this.paymentIntentRepository.save(intent);
     await this.paymentTransactionRepository.save(transaction);
     return PaymentIntent.toDTO(intent);
@@ -227,9 +274,7 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(params.intentId);
 
-    if (intent.orderId && params.userId) {
-      await this.assertOrderOwnership(intent.orderId, params.userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, params.userId);
 
     if (intent.isCaptured()) {
       throw new InvalidOperationError("Cannot void a captured payment; use refund instead");
@@ -295,9 +340,7 @@ export class PaymentService {
       PaymentIntentId.fromString(intentId),
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
-    if (intent.orderId && userId) {
-      await this.assertOrderOwnership(intent.orderId, userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, userId);
     return PaymentIntent.toDTO(intent);
   }
 
@@ -327,9 +370,7 @@ export class PaymentService {
     );
     if (!intent) throw new PaymentIntentNotFoundError(intentId);
 
-    if (intent.orderId && userId) {
-      await this.assertOrderOwnership(intent.orderId, userId);
-    }
+    await this.assertCustomerOwnsIntent(intent, userId);
 
     const transactions = await this.paymentTransactionRepository.findByIntentId(
       PaymentIntentId.fromString(intentId),

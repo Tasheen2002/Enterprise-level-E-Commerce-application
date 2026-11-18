@@ -8,3 +8,14 @@
 export interface IExternalOrderQueryPort {
   findOrderOwner(orderId: string): Promise<{ userId: string | null } | null>;
 }
+
+/** Sends refunds to the payment provider that collected the money. */
+export interface IPaymentRefundGateway {
+  /** Refunds `amount` (major units); throws when the provider refuses. Returns the provider's refund id. */
+  refund(params: {
+    provider: string;
+    providerReference: string;
+    amount: number;
+    currency: string;
+  }): Promise<{ reference: string }>;
+}
