@@ -15721,6 +15721,8 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        /** Format: uuid */
+                        customerId?: string;
                         guestToken?: string;
                         items: {
                             /** Format: uuid */

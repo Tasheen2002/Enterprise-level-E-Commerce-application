@@ -163,8 +163,10 @@ describe("Order Management Module E2E API Tests", () => {
 
   describe("Order Placement and Fulfillment Lifecycle", () => {
     it("should support a complete order lifecycle from creation to delivery", async () => {
-      // 1. Customer places order
+      // 1. Customer service places an order for the customer (storefront
+      // orders come from checkout; direct creation is a back-office function).
       const payload = {
+        customerId,
         items: [{ variantId, quantity: 1, isGift: false }],
         shippingAddress: {
           firstName: "Jane",
@@ -184,7 +186,7 @@ describe("Order Management Module E2E API Tests", () => {
       const createRes = await app.inject({
         method: "POST",
         url: "/api/v1/orders",
-        headers: { authorization: `Bearer ${customerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
         payload,
       });
 
@@ -260,8 +262,9 @@ describe("Order Management Module E2E API Tests", () => {
       const res = await app.inject({
         method: "POST",
         url: "/api/v1/orders",
-        headers: { authorization: `Bearer ${customerToken}` },
+        headers: { authorization: `Bearer ${adminToken}` },
         payload: {
+          customerId,
           items: [{ variantId, quantity: 1, isGift: false }],
           shippingAddress: {
             firstName: "Jane",
@@ -339,6 +342,114 @@ describe("Order Management Module E2E API Tests", () => {
         data: { orderId, provider: "stripe", status: "failed", amount: 150, currency: "USD" },
       });
       expect((await deleteOrder(orderId)).statusCode).toBe(204);
+    });
+  });
+
+  describe("Order creation and cancellation policy", () => {
+    const orderPayload = () => ({
+      customerId,
+      items: [{ variantId, quantity: 1, isGift: false }],
+      shippingAddress: {
+        firstName: "Jane",
+        lastName: "Doe",
+        addressLine1: "1 Example Street",
+        city: "New York",
+        state: "NY",
+        postalCode: "10001",
+        country: "US",
+      },
+      currency: "USD",
+    });
+    const createAs = (token?: string) =>
+      app.inject({
+        method: "POST",
+        url: "/api/v1/orders",
+        headers: token ? { authorization: `Bearer ${token}` } : {},
+        payload: orderPayload(),
+      });
+    const cancelAs = (orderId: string, token: string) =>
+      app.inject({
+        method: "POST",
+        url: `/api/v1/orders/${orderId}/cancel`,
+        headers: { authorization: `Bearer ${token}` },
+      });
+
+    it("only lets staff create orders directly (storefront orders come from checkout)", async () => {
+      expect((await createAs()).statusCode).toBe(401);
+      expect((await createAs(customerToken)).statusCode).toBe(403);
+      const staff = await createAs(adminToken);
+      expect(staff.statusCode).toBe(201);
+      expect(staff.json().data.userId).toBe(customerId);
+    });
+
+    it("lets customers cancel unpaid orders but not paid ones", async () => {
+      const unpaid = (await createAs(adminToken)).json().data.id as string;
+      expect((await cancelAs(unpaid, customerToken)).statusCode).toBe(200);
+
+      const paid = (await createAs(adminToken)).json().data.id as string;
+      await app.inject({
+        method: "POST",
+        url: `/api/v1/orders/${paid}/mark-paid`,
+        headers: { authorization: `Bearer ${adminToken}` },
+      });
+      const refused = await cancelAs(paid, customerToken);
+      expect(refused.statusCode).toBe(422);
+      expect(refused.json().message).toContain("contact customer service");
+      expect((await prisma.order.findUnique({ where: { id: paid } }))?.status).toBe("paid");
+      expect((await cancelAs(paid, adminToken)).statusCode).toBe(200);
+    });
+
+    it("puts the stock a checkout order took back on the shelf when it is cancelled", async () => {
+      const order = await prisma.order.create({
+        data: {
+          orderNo: `ORD-RESTOCK-${randomUUID()}`,
+          userId: customerId,
+          totals: { subtotal: 150, tax: 0, shipping: 0, discount: 0, total: 150 },
+          status: "paid",
+          source: "web",
+          currency: "USD",
+          items: {
+            create: [
+              {
+                variantId,
+                qty: 2,
+                productSnapshot: { productId, variantId, sku: "SKU-RESTOCK", name: "Restock", price: 75 },
+              },
+            ],
+          },
+        },
+      });
+      const before = await prisma.inventoryStock.findUnique({
+        where: { variantId_locationId: { variantId, locationId: defaultLocationId } },
+      });
+      // Checkout took 2 units for this order.
+      await prisma.inventoryStock.update({
+        where: { variantId_locationId: { variantId, locationId: defaultLocationId } },
+        data: { onHand: { decrement: 2 } },
+      });
+      await prisma.inventoryTransaction.create({
+        data: {
+          variantId,
+          locationId: defaultLocationId,
+          qtyDelta: -2,
+          reason: "order",
+          referenceId: order.id,
+        },
+      });
+
+      expect((await cancelAs(order.id, adminToken)).statusCode).toBe(200);
+      const after = await prisma.inventoryStock.findUnique({
+        where: { variantId_locationId: { variantId, locationId: defaultLocationId } },
+      });
+      expect(after?.onHand).toBe(before?.onHand);
+      const ledger = await prisma.inventoryTransaction.findMany({
+        where: { referenceId: order.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(ledger.map((row) => [row.reason, row.qtyDelta])).toEqual([
+        ["order", -2],
+        ["return", 2],
+      ]);
     });
   });
 });

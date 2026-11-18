@@ -145,6 +145,60 @@ export class StockManagementService {
     return { fromStock: Stock.toDTO(fromStock), toStock: Stock.toDTO(toStock) };
   }
 
+  /**
+   * Returns to stock what left inventory for an order, using the ledger as
+   * the record of what was taken (checkout deducts per warehouse and records
+   * shortages as backorders, so the order lines alone are not exact). Units
+   * already returned for the order are subtracted, so repeating is harmless.
+   */
+  async returnStockForOrder(orderId: string): Promise<number> {
+    const entries = await this.transactionRepository.findByReference(orderId);
+    const outstanding = new Map<string, { variantId: string; locationId: string; qty: number }>();
+    for (const entry of entries) {
+      const reason = entry.reason.getValue();
+      if (reason !== "order" && reason !== "return") continue;
+      const key = `${entry.variantId}|${entry.locationId}`;
+      const line = outstanding.get(key) ?? {
+        variantId: entry.variantId,
+        locationId: entry.locationId,
+        qty: 0,
+      };
+      line.qty -= entry.qtyDelta; // order rows are negative, return rows positive
+      outstanding.set(key, line);
+    }
+
+    const stocks: Stock[] = [];
+    const transactions: InventoryTransaction[] = [];
+    let returned = 0;
+    for (const line of outstanding.values()) {
+      if (line.qty <= 0) continue;
+      let stock = await this.stockRepository.findByVariantAndLocation(
+        VariantId.fromString(line.variantId),
+        LocationId.fromString(line.locationId),
+      );
+      if (!stock) {
+        stock = Stock.create({ variantId: line.variantId, locationId: line.locationId, onHand: line.qty });
+      } else {
+        stock.addStock(line.qty);
+      }
+      stocks.push(stock);
+      transactions.push(
+        InventoryTransaction.create({
+          variantId: line.variantId,
+          locationId: line.locationId,
+          qtyDelta: line.qty,
+          reason: "return",
+          referenceId: orderId,
+        }),
+      );
+      returned += line.qty;
+    }
+    if (stocks.length > 0) {
+      await this.stockRepository.saveWithTransactions(stocks, transactions);
+    }
+    return returned;
+  }
+
   async reserveStock(
     variantId: string,
     locationId: string,

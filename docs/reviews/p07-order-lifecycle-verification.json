@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-18",
+  "phase": "P07 (batch 1: order creation, cancellation and stock return)",
+  "baseline_commit": "4fe63227",
+  "scope": [
+    "All 48 order-management routes and their guards",
+    "application/services/order-management.service.ts createOrder, cancelOrder, trackOrder, assertCanAccessOrder",
+    "domain/entities/order.entity.ts and value-objects/order-status.vo.ts transitions",
+    "Storefront and admin callers of order creation"
+  ],
+  "reviewed_without_change": [
+    "Order status, totals, mark-paid, mark-fulfilled, shipments, events and status-history writes are staff-only; backorder and preorder writes admin-only.",
+    "Order reads (order, items, addresses, shipments, status history) check ownership in the service (staff bypass).",
+    "Order creation prices items from the catalog on the server.",
+    "Order tracking: by tracking number returns no addresses; by order number requires the order's email; rate limited."
+  ],
+  "findings": [
+    {
+      "id": "P07-05",
+      "severity": "P1",
+      "file": "modules/order-management/application/services/order-management.service.ts",
+      "problem": "Customers could cancel orders that were already paid or being processed. Cancellation issues no refund, so the customer was left without goods or money, and staff were not involved.",
+      "change": "Customers may cancel only unpaid orders (created, pending, confirmed); paid orders are refused with a message to contact customer service, who can cancel them (and handle the refund).",
+      "verification": "order E2E: baseline (with the old rules) customer cancellation of a paid order succeeded; fixed refused with 422 and the order stays paid; customer can still cancel an unpaid order; staff can cancel the paid one."
+    },
+    {
+      "id": "P07-06",
+      "severity": "P1",
+      "file": "order-management.service.ts cancelOrder; inventory stock-management.service.ts; order external-services port",
+      "problem": "Cancelling an order tried to release a stock reservation, but checkout takes stock off the shelf (P06-05) and reserves nothing, so the release failed silently and a cancelled order's stock never returned to sale.",
+      "change": "Cancellation returns exactly the stock the order took, from the inventory ledger (minus anything already returned), as 'return' ledger entries referencing the order, in one transaction; orders that only reserved stock (manual orders) still have their reservation released.",
+      "verification": "E2E: baseline stock stayed 2 units short (98 vs 100) after cancelling; fixed back to 100 with ledger [order -2, return +2]."
+    },
+    {
+      "id": "P07-07",
+      "severity": "P2",
+      "file": "modules/order-management/infra/http/{routes/order.routes.ts, controllers/order.controller.ts, validation/order.schema.ts}",
+      "problem": "POST /orders accepted unauthenticated requests: anyone could create unpaid orders (each raising staff notifications and reserving stock) and attach them to any guest token supplied in the body. No storefront or admin screen uses it; storefront orders come from checkout.",
+      "change": "Direct order creation requires ADMIN or CUSTOMER_SERVICE (manual/phone orders); the order belongs to the customer named by customerId, never to the staff member.",
+      "verification": "E2E: baseline anonymous request passed authorisation (400 on validation); fixed anonymous 401, customer 403, staff 201 with the order owned by the customer."
+    }
+  ],
+  "tests": {
+    "new": "order E2E creation and cancellation policy (3)",
+    "updated": "order E2E lifecycle and deletion-policy helpers create orders as staff for the customer",
+    "baseline": "With the old service, routes and port: 3 of 3 new cases failed.",
+    "database_suites": "All E2E and integration suites: 140 tests in 42 files pass",
+    "final": "1511 unit tests in 117 files; root/tooling tsc; 7/7 workspace type-checks; API client regenerated (customerId) and drift check passes"
+  },
+  "follow_ups": [
+    "Cancelling or refunding a paid order changes the order status only; the Stripe refund is not issued (P08 refund flow).",
+    "Manually created orders reserve stock but marking them paid or fulfilled never converts the reservation into a deduction.",
+    "Order status can be set to refunded by staff through PATCH /orders/:id/status without any payment refund."
+  ]
+}

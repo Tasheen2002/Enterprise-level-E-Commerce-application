@@ -1466,6 +1466,7 @@ export class Container {
       adjustStock: (...args) => stockManagementService.adjustStock(...args),
       reserveStock: (...args) => stockManagementService.reserveStock(...args),
       releaseStock: (...args) => stockManagementService.releaseStock(...args),
+      returnStockForOrder: (orderId) => stockManagementService.returnStockForOrder(orderId),
     };
 
     const orderEventService = new OrderEventService(orderEventRepository);

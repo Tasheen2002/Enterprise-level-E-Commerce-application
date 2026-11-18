@@ -55,6 +55,7 @@ import {
 import {
   OrderNotFoundError,
   OrderDeletionError,
+  OrderCancellationError,
   OrderItemNotFoundError,
   OrderShipmentNotFoundError,
   DomainValidationError,
@@ -110,6 +111,13 @@ export interface TrackOrderResult {
   createdAt: string;
   updatedAt: string;
 }
+
+// Order states a customer may cancel themselves (nothing has been paid yet).
+const CUSTOMER_CANCELLABLE_STATUSES: ReadonlySet<string> = new Set([
+  "created",
+  "pending",
+  "confirmed",
+]);
 
 export class OrderManagementService {
   constructor(
@@ -336,6 +344,13 @@ export class OrderManagementService {
     const order = await this.requireOrder(id);
     this.assertCanAccessOrder(order, requestingUserId, isStaff);
     const previousStatus = order.status;
+    // Customers may cancel only before payment; once paid, cancelling means a
+    // refund, which customer service handles.
+    if (!isStaff && !CUSTOMER_CANCELLABLE_STATUSES.has(previousStatus.getValue())) {
+      throw new OrderCancellationError(
+        "this order has been paid; please contact customer service to cancel it and arrange a refund",
+      );
+    }
     order.cancel();
     await this.orderRepository.save(order);
 
@@ -349,21 +364,25 @@ export class OrderManagementService {
       await this.orderStatusHistoryRepository.save(history);
     }
 
-    
-    const defaultLocationId = this.getDefaultWarehouseId();
-    await Promise.all(
-      order.items.map(async (item) => {
-        try {
-          await this.stockManagementService.releaseStock(
-            item.variantId,
-            defaultLocationId,
-            item.quantity,
-          );
-        } catch {
-          /* best-effort release — stock may have already been fulfilled */
-        }
-      }),
-    );
+        // Checkout orders took stock off the shelf (recorded in the ledger): put
+    // exactly that back. Manually created orders only reserved stock: release it.
+    const returned = await this.stockManagementService.returnStockForOrder(order.id.getValue());
+    if (returned === 0) {
+      const defaultLocationId = this.getDefaultWarehouseId();
+      await Promise.all(
+        order.items.map(async (item) => {
+          try {
+            await this.stockManagementService.releaseStock(
+              item.variantId,
+              defaultLocationId,
+              item.quantity,
+            );
+          } catch {
+            /* nothing reserved for this item */
+          }
+        }),
+      );
+    }
 
     return Order.toDTO(order);
   }

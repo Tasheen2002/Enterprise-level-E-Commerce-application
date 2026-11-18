@@ -1,11 +1,11 @@
 {
   "date": "2026-11-18",
-  "commit": "59691730c551fff49b6a967b052175c623b72153",
+  "commit": "4fe63227aa97e9727f18bf67748915a9046e1345",
   "branch": "fix/shared-backend-foundation",
-  "candidate_files": 1901,
+  "candidate_files": 1902,
   "backend_review_scope_files": 1557,
   "scope_counts": {
-    "audit-record": 97,
+    "audit-record": 98,
     "backend": 1429,
     "backend-support": 67,
     "excluded-frontend": 247,
