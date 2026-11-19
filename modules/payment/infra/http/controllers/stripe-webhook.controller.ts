@@ -39,6 +39,9 @@ export class StripeWebhookController {
         currency: currency || "usd",
         idempotencyKey,
         userId: req.user?.userId,
+        guestToken: req.user?.userId
+          ? undefined
+          : ((req.headers["x-guest-token"] ?? req.headers["guest-token"]) as string | undefined),
       });
 
       const stripeResult = await this.stripeProvider.createPaymentIntent({

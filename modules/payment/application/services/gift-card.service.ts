@@ -91,19 +91,13 @@ export class GiftCardService {
       );
     }
 
-    giftCard.redeem(redeemAmount);
-
-    const transaction = GiftCardTransaction.create({
-      giftCardId: giftCard.id,
-      orderId: params.orderId,
-      amount: redeemAmount,
-      type: GiftCardTransactionType.redeem(),
-    });
-
-    await this.giftCardRepo.save(giftCard);
-    await this.giftCardTxnRepo.save(transaction);
-
-    return GiftCard.toDTO(giftCard);
+    // The checks above give clear errors; the debit itself is conditional in
+    // the database, so a concurrent redemption cannot overspend the card.
+    if (!(await this.giftCardRepo.debit(giftCard.id, redeemAmount.getAmount(), params.orderId))) {
+      throw new InvalidOperationError("Insufficient gift card balance");
+    }
+    const updated = await this.giftCardRepo.findById(giftCard.id);
+    return GiftCard.toDTO(updated ?? giftCard);
   }
 
   async refundGiftCard(giftCardId: string, amount: number, orderId: string): Promise<GiftCardDTO> {
@@ -138,12 +132,11 @@ export class GiftCardService {
     return GiftCard.toDTO(giftCard);
   }
 
-  async getGiftCardBalance(codeOrId: string): Promise<number> {
-    let giftCard = await this.giftCardRepo.findByCode(codeOrId);
-    if (!giftCard) {
-      giftCard = await this.giftCardRepo.findById(GiftCardId.fromString(codeOrId));
-    }
-    if (!giftCard) throw new GiftCardNotFoundError(codeOrId);
+  // The code is the secret that proves possession of a gift card, so the
+  // balance is only available by code (never by internal id).
+  async getGiftCardBalance(code: string): Promise<number> {
+    const giftCard = await this.giftCardRepo.findByCode(code);
+    if (!giftCard) throw new GiftCardNotFoundError();
     return giftCard.balance.getAmount();
   }
 

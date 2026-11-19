@@ -22,6 +22,8 @@ interface CreatePaymentIntentParams {
   idempotencyKey?: string;
   clientSecret?: string;
   userId?: string;
+  /** Guest checkout identity (x-guest-token) for checkout payments. */
+  guestToken?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -82,6 +84,25 @@ export class PaymentService {
     }
   }
 
+  // A checkout payment may only be created by that checkout's owner (signed-in
+  // customer or guest token) while the checkout is still open. Otherwise anyone
+  // knowing a checkout id could replace its payment and block the real buyer.
+  private async assertCheckoutAccess(
+    checkoutId: string,
+    userId?: string,
+    guestToken?: string,
+  ): Promise<void> {
+    const owner = await this.orderQueryPort.findCheckoutOwner(checkoutId);
+    if (!owner) throw new InvalidOperationError("Checkout not found");
+    const ownsIt = owner.userId
+      ? owner.userId === userId
+      : owner.guestToken !== null && owner.guestToken === guestToken;
+    if (!ownsIt) throw new InvalidOperationError("Forbidden: you do not own this checkout");
+    if (owner.status !== "pending") {
+      throw new InvalidOperationError("Checkout is no longer open for payment");
+    }
+  }
+
   private activeCreates: Map<string, Promise<PaymentIntentDTO>> = new Map();
 
   async createPaymentIntent(params: CreatePaymentIntentParams): Promise<PaymentIntentDTO> {
@@ -110,6 +131,7 @@ export class PaymentService {
     }
 
     if (params.checkoutId) {
+      await this.assertCheckoutAccess(params.checkoutId, params.userId, params.guestToken);
       const existing = await this.paymentIntentRepository.findByCheckoutId(params.checkoutId);
       if (existing) {
         if (existing.amount.getAmount() !== params.amount) {

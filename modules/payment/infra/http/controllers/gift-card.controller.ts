@@ -28,7 +28,7 @@ export class GiftCardController {
   ) {
     try {
       const result = await this.balanceHandler.handle({
-        codeOrId: request.query.codeOrId,
+        code: request.query.code,
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "Gift card balance retrieved", result);
@@ -83,7 +83,7 @@ export class GiftCardController {
         giftCardId: request.params.giftCardId,
         amount: request.body.amount,
         orderId: request.body.orderId,
-        userId: request.user.userId,
+        // Staff redeem on a customer's behalf: no customer ownership scope.
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Gift card redeemed");

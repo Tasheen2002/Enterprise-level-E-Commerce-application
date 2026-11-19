@@ -19901,12 +19901,12 @@ export interface paths {
         };
         /**
          * Get Gift Card Balance
-         * @description Get gift card balance by code or ID.
+         * @description Get gift card balance by code.
          */
         get: {
             parameters: {
                 query: {
-                    codeOrId: string;
+                    code: string;
                 };
                 header?: never;
                 path?: never;

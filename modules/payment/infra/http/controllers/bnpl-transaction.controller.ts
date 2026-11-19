@@ -7,6 +7,14 @@ import {
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
+  hasRole,
+  STAFF_ROLES,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
+
+// Customers are limited to their own payments; staff act on any.
+const customerScope = (request: AuthenticatedRequest): string | undefined =>
+  hasRole(request, [...STAFF_ROLES]) ? undefined : request.user.userId;
+import {
   CreateBnplTransactionBody,
   BnplParams,
   ListBnplQuery,
@@ -26,7 +34,7 @@ export class BnplTransactionController {
     try {
       const result = await this.listHandler.handle({
         ...request.query,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "BNPL transactions retrieved", result);
@@ -42,7 +50,7 @@ export class BnplTransactionController {
     try {
       const result = await this.createHandler.handle({
         ...request.body,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "BNPL transaction created", 201);
@@ -59,7 +67,7 @@ export class BnplTransactionController {
       const result = await this.processHandler.handle({
         bnplId: request.params.bnplId,
         action: request.params.action,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "BNPL payment processed");

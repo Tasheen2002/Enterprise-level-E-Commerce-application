@@ -105,4 +105,48 @@ describe("Payment records", () => {
     const other = await call("GET", `/payment-intents?intentId=${intentId}`, stranger.token);
     expect(other.statusCode).toBe(404);
   });
+
+  it("treats gift cards as bearer codes and keeps redemption and promo usage internal", async () => {
+    const admin = await account("ADMIN");
+    const customer = await account();
+
+    const weak = await call("POST", "/gift-cards", admin.token, {
+      code: "ABC",
+      initialBalance: 50,
+    });
+    expect(weak.statusCode).toBe(400);
+    const code = `GIFT-${randomUUID().slice(0, 13).toUpperCase()}`;
+    const created = await call("POST", "/gift-cards", admin.token, { code, initialBalance: 50 });
+    expect(created.statusCode, created.body).toBe(201);
+    const giftCardId = created.json().data.id as string;
+
+    const byCode = await app.inject({
+      method: "GET",
+      url: `/api/v1/gift-cards/balance?code=${code}`,
+    });
+    expect(byCode.statusCode).toBe(200);
+    const byId = await app.inject({
+      method: "GET",
+      url: `/api/v1/gift-cards/balance?code=${giftCardId}`,
+    });
+    expect(byId.statusCode).toBe(404);
+
+    const orderId = await orderFor(customer.id);
+    const customerRedeem = await call("POST", `/gift-cards/${giftCardId}/redeem`, customer.token, {
+      amount: 10,
+      orderId,
+    });
+    expect(customerRedeem.statusCode).toBe(403);
+    const staffRedeem = await call("POST", `/gift-cards/${giftCardId}/redeem`, admin.token, {
+      amount: 10,
+      orderId,
+    });
+    expect(staffRedeem.statusCode, staffRedeem.body).toBe(200);
+
+    const usage = await call("POST", `/promotions/${randomUUID()}/usage`, customer.token, {
+      orderId,
+      discountAmount: 5,
+    });
+    expect(usage.statusCode).toBe(403);
+  });
 });

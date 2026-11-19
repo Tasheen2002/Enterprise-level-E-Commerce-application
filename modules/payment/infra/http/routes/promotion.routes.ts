@@ -102,7 +102,7 @@ export async function registerPromotionRoutes(
     "/promotions/:promoId/usage",
     {
       preValidation: [validateParams(promoIdParamsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(recordPromotionUsageSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(recordPromotionUsageSchema)],
       schema: {
         description: "Record that a promotion was used in an order.",
         tags: ["Promotions"],

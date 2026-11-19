@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 export const createGiftCardSchema = z.object({
-  code: z.string().min(1).max(64),
+  // Codes are bearer secrets: long and unguessable.
+  code: z
+    .string()
+    .min(12)
+    .max(64)
+    .regex(/^[A-Za-z0-9-]+$/, "Gift card codes may contain only letters, digits and dashes"),
   initialBalance: z.number().positive(),
   currency: z.string().length(3).optional(),
   expiresAt: z.iso.datetime().optional(),
@@ -20,7 +25,7 @@ export const giftCardIdParamsSchema = z.object({
 });
 
 export const giftCardBalanceQuerySchema = z.object({
-  codeOrId: z.string().min(1),
+  code: z.string().min(1).max(64),
 });
 
 export type CreateGiftCardBody = z.infer<typeof createGiftCardSchema>;

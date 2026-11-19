@@ -1597,6 +1597,12 @@ export class Container {
         const order = await orderRepository.findById(OrderId.fromString(orderId));
         return order ? { userId: order.userId ?? null } : null;
       },
+      async findCheckoutOwner(checkoutId: string) {
+        return prisma.checkout.findUnique({
+          where: { id: checkoutId },
+          select: { userId: true, guestToken: true, status: true },
+        });
+      },
     };
 
     const paymentService = new PaymentService(
