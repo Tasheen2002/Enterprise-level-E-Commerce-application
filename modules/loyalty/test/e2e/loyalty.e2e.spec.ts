@@ -238,11 +238,11 @@ describe("Loyalty Module E2E API Tests", () => {
       const balanceAfterAward = accountAfterAwardRes.json().data.currentBalance;
       expect(balanceAfterAward).toBe(initialBalance + 100);
 
-      // 6. Redeem points
+      // 6. Customer service redeems points (customers spend points at checkout)
       const redeemRes = await app.inject({
         method: "POST",
         url: "/api/v1/loyalty/points/redeem",
-        headers: { authorization: `Bearer ${customerToken}` },
+        headers: { authorization: `Bearer ${staffToken}` },
         payload: {
           userId: customerId,
           points: 20,
@@ -280,6 +280,66 @@ describe("Loyalty Module E2E API Tests", () => {
       expect(txHistoryRes.statusCode).toBe(200);
       const transactions = txHistoryRes.json().data;
       expect(transactions.length).toBeGreaterThanOrEqual(4); // Signup, earn, redeem, adjust
+    });
+  });
+
+  // Customers only see their own points; changing a balance is customer care's job
+  // (customers spend points at checkout).
+  describe("Account ownership", () => {
+    const otherCustomer = async () => {
+      const email = `loyalty-other-${randomUUID()}@example.com`;
+      const user = await prisma.user.create({
+        data: { email, passwordHash, role: "CUSTOMER", status: "active", emailVerified: true },
+      });
+      const login = await app.inject({
+        method: "POST",
+        url: "/api/v1/auth/login",
+        payload: { email, password, ipAddress: "127.0.0.1" },
+      });
+      return { id: user.id, token: login.json().data.accessToken as string };
+    };
+    const get = (url: string, token: string) =>
+      app.inject({ method: "GET", url: `/api/v1${url}`, headers: { authorization: `Bearer ${token}` } });
+
+    it("gives customers their own account and transactions whatever they ask for", async () => {
+      const other = await otherCustomer();
+      const otherAccount = (await get(`/loyalty/account?userId=${other.id}`, other.token)).json().data;
+
+      const asked = await get(`/loyalty/account?userId=${other.id}`, customerToken);
+      expect(asked.statusCode).toBe(200);
+      expect(asked.json().data.userId).toBe(customerId);
+
+      const history = await get(`/loyalty/transactions?accountId=${otherAccount.id}`, customerToken);
+      expect(history.statusCode).toBe(200);
+      const accountIds = new Set(history.json().data.map((t: { accountId: string }) => t.accountId));
+      expect(accountIds.has(otherAccount.id)).toBe(false);
+
+      // Staff can still look up any customer.
+      const staffView = await get(`/loyalty/account?userId=${other.id}`, staffToken);
+      expect(staffView.json().data.userId).toBe(other.id);
+    });
+
+    it("does not let customers redeem or award points directly", async () => {
+      const other = await otherCustomer();
+      const redeem = await app.inject({
+        method: "POST",
+        url: "/api/v1/loyalty/points/redeem",
+        headers: { authorization: `Bearer ${customerToken}` },
+        payload: { userId: other.id, points: 10, reason: "DISCOUNT_REDEMPTION" },
+      });
+      expect(redeem.statusCode).toBe(403);
+    });
+
+    it("attributes adjustments to the admin who made them", async () => {
+      await get("/loyalty/account", customerToken);
+      const adjust = await app.inject({
+        method: "POST",
+        url: "/api/v1/loyalty/points/adjust",
+        headers: { authorization: `Bearer ${adminToken}` },
+        payload: { userId: customerId, points: 5, isAddition: true, reason: "Goodwill", createdBy: randomUUID() },
+      });
+      expect(adjust.statusCode).toBe(200);
+      expect(adjust.json().data.createdBy).toBe(adminId);
     });
   });
 });

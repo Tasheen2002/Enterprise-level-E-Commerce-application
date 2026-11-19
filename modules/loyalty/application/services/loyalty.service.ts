@@ -89,7 +89,6 @@ export class LoyaltyService {
     expiresAt.setDate(expiresAt.getDate() + LOYALTY_POINTS_EXPIRY_DAYS);
 
     account.earnPoints(multipliedPoints);
-    await this.accountRepository.save(account);
 
     const transaction = LoyaltyTransaction.create({
       accountId: account.id.getValue(),
@@ -104,7 +103,7 @@ export class LoyaltyService {
       balanceAfter: account.currentBalance.getValue(),
     });
 
-    await this.transactionRepository.save(transaction);
+    await this.accountRepository.saveWithTransaction(account, transaction);
     return transaction;
   }
 
@@ -131,7 +130,6 @@ export class LoyaltyService {
     const points = Points.create(data.points);
 
     account.redeemPoints(points);
-    await this.accountRepository.save(account);
 
     const transaction = LoyaltyTransaction.create({
       accountId: account.id.getValue(),
@@ -146,7 +144,7 @@ export class LoyaltyService {
       balanceAfter: account.currentBalance.getValue(),
     });
 
-    await this.transactionRepository.save(transaction);
+    await this.accountRepository.saveWithTransaction(account, transaction);
     return LoyaltyTransaction.toDTO(transaction);
   }
 
@@ -155,7 +153,6 @@ export class LoyaltyService {
     const points = Points.create(data.points);
 
     account.adjustPoints(points, data.isAddition);
-    await this.accountRepository.save(account);
 
     const transaction = LoyaltyTransaction.create({
       accountId: account.id.getValue(),
@@ -170,7 +167,7 @@ export class LoyaltyService {
       balanceAfter: account.currentBalance.getValue(),
     });
 
-    await this.transactionRepository.save(transaction);
+    await this.accountRepository.saveWithTransaction(account, transaction);
     return LoyaltyTransaction.toDTO(transaction);
   }
 

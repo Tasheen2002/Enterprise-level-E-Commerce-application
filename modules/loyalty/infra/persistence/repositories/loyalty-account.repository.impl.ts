@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { IEventBus } from "../../../../../packages/core/src/domain/events/domain-event";
 import { PrismaRepository } from "../../../../../apps/api/src/shared/infrastructure/persistence/prisma-repository.base";
 import {
@@ -6,7 +6,13 @@ import {
   LoyaltyAccountFilters,
   LoyaltyAccountQueryOptions,
 } from "../../../domain/repositories/loyalty-account.repository";
-import { LoyaltyAccount } from "../../../domain/entities/loyalty-account.entity";
+import {
+  LoyaltyAccount,
+  LoyaltyCounters,
+} from "../../../domain/entities/loyalty-account.entity";
+import { LoyaltyTransaction } from "../../../domain/entities/loyalty-transaction.entity";
+import { InsufficientPointsError } from "../../../domain/errors/loyalty.errors";
+import { loyaltyTransactionData } from "./loyalty-transaction.repository.impl";
 import { LoyaltyAccountId } from "../../../domain/value-objects/loyalty-account-id.vo";
 import { Points } from "../../../domain/value-objects/points.vo";
 import { Tier } from "../../../domain/value-objects/tier.vo";
@@ -21,21 +27,80 @@ export class LoyaltyAccountRepositoryImpl
   }
 
   async save(account: LoyaltyAccount): Promise<void> {
+    await this.persist(account, () =>
+      this.prisma.$transaction((tx) => this.writeAccount(tx, account)),
+    );
+    await this.dispatchEvents(account);
+  }
+
+  async saveWithTransaction(
+    account: LoyaltyAccount,
+    transaction: LoyaltyTransaction,
+  ): Promise<void> {
+    await this.persist(account, () =>
+      this.prisma.$transaction(async (tx) => {
+        const stored = await this.writeAccount(tx, account);
+        // balanceAfter is the balance the database holds after this change.
+        await tx.loyaltyTransaction.create({
+          data: {
+            ...loyaltyTransactionData(transaction),
+            balanceAfter: BigInt(stored.currentBalance),
+          },
+        });
+      }),
+    );
+    await this.dispatchEvents(account);
+  }
+
+  // Writes the change since the account was read as atomic increments; the
+  // database CHECK (current_balance >= 0) refuses a redemption that
+  // concurrent activity has made impossible.
+  private async writeAccount(
+    tx: Prisma.TransactionClient,
+    account: LoyaltyAccount,
+  ): Promise<LoyaltyCounters> {
     const data = this.toPersistence(account);
-    await this.prisma.loyaltyAccount.upsert({
+    const now = account.counters();
+    const base = account.persistedCounters ?? {
+      currentBalance: 0,
+      totalPointsEarned: 0,
+      totalPointsRedeemed: 0,
+      lifetimePoints: 0,
+    };
+    const delta = (key: keyof LoyaltyCounters) => BigInt(now[key] - base[key]);
+    const row = await tx.loyaltyAccount.upsert({
       where: { accountId: data.accountId },
       create: data,
       update: {
-        currentBalance: data.currentBalance,
-        totalPointsEarned: data.totalPointsEarned,
-        totalPointsRedeemed: data.totalPointsRedeemed,
-        lifetimePoints: data.lifetimePoints,
+        currentBalance: { increment: delta("currentBalance") },
+        totalPointsEarned: { increment: delta("totalPointsEarned") },
+        totalPointsRedeemed: { increment: delta("totalPointsRedeemed") },
+        lifetimePoints: { increment: delta("lifetimePoints") },
         tier: data.tier,
         lastActivityAt: data.lastActivityAt,
         updatedAt: data.updatedAt,
       },
     });
-    await this.dispatchEvents(account);
+    const stored: LoyaltyCounters = {
+      currentBalance: Number(row.currentBalance),
+      totalPointsEarned: Number(row.totalPointsEarned),
+      totalPointsRedeemed: Number(row.totalPointsRedeemed),
+      lifetimePoints: Number(row.lifetimePoints),
+    };
+    account.markPersisted(stored);
+    return stored;
+  }
+
+  private async persist(account: LoyaltyAccount, write: () => Promise<unknown>): Promise<void> {
+    try {
+      await write();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/loyalty_accounts_current_balance_non_negative|23514/.test(message)) {
+        throw new InsufficientPointsError(0, account.persistedCounters?.currentBalance ?? 0);
+      }
+      throw error;
+    }
   }
 
   async delete(id: LoyaltyAccountId): Promise<void> {

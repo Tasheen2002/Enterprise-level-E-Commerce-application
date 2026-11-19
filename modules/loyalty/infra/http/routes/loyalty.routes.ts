@@ -109,7 +109,7 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/points/award",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(awardPointsSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(awardPointsSchema)],
       schema: {
         description: "Award loyalty points to a customer — Staff/Admin only.",
         tags: ["Loyalty Transactions"],
@@ -128,7 +128,7 @@ export async function loyaltyRoutes(
   fastify.post(
     "/loyalty/points/redeem",
     {
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(redeemPointsSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(redeemPointsSchema)],
       schema: {
         description: "Redeem loyalty points for a discount or reward.",
         tags: ["Loyalty Transactions"],

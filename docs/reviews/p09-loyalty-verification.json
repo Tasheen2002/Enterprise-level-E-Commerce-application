@@ -1,0 +1,70 @@
+{
+  "date": "2026-11-19",
+  "phase": "P09 (loyalty: accounts, points ledger, programs, HTTP access)",
+  "baseline_commit": "21a0383c",
+  "scope": [
+    "modules/loyalty domain entities, value objects and repositories",
+    "application/services/loyalty.service.ts and command/query handlers",
+    "infra persistence repositories (account, transaction, program)",
+    "infra http routes, controller and validation schemas",
+    "checkout loyalty redemption path (P06-04) re-checked against the new persistence"
+  ],
+  "reviewed_without_change": [
+    "Program management (create/update/delete) is admin-only and was confirmed correct.",
+    "Purchase earning is idempotent per order (existing EARN entry check) and runs after checkout commit.",
+    "Checkout redemption (P06-04) goes through the same service, so it gains the atomic persistence and the balance constraint."
+  ],
+  "findings": [
+    {
+      "id": "P09-01",
+      "severity": "P1",
+      "file": "loyalty-account entity and repository; migration 20261119090000_enforce_loyalty_balance_non_negative",
+      "problem": "Account balances were read, changed in memory and written back as absolute values, so concurrent earning and redeeming overwrote each other: four simultaneous redemptions of 60 on a 100-point balance all succeeded, and five of six simultaneous earnings were lost.",
+      "change": "The repository persists the change since the account was read as atomic increments; a database CHECK (current_balance >= 0) refuses a redemption that concurrent activity has made impossible, reported as insufficient points. The constraint is added NOT VALID and validated with a warning instead of failing on historical data.",
+      "verification": "Integration LoyaltyPointsConcurrency on PostgreSQL: baseline 4 of 4 redemptions succeeded and the balance stayed at 110 after 6 earnings; fixed exactly 1 redemption succeeds (balance 40) and all changes add up."
+    },
+    {
+      "id": "P09-02",
+      "severity": "P2",
+      "file": "loyalty.service.ts; loyalty-account and loyalty-transaction repositories",
+      "problem": "The account and its ledger entry were written in separate statements, so a failure between them changed a balance without a record (or the reverse), and balanceAfter was the in-memory value, wrong under concurrency (six entries all recorded 110).",
+      "change": "Earning, redeeming and adjusting write the account and the ledger entry in one database transaction, and balanceAfter is the balance the database holds after that change.",
+      "verification": "Integration: six concurrent earnings record balances 110..160 in sequence; a refused redemption writes no ledger entry."
+    },
+    {
+      "id": "P09-03",
+      "severity": "P1",
+      "file": "loyalty.controller.ts",
+      "problem": "GET /loyalty/account took the user id from the query, so any customer could read (and create) another customer's points account, and GET /loyalty/transactions returned any account's or order's history.",
+      "change": "Customers always get their own account and only their own account's transactions; staff can still look up any customer.",
+      "verification": "E2E: baseline returned the other customer's account; fixed returns the caller's own account and staff lookups still work."
+    },
+    {
+      "id": "P09-04",
+      "severity": "P1",
+      "file": "loyalty.routes.ts",
+      "problem": "POST /loyalty/points/redeem was open to any signed-in user with the user id taken from the body, so anyone could burn another customer's points; awarding points was allowed for the read-only ANALYST role.",
+      "change": "Direct redeem and award are limited to admins and customer service; customers spend points at checkout, where the server applies the redemption (P06-04).",
+      "verification": "E2E: baseline customer redemption of another customer's points returned 201; fixed 403. Lifecycle test now redeems as customer service."
+    },
+    {
+      "id": "P09-05",
+      "severity": "P3",
+      "file": "loyalty.controller.ts; loyalty.schema.ts",
+      "problem": "Manual adjustments recorded createdBy from the request body, so the audit trail could name any user.",
+      "change": "Adjustments are attributed to the signed-in admin; the body field is optional and ignored. API client regenerated.",
+      "verification": "E2E: baseline stored the forged id; fixed stores the admin's id."
+    }
+  ],
+  "tests": {
+    "new": "integration LoyaltyPointsConcurrency (4), E2E loyalty Account ownership (3)",
+    "baseline": "All 6 new concurrency and ownership cases failed against the previous code (stash baseline).",
+    "database_suites": "All E2E and integration suites: 152 tests in 45 files pass",
+    "final": "1526 unit tests in 119 files; root/tooling tsc; 7/7 workspace type-checks; loyalty ESLint; API client regenerated and drift check passes; migration applies and schema drift check passes"
+  },
+  "follow_ups": [
+    "Two simultaneous first requests for a new member can both try to create the account; the second fails on the unique user id instead of reusing the account.",
+    "Point expiry (expirePoints) is not called anywhere; as written it would expire the same earned entries on every run and ignore points already spent, so it needs a design decision (and its own transaction) before it is enabled.",
+    "Tier is still written as an absolute value; concurrent changes can only leave it one step behind until the next activity."
+  ]
+}

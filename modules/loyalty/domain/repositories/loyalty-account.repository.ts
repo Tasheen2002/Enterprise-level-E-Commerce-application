@@ -1,3 +1,4 @@
+import { LoyaltyTransaction } from "../entities/loyalty-transaction.entity";
 import { LoyaltyAccount } from '../entities/loyalty-account.entity';
 import { LoyaltyAccountId } from '../value-objects/loyalty-account-id.vo';
 import { LoyaltyTierValue } from '../value-objects/tier.vo';
@@ -14,6 +15,8 @@ export interface LoyaltyAccountFilters {
 
 export interface ILoyaltyAccountRepository {
   save(account: LoyaltyAccount): Promise<void>;
+  /** Saves the account change and its transaction entry in one database transaction. */
+  saveWithTransaction(account: LoyaltyAccount, transaction: LoyaltyTransaction): Promise<void>;
   delete(id: LoyaltyAccountId): Promise<void>;
   findById(id: LoyaltyAccountId): Promise<LoyaltyAccount | null>;
   findByUserId(userId: string): Promise<LoyaltyAccount | null>;

@@ -12,6 +12,12 @@ import {
   GetLoyaltyTransactionsHandler,
 } from "../../../application/queries";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import {
+  hasRole,
+  STAFF_ROLES,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
+
+const isStaff = (request: AuthenticatedRequest) => hasRole(request, [...STAFF_ROLES]);
 import { LoyaltyTransactionReasonValue } from "../../../domain/value-objects/loyalty-reason.vo";
 import {
   CreateLoyaltyProgramBody,
@@ -47,8 +53,9 @@ export class LoyaltyController {
     reply: FastifyReply,
   ) {
     try {
+      // Customers always get their own account; staff may look one up by userId.
       const result = await this.getAccountHandler.handle({
-        userId: request.query.userId,
+        userId: isStaff(request) ? (request.query.userId ?? request.user.userId) : request.user.userId,
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "Loyalty account retrieved", result);
@@ -62,9 +69,14 @@ export class LoyaltyController {
     reply: FastifyReply,
   ) {
     try {
+      // Customers only see their own account's transactions.
+      const ownAccountId = isStaff(request)
+        ? undefined
+        : (await this.getAccountHandler.handle({ userId: request.user.userId, timestamp: new Date() }))
+            .id;
       const result = await this.listTransactionsHandler.handle({
-        accountId: request.query.accountId,
-        orderId: request.query.orderId,
+        accountId: ownAccountId ?? request.query.accountId,
+        orderId: ownAccountId ? undefined : request.query.orderId,
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "Loyalty transactions retrieved", result);
@@ -127,6 +139,8 @@ export class LoyaltyController {
     try {
       const result = await this.adjustPointsHandler.handle({
         ...request.body,
+        // The audit trail records who actually made the adjustment.
+        createdBy: request.user.userId,
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Loyalty points adjusted", 200);

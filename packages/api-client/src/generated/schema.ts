@@ -21032,7 +21032,7 @@ export interface paths {
                         points: number;
                         isAddition: boolean;
                         reason: string;
-                        createdBy: string;
+                        createdBy?: string;
                     };
                 };
             };
