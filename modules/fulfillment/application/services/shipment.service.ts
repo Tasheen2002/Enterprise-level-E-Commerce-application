@@ -9,7 +9,9 @@ import {
   CreateShipmentData,
   CreateShipmentItemData,
 } from "../../domain/entities/shipment.entity";
+import { ShipmentItem } from "../../domain/entities/shipment-item.entity";
 import { ShipmentId, ShipmentStatus } from "../../domain/value-objects";
+import { IShipmentAllocationPort } from "../../domain/repositories/shipment-allocation.port";
 
 export interface ListShipmentsResult {
   shipments: Shipment[];
@@ -19,8 +21,49 @@ export interface ListShipmentsResult {
 export class ShipmentService {
   constructor(
     private readonly shipmentRepository: IShipmentRepository,
-    private readonly shipmentItemRepository: IShipmentItemRepository
+    private readonly shipmentItemRepository: IShipmentItemRepository,
+    private readonly allocation: IShipmentAllocationPort
   ) {}
+
+  /**
+   * A shipment may only contain items of its own order, each once, and never
+   * more of an item than was ordered across all shipments that have not failed.
+   */
+  private async assertAllocatable(
+    orderId: string,
+    items: { orderItemId: string; qty: number }[],
+    excludeShipmentId?: string
+  ): Promise<void> {
+    const lines = await this.allocation.getOrderLines(orderId, excludeShipmentId);
+    if (!lines) {
+      throw new Error("Order not found");
+    }
+    const seen = new Set<string>();
+    for (const item of items) {
+      if (seen.has(item.orderItemId)) {
+        throw new Error(`Order item ${item.orderItemId} is listed more than once`);
+      }
+      seen.add(item.orderItemId);
+      const line = lines.get(item.orderItemId);
+      if (!line) {
+        throw new Error(`Order item ${item.orderItemId} does not belong to this order`);
+      }
+      const available = line.orderedQty - line.allocatedQty;
+      if (item.qty > available) {
+        throw new Error(
+          `Only ${Math.max(available, 0)} of order item ${item.orderItemId} can still be shipped`
+        );
+      }
+    }
+  }
+
+  /** Items can change only until the parcel leaves (created or label printed). */
+  private assertItemsEditable(shipment: Shipment): void {
+    const status = shipment.getStatus();
+    if (!status.isCreated() && !status.isLabelPrinted()) {
+      throw new Error(`Items cannot be changed once a shipment is ${status.toString()}`);
+    }
+  }
 
   async createShipment(data: CreateShipmentData): Promise<Shipment> {
     // Validate order exists (this would typically involve calling order service)
@@ -28,18 +71,12 @@ export class ShipmentService {
       throw new Error("Order ID is required");
     }
 
-    // Create the shipment entity
+    // The order must exist and the items must belong to it, within the ordered quantity.
+    await this.assertAllocatable(data.orderId, data.items ?? []);
     const shipment = Shipment.create(data);
 
-    // Save to repository
+    // Saved together with its items in one statement.
     await this.shipmentRepository.save(shipment);
-
-    // Save shipment items if provided
-    if (shipment.getItems().length > 0) {
-      for (const item of shipment.getItems()) {
-        await this.shipmentItemRepository.save(item);
-      }
-    }
 
     return shipment;
   }
@@ -104,6 +141,16 @@ export class ShipmentService {
     }
 
     // Add item to shipment (this will create the item entity)
+    this.assertItemsEditable(shipment);
+    const current = shipment.getItems().map((item) => ({
+      orderItemId: item.getOrderItemId(),
+      qty: item.getQty(),
+    }));
+    await this.assertAllocatable(
+      shipment.getOrderId(),
+      [...current, { orderItemId: itemData.orderItemId, qty: itemData.qty }],
+      shipmentId
+    );
     shipment.addItem(itemData);
 
     // Save the updated shipment
@@ -128,6 +175,7 @@ export class ShipmentService {
     }
 
     // Remove item from shipment
+    this.assertItemsEditable(shipment);
     shipment.removeItem(orderItemId);
 
     // Save the updated shipment
@@ -137,6 +185,30 @@ export class ShipmentService {
     await this.shipmentItemRepository.delete(shipmentId, orderItemId);
 
     return shipment;
+  }
+
+  async updateItemQuantity(
+    shipmentId: string,
+    orderItemId: string,
+    qty: number
+  ): Promise<ShipmentItem> {
+    const shipment = await this.getShipment(shipmentId);
+    if (!shipment) {
+      throw new Error("Shipment not found");
+    }
+    this.assertItemsEditable(shipment);
+    const item = shipment.getItems().find((i) => i.getOrderItemId() === orderItemId);
+    if (!item) {
+      throw new Error("Shipment item not found");
+    }
+    const items = shipment.getItems().map((i) => ({
+      orderItemId: i.getOrderItemId(),
+      qty: i.getOrderItemId() === orderItemId ? qty : i.getQty(),
+    }));
+    await this.assertAllocatable(shipment.getOrderId(), items, shipmentId);
+    item.updateQty(qty);
+    await this.shipmentItemRepository.update(item);
+    return item;
   }
 
   async listShipments(
