@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import {
   createRateLimiter,
   RateLimitPresets,
@@ -73,11 +74,12 @@ export async function productReviewRoutes(
     (request, reply) => controller.getAllReviews(request as AuthenticatedRequest, reply),
   );
 
-  // GET /engagement/reviews/:reviewId — Get product review (public)
+  // GET /engagement/reviews/:reviewId — Get product review (public once approved)
   fastify.get(
     "/engagement/reviews/:reviewId",
     {
       preValidation: [validateParams(reviewIdParamsSchema)],
+      preHandler: [optionalAuth],
       schema: {
         description: "Get a specific product review by ID",
         summary: "Get Product Review",

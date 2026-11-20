@@ -82,9 +82,14 @@ describe("ProductReviewRepositoryImpl Database Integration Tests", () => {
     });
     await repository.save(review1);
 
+    // One review per customer and product: the second review is by another customer.
+    const secondUserId = randomUUID();
+    await prisma.user.create({
+      data: { id: secondUserId, email: `review-user-${randomUUID()}@example.com`, role: "CUSTOMER", status: "active" },
+    });
     const review2 = ProductReview.create({
       productId,
-      userId,
+      userId: secondUserId,
       rating: Rating.create(3),
       title: "Review 2"
     });
@@ -96,7 +101,7 @@ describe("ProductReviewRepositoryImpl Database Integration Tests", () => {
 
     // Find by user
     const userRes = await repository.findByUserId(userId);
-    expect(userRes.total).toBe(2);
+    expect(userRes.total).toBe(1);
 
     // Find by status
     const statusRes = await repository.findByStatus("pending");

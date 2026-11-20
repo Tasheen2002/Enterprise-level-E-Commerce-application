@@ -22,7 +22,7 @@ describe("AddToWishlistHandler", () => {
     const command: AddToWishlistCommand = {
       wishlistId: "wishlist-123",
       variantId: "variant-abc",
-      userId: "user-456"
+      actor: { userId: "user-456" },
     };
 
     // Act
@@ -32,7 +32,7 @@ describe("AddToWishlistHandler", () => {
     expect(mockService.addToWishlist).toHaveBeenCalledWith(
       "wishlist-123",
       "variant-abc",
-      { userId: "user-456", guestToken: undefined }
+      { userId: "user-456" }
     );
     expect(result).toBeInstanceOf(CommandResult);
     expect(result.success).toBe(true);

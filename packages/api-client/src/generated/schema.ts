@@ -21197,7 +21197,6 @@ export interface paths {
                                 id?: string;
                                 /** Format: uuid */
                                 userId?: string;
-                                guestToken?: string;
                                 name?: string;
                                 description?: string;
                                 isPublic?: boolean;
@@ -21259,7 +21258,6 @@ export interface paths {
                                     id?: string;
                                     /** Format: uuid */
                                     userId?: string;
-                                    guestToken?: string;
                                     name?: string;
                                     description?: string;
                                     isPublic?: boolean;
@@ -21326,7 +21324,6 @@ export interface paths {
                                 id?: string;
                                 /** Format: uuid */
                                 userId?: string;
-                                guestToken?: string;
                                 name?: string;
                                 description?: string;
                                 isPublic?: boolean;
@@ -21573,7 +21570,6 @@ export interface paths {
                                     id?: string;
                                     /** Format: uuid */
                                     userId?: string;
-                                    guestToken?: string;
                                     name?: string;
                                     description?: string;
                                     isPublic?: boolean;
@@ -21688,7 +21684,6 @@ export interface paths {
                                 id?: string;
                                 /** Format: uuid */
                                 userId?: string;
-                                guestToken?: string;
                                 name?: string;
                                 description?: string;
                                 isPublic?: boolean;
@@ -22843,7 +22838,7 @@ export interface paths {
                         /** Format: uuid */
                         productId: string;
                         /** Format: uuid */
-                        userId: string;
+                        userId?: string;
                         rating: number;
                         title?: string;
                         body?: string;

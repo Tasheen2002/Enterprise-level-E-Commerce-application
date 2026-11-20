@@ -1398,6 +1398,7 @@ model ProductReview {
   @@index([rating])
   @@index([createdAt])
   @@index([productId, status])
+  @@unique([userId, productId], map: "product_reviews_user_id_product_id_key")
   @@map("product_reviews")
   @@schema("engagement")
 }

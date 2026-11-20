@@ -62,7 +62,6 @@ export const wishlistResponseSchema = {
   properties: {
     id: { type: "string", format: "uuid" },
     userId: { type: "string", format: "uuid" },
-    guestToken: { type: "string" },
     name: { type: "string" },
     description: { type: "string" },
     isPublic: { type: "boolean" },
