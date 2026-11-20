@@ -22657,7 +22657,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** Format: uuid */
-                        userId: string;
+                        userId?: string;
                         /** @enum {string} */
                         type: "stylist" | "in-store";
                         /** Format: uuid */
@@ -23188,6 +23188,7 @@ export interface paths {
             parameters: {
                 query: {
                     email: string;
+                    token: string;
                 };
                 header?: never;
                 path?: never;
@@ -23225,6 +23226,7 @@ export interface paths {
                         subscriptionId?: string;
                         /** Format: email */
                         email?: string;
+                        token?: string;
                     };
                 };
             };

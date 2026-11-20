@@ -198,7 +198,8 @@ export class Appointment extends AggregateRoot {
 
   // Business methods
   reschedule(startAt: Date, endAt: Date): void {
-    Appointment.validateTimes(startAt, endAt, true);
+    // An appointment cannot be moved into the past.
+    Appointment.validateTimes(startAt, endAt);
 
     const oldStartAt = this.props.startAt.toISOString();
     const oldEndAt = this.props.endAt.toISOString();

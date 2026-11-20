@@ -104,6 +104,21 @@ describe("Appointment Aggregate Root", () => {
     expect(events[0]).toBeInstanceOf(AppointmentRescheduledEvent);
   });
 
+  it("should refuse rescheduling into the past", () => {
+    const { start, end } = getFutureDates(2, 1);
+    const appointment = Appointment.create({
+      userId: "user-789",
+      type: AppointmentType.STYLIST,
+      startAt: start,
+      endAt: end,
+    });
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    expect(() => appointment.reschedule(past, new Date(past.getTime() + 60 * 60 * 1000))).toThrow(
+      DomainValidationError,
+    );
+    expect(appointment.startAt).toBe(start);
+  });
+
   it("should support cancelling and emit AppointmentCancelledEvent", () => {
     const { start, end } = getFutureDates();
     const appointment = Appointment.create({

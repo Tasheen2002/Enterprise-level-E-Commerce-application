@@ -13,6 +13,12 @@ import {
 } from "../../../domain/value-objects";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces";
 
+// The database enum names "in-store" as in_store (Prisma enum keys cannot
+// contain dashes), so domain values are mapped both ways.
+const toDbType = (type: string): AppointmentTypeEnum =>
+  (type === "in-store" ? "in_store" : type) as AppointmentTypeEnum;
+const fromDbType = (type: string): string => (type === "in_store" ? "in-store" : type);
+
 // ============================================================================
 // Database Row Interface
 // ============================================================================
@@ -43,7 +49,7 @@ export class AppointmentRepositoryImpl
     return Appointment.fromPersistence({
       id: AppointmentId.fromString(row.id),
       userId: row.userId,
-      type: AppointmentType.fromString(row.type),
+      type: AppointmentType.fromString(fromDbType(row.type)),
       locationId: row.locationId || undefined,
       startAt: row.startAt,
       endAt: row.endAt,
@@ -59,7 +65,7 @@ export class AppointmentRepositoryImpl
       create: {
         id: appointment.id.getValue(),
         userId: appointment.userId,
-        type: appointment.type.getValue() as AppointmentTypeEnum,
+        type: toDbType(appointment.type.getValue()),
         locationId: appointment.locationId,
         startAt: appointment.startAt,
         endAt: appointment.endAt,
@@ -68,7 +74,7 @@ export class AppointmentRepositoryImpl
         updatedAt: appointment.updatedAt,
       },
       update: {
-        type: appointment.type.getValue() as AppointmentTypeEnum,
+        type: toDbType(appointment.type.getValue()),
         locationId: appointment.locationId,
         startAt: appointment.startAt,
         endAt: appointment.endAt,
@@ -167,7 +173,7 @@ export class AppointmentRepositoryImpl
       sortOrder = "asc",
     } = options || {};
 
-    const where = { type: type as AppointmentTypeEnum };
+    const where = { type: toDbType(type) };
 
     const [records, total] = await Promise.all([
       this.prisma.appointment.findMany({
@@ -230,7 +236,7 @@ export class AppointmentRepositoryImpl
     const where: Prisma.AppointmentWhereInput = {
       ...(filters.userId ? { userId: filters.userId } : {}),
       ...(filters.locationId ? { locationId: filters.locationId } : {}),
-      ...(filters.type ? { type: filters.type as AppointmentTypeEnum } : {}),
+      ...(filters.type ? { type: toDbType(filters.type) } : {}),
       ...((filters.startDate || filters.endDate) ? {
         startAt: {
           ...(filters.startDate ? { gte: filters.startDate } : {}),
@@ -434,7 +440,7 @@ export class AppointmentRepositoryImpl
 
   async countByType(type: string): Promise<number> {
     return await this.prisma.appointment.count({
-      where: { type: type as AppointmentTypeEnum },
+      where: { type: toDbType(type) },
     });
   }
 
@@ -442,7 +448,7 @@ export class AppointmentRepositoryImpl
     const where: Prisma.AppointmentWhereInput = {
       ...(filters?.userId ? { userId: filters.userId } : {}),
       ...(filters?.locationId ? { locationId: filters.locationId } : {}),
-      ...(filters?.type ? { type: filters.type as AppointmentTypeEnum } : {}),
+      ...(filters?.type ? { type: toDbType(filters.type) } : {}),
       ...((filters?.startDate || filters?.endDate) ? {
         startAt: {
           ...(filters.startDate ? { gte: filters.startDate } : {}),

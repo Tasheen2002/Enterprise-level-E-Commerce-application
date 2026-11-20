@@ -235,10 +235,11 @@ describe("Engagement Module E2E API Tests", () => {
     expect(subscribeRes.statusCode).toBe(201);
     expect(subscribeRes.json().data.status).toBe("active");
 
-    // 2. Get status
+    // 2. Get status (subscriptions are looked up by customer care or the signed-in owner)
     const statusRes = await app.inject({
       method: "GET",
-      url: `/api/v1/engagement/newsletter/subscription?email=${email}`
+      url: `/api/v1/engagement/newsletter/subscription?email=${email}`,
+      headers: { authorization: `Bearer ${adminToken}` }
     });
     expect(statusRes.statusCode).toBe(200);
     expect(statusRes.json().data.email).toBe(email);

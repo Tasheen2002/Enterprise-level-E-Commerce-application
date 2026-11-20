@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-20",
+  "phase": "P10 (batch 2: reminders, appointments, notifications, newsletter)",
+  "baseline_commit": "d200114c",
+  "scope": [
+    "engagement reminder controller and service",
+    "engagement appointment controller, schema, entity, service and repository",
+    "engagement notification routes",
+    "engagement newsletter controller, routes, schema and the new signed unsubscribe token"
+  ],
+  "reviewed_without_change": [
+    "Reminder creation already uses the signed-in user; marking reminders sent and variant reminder listings are admin-only.",
+    "Scheduling and sending notifications are admin-only.",
+    "Appointment booking refuses past start times, end-before-start and overlapping appointments for the same customer."
+  ],
+  "findings": [
+    {
+      "id": "P10-07",
+      "severity": "P2",
+      "file": "reminder.controller.ts",
+      "problem": "Any signed-in user could read any reminder (contact preferences) by id, list any user's reminders, and unsubscribe or delete other customers' reminders.",
+      "change": "Customers see and change only their own reminders; staff may read any and customer care may change any; others get 404 (403 for user listings).",
+      "verification": "E2E: baseline another customer read the reminder (200); fixed 404/403 for others, owner and customer care keep access."
+    },
+    {
+      "id": "P10-08",
+      "severity": "P1",
+      "file": "appointment.controller.ts; appointment.schema.ts",
+      "problem": "Appointments were booked under the userId in the body, and any signed-in user could read, reschedule or cancel any appointment and list any user's appointments.",
+      "change": "Customers book for themselves (store staff may book for a named customer); only the owner, staff (read) and store staff (change) can access an appointment.",
+      "verification": "E2E: baseline the appointment was stored under the other customer; fixed stored under the caller, other customers get 404/403, store staff booking for a customer works."
+    },
+    {
+      "id": "P10-09",
+      "severity": "P2",
+      "file": "appointment.repository.impl.ts",
+      "problem": "In-store appointments could never be booked: the domain value 'in-store' was passed to Prisma, whose enum key is in_store, so every in-store booking failed with a database error (and stored rows could not be read back).",
+      "change": "Appointment types are mapped to and from the database enum in the repository.",
+      "verification": "E2E: staff booking an in-store appointment returns 201 (previously 400 'Invalid database operation')."
+    },
+    {
+      "id": "P10-10",
+      "severity": "P3",
+      "file": "appointment.entity.ts",
+      "problem": "Rescheduling explicitly allowed moving an appointment into the past, although booking refuses past times.",
+      "change": "Rescheduling applies the same rule as booking.",
+      "verification": "Unit Appointment spec: baseline the past reschedule was accepted; fixed refused and the time unchanged."
+    },
+    {
+      "id": "P10-11",
+      "severity": "P2",
+      "file": "notification.routes.ts",
+      "problem": "Any signed-in user could read system notifications (payloads, recipients, errors) by id or type, while only admins can schedule or send them.",
+      "change": "Reading notifications is admin-only.",
+      "verification": "E2E: baseline customer 200; fixed 403."
+    },
+    {
+      "id": "P10-12",
+      "severity": "P2",
+      "file": "newsletter controller, routes and schema; newsletter-unsubscribe-token.ts",
+      "problem": "Anyone could check whether an address was subscribed (and get its subscription id) and unsubscribe any address or subscription id without proof; the unsubscribe page inserted values into HTML without escaping.",
+      "change": "Unsubscribing requires the signed token from the unsubscribe link, a signed-in account with that email, or customer care; lookups are for the signed-in owner or customer care; subscription ids are staff-only; HTML output is escaped. createNewsletterUnsubscribeToken is provided for building links (secret NEWSLETTER_UNSUBSCRIBE_SECRET, falling back to JWT_SECRET). API client regenerated.",
+      "verification": "E2E: baseline anonymous lookup and unsubscribe 200; fixed 403, forged link 400, signed link 200 and the subscription is unsubscribed, signed-in owner can still manage their own."
+    }
+  ],
+  "tests": {
+    "new": "E2E engagement-privacy (5), unit Appointment past-reschedule case (1); existing newsletter E2E now looks up the subscription as admin",
+    "baseline": "5 of 6 new cases failed against the previous engagement code (stash baseline); the owner self-management case passed by design.",
+    "database_suites": "All E2E and integration suites: 163 tests in 47 files pass",
+    "final": "1527 unit tests in 119 files; root/tooling tsc; 7/7 workspace type-checks (forced); engagement ESLint (no errors); API client regenerated and drift check passes"
+  },
+  "follow_ups": [
+    "No code sends newsletters yet; when it does, links must use createNewsletterUnsubscribeToken. Subscribing has no double opt-in, so anyone can subscribe any address (owner decision; needs an email sender).",
+    "Stock-added handling simulates restock notifications instead of sending them (existing P01 follow-up); reminder delivery is not implemented.",
+    "Appointments have no store capacity or opening-hours rules."
+  ]
+}
