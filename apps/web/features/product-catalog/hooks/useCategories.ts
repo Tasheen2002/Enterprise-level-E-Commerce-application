@@ -8,10 +8,10 @@ import { getSubCategories } from "../api";
  * with robust, out-of-the-box client-side caching and automatic deduplication
  * via @tanstack/react-query.
  */
-export function useCategories(categorySlug: string) {
+export function useCategories(categorySlug: string, gender?: string) {
   const { data = [], isLoading, error } = useQuery({
-    queryKey: ["catalog-categories", categorySlug],
-    queryFn: () => getSubCategories(categorySlug),
+    queryKey: ["catalog-categories", categorySlug, gender],
+    queryFn: () => getSubCategories(categorySlug, gender),
     enabled: !!categorySlug,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for static subcategories
     gcTime: 10 * 60 * 1000,   // 10 minutes garbage collection

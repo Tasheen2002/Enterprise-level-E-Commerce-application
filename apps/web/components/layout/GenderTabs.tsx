@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import { cn } from "@tasheen/ui";
 
 const GENDER_TABS = [
@@ -16,7 +16,8 @@ const GENDER_TABS = [
  */
 export function GenderTabs({ isTransparent }: { isTransparent: boolean }) {
   const searchParams = useSearchParams();
-  const currentGender = searchParams.get("gender") || "women";
+  const params = useParams();
+  const currentGender = (params?.gender as string) || searchParams.get("gender") || "women";
 
   return (
     <div className="hidden lg:flex items-center gap-8">

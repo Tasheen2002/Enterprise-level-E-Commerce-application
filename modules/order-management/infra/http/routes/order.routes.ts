@@ -187,7 +187,7 @@ export async function registerOrderRoutes(
   fastify.post(
     "/orders",
     {
-      preHandler: [optionalAuth, validateBody(createOrderSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(createOrderSchema)],
       schema: {
         description:
           "Create a new order. For authenticated users, userId is extracted from the auth token. For guest checkout, provide guestToken.",

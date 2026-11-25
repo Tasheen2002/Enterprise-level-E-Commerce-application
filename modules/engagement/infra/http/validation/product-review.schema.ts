@@ -22,7 +22,8 @@ export const userIdParamsSchema = z.object({
 
 export const createProductReviewSchema = z.object({
   productId: z.uuid(),
-  userId: z.uuid(),
+  /** Ignored: reviews are posted as the signed-in customer. */
+  userId: z.uuid().optional(),
   rating: z.number().int().min(1).max(5),
   title: z.string().min(1).max(255).optional(),
   body: z.string().max(5000).optional(),

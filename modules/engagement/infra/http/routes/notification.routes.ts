@@ -51,7 +51,7 @@ export async function notificationRoutes(
     "/engagement/notifications/:notificationId",
     {
       preValidation: [validateParams(notificationIdParamsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get a specific notification by ID",
         summary: "Get Notification",
@@ -71,7 +71,7 @@ export async function notificationRoutes(
     "/engagement/notifications",
     {
       preValidation: [validateQuery(notificationsByTypeQuerySchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get notifications by type",
         summary: "Get User Notifications",

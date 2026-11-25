@@ -19,6 +19,8 @@ export const USER_MANAGEMENT_CONSTANTS = {
   VERIFICATION_LOCKOUT_DURATION_MS: 15 * 60 * 1000,     // 15 minutes
   MAX_LOGIN_ATTEMPTS: 10,
   LOGIN_LOCKOUT_DURATION_MS: 15 * 60 * 1000,            // 15 minutes
+  MAX_TWO_FACTOR_ATTEMPTS: 5,                           // per user, per lockout window
+  TOTP_REUSE_BLOCK_MS: 3 * 60 * 1000,                   // covers the TOTP acceptance window
 
   // Two-factor authentication
   TOTP_WINDOW: 1,

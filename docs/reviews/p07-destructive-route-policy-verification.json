@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-17",
+  "phase": "P07 pulled forward (owner decision on order deletion) plus a sweep of every registered DELETE and destructive admin route against real-world retail practice",
+  "baseline_commit": "d26d518d",
+  "owner_decision": "Keep DELETE /orders/:orderId but allow it only for orders still in 'created' status with no captured payment, refund, return or shipment; refuse everything else with 409 telling the admin to cancel or refund. Archive is a later option. Apply the same real-world correctness to other routes with this kind of issue.",
+  "environment": "Disposable postgres:15-alpine container on a loopback-only random port with synthetic credentials, all migrations applied; E2E specs run against the real createServer with synthetic FedEx configuration (the local .env holds an incomplete FedEx key set that config rejects). Container removed afterwards.",
+  "sweep": {
+    "registered_delete_routes": 48,
+    "unregistered_modules_not_live": "customer-care (returns, repairs, tickets, agents) and fulfillment (shipment items) DELETE routes are not registered by modules.ts; recorded for P11-P13.",
+    "already_correct": [
+      "Payment and loyalty modules expose no DELETE routes.",
+      "DELETE /products/:productId archives (soft delete).",
+      "DELETE /purchase-orders/:poId allows only draft purchase orders; PO item removal goes through the aggregate's edit guard.",
+      "DELETE /orders/:orderId/items/:itemId goes through Order.removeItem (created status only, recalculates totals, keeps at least one item) with ownership checks.",
+      "DELETE /categories/:id refuses categories with subcategories.",
+      "DELETE /variants/:variantId and /suppliers/:supplierId fail closed with 409 once history references them (Restrict/NoAction foreign keys).",
+      "Backorder/preorder DELETE are admin-only removals of tracking flags; the order item remains.",
+      "Customer self-service deletes (addresses, payment methods, sessions, wishlist, reminders, reviews, cart items) affect only the caller's own data; orders keep address snapshots."
+    ]
+  },
+  "findings": [
+    {
+      "id": "P07-01",
+      "severity": "P1",
+      "file": "modules/order-management/{application/services/order-management.service.ts, domain/repositories/order.repository.ts, infra/persistence/repositories/order.repository.impl.ts, domain/errors/order-management.errors.ts}",
+      "problem": "Admin DELETE /orders/:orderId hard-deleted any order, including paid, shipped and refunded ones, cascading promotion usage (re-enabling single-use coupons), return requests, pickup reservations and items, and leaving payment intents, gift card, loyalty and BNPL transactions without an order.",
+      "change": "Deletion allowed only for orders in 'created' status with no live payment intent (failed/cancelled attempts are ignored), gift card/loyalty/BNPL transactions, return requests, order or fulfillment shipments, pickup reservations, support tickets or goodwill records. The check and delete run in one transaction with the order row locked (SELECT ... FOR UPDATE). Refusals return 409 ORDER_NOT_DELETABLE naming the reasons and telling the admin to cancel or refund.",
+      "verification": "order.e2e: baseline paid-order and payment/return cases failed (order deleted); fixed: created order 204, paid order 409 and kept, payment 409, return 409, failed-payment-only order 204."
+    },
+    {
+      "id": "P07-02",
+      "severity": "P1",
+      "file": "modules/inventory-management/infra/http/routes/pickup-reservation.routes.ts",
+      "problem": "Pickup reservation list, read, create and cancel required only authentication: any customer could list every customer's reservations, reserve stock against arbitrary orders and cancel other customers' reservations. No frontend uses these routes; in-store pickup holds are a staff/system operation.",
+      "change": "All four routes require STAFF_LEVEL, matching the rest of inventory management.",
+      "verification": "inventory.e2e: baseline customer requests were not refused; fixed customer 403 on all four, staff list 200."
+    },
+    {
+      "id": "P07-03",
+      "severity": "P2",
+      "file": "modules/inventory-management/application/services/location-management.service.ts; apps/api/src/container.ts",
+      "problem": "Deleting a location cascaded its inventory_stock rows, silently erasing stock on hand and reservations (blocked only once a ledger row existed).",
+      "change": "Deletion refused with 409 LOCATION_IN_USE while any stock row has on-hand or reserved quantity or an active pickup reservation exists; empty locations still delete.",
+      "verification": "inventory.e2e: baseline stock row deleted with the location; fixed 409 and stock kept, empty location 204. Unit spec location-deletion (4 cases)."
+    },
+    {
+      "id": "P07-04",
+      "severity": "P2",
+      "file": "modules/user-management/{application/services/user.service.ts, application/commands/{delete-user,update-user-role,update-user-status}.command.ts, infra/http/controllers/users.controller.ts, domain/errors/user-management.errors.ts}",
+      "problem": "An administrator could delete, demote or block their own account, or the last active administrator, locking the platform out of administration.",
+      "change": "Commands carry the acting administrator from the verified token. Self-delete, self-demote and self-deactivate/block are refused, as are actions removing the last active administrator: 409 ADMIN_SAFETY_VIOLATION. Re-activation and promotion are unrestricted.",
+      "verification": "admin-user-safety.e2e: baseline 3/3 self-lockout cases succeeded; fixed 409 with the account unchanged, managing another admin still 200. Unit spec admin-safety (6 cases) covers the last-admin rule."
+    }
+  ],
+  "tests": {
+    "new": "order.e2e deletion policy (4), inventory.e2e pickup/location (2), admin-user-safety.e2e (4), unit admin-safety (6), unit location-deletion (4)",
+    "baseline": "With source changes stashed: 7 of 14 targeted E2E cases failed, exactly the new policy cases; the 7 cases for behaviour that must keep working passed.",
+    "database_suites": "All E2E and integration suites on the disposable database: 108 tests in 36 files pass",
+    "final": "1465 unit tests in 113 files; root/tooling tsc; 7/7 workspace type-checks; API client drift check; focused ESLint (only pre-existing warnings); Prettier on new files"
+  },
+  "follow_ups": [
+    "Archive (hide) option for old orders if admins need it (owner, later).",
+    "P11-P13: unregistered customer-care and fulfillment DELETE routes (returns, repairs, tickets, shipment items) must follow the same record-retention rules before they are registered.",
+    "P03: admin user deletion is a hard delete; consider deactivate plus anonymisation as the default erasure path.",
+    "P05: pickup reservation creation does not verify the order exists or belongs to the stated customer (now staff-only)."
+  ]
+}

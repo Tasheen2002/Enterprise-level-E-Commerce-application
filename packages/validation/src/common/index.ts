@@ -5,7 +5,7 @@ import { z } from "zod";
 // this for list-page query string parsing so client and server agree on
 // bounds.
 export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
 
@@ -17,7 +17,8 @@ export const paginatedResponseShape = <T extends z.ZodTypeAny>(item: T) =>
   z.object({
     items: z.array(item),
     total: z.number().int().nonnegative(),
-    limit: z.number().int().positive(),
+    // Unbounded repository queries report a zero limit when no rows match.
+    limit: z.number().int().nonnegative(),
     offset: z.number().int().nonnegative(),
     hasMore: z.boolean(),
   });

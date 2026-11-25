@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-17",
+  "container": "slipperze-audit-p00-postgres",
+  "image": "postgres:15-alpine",
+  "identity": {
+    "database": "slipperze_audit_test",
+    "role": "audit_test",
+    "superuser": false,
+    "create_db": false,
+    "create_role": false
+  },
+  "connectivity": "passed",
+  "rollback": "passed",
+  "application_schema": "not-deployed",
+  "application_integration_tests": "not-run",
+  "credentials": "ignored-local-env-only"
+}

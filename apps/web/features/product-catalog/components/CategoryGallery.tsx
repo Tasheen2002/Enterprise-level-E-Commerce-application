@@ -6,8 +6,8 @@ import { motion } from "framer-motion";
 import { imageKitUrl } from "@/lib/imagekit";
 import { useCategories } from "../hooks/useCategories";
 
-export function CategoryGallery({ category }: { category: string }) {
-  const { data: items, isLoading } = useCategories(category);
+export function CategoryGallery({ category, gender }: { category: string; gender?: string }) {
+  const { data: items, isLoading } = useCategories(category, gender);
 
   if (isLoading) {
     return (

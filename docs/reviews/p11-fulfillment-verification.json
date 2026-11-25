@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-20",
+  "phase": "P11 (fulfillment module, not registered in the API)",
+  "baseline_commit": "d65e620c",
+  "scope": [
+    "All 25 modules/fulfillment files: entities, status value object, services, commands/queries, controllers, routes and Prisma repositories",
+    "Relationship to order-management shipments (order_management.order_shipments)"
+  ],
+  "registration_decision": "Not registered and not enabled. The live storefront and admin use order-management shipments (order_management.order_shipments); fulfillment keeps a second, separate shipment record (fulfillment.shipments/shipment_items) with no link back. Enabling both would create two sources of truth for what was shipped. Owner decision: either retire this module or make it the single shipment model and migrate order shipments into it.",
+  "reviewed_without_change": [
+    "Status transitions are sensible (created -> label_printed -> in_transit -> delivered; failed may restart) and shipped/delivered times are recorded.",
+    "Repository mappings work against PostgreSQL (verified by the new integration test) despite the untyped Prisma access."
+  ],
+  "findings": [
+    {
+      "id": "P11-01",
+      "severity": "P2",
+      "file": "shipment.service.ts; shipment-allocation.port.ts; shipment-allocation.prisma.ts",
+      "problem": "Shipments were accepted for any order id (no foreign key or lookup) and with any order items: items of other orders, the same item twice, and quantities beyond what was ordered, also across several shipments.",
+      "change": "Every shipment change checks the order exists, items belong to it, appear once, and total no more than the ordered quantity across shipments that have not failed (failed shipments free their quantities).",
+      "verification": "Integration ShipmentAllocation: baseline accepted foreign items, duplicates and over-shipment; fixed refuses all with nothing stored, and a failed shipment's quantity can be shipped again."
+    },
+    {
+      "id": "P11-02",
+      "severity": "P2",
+      "file": "shipment.service.ts; shipment-item.controller.ts",
+      "problem": "Items could be added, removed or re-quantified after the parcel was in transit or delivered, and quantity changes bypassed every shipment rule.",
+      "change": "Items can change only while a shipment is created or label printed; quantity changes go through the shipment service with the allocation rule and return 400 on a rule violation instead of 500.",
+      "verification": "Integration: quantity within the order accepted, beyond it refused, any change refused once in transit. The baseline run of this case failed because the quantity method did not exist yet, so it is not an independent reproduction."
+    },
+    {
+      "id": "P11-03",
+      "severity": "P3",
+      "file": "shipment.repository.impl.ts; shipment.service.ts",
+      "problem": "A shipment and its items were saved in separate statements, so a failure part-way stored a shipment with some of its items.",
+      "change": "The shipment is created together with its items in one statement.",
+      "verification": "Integration: created shipments are read back with all items."
+    },
+    {
+      "id": "P11-04",
+      "severity": "P3",
+      "file": "modules/fulfillment/infra/http/routes.ts",
+      "problem": "All write routes allowed every staff role, including the read-only ANALYST role.",
+      "change": "Creating and changing shipments requires ADMIN or INVENTORY_STAFF; reading stays staff-level.",
+      "verification": "Route definitions reviewed (module not registered, so no HTTP test is possible without enabling it)."
+    }
+  ],
+  "tests": {
+    "new": "integration ShipmentAllocation (4)",
+    "baseline": "3 of 4 failed against the previous code; the valid-shipment case passed by design.",
+    "database_suites": "All E2E and integration suites: 167 tests in 48 files pass",
+    "final": "1527 unit tests in 119 files; root/tooling tsc; 7/7 workspace type-checks; fulfillment ESLint (no errors); API client check passes (module routes unregistered)"
+  },
+  "follow_ups": [
+    "Owner decision on registering, merging or retiring the module (see registration_decision).",
+    "Allocation is checked before writing, so two simultaneous shipments for the same item could both pass; a database lock or constraint is needed before enabling the module.",
+    "Controllers use their own response envelope instead of the shared ResponseHelper, and repositories use untyped Prisma access."
+  ]
+}

@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { SearchController } from "../controllers/search.controller";
@@ -44,6 +45,7 @@ export async function searchRoutes(
   fastify.get(
     "/search",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(searchQuerySchema)],
       schema: {
         description: "Full-text search across products with filtering and sorting",

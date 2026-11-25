@@ -1,8 +1,9 @@
 import { ICommand, ICommandHandler, CommandResult } from "../../../../packages/core/src/application/cqrs";
-import { WishlistManagementService } from "../services/wishlist-management.service";
+import { WishlistManagementService, WishlistActor } from "../services/wishlist-management.service";
 
 export interface UpdateWishlistCommand extends ICommand {
   readonly wishlistId: string;
+  readonly actor: WishlistActor;
   readonly name?: string;
   readonly description?: string;
   readonly isPublic?: boolean;
@@ -14,6 +15,7 @@ export class UpdateWishlistHandler
   constructor(private readonly wishlistService: WishlistManagementService) {}
 
   async handle(command: UpdateWishlistCommand): Promise<CommandResult<void>> {
+    await this.wishlistService.assertAccess(command.wishlistId, command.actor, "write");
     if (command.name === undefined && command.description === undefined && command.isPublic === undefined) {
       return CommandResult.failure("At least one field must be provided to update");
     }

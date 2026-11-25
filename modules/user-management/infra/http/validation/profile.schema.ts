@@ -4,31 +4,8 @@ import { z } from "zod";
 // Request body schemas
 // ============================================================================
 
-export const updateProfileSchema = z.object({
-  // User-level fields
-  firstName: z.string().max(100).optional(),
-  lastName: z.string().max(100).optional(),
-  phone: z.string().max(20).optional(),
-  title: z.string().max(50).optional(),
-  // ISO 8601 date or date-time string. Domain converts via `new Date()`.
-  dateOfBirth: z.iso.datetime({ offset: true }).or(z.iso.date()).optional(),
-  residentOf: z.string().max(100).optional(),
-  nationality: z.string().max(100).optional(),
-
-  // Profile-level fields
-  // BCP 47 locale: e.g. "en-US", "fr-FR" — Locale VO does the strict allowlist check.
-  locale: z.string().regex(/^[a-z]{2}-[A-Z]{2}$/).optional(),
-  // ISO 4217 currency code: 3 uppercase letters — Currency VO does the strict allowlist check.
-  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
-  defaultAddressId: z.uuid().optional(),
-  defaultPaymentMethodId: z.uuid().optional(),
-  // Public ImageKit URL (or null to clear). Frontend writes this AFTER
-  // confirming an upload via the /upload-token + ImageKit upload-API flow.
-  avatarUrl: z.string().url().max(2048).nullable().optional(),
-  prefs: z.record(z.string(), z.unknown()).optional(),
-  stylePreferences: z.record(z.string(), z.unknown()).optional(),
-  preferredSizes: z.record(z.string(), z.string().optional()).optional(),
-});
+import { updateProfileRequestSchema } from '../../../../../packages/validation/src/user';
+export const updateProfileSchema = updateProfileRequestSchema;
 
 // ============================================================================
 // Inferred types

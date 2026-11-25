@@ -1,0 +1,118 @@
+{
+  "diagnosticChecks": 16,
+  "results": [
+    {
+      "id": "refresh-as-admin-access",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "id": "pending-2fa-as-authenticated",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "id": "blacklisted-access-still-authorized",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "id": "missing-identity-claims-accepted",
+      "observed": {
+        "status": 200
+      }
+    },
+    {
+      "id": "forwarded-header-rate-limit-bypass",
+      "observed": [
+        200,
+        429,
+        200
+      ]
+    },
+    {
+      "id": "distinct-users-share-pre-auth-bucket",
+      "observed": [
+        200,
+        429
+      ]
+    },
+    {
+      "id": "different-policies-share-count-and-window",
+      "observed": {
+        "statuses": [
+          200,
+          429
+        ],
+        "retryAfterExceedsOwnWindow": true
+      }
+    },
+    {
+      "id": "production-error-message-leak:/helper",
+      "observed": {
+        "status": 500,
+        "internalMessageReturned": true
+      }
+    },
+    {
+      "id": "production-error-message-leak:/throw-status",
+      "observed": {
+        "status": 503,
+        "internalMessageReturned": true
+      }
+    },
+    {
+      "id": "command-404-collapsed-to-400",
+      "observed": {
+        "status": 400
+      }
+    },
+    {
+      "id": "response-schema-drops-validator-field-errors",
+      "observed": {
+        "status": 400,
+        "noFieldDetails": true
+      }
+    },
+    {
+      "id": "profile-schema-drift",
+      "observed": {
+        "clientAcceptsServerInvalidData": true,
+        "userSubpathStripsAvatar": true
+      }
+    },
+    {
+      "id": "configuration-accepts-invalid-numeric-settings",
+      "observed": {
+        "portIsNaN": true,
+        "negativeRateLimit": true
+      }
+    },
+    {
+      "id": "event-partial-failure-repeats-delivered-handler",
+      "observed": {
+        "delivered": 2,
+        "retainedEvents": 1
+      }
+    },
+    {
+      "id": "unwired-shared-mailer-resolves-skips-and-failures",
+      "observed": {
+        "skipResolves": true,
+        "smtpFailureResolves": true
+      }
+    },
+    {
+      "id": "missing-validation-subpath-targets",
+      "observed": [
+        "./cart",
+        "./order",
+        "./payment",
+        "./product"
+      ]
+    }
+  ]
+}

@@ -2,7 +2,6 @@ import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ReservationController } from "../controllers/reservation.controller";
 import {
-  requireRole,
   RolePermissions,
 } from "@/api/src/shared/middleware/role-authorization.middleware";
 import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
@@ -80,7 +79,7 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations",
     {
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(createReservationSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createReservationSchema)],
       schema: {
         description: "Create a new reservation",
         tags: ["Reservations"],
@@ -101,7 +100,7 @@ export async function reservationRoutes(
     "/reservations/:reservationId",
     {
       preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get reservation details",
         tags: ["Reservations"],
@@ -122,7 +121,7 @@ export async function reservationRoutes(
     "/carts/:cartId/reservations",
     {
       preValidation: [validateParams(cartIdParamsSchema), validateQuery(cartReservationsQuerySchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get all reservations for a cart",
         tags: ["Reservations"],
@@ -169,7 +168,7 @@ export async function reservationRoutes(
     "/reservations/:reservationId/extend",
     {
       preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(extendReservationSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(extendReservationSchema)],
       schema: {
         description: "Extend reservation duration",
         tags: ["Reservations"],
@@ -191,7 +190,7 @@ export async function reservationRoutes(
     "/reservations/:reservationId",
     {
       preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Release a reservation",
         tags: ["Reservations"],
@@ -250,7 +249,7 @@ export async function reservationRoutes(
     "/carts/:cartId/reservations/:variantId",
     {
       preValidation: [validateParams(cartReservationParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"])],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Get reservation for a specific variant in a cart",
         tags: ["Reservations"],
@@ -271,7 +270,7 @@ export async function reservationRoutes(
     "/reservations/:reservationId/renew",
     {
       preValidation: [validateParams(reservationIdParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(renewReservationSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(renewReservationSchema)],
       schema: {
         description: "Renew an expired or expiring reservation",
         tags: ["Reservations"],
@@ -293,7 +292,7 @@ export async function reservationRoutes(
     "/carts/:cartId/reservations/:variantId",
     {
       preValidation: [validateParams(cartReservationParamsSchema)],
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(adjustReservationSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(adjustReservationSchema)],
       schema: {
         description: "Adjust reservation quantity for a variant in a cart",
         tags: ["Reservations"],
@@ -352,7 +351,7 @@ export async function reservationRoutes(
   fastify.post(
     "/reservations/bulk",
     {
-      preHandler: [authenticate, requireRole(["ADMIN", "CUSTOMER"]), validateBody(createBulkReservationsSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createBulkReservationsSchema)],
       schema: {
         description: "Create reservations for multiple items at once",
         tags: ["Reservations"],

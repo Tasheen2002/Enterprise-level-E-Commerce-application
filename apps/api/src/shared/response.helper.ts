@@ -1,7 +1,8 @@
 import { FastifyReply } from "fastify";
-import { ZodError } from "zod";
 import { CommandResult } from "../../../../packages/core/src/application/command-result";
 import { QueryResult } from "../../../../packages/core/src/application/query-result";
+import { serializeError, errorStatus, type ErrorEnvelope } from "./http/error-response";
+import { BEARER_AUTH_CHALLENGE } from "./http/authentication";
 
 export interface SuccessResponse<T = any> {
   success: true;
@@ -10,13 +11,7 @@ export interface SuccessResponse<T = any> {
   data?: T;
 }
 
-export interface ErrorResponse {
-  success: false;
-  statusCode: number;
-  message: string;
-  error?: string;
-  errors?: string[];
-}
+export type ErrorResponse = ErrorEnvelope;
 
 export class ResponseHelper {
   static success<T>(
@@ -33,76 +28,36 @@ export class ResponseHelper {
   }
 
   static error(reply: FastifyReply, error: unknown): FastifyReply {
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
-        success: false,
-        statusCode: 400,
-        message: "Validation failed",
-        error: error.format(),
-      });
-    }
-
-    const statusCode =
-      error && typeof error === "object" && "statusCode" in error
-        ? (error as { statusCode: number }).statusCode
-        : 500;
-
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-
-    const errorCode =
-      error && typeof error === "object" && "code" in error
-        ? (error as { code: string }).code
-        : undefined;
-
-    const errorName =
-      statusCode === 409 ? "Conflict"
-        : statusCode === 404 ? "Not Found"
-          : statusCode === 401 ? "Unauthorized"
-            : statusCode === 403 ? "Forbidden"
-              : statusCode === 400 ? "Bad Request"
-                : "Internal Server Error";
-
-    return reply.status(statusCode).send({
-      success: false,
-      statusCode,
-      error: errorName,
-      code: errorCode,
-      message,
-    });
+    const response = serializeError(error);
+    if (response.statusCode >= 500) reply.log.error({ err: error }, "Request failed");
+    return reply.status(response.statusCode).send(response);
   }
 
+  /** Missing/invalid bearer credentials. Not for signature failures (use badRequest). */
   static unauthorized(
     reply: FastifyReply,
     message: string = "User not authenticated",
   ): FastifyReply {
-    return reply.status(401).send({ success: false, statusCode: 401, message });
+    return reply
+      .header("WWW-Authenticate", BEARER_AUTH_CHALLENGE)
+      .status(401)
+      .send({ success: false, statusCode: 401, message });
   }
 
-  static forbidden(
-    reply: FastifyReply,
-    message: string = "Access forbidden",
-  ): FastifyReply {
+  static forbidden(reply: FastifyReply, message: string = "Access forbidden"): FastifyReply {
     return reply.status(403).send({ success: false, statusCode: 403, message });
   }
 
-  static notFound(
-    reply: FastifyReply,
-    message: string = "Resource not found",
-  ): FastifyReply {
+  static notFound(reply: FastifyReply, message: string = "Resource not found"): FastifyReply {
     return reply.status(404).send({ success: false, statusCode: 404, message });
   }
 
-  static badRequest(
-    reply: FastifyReply,
-    message: string,
-    errors?: string[],
-  ): FastifyReply {
+  static badRequest(reply: FastifyReply, message: string, errors?: string[]): FastifyReply {
     return reply.status(400).send({
       success: false,
       statusCode: 400,
       message,
-      ...(errors && errors.length > 0 ? { errors } : {}),
+      ...(errors && errors.length > 0 ? { details: { _root: errors } } : {}),
     });
   }
 
@@ -120,12 +75,7 @@ export class ResponseHelper {
       }
       return ResponseHelper.success(reply, statusCode ?? 200, successMessage, result.data);
     }
-    return reply.status(400).send({
-      success: false,
-      statusCode: 400,
-      message: result.error ?? "Request failed",
-      ...(result.errors && result.errors.length > 0 ? { errors: result.errors } : {}),
-    });
+    return ResponseHelper.resultFailure(reply, result, "Command failed");
   }
 
   // Handles QueryResult directly — maps success/failure to the correct HTTP response
@@ -141,26 +91,32 @@ export class ResponseHelper {
       }
       return ResponseHelper.ok(reply, successMessage, result.data ?? undefined);
     }
-    return reply.status(400).send({
+    return ResponseHelper.resultFailure(reply, result, "Query failed");
+  }
+
+  private static resultFailure(
+    reply: FastifyReply,
+    result: CommandResult<unknown> | QueryResult<unknown>,
+    logMessage: string,
+  ): FastifyReply {
+    const failureStatus = result.statusCode === undefined ? 400 : errorStatus(result.statusCode);
+    if (failureStatus >= 500) reply.log.error({ message: result.error }, logMessage);
+    return reply.status(failureStatus).send({
       success: false,
-      statusCode: 400,
-      message: result.error ?? "Request failed",
+      statusCode: failureStatus,
+      message:
+        failureStatus >= 500 ? "An unexpected error occurred" : (result.error ?? "Request failed"),
+      ...(failureStatus < 500 && result.errors?.length
+        ? { details: { _root: result.errors } }
+        : {}),
     });
   }
 
-  static created<T>(
-    reply: FastifyReply,
-    message: string,
-    data?: T,
-  ): FastifyReply {
+  static created<T>(reply: FastifyReply, message: string, data?: T): FastifyReply {
     return this.success(reply, 201, message, data);
   }
 
-  static ok<T>(
-    reply: FastifyReply,
-    message: string,
-    data?: T,
-  ): FastifyReply {
+  static ok<T>(reply: FastifyReply, message: string, data?: T): FastifyReply {
     return this.success(reply, 200, message, data);
   }
 

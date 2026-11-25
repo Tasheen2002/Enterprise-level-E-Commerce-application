@@ -91,6 +91,8 @@ const addressFieldsSchema = z.object({
 // only validate shape here. billingAddress is optional — defaults to
 // shippingAddress when omitted (handled by the service).
 export const createOrderSchema = z.object({
+  /** Customer the staff member is placing the order for. */
+  customerId: z.uuid().optional(),
   guestToken: z.string().optional(),
   items: z
     .array(

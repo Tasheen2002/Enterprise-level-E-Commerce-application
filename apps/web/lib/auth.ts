@@ -5,7 +5,7 @@
  * Tokens live in two places:
  * - `localStorage` — read by the client-side API helper to add the
  *   `Authorization: Bearer …` header on outgoing requests.
- * - httpOnly cookies (set via `/api/auth/sync`) — read by the Next.js
+ * - an httpOnly access-token cookie (set via `/api/auth/sync`) — read by the Next.js
  *   middleware (route gating) and by Server Components (`cookies()` from
  *   `next/headers`) so they can pre-render authenticated pages without
  *   waiting on a client-side fetch.
@@ -36,21 +36,19 @@ export function setRefreshToken(token: string): void {
 }
 
 /**
- * Mirror tokens into httpOnly cookies. Awaited at login/register/google-
- * login sites so the cookie is in place before the user is redirected
+ * Mirror the access token into an httpOnly cookie. Awaited at login/register/
+ * google-login sites so the cookie is in place before the user is redirected
  * into a middleware-gated route. Failures here would leave the user with
  * a token in localStorage but no cookie — the middleware would then
  * redirect them to `/sign-in`, so callers should surface failures.
+ * The refresh token is never sent: no server code reads it from a cookie.
  */
-export async function syncAuthCookies(
-  accessToken: string,
-  refreshToken?: string,
-): Promise<void> {
+export async function syncAuthCookies(accessToken: string): Promise<void> {
   if (typeof window === "undefined") return;
   await fetch("/api/auth/sync", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accessToken, refreshToken }),
+    body: JSON.stringify({ accessToken }),
     credentials: "same-origin",
   });
 }

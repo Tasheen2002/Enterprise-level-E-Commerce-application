@@ -28,6 +28,7 @@ interface BackendErrorBody {
   statusCode: number;
   message: string;
   code?: string;
+  details?: Record<string, string[]>;
   error?: unknown;
   errors?: string[];
 }
@@ -97,7 +98,7 @@ async function doRequest<T>(
   }
 
   if (!body.success) {
-    const fieldErrors = extractFieldErrors(body.error);
+    const fieldErrors = body.details ? Object.fromEntries(Object.entries(body.details).map(([field, messages]) => [field, messages[0] ?? 'Invalid value'])) : extractFieldErrors(body.error);
     throw new ApiCallError(
       body.message ?? "Request failed",
       body.statusCode ?? response.status,

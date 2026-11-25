@@ -5,7 +5,7 @@ import {
 import { GiftCardService } from "../services/gift-card.service";
 
 export interface GetGiftCardBalanceQuery extends IQuery {
-  readonly codeOrId: string;
+  readonly code: string;
 }
 
 export class GetGiftCardBalanceHandler implements IQueryHandler<
@@ -15,6 +15,6 @@ export class GetGiftCardBalanceHandler implements IQueryHandler<
   constructor(private readonly giftCardService: GiftCardService) {}
 
   async handle(query: GetGiftCardBalanceQuery): Promise<number> {
-    return this.giftCardService.getGiftCardBalance(query.codeOrId);
+    return this.giftCardService.getGiftCardBalance(query.code);
   }
 }

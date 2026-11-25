@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-19",
+  "phase": "P08 (batch 2: checkout payment creation, gift cards, promotion usage, BNPL, webhooks)",
+  "baseline_commit": "b7bfd9ee",
+  "scope": [
+    "Stripe create-intent controller and PaymentService.createPaymentIntent",
+    "application/services/gift-card.service.ts, infra gift-card repository, gift-card routes/schema/controller/query",
+    "promotion routes (usage recording), bnpl-transaction service and controller",
+    "Stripe webhook event handling (replay behaviour)"
+  ],
+  "reviewed_without_change": [
+    "Stripe webhook replays are handled by payment state (a repeated succeeded event does not capture again; covered by the existing controller spec). Recording event ids would add a second guard (follow-up)."
+  ],
+  "findings": [
+    {
+      "id": "P08-04",
+      "severity": "P2",
+      "file": "modules/payment/application/services/payment.service.ts; stripe-webhook.controller.ts; payment external-services port; container",
+      "problem": "Creating a Stripe payment for a checkout did not check who owned the checkout or whether it was still open. Anyone who knew a checkout id could replace its stored payment (amount and Stripe reference), so the real buyer's payment no longer matched and their checkout failed after paying.",
+      "change": "Checkout payments can only be created by the checkout's signed-in owner or its guest token, and only while the checkout is pending; the guest token is read from the request headers the storefront already sends.",
+      "verification": "Unit checkout-payment-ownership: baseline 5 of 7 cases failed (another customer, anonymous, wrong guest token and closed checkouts accepted); fixed refused, owner and guest still allowed."
+    },
+    {
+      "id": "P08-05",
+      "severity": "P1",
+      "file": "modules/payment gift-card service and repository",
+      "problem": "Gift card redemption read the balance and wrote the new absolute value back, so concurrent redemptions overspent the card: four simultaneous redemptions of 60 on a 100 card all succeeded (240 spent, four redemption records).",
+      "change": "Redemption is a single conditional debit in the database (active and balance covers the amount) with its ledger entry in the same transaction; the card is marked redeemed at zero.",
+      "verification": "Service-level comparison on PostgreSQL: baseline succeeded=4, redemptions=4; fixed succeeded=1. GiftCardRedemption integration cases (concurrency, zero balance)."
+    },
+    {
+      "id": "P08-06",
+      "severity": "P2",
+      "file": "gift-card routes, schema, controller, query and service",
+      "problem": "Any signed-in customer could redeem any gift card by its internal id (no code, no customer flow exists), the public balance lookup accepted ids as well as codes with only the global rate limit, and admins could create trivially guessable codes such as 'ABC'.",
+      "change": "Redemption is limited to admins and customer service; balance lookups accept the code only and are rate limited per IP; codes must be at least 12 characters of letters, digits and dashes. API client regenerated (code query parameter).",
+      "verification": "E2E: baseline weak code accepted (201); fixed weak code 400, balance by code 200 and by id 404, customer redemption 403, staff redemption 200."
+    },
+    {
+      "id": "P08-07",
+      "severity": "P2",
+      "file": "promotion.routes.ts; bnpl-transaction.service.ts and controller",
+      "problem": "Any customer could record promotion usage against any promotion (exhausting usage limits); checkout records usage internally. BNPL ownership checks were fail-open for customers (skipped without an order or for guest orders) and scoped staff as customers, blocking staff BNPL actions on customers' orders.",
+      "change": "Promotion usage recording is admin-only; BNPL access is fail-closed for customers and unscoped for staff.",
+      "verification": "E2E: customer promotion usage 403. BNPL follows the same rule as payments (P08-02)."
+    }
+  ],
+  "tests": {
+    "new": "unit checkout-payment-ownership (7), integration GiftCardRedemption (2), E2E payment-records gift card/promotion case (1)",
+    "baseline": "Ownership unit 5 of 7 failed; concurrent redemption overspent (4 of 4 succeeded); E2E gift card case failed on the weak code.",
+    "database_suites": "All E2E and integration suites: 145 tests in 44 files pass",
+    "final": "1526 unit tests in 119 files; root/tooling tsc; 7/7 workspace type-checks; API client regenerated and drift check passes"
+  },
+  "follow_ups": [
+    "Gift cards are not part of checkout (cannot pay for an order); integrating them requires server-side redemption inside the order transaction.",
+    "Record processed Stripe event ids for replay protection in addition to state checks.",
+    "The create-intent amount still comes from the client; checkout completion refuses underpayment (P06-02), but the server could set it from the checkout."
+  ]
+}

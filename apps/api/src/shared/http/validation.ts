@@ -1,19 +1,28 @@
 import { FastifyRequest, FastifyReply } from "fastify";
 import { z, ZodSchema, ZodError } from "zod";
+import { serializeError } from "./error-response";
+export { paginationQuerySchema } from "../../../../../packages/validation/src/common";
+export type { PaginationQuery } from "../../../../../packages/validation/src/common";
 
-function formatZodErrors(error: ZodError) {
-  return error.issues.map((issue) => ({
-    field: issue.path.join("."),
-    message: issue.message,
-  }));
-}
+/**
+ * Boolean query-string parameter. `z.coerce.boolean()` treats any non-empty
+ * string as true, so `?flag=false` would mean true; this accepts only "true"
+ * and "false" (or real booleans) and rejects anything else.
+ */
+export const queryBoolean = () =>
+  z.preprocess(
+    (value) => (value === "true" ? true : value === "false" ? false : value),
+    z.boolean(),
+  );
 
 /**
  * Convert a Zod schema to a JSON Schema (draft-07) for use in Fastify
  * route schemas — `body`, `params`, `querystring` — and Swagger docs.
  *
- * Lets Zod be the single source of truth; eliminates manually maintaining
- * parallel inline JSON-Schema definitions in route files.
+ * This is a structural approximation: custom refinements/transforms and
+ * asynchronous rules cannot be fully represented. Keep the Zod validation
+ * hook; generated schemas alone do not enforce those rules. Hook ordering
+ * also matters when Fastify coerces or removes input before Zod runs.
  *
  * @example
  *   fastify.post('/x', {
@@ -22,77 +31,30 @@ function formatZodErrors(error: ZodError) {
  *   }, ...);
  */
 export function toJsonSchema(schema: ZodSchema): object {
-
   return z.toJSONSchema(schema, { target: "draft-7", unrepresentable: "any" });
 }
 
-/**
- * Canonical pagination query schema. Use this directly for endpoints that
- * accept only `limit` and `offset`, or extend it for endpoints with
- * additional filters:
- *
- * @example
- *   const listX = paginationQuerySchema.extend({ status: z.enum(...) });
- *
- * Coerces query-string values (always strings on the wire) into numbers.
- */
-export const paginationQuerySchema = z.object({
-  limit: z.coerce.number().int().positive().optional(),
-  offset: z.coerce.number().int().min(0).optional(),
-});
-
-export type PaginationQuery = z.infer<typeof paginationQuerySchema>;
-
-export function validateBody<T extends ZodSchema>(schema: T) {
+function validate(schema: ZodSchema, part: "body" | "query" | "params") {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      request.body = schema.parse(request.body);
+      request[part] = await schema.parseAsync(request[part]);
     } catch (error) {
       if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
+        return reply.status(400).send(serializeError(error));
       }
       throw error;
     }
   };
+}
+
+export function validateBody<T extends ZodSchema>(schema: T) {
+  return validate(schema, "body");
 }
 
 export function validateQuery<T extends ZodSchema>(schema: T) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      request.query = schema.parse(request.query);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
-      }
-      throw error;
-    }
-  };
+  return validate(schema, "query");
 }
 
 export function validateParams<T extends ZodSchema>(schema: T) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      request.params = schema.parse(request.params);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return reply.status(400).send({
-          success: false,
-          statusCode: 400,
-          message: "Validation failed",
-          errors: formatZodErrors(error),
-        });
-      }
-      throw error;
-    }
-  };
+  return validate(schema, "params");
 }

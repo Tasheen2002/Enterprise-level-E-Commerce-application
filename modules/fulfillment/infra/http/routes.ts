@@ -9,6 +9,8 @@ import { authenticate } from "@/api/src/shared/middleware/authenticate.middlewar
 import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 
 const authenticateStaff = [authenticate, RolePermissions.STAFF_LEVEL];
+// Creating and changing shipments is warehouse work; analysts and customer service read only.
+const authenticateWarehouse = [authenticate, RolePermissions.INVENTORY_MANAGEMENT];
 
 export interface FulfillmentServices {
   shipmentService: ShipmentService;
@@ -61,7 +63,7 @@ export async function registerFulfillmentRoutes(
   fastify.post(
     "/shipments",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Create a shipment - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -150,7 +152,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/status",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment status - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -175,7 +177,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/carrier",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment carrier - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -200,7 +202,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/service",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment service - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -225,7 +227,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/label",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment label URL - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -271,7 +273,7 @@ export async function registerFulfillmentRoutes(
   fastify.post(
     "/shipments/:shipmentId/items",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Add item to shipment - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -299,7 +301,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/items/:orderItemId/qty",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment item quantity - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -330,7 +332,7 @@ export async function registerFulfillmentRoutes(
   fastify.patch(
     "/shipments/:shipmentId/gift",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Update shipment gift options (isGift, giftMessage) - Staff/Admin only",
         tags: ["Fulfillment"],
@@ -358,7 +360,7 @@ export async function registerFulfillmentRoutes(
   fastify.delete(
     "/shipments/:shipmentId/items/:orderItemId",
     {
-      preHandler: authenticateStaff,
+      preHandler: authenticateWarehouse,
       schema: {
         description: "Delete shipment item - Staff/Admin only",
         tags: ["Fulfillment"],

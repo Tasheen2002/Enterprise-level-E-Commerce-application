@@ -1,8 +1,9 @@
 import { IQuery, IQueryHandler } from "../../../../packages/core/src/application/cqrs";
-import { WishlistManagementService, PaginatedWishlistItemResult } from "../services/wishlist-management.service";
+import { WishlistManagementService, WishlistActor, PaginatedWishlistItemResult } from "../services/wishlist-management.service";
 
 export interface GetWishlistItemsQuery extends IQuery {
   readonly wishlistId: string;
+  readonly actor: WishlistActor;
   readonly limit?: number;
   readonly offset?: number;
 }
@@ -11,6 +12,7 @@ export class GetWishlistItemsHandler implements IQueryHandler<GetWishlistItemsQu
   constructor(private readonly wishlistService: WishlistManagementService) {}
 
   async handle(query: GetWishlistItemsQuery): Promise<PaginatedWishlistItemResult> {
+    await this.wishlistService.assertAccess(query.wishlistId, query.actor, "read");
     return this.wishlistService.getWishlistItems(
       query.wishlistId,
       {

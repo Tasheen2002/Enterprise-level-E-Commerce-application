@@ -1,0 +1,207 @@
+{
+  "date": "2026-10-23",
+  "finding": "P00-22",
+  "baseline_commit": "7190c95e9cf3fe6274537b49b5ad4d4914c0ffa8",
+  "baseline": {
+    "passed": 16,
+    "expected_failed": 5,
+    "failed_cases": [
+      "test administrator seed CLI normalizes identity, hashes at cost twelve, inserts minimal flags and reports after disconnect",
+      "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+      "test administrator seed CLI rejects an invalid or bcrypt-truncated password before hashing",
+      "test administrator seed CLI rechecks test authorization after asynchronous hashing",
+      "test administrator seed CLI fails safely for disconnect without modifying an existing account"
+    ]
+  },
+  "changes": [
+    "Seed uses the existing guarded operation lifecycle and reports success only after disconnect; original operation/disconnect errors remain preserved.",
+    "Early database guard avoids hashing unsafe configurations; the lifecycle rechecks settings after asynchronous hashing.",
+    "Configured email parsing is shared by seed and inspector; normalization and validation behavior retained without duplicated regex logic.",
+    "Seed passwords retain the existing minimum and now reject more than 72 UTF-8 bytes before hashing or client construction; README documents the test-only contract."
+  ],
+  "new_cli_cases": 21,
+  "focused_tests": 103,
+  "focused_files": 6,
+  "full_unit_tests": 662,
+  "full_unit_files": 80,
+  "coverage_scope": "Only seed CLI, shared configured-email helper, admin-inspection helper and common DB lifecycle. No application-wide coverage claim.",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 41,
+        "covered": 41,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 43,
+        "covered": 43,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 18,
+        "covered": 18,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scratch/seed-admin.ts": {
+      "lines": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/admin-inspection.ts": {
+      "lines": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 5,
+        "covered": 5,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-inspection.ts": {
+      "lines": {
+        "total": 18,
+        "covered": 18,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 20,
+        "covered": 20,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/test-admin-settings.ts": {
+      "lines": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 1,
+        "covered": 1,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "verified_source_sha256": {
+    "scratch/seed-admin.ts": "2552480d6c710d53fee740515829c2509b0c70e26f72b3b16b3cca15ac1593d9",
+    "scripts/testing/test-admin-settings.ts": "13f2c064a646d21136fbdcd605d89dd2dc78170bed9547453fec9de49a61d87d",
+    "scripts/testing/admin-inspection.ts": "d6cc062d177ba13769de273bcd69f76039a36d61826d772bab24f70a793d3124",
+    "scripts/testing/database-inspection.ts": "fe932a7f9faa4b8fb1454ba90bbf02d6f7043e78113294e0c61fe195f8609c0f",
+    "apps/api/test/unit/seed-admin-cli.spec.ts": "3f5886ba190ea10cdb5027062fa7c801b8e0a4f0b3a3bee16a509c010037f8a8",
+    "scripts/review/check-operational-database.ts": "cb75cb8040383330d17e3fdcb123dd830b0803f12a6807661994cabb6442537e"
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "tooling_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed",
+    "refusal_tripwires": "18 passed before construction",
+    "postgres": "46 scenario groups passed; over-limit ASCII/multibyte rejection, normalized identity, actual cost-12 bcrypt hash/match, expected flags, unchanged full conflict snapshot and temporary DB removal verified"
+  },
+  "bcrypt_probe": {
+    "date": "2026-10-23",
+    "bcrypt_version": "3.0.3",
+    "ascii_over_limit_truncates": true,
+    "unicode_over_limit_truncates": true,
+    "unicode_exact_limit_truncates": false,
+    "application_adapter_accepts_different_suffix": true,
+    "scope": "Synthetic local adapter probe at cost 4, not authentication end-to-end; no account, database or provider involved. Actual seed hash cost remains 12."
+  },
+  "authentication_followup": {
+    "finding": "P03-BCRYPT-BYTE-LIMIT",
+    "source_sha256": {
+      "modules/user-management/infra/security/bcrypt-password-hasher.adapter.ts": "a89d4d0d15d356f4e7aac9a3d4e6ba2646e47915778c89e9cc57084c40cd0945",
+      "packages/validation/src/auth/index.ts": "a5b9cd64b8c2a8c6dce69ad55029edac4a567a0ccfa275fa036e574fb483e902"
+    },
+    "observed": "Current application hasher adapter at synthetic cost 4 accepts different suffixes after the same 72-byte prefix; shared registration/login schemas allow up to 128 characters.",
+    "scope": "Adapter behavior and shared-schema bound observed; complete registration/login/reset/invitation input-validation flow and legacy-account compatibility are not verified. No application authentication policy changed.",
+    "required": "Trace all callers in P03, define a compatible password-byte/hashing policy and test the full flow before changing existing-account behavior."
+  },
+  "limits": [
+    "This completes only seed-admin and its shared identity policy. Full catalog seed and catalog cleanup CLI reviews remain next.",
+    "Bcrypt cost 4 is used only in the isolated reproduction, not seeding; actual seed remains cost 12. No credentials/hashes/customer records emitted by evidence.",
+    "Whole operational verifier fault/teardown branches, build/CI/bootstrap reproducibility, migration replay and providers remain open.",
+    "Broad backend coverage was not remeasured."
+  ]
+}

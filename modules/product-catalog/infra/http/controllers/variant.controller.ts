@@ -8,6 +8,8 @@ import {
   GetVariantHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { ProductVisibilityPolicy } from "../../../application/services/product-visibility.policy";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   VariantParams,
   VariantByProductParams,
@@ -23,6 +25,7 @@ export class VariantController {
     private readonly deleteVariantHandler: DeleteProductVariantHandler,
     private readonly listVariantsHandler: ListVariantsHandler,
     private readonly getVariantHandler: GetVariantHandler,
+    private readonly productVisibility: ProductVisibilityPolicy,
   ) {}
 
   async getVariants(
@@ -30,6 +33,10 @@ export class VariantController {
     reply: FastifyReply,
   ) {
     try {
+      await this.productVisibility.assertVisible(
+        request.params.productId,
+        canViewUnpublished(request),
+      );
       const result = await this.listVariantsHandler.handle({
         productId: request.params.productId,
         page: request.query.page,
@@ -51,6 +58,7 @@ export class VariantController {
   ) {
     try {
       const result = await this.getVariantHandler.handle({ variantId: request.params.variantId });
+      await this.productVisibility.assertVisible(result.productId, canViewUnpublished(request));
       return ResponseHelper.ok(reply, "Variant retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -1,11 +1,12 @@
-import { SupportAgentService } from "../services/support-agent.service.js";
+import { PageQuery, pageOf } from "./paging.js";
 import {
-  IQuery,
-  IQueryHandler,
+  type IQuery,
+  type IQueryHandler,
   QueryResult,
-} from "./get-support-ticket.query.js";
+} from "../../../../packages/core/src/application/cqrs";
+import { SupportAgentService } from "../services/support-agent.service.js";
 
-export interface ListSupportAgentsQuery extends IQuery {}
+export interface ListSupportAgentsQuery extends IQuery, PageQuery {}
 
 export interface SupportAgentDto {
   agentId: string;
@@ -15,16 +16,13 @@ export interface SupportAgentDto {
 }
 
 export class ListSupportAgentsHandler
-  implements
-    IQueryHandler<ListSupportAgentsQuery, QueryResult<SupportAgentDto[]>>
+  implements IQueryHandler<ListSupportAgentsQuery, QueryResult<SupportAgentDto[]>>
 {
   constructor(private readonly supportAgentService: SupportAgentService) {}
 
-  async handle(
-    query: ListSupportAgentsQuery
-  ): Promise<QueryResult<SupportAgentDto[]>> {
+  async handle(query: ListSupportAgentsQuery): Promise<QueryResult<SupportAgentDto[]>> {
     try {
-      const agents = await this.supportAgentService.getAllAgents();
+      const agents = await this.supportAgentService.getAllAgents(pageOf(query));
       const result: SupportAgentDto[] = agents.map((agent) => ({
         agentId: agent.getAgentId().getValue(),
         name: agent.getName(),
@@ -34,13 +32,12 @@ export class ListSupportAgentsHandler
       return QueryResult.success<SupportAgentDto[]>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return QueryResult.failure<SupportAgentDto[]>(
-          "Failed to list support agents",
-          [error.message]
-        );
+        return QueryResult.failure<SupportAgentDto[]>("Failed to list support agents", [
+          error.message,
+        ]);
       }
       return QueryResult.failure<SupportAgentDto[]>(
-        "An unexpected error occurred while listing support agents"
+        "An unexpected error occurred while listing support agents",
       );
     }
   }

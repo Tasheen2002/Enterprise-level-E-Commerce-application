@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-17",
+  "phase": "P03 (batch 1: authentication - registration, login, lockout, Google sign-in, 2FA verification, refresh, password change/reset, password policy, auth rate limits)",
+  "baseline_commit": "ce164a07",
+  "scope": [
+    "modules/user-management/application/services/authentication.service.ts (read in full)",
+    "application/commands: login-user, verify-2fa-login, login-with-google, register-user, reset-password, initiate-password-reset, change-password, update-user-status",
+    "infra/http/routes/auth.routes.ts, controllers/auth.controller.ts (forgot/resend/2FA/change-password paths), validation/auth.schema.ts",
+    "infra/http/security/jwt.service.ts and token-blacklist.ts, infra/security/firebase-auth-verifier.adapter.ts and bcrypt-password-hasher.adapter.ts",
+    "apps/api/src/plugins/auth.ts status enforcement, shared rate limiter presets and server-wide limiter"
+  ],
+  "reviewed_without_change": [
+    "Registration never accepts a role from clients (schema strips it; accounts default to CUSTOMER).",
+    "Forgot-password and resend-verification return identical responses whether or not the account exists (no enumeration).",
+    "The auth plugin requires an active user and a live session on every request, so blocking or deactivating a user takes effect immediately.",
+    "Refresh tokens are stored hashed, rotated on every refresh and rejected once revoked or expired; the pending-2FA token cannot be used as an access or refresh token.",
+    "Backup codes are single use (marked used in the database); 2FA disable and backup-code regeneration are password-gated.",
+    "loginAsGuest has no route or caller (dead code); guest-to-member conversion is therefore unreachable today."
+  ],
+  "findings": [
+    {
+      "id": "P03-01",
+      "severity": "P1",
+      "file": "application/services/authentication.service.ts (loginWithGoogle)",
+      "problem": "Google sign-in logged into any existing account whose email matched the Firebase identity without checking Firebase's email_verified claim, and created new accounts for unverified addresses. Firebase also issues ID tokens for unverified addresses (for example email/password sign-ups in the same project), so anyone could sign in to another customer's account or pre-create an account under their address.",
+      "change": "An unverified provider email is refused with 403 EMAIL_NOT_VERIFIED before any lookup; new Google accounts are always marked verified.",
+      "verification": "Unit and google-login E2E: baseline signed in/created accounts for unverified identities; fixed 403, no user or session created. Verified identities still sign in and auto-create."
+    },
+    {
+      "id": "P03-02",
+      "severity": "P1",
+      "file": "application/commands/verify-2fa-login.command.ts; infra/http/security/token-blacklist.ts; domain/constants",
+      "problem": "Second-factor verification had no per-user attempt limit and accepted the same authenticator code repeatedly. With the password, a fresh 5-minute pending token is one login away and wrong codes did not count toward any lockout, so a 6-digit code could be brute-forced; an observed code could also be replayed within its window.",
+      "change": "Five wrong codes per user lock second-factor verification for 15 minutes (429, even for a correct code); each accepted code is single use for 3 minutes; an invalid pending token is rejected before any code check.",
+      "verification": "Unit: baseline 3/3 failed; fixed lockout, replay refusal and invalid-token handling pass. Existing two-factor E2E lifecycle still passes through the real wiring."
+    },
+    {
+      "id": "P03-03",
+      "severity": "P1",
+      "file": "application/services/authentication.service.ts; application/commands/{change-password,reset-password}.command.ts; infra/http/controllers/auth.controller.ts",
+      "problem": "Changing or resetting the password left every other session signed in, so a stolen session survived the user securing their account. The reset completed against whichever account owned the token's stored email at completion time, not the account the token was issued for.",
+      "change": "Change-password revokes all other sessions and keeps the current one; reset-password targets the account by id and revokes all of its sessions.",
+      "verification": "auth-session-security E2E on a real database: baseline second session stayed valid; fixed second session 401, current session 200, one live session left. Unit cases for both flows."
+    },
+    {
+      "id": "P03-04",
+      "severity": "P2",
+      "file": "apps/api/src/shared/middleware/rate-limiter.middleware.ts; infra/http/routes/auth.routes.ts",
+      "problem": "Authentication routes allowed 1,000 requests per IP per route every 15 minutes (5,000/min API-wide), and the endpoints that send email had no separate limit, so forgot-password or resend-verification could flood a victim's inbox.",
+      "change": "Auth preset lowered to 100 per IP per route per 15 minutes (headroom for shared NAT; per-account lockouts do the targeted protection) and a new 10-per-15-minute limit for forgot-password and resend-verification. Admin invitations share the auth preset.",
+      "verification": "auth-session-security E2E: baseline 11th reset request accepted; fixed 10 accepted, 11th 429. Existing E2E suites, which log in repeatedly, pass."
+    },
+    {
+      "id": "P03-05",
+      "severity": "P2",
+      "file": "application/commands/login-user.command.ts; infra/http/security/token-blacklist.ts",
+      "problem": "The login lockout key used the email exactly as typed while the account lookup normalises it, so case or whitespace variants each got a fresh counter; failures below the limit were never forgotten.",
+      "change": "Lockout key normalised like the Email value object; failure counts expire after the lockout window.",
+      "verification": "Unit: baseline ten mixed-case failures did not lock; fixed the next attempt is refused with 429 without checking the password."
+    },
+    {
+      "id": "P03-06",
+      "severity": "P2",
+      "file": "application/services/authentication.service.ts (refreshToken, validateToken); infra/http/security/jwt.service.ts; application/services/ijwt.service.ts",
+      "problem": "Every refresh issued a 30-day 'remember me' refresh token and extended the session 30 days, silently turning standard 7-day sessions into 30-day ones; refresh and token validation did not refuse deactivated accounts.",
+      "change": "Refresh tokens carry a rememberMe claim and rotation keeps the original lifetime (tokens issued before the claim are treated as standard); inactive accounts are refused.",
+      "verification": "Unit: baseline standard session rotated to 30 days and an inactive account refreshed; fixed 7 and 30 days preserved, inactive refused."
+    },
+    {
+      "id": "P03-07",
+      "severity": "P3",
+      "file": "infra/security/bcrypt-password-hasher.adapter.ts",
+      "problem": "Resolves P03-FOLLOWUP-001: bcrypt uses only the first 72 bytes, but new passwords up to 128 characters (up to 512 bytes) were accepted, so characters after byte 72 were silently ignored. The strength check also accepted 7-character passwords when four character classes were present (the HTTP schemas require 8, so this was defence in depth).",
+      "change": "New passwords must be 8+ characters and at most 72 UTF-8 bytes; existing longer hashes still verify at login (legacy-compatible).",
+      "verification": "Unit: baseline 7-character, 73-byte and multi-byte over-limit passwords accepted; fixed rejected, 72 bytes accepted, legacy hash still verifies."
+    }
+  ],
+  "tests": {
+    "new": "unit auth-hardening (18), E2E auth-session-security (2), google-login E2E unverified cases rewritten (2; the old case asserted the vulnerable behaviour)",
+    "updated": "change-password and reset-password unit specs now assert the session id / user id contract",
+    "baseline": "With source changes stashed: 13 of 18 unit cases and 4 of 6 targeted E2E cases failed, exactly the new rules; the cases for behaviour that must keep working passed.",
+    "database_suites": "All E2E and integration suites on the disposable database: 111 tests in 37 files pass",
+    "final": "1483 unit tests in 114 files; 16 user-management E2E tests; root/tooling tsc; 7/7 workspace type-checks; API client drift check; focused ESLint (pre-existing container warnings only); Prettier"
+  },
+  "follow_ups": [
+    "Verification, reset, lockout and used-code state is in process memory (documented in token-blacklist.ts): lost on restart and not shared between instances. Move to Redis before running more than one API instance.",
+    "Login timing differs between unknown emails and wrong passwords (bcrypt only runs for existing accounts); low-impact enumeration signal.",
+    "changeEmail does not re-verify the new address or notify the old one (next P03 batch with profile/account management).",
+    "loginAsGuest and guest conversion are unreachable; remove or redesign with email-ownership proof if guest accounts are reintroduced.",
+    "Access and refresh tokens share one secret (owner decision carried from P01)."
+  ]
+}

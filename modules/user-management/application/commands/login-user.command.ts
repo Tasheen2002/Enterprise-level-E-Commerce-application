@@ -30,7 +30,9 @@ export class LoginUserHandler
   ): Promise<CommandResult<LoginOutcome>> {
     // Composite key prevents account-DoS by an attacker who only knows the
     // victim's email — the lockout follows the attacker's IP, not the victim.
-    const lockoutKey = `${command.email}|${command.ipAddress}`;
+    // Normalised the same way as the Email value object, so case or
+    // whitespace variants of one address share a single counter.
+    const lockoutKey = `${command.email.trim().toLowerCase()}|${command.ipAddress}`;
 
     if (this.tokenBlacklistService.isAccountLocked(lockoutKey)) {
       return CommandResult.failure(

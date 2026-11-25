@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductTagController } from "../controllers/product-tag.controller";
@@ -212,6 +213,7 @@ export async function productTagRoutes(
   fastify.get(
     "/tags/:tagId/products",
     {
+      preHandler: [optionalAuth],
       preValidation: [
         validateParams(tagByTagIdParamsSchema),
         validateQuery(tagProductsQuerySchema),

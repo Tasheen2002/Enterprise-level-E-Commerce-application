@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-20",
+  "phase": "P10 (batch 1: wishlists and product reviews)",
+  "baseline_commit": "0c3dbcbc",
+  "scope": [
+    "engagement wishlist service, commands, queries, controller, routes and schemas",
+    "engagement product review service, commands, queries, controller, routes and schemas",
+    "storefront WishlistProvider (guest token on wishlist calls)"
+  ],
+  "reviewed_without_change": [
+    "Guest-to-account wishlist transfer already checks the guest token and requires sign-in.",
+    "Review moderation and the all-reviews listing are admin-only; product review listings show approved reviews only."
+  ],
+  "findings": [
+    {
+      "id": "P10-01",
+      "severity": "P1",
+      "file": "wishlist.schema.ts (response schema)",
+      "problem": "Wishlist responses, including the public wishlist listing, returned the owner's guest token. The storefront uses the same token for the guest's cart, checkout and orders, so anyone listing public wishlists obtained other guests' cart and order access.",
+      "change": "Guest tokens are no longer part of any wishlist response; the owner already holds theirs.",
+      "verification": "E2E: baseline returned the token on creation; fixed creation, single and public listing responses contain no token."
+    },
+    {
+      "id": "P10-02",
+      "severity": "P1",
+      "file": "wishlist service, get/items/update/delete/remove handlers, controller",
+      "problem": "Any caller with a wishlist id could read a private wishlist and its items, rename or publish it, remove items or delete it (no ownership check outside adding items), and customers could list any user's wishlists.",
+      "change": "One access rule: the owner (signed-in user, or the guest token for a guest list) may read and change it; staff and, for public lists, anyone may read it; others get 404. User wishlist listings are self or staff. The storefront now sends the guest token on guest wishlist reads and removals.",
+      "verification": "E2E: baseline another customer read the private list (200); fixed reads, updates, removals and deletes by others are 404, the owner and admin keep access, guest lists need their token."
+    },
+    {
+      "id": "P10-03",
+      "severity": "P2",
+      "file": "wishlist.controller.ts",
+      "problem": "An anonymous request with a userId in the body created a wishlist on that user's account.",
+      "change": "The owner is the signed-in user or the guest token; a body userId is ignored and a request with neither is refused (400).",
+      "verification": "E2E: baseline 201 and a wishlist on the victim's account; fixed 400 and none created."
+    },
+    {
+      "id": "P10-04",
+      "severity": "P1",
+      "file": "product-review controller, schema and delete handler",
+      "problem": "Reviews were posted under the userId in the request body (impersonating any customer), any signed-in user could delete any review, and customers could list any user's reviews including unapproved ones.",
+      "change": "Reviews are posted as the signed-in customer (body userId optional and ignored); only the author or an admin can delete; user review listings are self or staff. API client regenerated.",
+      "verification": "E2E: baseline the review was stored under the other customer's id; fixed stored under the author, other customers' delete is 404, admin delete 204."
+    },
+    {
+      "id": "P10-05",
+      "severity": "P2",
+      "file": "get-product-review.query.ts; product-review.routes.ts",
+      "problem": "GET /engagement/reviews/:id returned pending and rejected reviews to anyone, bypassing moderation.",
+      "change": "Unapproved reviews are visible only to their author and staff (optional sign-in on the route).",
+      "verification": "E2E: pending review 404 for the public, 200 for the author, 200 for the public once approved."
+    },
+    {
+      "id": "P10-06",
+      "severity": "P3",
+      "file": "product-review.service.ts; migration 20261120090000_one_review_per_customer_and_product; schema.prisma",
+      "problem": "One review per customer and product was only checked in the service, so simultaneous submissions could store duplicates.",
+      "change": "A unique index on (user_id, product_id) keeps one review; the service reports the losing submission as already reviewed (409). The migration skips the index with a warning if historical duplicates exist.",
+      "verification": "E2E: four simultaneous submissions give one 201 and 409s, one stored review. The baseline run of this case failed because the old schema required userId in the body, so it is not an independent reproduction of the race."
+    }
+  ],
+  "tests": {
+    "new": "E2E engagement-ownership (6); ProductReviewRepository integration fixture updated to one review per customer and product; add-to-wishlist unit spec updated for the actor",
+    "baseline": "All 6 new E2E cases failed against the previous engagement code (stash baseline).",
+    "database_suites": "All E2E and integration suites: 158 tests in 46 files pass",
+    "final": "1526 unit tests in 119 files; root/tooling tsc; 7/7 workspace type-checks (forced, storefront included); engagement ESLint (no errors); API client regenerated and drift check passes; migration applies and schema drift check passes"
+  },
+  "follow_ups": [
+    "Reviews are accepted for any existing product without a verified purchase; whether only buyers may review is an owner decision.",
+    "Public wishlists still expose the owner's user id."
+  ]
+}

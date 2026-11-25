@@ -1,5 +1,5 @@
 import fp from "fastify-plugin";
-import { container } from "./container";
+import type { Container } from "./container";
 import { registerUserManagementRoutes } from "../../../modules/user-management/infra/http/routes/index";
 import { registerProductCatalogRoutes } from "../../../modules/product-catalog/infra/http/routes";
 import { registerInventoryManagementRoutes } from "../../../modules/inventory-management/infra/http/routes";
@@ -9,8 +9,8 @@ import { registerPaymentRoutes } from "../../../modules/payment/infra/http/route
 import { registerLoyaltyRoutes } from "../../../modules/loyalty/infra/http/routes";
 import { registerEngagementRoutes } from "../../../modules/engagement/infra/http/routes";
 
-export default fp(
-  async (fastify) => {
+export default fp<{ container: Container }>(
+  async (fastify, { container }) => {
     fastify.log.info("Registering modules...");
 
     // ============================================
@@ -74,5 +74,5 @@ export default fp(
 
     fastify.log.info("All 8 modules registered successfully");
   },
-  { name: "module-loader" },
+  { name: "module-loader", dependencies: ["config", "db-plugin", "auth-plugin"] },
 );

@@ -137,10 +137,6 @@ export class OrderRepositoryImpl
 
   // ─── Writes ───────────────────────────────────────────────────────────────
 
-  // FLAG: items and shipments are synced by delete-then-recreate. With
-  // `Backorder`/`Preorder` referencing OrderItem.id via `onDelete: Cascade`,
-  // saving an order will silently drop their satellite rows. Long-term: use
-  // diff-based upsert/delete instead of wholesale recreation.
   async save(order: Order): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       await this.persistOrderInTransaction(tx, order);
@@ -201,19 +197,33 @@ export class OrderRepositoryImpl
       update: orderData,
     });
 
-    await tx.orderItem.deleteMany({ where: { orderId } });
-    if (items.length > 0) {
-      await tx.orderItem.createMany({
-        data: items.map((item) => ({
-          id: item.orderItemId.getValue(),
-          orderId,
-          variantId: item.variantId,
-          qty: item.quantity,
-          productSnapshot: item.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
-          isGift: item.isGift,
-          giftMessage: item.giftMessage,
-        })),
-      });
+    // Items are synced by diff, never delete-then-recreate: backorders,
+    // preorders, fulfillment shipment items, return items and repairs
+    // reference order_items with ON DELETE CASCADE and would be lost.
+    const itemRows = items.map((item) => ({
+      id: item.orderItemId.getValue(),
+      variantId: item.variantId,
+      qty: item.quantity,
+      productSnapshot: item.productSnapshot.getValue() as unknown as Prisma.InputJsonValue,
+      isGift: item.isGift,
+      giftMessage: item.giftMessage ?? null,
+    }));
+    const keptIds = itemRows.map((row) => row.id);
+    await tx.orderItem.deleteMany({ where: { orderId, id: { notIn: keptIds } } });
+    const persistedIds = new Set(
+      (
+        await tx.orderItem.findMany({ where: { orderId }, select: { id: true } })
+      ).map((row) => row.id),
+    );
+    for (const { id, ...data } of itemRows) {
+      if (persistedIds.has(id)) {
+        // Scoped to this order so an item id can never touch another order.
+        await tx.orderItem.updateMany({ where: { id, orderId }, data });
+      }
+    }
+    const newRows = itemRows.filter((row) => !persistedIds.has(row.id));
+    if (newRows.length > 0) {
+      await tx.orderItem.createMany({ data: newRows.map((row) => ({ ...row, orderId })) });
     }
 
     if (address) {
@@ -246,9 +256,41 @@ export class OrderRepositoryImpl
     }
   }
 
-  async delete(orderId: OrderId): Promise<void> {
-    await this.prisma.order.delete({
-      where: { id: orderId.getValue() },
+  async deleteIfUnprocessed(orderId: OrderId): Promise<string[]> {
+    const id = orderId.getValue();
+    return this.prisma.$transaction(async (tx) => {
+      // Lock the order row so a concurrent status change cannot slip in
+      // between the checks and the delete.
+      const locked = await tx.$queryRaw<Array<{ status: string }>>`
+        SELECT status::text AS status FROM order_management.orders
+        WHERE order_id = ${id}::uuid FOR UPDATE`;
+      if (locked.length === 0) return [];
+      if (locked[0]!.status !== "created") return [`order status is '${locked[0]!.status}'`];
+
+      const where = { orderId: id };
+      const checks: Array<[string, Promise<number>]> = [
+        [
+          "it has a payment",
+          tx.paymentIntent.count({
+            where: { orderId: id, status: { notIn: ["failed", "cancelled"] } },
+          }),
+        ],
+        ["it has gift card transactions", tx.giftCardTransaction.count({ where })],
+        ["it has loyalty transactions", tx.loyaltyTransaction.count({ where })],
+        ["it has BNPL transactions", tx.bnplTransaction.count({ where })],
+        ["it has return requests", tx.returnRequest.count({ where })],
+        ["it has shipments", tx.orderShipment.count({ where })],
+        ["it has fulfillment shipments", tx.shipment.count({ where })],
+        ["it has pickup reservations", tx.pickupReservation.count({ where })],
+        ["it has support tickets", tx.supportTicket.count({ where })],
+        ["it has goodwill records", tx.goodwillRecord.count({ where })],
+      ];
+      const blockers: string[] = [];
+      for (const [reason, count] of checks) if ((await count) > 0) blockers.push(reason);
+      if (blockers.length > 0) return blockers;
+
+      await tx.order.delete({ where: { id } });
+      return [];
     });
   }
 

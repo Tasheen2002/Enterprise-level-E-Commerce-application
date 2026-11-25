@@ -13,7 +13,7 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     <NextThemesProvider
       attribute="class"
       defaultTheme="light"
-      enableSystem
+      enableSystem={false}
       disableTransitionOnChange
     >
       {children}

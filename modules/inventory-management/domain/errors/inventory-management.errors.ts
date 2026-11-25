@@ -155,6 +155,18 @@ export class InvalidOperationError extends DomainError {
   }
 }
 
+// Raised when the database refuses a stock change because, after concurrent
+// changes, it would make stock negative or reserve more than is on hand.
+export class StockUnavailableError extends DomainError {
+  constructor(variantId: string, locationId: string) {
+    super(
+      `Not enough stock for variant '${variantId}' at location '${locationId}'`,
+      "STOCK_UNAVAILABLE",
+      409,
+    );
+  }
+}
+
 export class InsufficientStockError extends DomainError {
   constructor(variantId: string, locationId: string, requested: number, available: number) {
     super(
@@ -181,6 +193,18 @@ export class PurchaseOrderNotDeletableError extends DomainError {
       `Only draft purchase orders can be deleted, current status: '${status}'`,
       "PURCHASE_ORDER_NOT_DELETABLE",
       422,
+    );
+  }
+}
+
+// A location's stock rows cascade with it, so deleting a location that still
+// holds or reserves stock would silently erase inventory.
+export class LocationInUseError extends DomainError {
+  constructor(reason: string) {
+    super(
+      `Cannot delete location: ${reason}. Move or write off its stock first.`,
+      "LOCATION_IN_USE",
+      409,
     );
   }
 }

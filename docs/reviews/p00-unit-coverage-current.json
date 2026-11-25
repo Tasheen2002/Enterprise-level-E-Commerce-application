@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-17",
+  "passed_files": 64,
+  "passed_tests": 367,
+  "scope": "Vitest configured broad backend unit include; scripts/testing safety helpers excluded and measured separately",
+  "coverage": {
+    "lines": {
+      "total": 22337,
+      "covered": 2627,
+      "skipped": 0,
+      "pct": 11.76
+    },
+    "statements": {
+      "total": 23335,
+      "covered": 2674,
+      "skipped": 0,
+      "pct": 11.45
+    },
+    "functions": {
+      "total": 8249,
+      "covered": 1275,
+      "skipped": 0,
+      "pct": 15.45
+    },
+    "branches": {
+      "total": 10650,
+      "covered": 835,
+      "skipped": 0,
+      "pct": 7.84
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-16",
+  "phase": "P02 (batch 1: migration history integrity and structural index checks)",
+  "baseline_commit": "e4a403a4",
+  "environment": "Disposable postgres:15-alpine container on a loopback-only random port with synthetic credentials; several throwaway databases; container removed afterwards. No existing database touched.",
+  "scope": [
+    "prisma/schema.prisma (72 models, 31 enums, 10 PostgreSQL schemas) - structural checks only in this batch",
+    "prisma/migrations/* (10 existing, 3 added), migration_lock.toml",
+    "modules/fulfillment/infra/persistence/migrations/20251014000100_fulfillment_add_timestamps/migration.sql",
+    "prisma/indexes-to-add.sql",
+    ".github/workflows/ci-cd.yml migration step"
+  ],
+  "findings": [
+    {
+      "id": "P02-01",
+      "severity": "P0",
+      "file": "prisma/migrations (history) vs prisma/schema.prisma",
+      "problem": "A database built with `prisma migrate deploy` (the production path) lacked order_status_enum values pending/confirmed/processing/shipped/delivered and the order_management.admin_notifications table. Development and CI used `prisma db push`, which hid the drift. Checkout completion writes an admin notification inside its interactive transaction; the caught P2021 still aborts the PostgreSQL transaction, so the commit fails with 25P02 and the checkout is lost. Any transition into the missing statuses is rejected by the enum.",
+      "change": "Migration 20261116090000_reconcile_order_status_and_admin_notifications: ADD VALUE IF NOT EXISTS with BEFORE/AFTER positions matching schema order; CREATE TABLE/INDEX IF NOT EXISTS so databases already patched by db push are unaffected.",
+      "verification": "On a migrated database before the fix: Prisma transaction reproducing the checkout pattern failed with 25P02 and 'pending' cast was rejected. After: same transaction commits; enum order created,pending,confirmed,paid,processing,shipped,delivered,fulfilled,partially_returned,refunded,cancelled; zero drift on upgrade, fresh and db-push-then-migrate databases."
+    },
+    {
+      "id": "P02-02",
+      "severity": "P2",
+      "file": ".github/workflows/ci-cd.yml; package.json",
+      "problem": "CI built its test database with `prisma db push`, so the committed migration history was never exercised and drift could not be detected.",
+      "change": "CI runs `prisma migrate deploy` followed by `pnpm run check:migrations` (`prisma migrate diff --from-schema-datasource ... --to-schema-datamodel ... --exit-code`, cross-platform).",
+      "verification": "check:migrations fails (Prisma exit 2, reported by pnpm as 1) on the pre-fix database with the expected table/enum differences and passes on corrected databases."
+    },
+    {
+      "id": "P02-03",
+      "severity": "P3",
+      "file": "prisma/schema.prisma; migration 20261116091000_drop_redundant_indexes",
+      "problem": "Redundant indexes: fulfillment.shipments(order_id) indexed twice (idx_fulfillment_shipments_order_id and idx_shipments_order_id), and loyalty_accounts(user_id) had a plain index beside its unique-constraint index.",
+      "change": "Removed both from the schema and dropped them in a migration. Prisma's differ matches indexes by column list and did not report the shipments duplicate, so that DROP is hand-written.",
+      "verification": "Catalog query for indexes sharing table and column list (including unique/plain overlap) returns none afterwards; drift check passes."
+    },
+    {
+      "id": "P02-04",
+      "severity": "P3",
+      "file": "prisma/schema.prisma; migration 20261116092000_index_unindexed_foreign_keys",
+      "problem": "5 of 90 foreign keys had no index on their referencing columns: editorial_look_products.product_id, editorial_looks.hero_asset_id, variant_media.asset_id (all used by registered catalog lookup handlers) and user_profiles.default_address_id / default_payment_method_id. Parent deletes with cascade/set-null scan the child tables.",
+      "change": "Added @@index for each and the generated CREATE INDEX migration.",
+      "verification": "Unindexed-foreign-key catalog query returns 0 on every test database."
+    },
+    {
+      "id": "P02-05",
+      "severity": "P3",
+      "file": "modules/fulfillment/infra/persistence/migrations/...; prisma/indexes-to-add.sql",
+      "problem": "A fulfillment migration outside prisma/migrations (never run by Prisma) duplicated columns/indexes already created by the init migration; indexes-to-add.sql held 198 unexecuted 'historical' index proposals.",
+      "change": "Removed both after verification.",
+      "verification": "All fulfillment columns/indexes present on a database built from the real history; 196 of 198 proposals already covered by an existing index with the same leading columns; the remaining two (loyalty_accounts.program_id, points_balance) recorded for P09 query review."
+    }
+  ],
+  "checks_without_findings": [
+    "All money columns are Decimal(12,2) (16 columns); no Float fields in the schema.",
+    "All 13 migrations apply in order to an empty database; migration_lock provider is postgresql."
+  ],
+  "final": {
+    "databases": "fresh, upgraded-from-10, db-push-then-migrate and clean 13-migration builds: deploy ok, drift exit 0, 0 unindexed foreign keys, 0 duplicate indexes",
+    "unit": "Prisma client regenerated; 1451 unit tests in 110 files pass; root/tooling tsc and API client drift check pass"
+  },
+  "remaining_p02": [
+    "Model-by-model review of constraints, nullability, cascade/set-null policies, ownership and uniqueness against repository usage (72 models).",
+    "Deprecated multiSchema preview flag; Prisma 6.19.3 -> later major is a separate upgrade decision.",
+    "Existing production databases created with db push have no _prisma_migrations baseline; adopting migrate deploy there requires `prisma migrate resolve --applied` for the historical migrations (owner/deployment decision)."
+  ]
+}

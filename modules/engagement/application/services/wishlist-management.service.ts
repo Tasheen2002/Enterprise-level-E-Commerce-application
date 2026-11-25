@@ -37,6 +37,32 @@ export interface PaginatedWishlistItemResult {
   hasMore: boolean;
 }
 
+/** Who is asking: the signed-in user, the guest token sent by the storefront, and whether they are staff. */
+export interface WishlistActor {
+  userId?: string;
+  guestToken?: string;
+  isStaff?: boolean;
+}
+
+export type WishlistAccess = "read" | "write";
+
+/**
+ * The one access rule for a wishlist: its owner (the signed-in user, or for a
+ * guest wishlist the matching guest token) may read and change it; staff and,
+ * for public wishlists, anyone may read it.
+ */
+export function canAccessWishlist(
+  wishlist: Wishlist,
+  actor: WishlistActor,
+  access: WishlistAccess,
+): boolean {
+  const owns = wishlist.userId
+    ? actor.userId === wishlist.userId
+    : !!wishlist.guestToken && actor.guestToken === wishlist.guestToken;
+  if (owns) return true;
+  return access === "read" && (wishlist.isPublic || actor.isStaff === true);
+}
+
 export class WishlistManagementService {
   constructor(
     private readonly wishlistRepository: IWishlistRepository,
@@ -44,6 +70,14 @@ export class WishlistManagementService {
   ) { }
 
   // ── Wishlist CRUD ────────────────────────────────────────────────────────────
+
+  /** Refuses (as "not found", so ids cannot be probed) anyone the access rule does not allow. */
+  async assertAccess(wishlistId: string, actor: WishlistActor, access: WishlistAccess): Promise<void> {
+    const wishlist = await this.wishlistRepository.findById(WishlistId.fromString(wishlistId));
+    if (!wishlist || !canAccessWishlist(wishlist, actor, access)) {
+      throw new WishlistNotFoundError(wishlistId);
+    }
+  }
 
   async createWishlist(data: {
     userId?: string;
@@ -254,20 +288,15 @@ export class WishlistManagementService {
   async addToWishlist(
     wishlistId: string,
     variantId: string,
-    context?: { userId?: string; guestToken?: string },
+    actor: WishlistActor,
   ): Promise<WishlistItemDTO> {
     const wishlist = await this.wishlistRepository.findById(
       WishlistId.fromString(wishlistId),
     );
     if (!wishlist) throw new WishlistNotFoundError(wishlistId);
 
-    if (context) {
-      if (wishlist.userId && context.userId !== wishlist.userId) {
-        throw new WishlistNotFoundError(wishlistId);
-      }
-      if (wishlist.guestToken && context.guestToken !== wishlist.guestToken) {
-        throw new WishlistNotFoundError(wishlistId);
-      }
+    if (!canAccessWishlist(wishlist, actor, "write")) {
+      throw new WishlistNotFoundError(wishlistId);
     }
 
     // Aggregate enforces no-duplicate-variant invariant; throws

@@ -1,12 +1,12 @@
 import {
+  type ICommand,
+  type ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
   AnalyticsTrackingService,
   TrackBeginCheckoutDto,
 } from "../services/analytics-tracking.service";
-import {
-  ICommand,
-  ICommandHandler,
-  CommandResult,
-} from "./track-product-view.command";
 
 export interface TrackBeginCheckoutCommand extends ICommand {
   cartId: string;
@@ -25,13 +25,9 @@ export interface TrackBeginCheckoutCommand extends ICommand {
 export class TrackBeginCheckoutHandler
   implements ICommandHandler<TrackBeginCheckoutCommand, CommandResult<void>>
 {
-  constructor(
-    private readonly analyticsTrackingService: AnalyticsTrackingService
-  ) {}
+  constructor(private readonly analyticsTrackingService: AnalyticsTrackingService) {}
 
-  async handle(
-    command: TrackBeginCheckoutCommand
-  ): Promise<CommandResult<void>> {
+  async handle(command: TrackBeginCheckoutCommand): Promise<CommandResult<void>> {
     try {
       await this.analyticsTrackingService.trackBeginCheckout({
         cartId: command.cartId,

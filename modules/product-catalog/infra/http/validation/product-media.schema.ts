@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 
 // ── Request Schemas (Zod) ─────────────────────────────────────────────────────
 
@@ -16,7 +17,7 @@ export const productMediaIdParamsSchema = z.object({
 });
 
 export const getProductMediaQuerySchema = z.object({
-  includeAssetDetails: z.coerce.boolean().optional().default(true),
+  includeAssetDetails: queryBoolean().optional().default(true),
   sortBy: z.enum(["position", "createdAt"]).optional().default("position"),
 });
 

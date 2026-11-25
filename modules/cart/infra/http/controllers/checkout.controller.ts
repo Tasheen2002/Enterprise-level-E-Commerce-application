@@ -104,15 +104,10 @@ export class CheckoutController {
     reply: FastifyReply,
   ) {
     try {
-      const userId = request.user?.userId;
-      const guestToken = userId ? undefined : request.guestToken;
+      // Admin-only route (see checkout.routes.ts): closes a customer's checkout
+      // without an order, so the customer ownership rule does not apply.
       const { checkoutId } = request.params;
-
-      if (!userId && !guestToken) {
-        return ResponseHelper.unauthorized(reply, "Authentication required");
-      }
-
-      const result = await this.completeCheckoutHandler.handle({ checkoutId, userId, guestToken });
+      const result = await this.completeCheckoutHandler.handle({ checkoutId, asStaff: true });
       return ResponseHelper.fromCommand(reply, result, "Checkout completed");
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -143,6 +138,7 @@ export class CheckoutController {
         shippingAddress: body.shippingAddress,
         billingAddress: body.billingAddress,
         promoCode: body.promoCode,
+        pointsToRedeem: body.pointsToRedeem,
       });
       return ResponseHelper.fromCommand(reply, result, "Order created successfully from checkout");
     } catch (error: unknown) {

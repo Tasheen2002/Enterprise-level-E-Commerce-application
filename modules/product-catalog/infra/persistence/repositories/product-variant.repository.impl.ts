@@ -89,7 +89,6 @@ export class ProductVariantRepositoryImpl
       where: { id: id.getValue() },
       include: { inventoryStocks: true },
     });
-
     if (!variantData) {
       return null;
     }

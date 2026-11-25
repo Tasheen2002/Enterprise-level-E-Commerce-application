@@ -1,0 +1,208 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "5c8f38fb831e3a6cf687342517015fd0dc3ab618",
+  "findings": [
+    {
+      "id": "P01-32",
+      "severity": "P2",
+      "problem": "Process entry marked listen failure unsuccessful but did not close the acquired server/resources.",
+      "change": "Extract a lifecycle owner into startup.ts; await its single-flight close operation on startup failure and preserve the primary startup error. index.ts retains dotenv loading and invokes startApi.",
+      "limit": "Factory failure cleanup remains owned by createServer when no instance was returned. No live DB/provider shutdown proof added."
+    },
+    {
+      "id": "P01-33",
+      "severity": "P2",
+      "problem": "Independent once listeners could invoke close twice for SIGINT/SIGTERM and leave the other listener attached; a repeat of the same signal had no owned handler during cleanup.",
+      "change": "Retain owned on listeners while closing, share one close promise and remove only the exact owned callbacks when cleanup settles. Return an idempotent close owner for programmatic use; failures log/set runtime.exitCode and settle after cleanup.",
+      "limit": "Programmatic callers must use the returned owner; directly closing a separately held Fastify instance bypasses this ownership wrapper. No removeAllListeners, forced process.exit or force-kill policy added."
+    },
+    {
+      "id": "P01-34",
+      "severity": "P2",
+      "problem": "Signals while the factory was pending had no lifecycle owner; a signal during listen could still be followed by a success announcement.",
+      "change": "Attach handlers before awaiting the factory, remember shutdown intent, close a subsequently returned instance without listening, and suppress success logging once shutdown starts.",
+      "limit": "This records shutdown intent; it does not cancel an unresolved factory, enforce a shutdown deadline or guarantee a successful exit if listen itself rejects during concurrent shutdown."
+    }
+  ],
+  "baseline": {
+    "passed": 2,
+    "failed": 8,
+    "cases": 10,
+    "failed_cases": [
+      "API process lifecycle closes acquired resources and removes only its own listeners after listen failure",
+      "API process lifecycle waits for failed-listen cleanup before completing",
+      "API process lifecycle shares one shutdown for repeated SIGINT and the other signal",
+      "API process lifecycle shares one shutdown for repeated SIGTERM and the other signal",
+      "API process lifecycle records close failure and removes both owned signal listeners",
+      "API process lifecycle preserves startup failure when cleanup rejects",
+      "API process lifecycle honors a signal while the factory is pending without starting a listener",
+      "API process lifecycle does not announce startup if shutdown starts while listen is pending"
+    ],
+    "extraction": "Pre-fix cases ran after moving the original entry function into startup.ts with injectable factory/runtime; original once/close/listen/error behavior was retained. This is an extracted-logic baseline, not execution of the unchanged original index module. One later case verifies default process ownership and the returned close handle; total new runtime cases 11."
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/index.ts",
+      "apps/api/src/startup.ts",
+      "apps/api/test/unit/api-process.spec.ts",
+      "apps/api/test/fixtures/api-process.fixture.ts"
+    ],
+    "dependency_trace": "Re-read process entry and server-factory return/cleanup; inspected installed Fastify addHook/onClose implementation and token-blacklist import-time unref timer. Existing server-bootstrap suite revalidated. Complete container/module/DB/provider graph is not reviewed in this task.",
+    "preserved": "Bind host :: and configured port; factory dependency and dotenv import ordering; startup/close failure exit code 1; existing failure exit state retained on success; no immediate process.exit. Close errors still log and set failure status.",
+    "ownership": "Each invocation owns only its callback references. Repeated requests return the same promise. The returned close handle owns signal cleanup; lifecycle calls before instance acquisition defer shutdown until the factory settles."
+  },
+  "verification": {
+    "new_runtime_cases": 11,
+    "focused_cases": 21,
+    "focused_files": 2,
+    "full_unit_cases": 1358,
+    "full_unit_files": 104,
+    "child_process_cases": [
+      {
+        "mode": "graceful",
+        "exitCode": 0,
+        "output": {
+          "mode": "graceful",
+          "closed": 1,
+          "cleaned": true
+        },
+        "stderr_present": false
+      },
+      {
+        "mode": "factory-failure",
+        "exitCode": 1,
+        "output": {
+          "mode": "factory-failure",
+          "cleaned": true
+        },
+        "stderr_present": true
+      },
+      {
+        "mode": "listen-failure",
+        "exitCode": 1,
+        "output": {
+          "mode": "listen-failure",
+          "closed": 1,
+          "cleaned": true
+        },
+        "stderr_present": true
+      },
+      {
+        "mode": "close-failure",
+        "exitCode": 1,
+        "output": {
+          "mode": "close-failure",
+          "closed": 1,
+          "cleaned": true
+        },
+        "stderr_present": false
+      }
+    ],
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 29,
+          "covered": 29,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": "Unknown"
+        }
+      },
+      "apps/api/src/startup.ts": {
+        "lines": {
+          "total": 29,
+          "covered": 29,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 6,
+          "covered": 6,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 33,
+          "covered": 33,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 10,
+          "covered": 10,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "startup.ts only: 29 lines, 33 statements, 6 functions, 10 branches at 100%. Thin index launcher read/compiled, not included in coverage; no entire process/DB/provider coverage claim.",
+    "cases": "Factory/listen/close failures, awaiting cleanup, primary error retention, repeated same/mixed signals, exact listener ownership, pending factory/listen races, default real process handler installation/removal and returned owner promise identity. Existing 10 server-bootstrap cases pass.",
+    "children": "Four separate Node processes run the retained fixture via --import tsx. Actual Fastify binds ephemeral local ports; listen failure uses an actual occupied port. Graceful and close-failure paths emit Node SIGINT/SIGTERM events and await owner cleanup. Processes terminate naturally with expected 0/1 statuses; no real application factory, DB or provider invoked.",
+    "checks": {
+      "root_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Vitest api-process.spec.ts and server-bootstrap.spec.ts --testTimeout=15000, startup.ts-only coverage",
+      "Full unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "node --import tsx apps/api/test/fixtures/api-process.fixture.ts <graceful|factory-failure|listen-failure|close-failure> (30-second parent deadline per fixture, no timeout fired)",
+      "Root tsc --noEmit; focused lint/format; static candidate/compiler membership refresh"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/index.ts": "d88c4243e1597f10e38906816dc0ada14d02f85a3c1137796741c0f2f27738b8",
+    "apps/api/src/startup.ts": "90cde604d9809e6047fcfe81e8e954ab32c2f34c29f124b7b6bfd99ee28b5c4e",
+    "apps/api/test/unit/api-process.spec.ts": "a0173dfb95346c373489313e3e8445f3e6ce4f9d08eed8348be9a2a8d912fcda",
+    "apps/api/test/fixtures/api-process.fixture.ts": "2aada90810b487f4ad563cba460189c78811a29c237216cc91cfa5e8b2e4187f"
+  },
+  "dependency_sha256": {
+    "apps/api/src/server.ts": "69df7d33f2a6a440a8a6cba97fc0f7da1e99432ef55fdd27de5b36b31ad1c06a",
+    "apps/api/src/plugins/config.ts": "36640889e66a1308a803105d50477ec9c15c41648ef60e591a4a4bdfe2b0ae16",
+    "apps/api/test/unit/server-bootstrap.spec.ts": "f4ba1a3ad6606a0d91faff5b9b9c4ed049eff80d98db1b1629e241f155600654"
+  },
+  "open_followups": [
+    {
+      "id": "P01-PROCESS-NATIVE-DEPLOYMENT",
+      "scope": "Signals were emitted as Node events, not delivered natively by Windows/production process manager. Verify deployment grace period, drain/load behavior, inherited handles and native supervisor/OS semantics in P15."
+    },
+    {
+      "id": "P01-PROCESS-TIMEOUT",
+      "scope": "No cancellation/deadline for hanging factories or close hooks. Choose graceful timeout/second-signal escalation from deployment requirements; no force-exit policy invented."
+    },
+    {
+      "id": "P01-COMPOSITION-REAL-INFRA",
+      "scope": "Default factory startup with actual DB/container/modules/background/provider services and log/secret redaction remains open. Child fixtures instantiate synthetic Fastify apps; importing the module graph is not proof of production composition."
+    }
+  ],
+  "limits": [
+    "Child processes prove natural exit for the stated synthetic scenarios. They do not prove native signal delivery, real database/provider cleanup or all request-drain behavior.",
+    "Only unit/child fixtures close strictly; index/startup sources remain open for actual entry/composition/native deployment gates. P01 remains open.",
+    "Direct Fastify.close calls outside the returned owner do not automatically release this wrapper\u2019s process listeners; the application entry uses the owned signal path. Broad coverage not remeasured."
+  ]
+}

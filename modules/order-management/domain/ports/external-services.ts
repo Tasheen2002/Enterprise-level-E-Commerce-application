@@ -74,4 +74,10 @@ export interface IExternalStockService {
     locationId: string,
     quantity: number,
   ): Promise<unknown>;
+  /**
+   * Puts back on the shelf the stock that left inventory for an order
+   * (recorded in the inventory ledger), minus anything already returned.
+   * Returns the number of units returned.
+   */
+  returnStockForOrder(orderId: string): Promise<number>;
 }

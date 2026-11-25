@@ -22,7 +22,8 @@ export const locationIdParamsSchema = z.object({
 
 // Enum derives from the domain VO so the wire schema stays in sync.
 export const createAppointmentSchema = z.object({
-  userId: z.uuid(),
+  /** Used only when store staff book for a customer; customers always book for themselves. */
+  userId: z.uuid().optional(),
   type: z.enum(AppointmentTypeValue),
   locationId: z.uuid().optional(),
   startAt: z.coerce.date(),

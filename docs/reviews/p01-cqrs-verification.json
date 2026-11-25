@@ -1,0 +1,204 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "4901ff358e77cc26dc51509936d3906a287b56db",
+  "findings": [
+    "P01-06 unchecked exception statuses/messages and unsafe introspection in fromError",
+    "P01-07 unspecified query result defaulted to any"
+  ],
+  "baseline": {
+    "passed": 48,
+    "failed": 33,
+    "failed_cases": [
+      "'command' exception conversion treats malformed 'undefined' status as an internal failure",
+      "'command' exception conversion treats malformed 'null' status as an internal failure",
+      "'command' exception conversion treats malformed 'numeric-string' status as an internal failure",
+      "'command' exception conversion treats malformed 'array' status as an internal failure",
+      "'command' exception conversion treats malformed 'object' status as an internal failure",
+      "'command' exception conversion treats malformed 'boolean' status as an internal failure",
+      "'command' exception conversion treats malformed 'NaN' status as an internal failure",
+      "'command' exception conversion treats malformed 'infinity' status as an internal failure",
+      "'command' exception conversion treats malformed 'fraction' status as an internal failure",
+      "'command' exception conversion treats malformed 'success-status' status as an internal failure",
+      "'command' exception conversion treats malformed 'below-bound' status as an internal failure",
+      "'command' exception conversion treats malformed 'above-bound' status as an internal failure",
+      "'command' exception conversion uses a string fallback when an Error has a malformed message",
+      "'command' exception conversion contains throwing status getters rather than throwing another error",
+      "'command' exception conversion contains a proxy that refuses error introspection",
+      "'query' exception conversion treats malformed 'undefined' status as an internal failure",
+      "'query' exception conversion treats malformed 'null' status as an internal failure",
+      "'query' exception conversion treats malformed 'numeric-string' status as an internal failure",
+      "'query' exception conversion treats malformed 'array' status as an internal failure",
+      "'query' exception conversion treats malformed 'object' status as an internal failure",
+      "'query' exception conversion treats malformed 'boolean' status as an internal failure",
+      "'query' exception conversion treats malformed 'NaN' status as an internal failure",
+      "'query' exception conversion treats malformed 'infinity' status as an internal failure",
+      "'query' exception conversion treats malformed 'fraction' status as an internal failure",
+      "'query' exception conversion treats malformed 'success-status' status as an internal failure",
+      "'query' exception conversion treats malformed 'below-bound' status as an internal failure",
+      "'query' exception conversion treats malformed 'above-bound' status as an internal failure",
+      "'query' exception conversion uses a string fallback when an Error has a malformed message",
+      "'query' exception conversion contains throwing status getters rather than throwing another error",
+      "'query' exception conversion contains a proxy that refuses error introspection",
+      "CQRS result HTTP boundary redacts converted 'undefined' failures through both result paths",
+      "CQRS result HTTP boundary redacts converted 'string' failures through both result paths",
+      "CQRS result HTTP boundary redacts converted 'array' failures through both result paths"
+    ],
+    "typecheck": {
+      "exit_code": 1,
+      "diagnostic": "packages/core/test/cqrs-contracts.typecheck.ts(5,3): TS2578 unused @ts-expect-error for unchecked access to unspecified query result"
+    }
+  },
+  "changes": [
+    "Share defensive exception conversion in an internal core helper; retain only integer failure statuses 400-599, otherwise 500.",
+    "Require a string Error message, retain fixed fallbacks for non-Error values and catch throwing property/prototype introspection.",
+    "Preserve explicit failure factories, query failure overloads, optional command data, null query sentinel and falsy success values.",
+    "Default unspecified IQueryHandler results to unknown rather than any; positive explicit result types, void commands and readonly metadata are compile-checked.",
+    "Remove redundant barrel stars without changing public class identities; the conversion helper is not added to the public barrel."
+  ],
+  "new_runtime_cases": 81,
+  "focused_cases": 100,
+  "focused_files": 3,
+  "full_unit_cases": 898,
+  "full_unit_files": 90,
+  "compile_only_fixture": "packages/core/test/cqrs-contracts.typecheck.ts",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 27,
+        "covered": 27,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 27,
+        "covered": 27,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 20,
+        "covered": 20,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    },
+    "packages/core/src/application/command-result.ts": {
+      "lines": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/application/query-result.ts": {
+      "lines": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "packages/core/src/application/result-error.ts": {
+      "lines": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 1,
+        "covered": 1,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 14,
+        "covered": 14,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Only command-result.ts, query-result.ts and result-error.ts: 27 executable lines, 20 branches; 100% line/statement/function/branch coverage. Interfaces/barrels use compiler and export-identity checks. No whole-backend coverage claim.",
+  "verified_source_sha256": {
+    "packages/core/src/application/command-result.ts": "f30c0a000579a4e2778dbb4903abf9632004aa41925f6707b077dc2611de3595",
+    "packages/core/src/application/query-result.ts": "1a1ad319201a68164b20bd225b13a608e9a790751224e2839fa8bd9b803184e2",
+    "packages/core/src/application/result-error.ts": "f623a8c297ada95068900cb9ed601b0e26ef99816f7574aea5a1f062a6126a83",
+    "packages/core/src/application/cqrs.ts": "0270f79dbfa8d143883a6f6360f1c2b2dff3b82ea7a7a9db42f4057a2a36a5fa",
+    "packages/core/src/application/index.ts": "3dbb34782eb028763607568322004994691bf293bcb5fd32d2bbc415ee3a1d5e",
+    "packages/core/test/cqrs-results.spec.ts": "114b4266a2d5a8208675391974799bcbe154086f0f5bba2b0b13b59cddc23836",
+    "apps/api/test/unit/cqrs-result-http.spec.ts": "1d41990df02f8c4be288d65b040ec24cc44c758940ddaf8358d4ddbd27bb948a",
+    "packages/core/test/cqrs-contracts.typecheck.ts": "c261d970fc493d7b288c6ee1e40ec8d110dea278c22046718058afa942247636"
+  },
+  "checks": {
+    "root_tsc": "passed with compile-only positive/negative contracts",
+    "core_package_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed"
+  },
+  "caller_scope": "Static scan found fromError only at the two core method definitions, not production application callers. The three pre-fix HTTP failures are synthetic Fastify/ResponseHelper reproductions, not a demonstrated live endpoint vulnerability. Manual failure(error.message) call sites remain owning-module work.",
+  "dependency_reads": [
+    "Complete ResponseHelper and HTTP error serializer read; representative login/get-profile handler paths inspected. No whole user/auth/business-module review implied."
+  ],
+  "limits": [
+    "Results retain actual Error messages internally for diagnostics; HTTP responders must apply server-error redaction. This does not certify direct serialization of result objects or every application catch path.",
+    "Explicit failure() without status still defaults to client validation behavior at the HTTP boundary; it was not globally changed to 500.",
+    "Field-level domain serialization, nominal ID types, event composition and remaining shared-foundation reviews retain their open findings.",
+    "No persistence, schema or provider behavior changed. Database/provider checks were not rerun; prior 47-group database baseline remains historical."
+  ]
+}

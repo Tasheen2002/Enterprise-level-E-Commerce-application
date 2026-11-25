@@ -58,7 +58,7 @@ async function persistTokens(result: AuthResult): Promise<void> {
   if (result.refreshToken) {
     setRefreshToken(result.refreshToken);
   }
-  await syncAuthCookies(result.accessToken, result.refreshToken);
+  await syncAuthCookies(result.accessToken);
 }
 
 export async function forgotPassword(input: ForgotPasswordRequest): Promise<void> {
@@ -90,7 +90,7 @@ export async function refreshToken(input: RefreshTokenRequest): Promise<RefreshT
   if (result.refreshToken) {
     setRefreshToken(result.refreshToken);
   }
-  await syncAuthCookies(result.accessToken, result.refreshToken);
+  await syncAuthCookies(result.accessToken);
   return result;
 }
 
@@ -416,16 +416,3 @@ export async function getLoyaltyTransactions(accountId?: string, orderId?: strin
     method: "GET",
   });
 }
-
-export async function redeemLoyaltyPoints(input: {
-  userId: string;
-  points: number;
-  orderId?: string;
-  reason?: string;
-}): Promise<LoyaltyTransaction> {
-  return request<LoyaltyTransaction>("/loyalty/points/redeem", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-

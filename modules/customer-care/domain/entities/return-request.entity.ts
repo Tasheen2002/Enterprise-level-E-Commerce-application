@@ -102,6 +102,11 @@ export class ReturnRequest {
     if (this.status.isRefunded() || this.status.isRejected()) {
       throw new Error("Cannot change status of finalized return request");
     }
+    if (!this.status.canTransitionTo(newStatus)) {
+      throw new Error(
+        `Cannot move a return from ${this.status.getValue()} to ${newStatus.getValue()}`
+      );
+    }
 
     this.status = newStatus;
     this.updatedAt = new Date();

@@ -157,7 +157,21 @@ export interface LoyaltyAccountDTO {
 // 4. Entity Class
 // ============================================================================
 
+export interface LoyaltyCounters {
+  currentBalance: number;
+  totalPointsEarned: number;
+  totalPointsRedeemed: number;
+  lifetimePoints: number;
+}
+
 export class LoyaltyAccount extends AggregateRoot {
+  /**
+   * Counters as last read from / written to the database. The repository
+   * persists the change since then as atomic increments, so concurrent
+   * earning and redeeming add up instead of overwriting each other.
+   */
+  private persisted: LoyaltyCounters | null = null;
+
   private constructor(private props: LoyaltyAccountProps) {
     super();
   }
@@ -200,7 +214,31 @@ export class LoyaltyAccount extends AggregateRoot {
   }
 
   static fromPersistence(props: LoyaltyAccountProps): LoyaltyAccount {
-    return new LoyaltyAccount(props);
+    const account = new LoyaltyAccount(props);
+    account.persisted = account.counters();
+    return account;
+  }
+
+  counters(): LoyaltyCounters {
+    return {
+      currentBalance: this.props.currentBalance.getValue(),
+      totalPointsEarned: this.props.totalPointsEarned.getValue(),
+      totalPointsRedeemed: this.props.totalPointsRedeemed.getValue(),
+      lifetimePoints: this.props.lifetimePoints.getValue(),
+    };
+  }
+
+  get persistedCounters(): LoyaltyCounters | null {
+    return this.persisted;
+  }
+
+  /** Called by the repository with the counters the database now holds. */
+  markPersisted(stored: LoyaltyCounters): void {
+    this.props.currentBalance = Points.create(stored.currentBalance);
+    this.props.totalPointsEarned = Points.create(stored.totalPointsEarned);
+    this.props.totalPointsRedeemed = Points.create(stored.totalPointsRedeemed);
+    this.props.lifetimePoints = Points.create(stored.lifetimePoints);
+    this.persisted = { ...stored };
   }
 
   get id(): LoyaltyAccountId {

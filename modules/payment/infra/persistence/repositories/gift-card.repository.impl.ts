@@ -32,6 +32,25 @@ export class GiftCardRepositoryImpl
     await this.dispatchEvents(giftCard);
   }
 
+  async debit(giftCardId: GiftCardId, amount: number, orderId: string): Promise<boolean> {
+    const id = giftCardId.getValue();
+    return this.prisma.$transaction(async (tx) => {
+      const debited = await tx.giftCard.updateMany({
+        where: { giftCardId: id, status: "active", currentBalance: { gte: amount } },
+        data: { currentBalance: { decrement: amount }, updatedAt: new Date() },
+      });
+      if (debited.count !== 1) return false;
+      await tx.giftCardTransaction.create({
+        data: { giftCardId: id, orderId, amount, type: "redeem" },
+      });
+      await tx.giftCard.updateMany({
+        where: { giftCardId: id, currentBalance: { lte: 0 } },
+        data: { status: "redeemed" },
+      });
+      return true;
+    });
+  }
+
   async delete(id: GiftCardId): Promise<void> {
     await this.prisma.giftCard.delete({
       where: { giftCardId: id.getValue() },

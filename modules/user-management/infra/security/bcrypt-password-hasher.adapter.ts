@@ -7,6 +7,12 @@ import { DomainValidationError } from "../../domain/errors/user-management.error
 // into the application layer. The application service depends on the
 // interface in `application/services/password-hasher.service.ts`; the
 // container wires this adapter at boot.
+// bcrypt only uses the first 72 bytes of its input; longer passwords would be
+// silently truncated, so new passwords are capped at that byte length. Login
+// still verifies existing hashes unchanged (legacy-compatible).
+export const BCRYPT_MAX_PASSWORD_BYTES = 72;
+const MIN_PASSWORD_LENGTH = 8;
+
 export class BcryptPasswordHasherAdapter implements IPasswordHasherService {
   private readonly saltRounds: number;
 
@@ -69,7 +75,7 @@ export class BcryptPasswordHasherAdapter implements IPasswordHasherService {
       feedback.push("Password must contain at least one number");
     }
 
-    if (/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
       score += 1;
     } else {
       feedback.push("Password must contain at least one special character");
@@ -79,8 +85,15 @@ export class BcryptPasswordHasherAdapter implements IPasswordHasherService {
       score += 1;
     }
 
+    const tooLong = Buffer.byteLength(password, "utf8") > BCRYPT_MAX_PASSWORD_BYTES;
+    if (tooLong) {
+      feedback.push(`Password must be at most ${BCRYPT_MAX_PASSWORD_BYTES} bytes long`);
+    }
+
     return {
-      isValid: score >= 4,
+      // Length limits are hard requirements; the character-class score only
+      // applies once they are met.
+      isValid: password.length >= MIN_PASSWORD_LENGTH && !tooLong && score >= 4,
       score,
       feedback,
     };

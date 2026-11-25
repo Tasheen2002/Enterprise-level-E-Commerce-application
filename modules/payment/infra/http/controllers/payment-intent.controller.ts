@@ -10,6 +10,14 @@ import {
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
+  hasRole,
+  STAFF_ROLES,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
+
+// Customers are limited to their own payments; staff see and act on any.
+const customerScope = (request: AuthenticatedRequest): string | undefined =>
+  hasRole(request, [...STAFF_ROLES]) ? undefined : request.user.userId;
+import {
   CreatePaymentIntentBody,
   ProcessPaymentBody,
   RefundPaymentBody,
@@ -36,7 +44,7 @@ export class PaymentIntentController {
       const result = await this.getHandler.handle({
         intentId: request.query.intentId,
         orderId: request.query.orderId,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "Payment intent retrieved", result);
@@ -52,7 +60,7 @@ export class PaymentIntentController {
     try {
       const result = await this.listTransactionsHandler.handle({
         intentId: request.params.intentId,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.ok(reply, "Payment transactions retrieved", result);
@@ -68,7 +76,7 @@ export class PaymentIntentController {
     try {
       const result = await this.createHandler.handle({
         ...request.body,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Payment intent created", 201);
@@ -84,7 +92,7 @@ export class PaymentIntentController {
     try {
       const result = await this.processHandler.handle({
         ...request.body,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Payment processed");
@@ -100,7 +108,7 @@ export class PaymentIntentController {
     try {
       const result = await this.refundHandler.handle({
         ...request.body,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Payment refunded");
@@ -116,7 +124,7 @@ export class PaymentIntentController {
     try {
       const result = await this.voidHandler.handle({
         ...request.body,
-        userId: request.user.userId,
+        userId: customerScope(request),
         timestamp: new Date(),
       });
       return ResponseHelper.fromCommand(reply, result, "Payment voided");

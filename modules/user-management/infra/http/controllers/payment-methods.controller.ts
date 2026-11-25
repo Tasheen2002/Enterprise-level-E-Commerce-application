@@ -57,7 +57,6 @@ export class PaymentMethodsController {
         expMonth: request.body.expMonth,
         expYear: request.body.expYear,
         billingAddressId: request.body.billingAddressId,
-        providerRef: request.body.providerRef,
         isDefault: request.body.isDefault,
       });
       return ResponseHelper.fromCommand(reply, result, "Payment method added", 201);
@@ -78,7 +77,6 @@ export class PaymentMethodsController {
         isDefault: request.body.isDefault,
         expMonth: request.body.expMonth,
         expYear: request.body.expYear,
-        providerRef: request.body.providerRef,
       });
       return ResponseHelper.fromCommand(reply, result, "Payment method updated");
     } catch (error: unknown) {

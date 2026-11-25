@@ -8,6 +8,7 @@ import {
   ListProductsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   ProductParams,
   ProductSlugParams,
@@ -34,7 +35,10 @@ export class ProductController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listProductsHandler.handle(request.query);
+      const result = await this.listProductsHandler.handle({
+        ...request.query,
+        includeUnpublished: canViewUnpublished(request),
+      });
       return ResponseHelper.ok(reply, "Products retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -46,7 +50,10 @@ export class ProductController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.getProductHandler.handle({ productId: request.params.productId });
+      const result = await this.getProductHandler.handle({
+        productId: request.params.productId,
+        includeUnpublished: canViewUnpublished(request),
+      });
       return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -58,7 +65,10 @@ export class ProductController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.getProductHandler.handle({ slug: request.params.slug });
+      const result = await this.getProductHandler.handle({
+        slug: request.params.slug,
+        includeUnpublished: canViewUnpublished(request),
+      });
       return ResponseHelper.ok(reply, "Product retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

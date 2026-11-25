@@ -169,7 +169,7 @@ export function AccountDashboard() {
       <section className="space-y-8">
         <h2 className="font-serif text-3xl italic text-charcoal tracking-wide">Recent Activity</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-sand/20 divide-x divide-sand/20 bg-ivory shadow-sm overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-sand/20 divide-y md:divide-y-0 md:divide-x divide-sand/20 bg-ivory shadow-sm overflow-hidden">
           <ActivityCard
             icon={Package}
             label="Active Orders"

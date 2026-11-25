@@ -1,3 +1,4 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreateGoodwillRecordCommand,
@@ -121,7 +122,7 @@ export class GoodwillRecordController {
 
   async listRecords(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListGoodwillRecordsQuery = {};
+      const query: ListGoodwillRecordsQuery = pageFromRequest(request.query);
       const result = await this.listGoodwillRecordsHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

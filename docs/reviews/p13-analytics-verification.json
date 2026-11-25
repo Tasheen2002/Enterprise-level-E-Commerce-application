@@ -1,0 +1,42 @@
+{
+  "date": "2026-11-25",
+  "phase": "P13 (analytics: unregistered tracking module and the live checkout purchase event)",
+  "baseline_commit": "b21ebf5c",
+  "scope": [
+    "All 23 modules/analytics files: commands, tracking service, entity and value objects, controller, routes, repository",
+    "The registered checkout completion path that writes purchase events (modules/cart checkout-completion.port.impl.ts)"
+  ],
+  "registration_decision": "The tracking module stays unregistered (owner decision). Checkout writes its own purchase event after commit and failures there cannot affect the order (verified in P06).",
+  "reviewed_without_change": [
+    "Event types and payload shapes are validated by route schemas and value objects; purchase events are written after the order commits and only logged on failure."
+  ],
+  "findings": [
+    {
+      "id": "P13-01",
+      "severity": "P1",
+      "file": "checkout-completion.port.impl.ts; analytics-event.repository.impl.ts; apps/api/src/shared/utils/analytics-pseudonym.ts",
+      "problem": "Every guest purchase stored the guest's token in plain text in analytics.analytics_events. The same token opens the guest's cart, checkout and orders, so anyone with access to analytics data could act as those guests. The tracking module stored and indexed it the same way.",
+      "change": "Analytics stores a keyed hash of the guest token (secret ANALYTICS_PSEUDONYM_SECRET, falling back to JWT_SECRET; the token is dropped if neither is set). Events can still be grouped and looked up per guest, but the stored value is not a credential.",
+      "verification": "Integration: baseline the checkout and repository stored the raw guest token; fixed both store a gt_ pseudonym and lookups by guest still work. Unit analytics-pseudonym: stable, secret-dependent, never contains the token."
+    },
+    {
+      "id": "P13-02",
+      "severity": "P2",
+      "file": "modules/analytics/infra/http/routes.ts",
+      "problem": "Public tracking routes attributed events to any userId sent in the body (polluting or impersonating customer behaviour data), had no rate limit, and the internal purchase capture endpoint was public, so purchases and revenue could be fabricated.",
+      "change": "Events are attributed to the signed-in user (if any), never to a body userId; public tracking is rate limited per user or IP; purchase capture is admin-only (checkout records real purchases itself).",
+      "verification": "Route handlers reviewed and type-checked (module unregistered, so no HTTP test without enabling it)."
+    }
+  ],
+  "tests": {
+    "new": "integration AnalyticsGuestPrivacy (1), CheckoutCompletion guest token case (1), unit analytics-pseudonym (3)",
+    "baseline": "Both integration privacy cases failed against the previous code (raw guest_ tokens stored).",
+    "database_suites": "All E2E and integration suites: 172 tests in 50 files pass",
+    "final": "1547 unit tests in 122 files; root/tooling tsc; 7/7 workspace type-checks; ESLint (no errors); Prettier on the new shared file; API client check passes"
+  },
+  "follow_ups": [
+    "OWNER DECISION: existing analytics_events rows still contain raw guest tokens. They should be removed or replaced (for example UPDATE ... SET guest_token = NULL WHERE guest_token NOT LIKE 'gt_%'); this deletes data in production, so it is not done automatically.",
+    "Set a dedicated ANALYTICS_PSEUDONYM_SECRET in production so rotating JWT_SECRET does not split guests' analytics history.",
+    "Analytics events also store IP address and user agent; a retention period and consent policy are owner/legal decisions."
+  ]
+}

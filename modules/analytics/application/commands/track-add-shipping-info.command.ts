@@ -1,5 +1,8 @@
-import { ICommand, ICommandHandler } from "./track-product-view.command";
-import { CommandResult } from "./track-product-view.command";
+import {
+  type ICommand,
+  type ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { AnalyticsTrackingService } from "../services/analytics-tracking.service";
 
 // Define DTO locally to avoid circular dependencies or external complex types
@@ -38,13 +41,9 @@ export interface TrackAddShippingInfoCommand extends ICommand {
 export class TrackAddShippingInfoHandler
   implements ICommandHandler<TrackAddShippingInfoCommand, CommandResult<void>>
 {
-  constructor(
-    private readonly analyticsTrackingService: AnalyticsTrackingService
-  ) {}
+  constructor(private readonly analyticsTrackingService: AnalyticsTrackingService) {}
 
-  async handle(
-    command: TrackAddShippingInfoCommand
-  ): Promise<CommandResult<void>> {
+  async handle(command: TrackAddShippingInfoCommand): Promise<CommandResult<void>> {
     try {
       // Map command to DTO expected by service (if separate, otherwise pass direct params)
       // Since service method doesn't exist yet, we'll implement it shortly.

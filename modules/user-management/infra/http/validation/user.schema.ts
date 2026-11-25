@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import { UserRole } from "../../../domain/value-objects/user-role.vo";
 import { UserStatus } from "../../../domain/value-objects/user-status.vo";
 
@@ -32,7 +33,7 @@ export const listUsersQuerySchema = z.object({
   role: z.enum(USER_ROLES).optional(),
   status: z.enum(USER_STATUSES).optional(),
   search: z.string().max(200).optional(),
-  emailVerified: z.coerce.boolean().optional(),
+  emailVerified: queryBoolean().optional(),
   sortBy: z.enum(["createdAt", "email"]).optional(),
   sortOrder: z.enum(["asc", "desc"]).optional(),
 });

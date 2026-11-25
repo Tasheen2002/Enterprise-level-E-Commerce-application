@@ -72,20 +72,6 @@ export interface Order {
   updatedAt: string;
 }
 
-export interface CreateOrderRequest {
-  guestToken?: string;
-  items: Array<{
-    variantId: string;
-    quantity: number;
-    isGift?: boolean;
-    giftMessage?: string;
-  }>;
-  shippingAddress: AddressSnapshot;
-  billingAddress?: AddressSnapshot;
-  source?: string;
-  currency?: string;
-}
-
 export interface TrackOrderResult {
   orderId: string;
   orderNumber: string;

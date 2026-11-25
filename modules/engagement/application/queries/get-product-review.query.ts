@@ -5,6 +5,8 @@ import { ProductReviewNotFoundError } from "../../domain/errors/engagement.error
 
 export interface GetProductReviewQuery extends IQuery {
   readonly reviewId: string;
+  /** Unapproved reviews are visible only to their author and staff. */
+  readonly viewer: { userId?: string; isStaff: boolean };
 }
 
 export class GetProductReviewHandler implements IQueryHandler<GetProductReviewQuery, ReviewDTO> {
@@ -12,7 +14,10 @@ export class GetProductReviewHandler implements IQueryHandler<GetProductReviewQu
 
   async handle(query: GetProductReviewQuery): Promise<ReviewDTO> {
     const dto = await this.productReviewService.getReviewById(query.reviewId);
-    if (!dto) {
+    const visible =
+      dto &&
+      (dto.status === "approved" || query.viewer.isStaff || query.viewer.userId === dto.userId);
+    if (!dto || !visible) {
       throw new ProductReviewNotFoundError(query.reviewId);
     }
     return dto;

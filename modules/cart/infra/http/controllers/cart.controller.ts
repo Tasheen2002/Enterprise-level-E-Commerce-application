@@ -22,6 +22,12 @@ import {
 } from "../../../application";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { hasRole } from "@/api/src/shared/middleware/role-authorization.middleware";
+
+// Customers may only address their own cart by user id; admins may address any.
+function canActForUser(request: AuthenticatedRequest, userId: string): boolean {
+  return request.user?.userId === userId || hasRole(request, ["ADMIN"]);
+}
 import {
   CartIdParams,
   UserIdParams,
@@ -101,6 +107,9 @@ export class CartController {
   ) {
     try {
       const { userId } = request.params;
+      if (!canActForUser(request, userId)) {
+        return ResponseHelper.forbidden(reply, "You can only access your own cart");
+      }
       const result = await this.getActiveCartByUserHandler.handle({ userId });
       return ResponseHelper.ok(reply, "Active cart retrieved", result);
     } catch (error: unknown) {
@@ -160,6 +169,9 @@ export class CartController {
   ) {
     try {
       const { userId } = request.params;
+      if (!canActForUser(request, userId)) {
+        return ResponseHelper.forbidden(reply, "You can only create your own cart");
+      }
       const cartData = request.body || {};
       const result = await this.createUserCartHandler.handle({
         userId,
@@ -362,7 +374,12 @@ export class CartController {
       const { guestToken } = request.params;
       const { userId, mergeWithExisting } = request.body;
 
-      if (request.user?.userId && request.user.userId !== userId) {
+      // Transferring requires a signed-in customer and always targets their own
+      // account; anonymous callers could otherwise push carts into any account.
+      if (!request.user?.userId) {
+        return ResponseHelper.unauthorized(reply, "Sign in to transfer a cart");
+      }
+      if (request.user.userId !== userId) {
         return ResponseHelper.forbidden(
           reply,
           "You can only transfer carts to your own account",
@@ -443,6 +460,9 @@ export class CartController {
   ) {
     try {
       const { userId } = request.params;
+      if (!canActForUser(request, userId)) {
+        return ResponseHelper.forbidden(reply, "You can only clear your own cart");
+      }
       const result = await this.clearUserCartHandler.handle({ userId });
       return ResponseHelper.fromCommand(
         reply,

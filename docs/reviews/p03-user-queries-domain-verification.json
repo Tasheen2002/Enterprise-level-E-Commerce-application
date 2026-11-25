@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-17",
+  "phase": "P03 (batch 3: user/admin queries, repositories, profile service, domain entities and value objects)",
+  "baseline_commit": "06288cd4",
+  "scope": [
+    "infra/http/routes/users.routes.ts and users.controller.ts; application/queries/*",
+    "infra/persistence/repositories/user.repository.ts (admin listing, filters, sorting, projection)",
+    "application/services/user-profile.service.ts",
+    "domain/entities/user.entity.ts (DTO, status/role transitions), value-objects email/phone",
+    "packages/validation/src/user profile request schema"
+  ],
+  "reviewed_without_change": [
+    "All /users/:userId and /admin/users routes are ADMIN_ONLY; /users/me and profile/session routes use the token's user id.",
+    "User DTOs and the admin listing projection exclude password hash, 2FA secret and Stripe customer id.",
+    "Admin listing: search length capped, sortBy whitelisted (createdAt, email), page size capped at 100.",
+    "Email and phone value objects validate format and length; status/role transitions emit events and are guarded by the admin safety rules from P07-04."
+  ],
+  "findings": [
+    {
+      "id": "P03-11",
+      "severity": "P3",
+      "file": "modules/user-management/application/services/user-profile.service.ts",
+      "problem": "Profiles are created on the first update. That creation path stored defaultAddressId/defaultPaymentMethodId without the ownership check applied on later updates, so a user could point their profile at another customer's address or payment method (ids only; no other customer's details were returned).",
+      "change": "Ownership of both references is checked before anything is written, for new and existing profiles.",
+      "verification": "Unit profile-default-ownership: baseline 2/2 failed (another user's address/payment method accepted on first update); fixed refused with nothing saved."
+    },
+    {
+      "id": "P03-12",
+      "severity": "P3",
+      "file": "packages/validation/src/user/index.ts",
+      "problem": "Date of birth accepted any well-formed date, including future dates.",
+      "change": "Date of birth must be in the past and on or after 1900.",
+      "verification": "Boundary tests: future and pre-1900 dates rejected; existing accepted forms unchanged."
+    }
+  ],
+  "tests": {
+    "new": "unit profile-default-ownership (2), validation boundary date-of-birth cases (2)",
+    "final": "1487 unit tests in 115 files; all user-management unit, integration and E2E tests (76) on a disposable database; root/tooling tsc; 7/7 workspace type-checks; API client drift check; ESLint and Prettier"
+  },
+  "p03_status": "Batches 1-3 cover authentication, account management, user/admin queries, repositories and domain rules. Open P03 items are infrastructure/owner decisions: the in-memory token store (move to Redis before running more than one API instance), ImageKit upload restrictions, avatar host restriction, admin user hard delete vs deactivate-and-anonymise, and the shared access/refresh token secret."
+}

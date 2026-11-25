@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-17",
+  "sourceCommit": "f8babd21",
+  "mode": "Inert imports and synthetic state; no database access",
+  "results": [
+    {
+      "mode": "heterogeneous-stock",
+      "reproduced": true,
+      "exitCode": 0
+    },
+    {
+      "mode": "setup-failure",
+      "reproduced": true,
+      "exitCode": 1
+    },
+    {
+      "mode": "empty-catalog",
+      "reproduced": true,
+      "exitCode": 0
+    }
+  ]
+}

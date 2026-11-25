@@ -26,6 +26,7 @@ import { api } from "@/lib/api-client";
 import { imageKitUrl } from "@/lib/imagekit";
 import { useProductReviews } from "../hooks/useProductReviews";
 import { WriteReviewModal } from "./WriteReviewModal";
+import { RestockAlertModal } from "./RestockAlertModal";
 import { useCurrentIdentity } from "@/features/user-management/hooks/useCurrentIdentity";
 import { useUserProfile } from "@/features/user-management/hooks/useUserProfile";
 import { useAuth } from "@/providers/AuthProvider";
@@ -64,6 +65,7 @@ export function ProductDetail({ slug }: { slug: string }) {
   const { data: profile } = useUserProfile();
   const { isAuthenticated } = useAuth();
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
 
   // Advanced Interactive Features states
   const [selectedCurrency, setSelectedCurrency] = useState<"EUR" | "USD" | "SGD">("EUR");
@@ -161,6 +163,15 @@ export function ProductDetail({ slug }: { slug: string }) {
     );
   }, [product, selectedColor]);
 
+  // Check if variant combination exists at all in the catalog
+  const hasVariant = useCallback((sizeValue: string) => {
+    if (!product) return false;
+    if (!product.variants || product.variants.length === 0) return true;
+    return product.variants.some(
+      v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === sizeValue
+    );
+  }, [product, selectedColor]);
+
   const selectedVariant = useMemo(() => {
     if (!product || !selectedSize) return null;
     return product.variants?.find(
@@ -168,9 +179,22 @@ export function ProductDetail({ slug }: { slug: string }) {
     ) || null;
   }, [product, selectedColor, selectedSize]);
 
+  // Compute if the currently selected size/finish is out of stock (and doesn't allow preorder/backorder)
+  const isSelectedOutOfStock = useMemo(() => {
+    if (!selectedSize) return false;
+    if (!selectedVariant) return true;
+    const inventory = selectedVariant.inventory ?? 0;
+    const isPreorderOrBackorder = selectedVariant.allowPreorder || selectedVariant.allowBackorder;
+    return inventory <= 0 && !isPreorderOrBackorder;
+  }, [selectedSize, selectedVariant]);
+
   const getButtonText = () => {
     if (isAdding) return "Adding to Bag...";
     if (!selectedSize) return "Select Size";
+    
+    if (isSelectedOutOfStock) {
+      return "Notify Me When Available";
+    }
     
     if (selectedVariant) {
       const inventory = selectedVariant.inventory ?? 0;
@@ -182,12 +206,12 @@ export function ProductDetail({ slug }: { slug: string }) {
     return "Add to Cart";
   };
 
-  // Safe size reset if change of finish results in selected size sold out
+  // Safe size reset if change of finish results in selected size variant not existing
   useEffect(() => {
-    if (selectedSize && !isSizeAvailable(selectedSize)) {
+    if (selectedSize && !hasVariant(selectedSize)) {
       setSelectedSize(null);
     }
-  }, [selectedColor, selectedSize, isSizeAvailable]);
+  }, [selectedColor, selectedSize, hasVariant]);
 
   // Determine if footwear or leather goods for size guide matrix conversions
   const isFootwear = product 
@@ -242,12 +266,17 @@ export function ProductDetail({ slug }: { slug: string }) {
       return;
     }
 
+    if (isSelectedOutOfStock) {
+      setIsRestockModalOpen(true);
+      return;
+    }
+
     const activeVariant = product.variants?.find(
       v => v.color?.toLowerCase() === selectedColor.toLowerCase() && v.size === selectedSize
     );
 
     if (!activeVariant) {
-      toast.error("This size and finish combination is currently unavailable.");
+      setIsRestockModalOpen(true);
       return;
     }
 
@@ -288,16 +317,12 @@ export function ProductDetail({ slug }: { slug: string }) {
     setActiveAccordion(activeAccordion === id ? null : id);
   };
 
-  const accordionData = [
-    { id: "description", label: "Description", content: "Artisanal heeled sandals handcrafted in Italy. Featuring delicate mocha dots on premium leather, a comfortable 75mm heel, and a secure ankle strap." },
-    { id: "traceability", label: "Traceability & Recyclability", content: "Designed in Paris, handcrafted in our family-owned workshop in Tuscany, Italy. Leather sourced from certified European tanneries." },
-    { id: "shipping", label: "Shipping & Returns", content: "Free shipping on orders over $300. Easy returns within 30 days. Taxes and duties included." }
-  ];
+
 
   return (
     <div className="bg-cream w-full min-h-screen">
       <div className="flex flex-col lg:flex-row bg-cream max-w-[1440px] mx-auto">
-        {/* Left Column: Editorial Image Grid (2-3 Layout) */}
+        {/* Left Column: Editorial Image Grid (2-3 Layout on Desktop, Horizontal Swipe on Mobile) */}
         <div className="w-full lg:w-[65%] p-4 lg:p-6 space-y-2 lg:space-y-3">
           {isFetchingMedia ? (
             <div className="min-h-[50vh] flex items-center justify-center bg-cream/50">
@@ -305,33 +330,54 @@ export function ProductDetail({ slug }: { slug: string }) {
             </div>
           ) : (
             <>
-              {/* Row 1: 2 Images */}
-              <div className="grid grid-cols-2 gap-2 lg:gap-3">
-                {colorImages.slice(0, 2).map((image, index) => (
-                  <div key={`row1-${index}`} className="relative aspect-[3/4] overflow-hidden bg-stone-50 rounded-sm group">
-                    <img
-                      src={image || "/images/placeholder.png"}
-                      alt={`${product.name} lifestyle ${index + 1}`}
-                      className="object-cover w-full h-full transition-transform duration-[2000ms] ease-editorial group-hover:scale-105"
-                    />
-                  </div>
-                ))}
-              </div>
-              
-              {/* Row 2: 3 Images */}
-              {colorImages.length > 2 && (
-                <div className="grid grid-cols-3 gap-2 lg:gap-3">
-                  {colorImages.slice(2, 5).map((image, index) => (
-                    <div key={`row2-${index}`} className="relative aspect-[3/4] overflow-hidden bg-stone-50 rounded-sm group">
+              {/* Mobile Image Carousel (lg:hidden) */}
+              <div className="lg:hidden relative w-full aspect-[3/4] overflow-hidden bg-stone-50 rounded-sm">
+                <div className="flex h-full overflow-x-auto snap-x snap-mandatory ts-scrollbar-none scroll-smooth">
+                  {colorImages.map((image, index) => (
+                    <div key={`mobile-gallery-${index}`} className="w-full h-full flex-shrink-0 snap-start relative">
                       <img
                         src={image || "/images/placeholder.png"}
-                        alt={`${product.name} detail ${index + 1}`}
+                        alt={`${product.name} view ${index + 1}`}
+                        className="object-cover w-full h-full"
+                      />
+                      <div className="absolute bottom-4 right-4 bg-charcoal/60 backdrop-blur-sm text-cream px-2.5 py-1 text-[9px] uppercase tracking-widest font-bold rounded-sm select-none">
+                        {index + 1} / {colorImages.length}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Desktop Editorial Grid (hidden lg:block) */}
+              <div className="hidden lg:block space-y-2 lg:space-y-3">
+                {/* Row 1: 2 Images */}
+                <div className="grid grid-cols-2 gap-2 lg:gap-3">
+                  {colorImages.slice(0, 2).map((image, index) => (
+                    <div key={`row1-${index}`} className="relative aspect-[3/4] overflow-hidden bg-stone-50 rounded-sm group">
+                      <img
+                        src={image || "/images/placeholder.png"}
+                        alt={`${product.name} lifestyle ${index + 1}`}
                         className="object-cover w-full h-full transition-transform duration-[2000ms] ease-editorial group-hover:scale-105"
                       />
                     </div>
                   ))}
                 </div>
-              )}
+                
+                {/* Row 2: 3 Images */}
+                {colorImages.length > 2 && (
+                  <div className="grid grid-cols-3 gap-2 lg:gap-3">
+                    {colorImages.slice(2, 5).map((image, index) => (
+                      <div key={`row2-${index}`} className="relative aspect-[3/4] overflow-hidden bg-stone-50 rounded-sm group">
+                        <img
+                          src={image || "/images/placeholder.png"}
+                          alt={`${product.name} detail ${index + 1}`}
+                          className="object-cover w-full h-full transition-transform duration-[2000ms] ease-editorial group-hover:scale-105"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -460,18 +506,21 @@ export function ProductDetail({ slug }: { slug: string }) {
           <div className={cn("grid grid-cols-4 gap-1.5 transition-transform duration-300", shakeSizeGrid && "animate-shake")}>
             {product.sizes.map((size) => {
               const available = isSizeAvailable(size.value);
+              const exists = hasVariant(size.value);
               return (
                 <button
                   key={size.value}
-                  disabled={!available}
+                  disabled={!exists || !available}
                   onClick={() => setSelectedSize(size.value)}
                   className={cn(
-                    "h-11 border text-[11px] font-bold transition-all duration-300",
-                    !available 
-                      ? "bg-stone-50 text-stone-300 border-stone-100 cursor-not-allowed relative overflow-hidden after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-[linear-gradient(to_top_right,transparent_49%,#e5e5e5_50%,transparent_51%)]" 
-                      : selectedSize === size.value
-                        ? "bg-charcoal text-cream border-charcoal"
-                        : "bg-white text-charcoal border-sand/30 hover:border-charcoal"
+                    "h-11 border text-[11px] font-bold transition-all duration-300 relative",
+                    !exists
+                      ? "opacity-20 cursor-not-allowed border-stone-200 text-stone-300"
+                      : !available
+                        ? "bg-stone-50 text-stone-400 border-stone-200 overflow-hidden after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-full after:bg-[linear-gradient(to_top_right,transparent_49%,#e5e5e5_50%,transparent_51%)] cursor-not-allowed opacity-40"
+                        : selectedSize === size.value
+                          ? "bg-charcoal text-cream border-charcoal"
+                          : "bg-white text-charcoal border-sand/30 hover:border-charcoal"
                   )}
                 >
                   {size.value}
@@ -538,9 +587,9 @@ export function ProductDetail({ slug }: { slug: string }) {
         {/* Product Details Accordion */}
         <div className="border-t border-sand/20 pt-2 space-y-0">
           {[
-            { id: "description", label: "Description", content: "Artisanal heeled sandals handcrafted in Italy. Featuring delicate mocha dots on premium leather, a comfortable 75mm heel, and a secure ankle strap." },
-            { id: "traceability", label: "Traceability & Recyclability", content: "Designed in Paris, handcrafted in our family-owned workshop in Tuscany, Italy. Leather sourced from certified European tanneries." },
-            { id: "shipping", label: "Shipping & Returns", content: "Free shipping on orders over $300. Easy returns within 30 days. Taxes and duties included." }
+            { id: "description", label: "Description", content: product?.longDescHtml || product?.shortDesc || "Premium handcrafted product by Slipperze.", isHtml: !!product?.longDescHtml },
+            { id: "traceability", label: "Traceability & Recyclability", content: "Designed in Paris, handcrafted in our family-owned workshop in Tuscany, Italy. Leather sourced from certified European tanneries. All materials are fully recyclable and traceable to their origin.", isHtml: false },
+            { id: "shipping", label: "Shipping & Returns", content: "Complimentary shipping on all orders over €300. Easy returns within 30 days of delivery. All taxes and duties are included in the displayed price.", isHtml: false }
           ].map((item) => (
             <div key={item.id} className="border-b border-sand/10">
               <button 
@@ -556,9 +605,16 @@ export function ProductDetail({ slug }: { slug: string }) {
                 "overflow-hidden transition-all duration-500 ease-in-out",
                 activeAccordion === item.id ? "max-h-40 pb-6" : "max-h-0"
               )}>
-                <p className="text-[11px] text-stone-500 leading-relaxed uppercase tracking-wider">
-                  {item.content}
-                </p>
+                {item.isHtml ? (
+                  <div 
+                    className="text-[11px] text-stone-500 leading-relaxed tracking-wider prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: item.content }}
+                  />
+                ) : (
+                  <p className="text-[11px] text-stone-500 leading-relaxed tracking-wider">
+                    {item.content}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -808,6 +864,16 @@ export function ProductDetail({ slug }: { slug: string }) {
           userId={identity.userId}
         />
       )}
+      {isMounted && selectedVariant && (
+        <RestockAlertModal
+          isOpen={isRestockModalOpen}
+          onClose={() => setIsRestockModalOpen(false)}
+          variantId={selectedVariant.id}
+          sizeName={selectedSize || ""}
+          colorName={selectedColor}
+          productName={product.name}
+        />
+      )}
     </div>
   );
 }
@@ -827,6 +893,17 @@ interface SizeGuideDrawerProps {
 function SizeGuideDrawer({ isOpen, onClose, isFootwear, onSelectSize, availableSizes }: SizeGuideDrawerProps) {
   const [activeUnit, setActiveUnit] = useState<"metric" | "imperial">("metric");
   
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // Premium footwear measurement conversions
@@ -934,21 +1011,20 @@ function SizeGuideDrawer({ isOpen, onClose, isFootwear, onSelectSize, availableS
                           {activeUnit === "metric" ? `${row.cm} cm` : `${row.in} in`}
                         </td>
                         <td className="p-3 text-right">
-                          {isAvailable ? (
-                            <button
-                              onClick={() => {
-                                onSelectSize(row.eu);
-                                onClose();
-                              }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-gold hover:text-charcoal transition-colors border-b border-gold hover:border-charcoal"
-                            >
-                              Select
-                            </button>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500">
-                              Sold Out
-                            </span>
-                          )}
+                          <button
+                            onClick={() => {
+                              onSelectSize(row.eu);
+                              onClose();
+                            }}
+                            className={cn(
+                              "text-[9px] font-bold uppercase tracking-widest transition-colors border-b",
+                              isAvailable
+                                ? "text-gold hover:text-charcoal border-gold hover:border-charcoal"
+                                : "text-stone-400 hover:text-charcoal border-stone-300 hover:border-charcoal"
+                            )}
+                          >
+                            {isAvailable ? "Select" : "Notify Me"}
+                          </button>
                         </td>
                       </tr>
                     );
@@ -993,21 +1069,20 @@ function SizeGuideDrawer({ isOpen, onClose, isFootwear, onSelectSize, availableS
                           {activeUnit === "metric" ? `${row.dCm} cm` : `${row.dIn} in`}
                         </td>
                         <td className="p-3 text-right">
-                          {isAvailable ? (
-                            <button
-                              onClick={() => {
-                                onSelectSize(row.size);
-                                onClose();
-                              }}
-                              className="text-[9px] font-bold uppercase tracking-widest text-gold hover:text-charcoal transition-colors border-b border-gold hover:border-charcoal"
-                            >
-                              Select
-                            </button>
-                          ) : (
-                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-500">
-                              Sold Out
-                            </span>
-                          )}
+                          <button
+                            onClick={() => {
+                              onSelectSize(row.size);
+                              onClose();
+                            }}
+                            className={cn(
+                              "text-[9px] font-bold uppercase tracking-widest transition-colors border-b",
+                              isAvailable
+                                ? "text-gold hover:text-charcoal border-gold hover:border-charcoal"
+                                : "text-stone-400 hover:text-charcoal border-stone-300 hover:border-charcoal"
+                            )}
+                          >
+                            {isAvailable ? "Select" : "Notify Me"}
+                          </button>
                         </td>
                       </tr>
                     );

@@ -1,6 +1,7 @@
 import React from "react";
 import { Stock } from "../types";
-import { ArrowUpRight, ArrowDownRight, Sliders } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Sliders, Bell } from "lucide-react";
+import { inventoryApi } from "../api";
 
 interface StockTableProps {
   stocks: Stock[];
@@ -21,6 +22,52 @@ export function StockTable({
   onAdjust,
   onEditThreshold
 }: StockTableProps) {
+  const [reminderCounts, setReminderCounts] = React.useState<Record<string, number>>({});
+
+  React.useEffect(() => {
+    const outOfStockVariantIds = Array.from(
+      new Set(
+        stocks
+          .filter((s) => s.available <= 0)
+          .map((s) => s.variantId)
+      )
+    );
+
+    if (outOfStockVariantIds.length === 0) {
+      setReminderCounts({});
+      return;
+    }
+
+    let active = true;
+
+    async function loadReminders() {
+      const counts: Record<string, number> = {};
+      try {
+        await Promise.all(
+          outOfStockVariantIds.map(async (variantId) => {
+            try {
+              const res = await inventoryApi.getVariantReminders(variantId);
+              counts[variantId] = res.total || 0;
+            } catch (err) {
+              console.warn(`Failed to fetch reminders for variant ${variantId}`, err);
+              counts[variantId] = 0;
+            }
+          })
+        );
+        if (active) {
+          setReminderCounts(counts);
+        }
+      } catch (err) {
+        console.error("Failed to load variant reminders waitlist counts", err);
+      }
+    }
+
+    loadReminders();
+
+    return () => {
+      active = false;
+    };
+  }, [stocks]);
   
   // Filter stocks
   const filteredStocks = stocks.filter((stock) => {
@@ -59,7 +106,8 @@ export function StockTable({
 
   return (
     <div className="bg-white border border-charcoal/5 rounded-2xl overflow-hidden shadow-sm">
-      <table className="w-full text-left border-collapse">
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[900px]">
         <thead>
           <tr className="bg-[#EBE6D9]/40 border-b border-charcoal/5 text-[10px] font-bold text-charcoal/50 uppercase tracking-widest">
             <th className="py-4 px-6 font-medium">Variant</th>
@@ -95,7 +143,15 @@ export function StockTable({
                   <td className="py-4 px-6 text-charcoal font-medium">
                     {variant ? (
                       <div>
-                        <div className="font-bold">{variant.productName}</div>
+                        <div className="font-bold flex items-center gap-2 flex-wrap">
+                          <span>{variant.productName}</span>
+                          {isOutOfStock && (reminderCounts[stock.variantId] ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-burgundy/5 border border-burgundy/15 text-[9px] font-bold text-burgundy uppercase tracking-widest whitespace-nowrap">
+                              <Bell className="w-2.5 h-2.5 text-burgundy" />
+                              {reminderCounts[stock.variantId]} Waiting
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-charcoal/50 font-mono mt-0.5">{variant.sku} {variant.size ? `(${variant.size})` : ""}</div>
                       </div>
                     ) : (
@@ -152,6 +208,7 @@ export function StockTable({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

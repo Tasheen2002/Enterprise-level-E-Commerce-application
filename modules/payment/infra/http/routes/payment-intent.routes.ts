@@ -48,7 +48,7 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents",
     {
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(createPaymentIntentSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(createPaymentIntentSchema)],
       schema: {
         description: "Create a new payment intent for processing a payment.",
         tags: ["Payment Intents"],
@@ -67,7 +67,7 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/process",
     {
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(processPaymentSchema)],
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, validateBody(processPaymentSchema)],
       schema: {
         description: "Process a payment intent — authorize and capture funds.",
         tags: ["Payment Intents"],
@@ -86,7 +86,7 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/refund",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(refundPaymentSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(refundPaymentSchema)],
       schema: {
         description: "Refund a captured payment (full or partial) — Staff/Admin only.",
         tags: ["Payment Intents"],
@@ -105,7 +105,7 @@ export async function registerPaymentIntentRoutes(
   fastify.post(
     "/payment-intents/void",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(voidPaymentSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(voidPaymentSchema)],
       schema: {
         description: "Void an authorized (not yet captured) payment — Staff/Admin only.",
         tags: ["Payment Intents"],

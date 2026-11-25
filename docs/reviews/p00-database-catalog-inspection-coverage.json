@@ -1,0 +1,162 @@
+{
+  "date": "2026-10-21",
+  "catalog_tests": 31,
+  "focused_tests_passed": 69,
+  "scope": "Catalog helper, shared read-only lifecycle and two database safety helpers only; no broad backend or separate CLI source coverage claim",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 50,
+        "covered": 50,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 53,
+        "covered": 53,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 39,
+        "covered": 39,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    },
+    "scripts/testing/database-catalog-inspection.ts": {
+      "lines": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-inspection.ts": {
+      "lines": {
+        "total": 12,
+        "covered": 12,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 1,
+        "covered": 1,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-safety.ts": {
+      "lines": {
+        "total": 13,
+        "covered": 13,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 14,
+        "covered": 14,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 15,
+        "covered": 15,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/operational-database.ts": {
+      "lines": {
+        "total": 10,
+        "covered": 10,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 11,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 20,
+        "covered": 20,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "verification_history": [
+    "Before replacement, four pinned-source/inert-client modes reproduce hardcoded destination use, broad metadata/raw error output and exit 0 on query failures, without opening real connections.",
+    "31 new and 38 existing guard cases pass with 100% helper coverage; 15 original/current catalog CLI modes pass.",
+    "First PostgreSQL attempt stopped before creating a database because the labelled tmpfs container was stopped. Restart was authorized after label/storage/loopback checks.",
+    "First restricted-role recovery refused a stale local port. A checker retry could create/drop its new database but could not assign its owner because the restricted role was absent; cleanup completed.",
+    "Updated only ignored audit test URL to the owned container port; recreated restricted audit_test role with no superuser/createDB/createRole/replication/bypassRLS rights; reran verification.",
+    "After recovery, the complete real PostgreSQL checker passed all catalog and previous operational checks. A uniquely named database was dropped, verified absent and independently reported absent by the selected-database CLI.",
+    "Root compiler found that the test runtime Prisma import had been removed although its transaction-isolation assertion still used it. Restored the import; no application behavior changed.",
+    "Final standalone full unit run passed 560 tests in 74 files; root/tooling compilers and focused lint/format pass; all prior CLI modes rerun successfully with actual 21 October execution date. Broad backend coverage not remeasured."
+  ],
+  "limitations": [
+    "Selected database existence is not target connectivity, credentials readiness or server-wide database inventory.",
+    "Table counts cover at most 100 allowed application-schema tables; flag indicates truncation, and no per-row data is returned.",
+    "Exact counts still scan tables; output/work count caps and a transaction timeout are not production performance certification.",
+    "The application schema list was centralized without changing the existing cleanup policy; complete integration cleanup behavior and unusual-identifier truncation policy remain open in infrastructure review."
+  ],
+  "unit_regression_tests_passed": 560,
+  "unit_regression_files_passed": 74
+}

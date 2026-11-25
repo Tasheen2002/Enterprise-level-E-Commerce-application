@@ -130,7 +130,7 @@ export async function purchaseOrderRoutes(
   fastify.post(
     "/purchase-orders",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT],
       schema: {
         description: "Create an empty purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -149,7 +149,7 @@ export async function purchaseOrderRoutes(
   fastify.post(
     "/purchase-orders/full",
     {
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(createPurchaseOrderWithItemsSchema)],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT, validateBody(createPurchaseOrderWithItemsSchema)],
       schema: {
         description: "Create a new purchase order with items (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -169,7 +169,7 @@ export async function purchaseOrderRoutes(
     "/purchase-orders/:poId/status",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOStatusSchema)],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT, validateBody(updatePOStatusSchema)],
       schema: {
         description: "Update purchase order status (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -190,7 +190,7 @@ export async function purchaseOrderRoutes(
     "/purchase-orders/:poId/eta",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(updatePOEtaSchema)],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT, validateBody(updatePOEtaSchema)],
       schema: {
         description: "Update purchase order estimated arrival (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -211,7 +211,7 @@ export async function purchaseOrderRoutes(
     "/purchase-orders/:poId/receive",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL, validateBody(receivePOItemsSchema)],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT, validateBody(receivePOItemsSchema)],
       schema: {
         description: "Receive items from purchase order (Staff/Admin only)",
         tags: ["Purchase Orders"],
@@ -232,7 +232,7 @@ export async function purchaseOrderRoutes(
     "/purchase-orders/:poId",
     {
       preValidation: [validateParams(poParamsSchema)],
-      preHandler: [authenticate, RolePermissions.STAFF_LEVEL],
+      preHandler: [authenticate, RolePermissions.INVENTORY_MANAGEMENT],
       schema: {
         description: "Delete purchase order (draft only, Staff/Admin only)",
         tags: ["Purchase Orders"],

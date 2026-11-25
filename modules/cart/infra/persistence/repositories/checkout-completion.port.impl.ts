@@ -1,17 +1,5 @@
+import { pseudonymizeGuestToken } from "@/api/src/shared/utils/analytics-pseudonym";
 import { PrismaClient, Prisma } from "@prisma/client";
-
-interface ExtendedPrismaTransaction {
-  adminNotification: {
-    create(args: {
-      data: {
-        type: string;
-        title: string;
-        message: string;
-        targetUrl: string;
-      };
-    }): Promise<unknown>;
-  };
-}
 
 import {
   ICheckoutCompletionPort,
@@ -19,6 +7,17 @@ import {
   CheckoutOrderResult,
   PersistCheckoutOrderData,
 } from "../../../domain/ports/external-services";
+import { InvalidCheckoutStateError } from "../../../domain/errors/cart.errors";
+
+const PAYMENT_INTENT_FIELDS = {
+  intentId: true,
+  status: true,
+  amount: true,
+  provider: true,
+  clientSecret: true,
+  checkoutId: true,
+  orderId: true,
+} as const;
 
 export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
   constructor(private readonly prisma: PrismaClient) {}
@@ -30,7 +29,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
     // Try by checkoutId first (common during checkout flow)
     let pi = await this.prisma.paymentIntent.findUnique({
       where: { checkoutId },
-      select: { intentId: true, status: true, amount: true },
+      select: PAYMENT_INTENT_FIELDS,
     });
 
     // Fallback to intentId or clientSecret
@@ -39,12 +38,12 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       if (isUuid) {
         pi = await this.prisma.paymentIntent.findUnique({
           where: { intentId: paymentIntentId },
-          select: { intentId: true, status: true, amount: true },
+          select: PAYMENT_INTENT_FIELDS,
         });
       } else {
         pi = await this.prisma.paymentIntent.findFirst({
           where: { clientSecret: paymentIntentId },
-          select: { intentId: true, status: true, amount: true },
+          select: PAYMENT_INTENT_FIELDS,
         });
       }
     }
@@ -55,6 +54,10 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       intentId: pi.intentId,
       status: pi.status,
       amount: Number(pi.amount),
+      provider: pi.provider,
+      providerReference: pi.clientSecret,
+      checkoutId: pi.checkoutId,
+      orderId: pi.orderId,
     };
   }
 
@@ -139,7 +142,28 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
   async persistCheckoutOrder(
     data: PersistCheckoutOrderData,
   ): Promise<CheckoutOrderResult> {
-    return await this.prisma.$transaction(async (tx) => {
+    const warehouseByVariant = new Map(
+      data.stockAdjustments.map((adjustment) => [adjustment.variantId, adjustment.warehouseId]),
+    );
+    const stockTaken: Array<{ variantId: string; locationId: string; quantity: number }> = [];
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      // 0. Claim the checkout. The conditional update takes the row lock, so a
+      // concurrent completion of the same checkout waits, then matches no row
+      // and rolls back instead of creating a second order for one payment.
+      const claimed = await tx.checkout.updateMany({
+        where: { id: data.checkoutId, status: "pending" },
+        data: {
+          status: "completed",
+          totalAmount: data.totals.total,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new InvalidCheckoutStateError("Checkout is not in pending state");
+      }
+
       // 1. Create order
       const order = await tx.order.create({
         data: {
@@ -165,7 +189,7 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
             data: {
               promoId: promotion.promoId,
               orderId: order.id,
-              discountAmount: new Prisma.Decimal(data.totals.discount || 0),
+              discountAmount: new Prisma.Decimal(data.promoDiscount ?? data.totals.discount ?? 0),
               currency: data.currency,
             },
           });
@@ -187,33 +211,50 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         });
         orderItems.push(orderItem);
 
-        // Preorder/Backorder registry insertion
-        const variant = await tx.productVariant.findUnique({
-          where: { id: item.variantId },
-          include: { inventoryStocks: true },
-        });
-        if (variant) {
-          const totalInventory =
-            variant.inventoryStocks?.reduce(
-              (sum, stock) => sum + (stock.onHand - stock.reserved),
-              0
-            ) || 0;
-          if (totalInventory < item.qty) {
-            if (variant.allowPreorder) {
-              await tx.preorder.create({
-                data: {
-                  orderItemId: orderItem.id,
-                  releaseDate: variant.restockEta,
-                },
-              });
-            } else if (variant.allowBackorder) {
-              await tx.backorder.create({
-                data: {
-                  orderItemId: orderItem.id,
-                  promisedEta: variant.restockEta,
-                },
-              });
-            }
+        // Stock leaves the warehouse in the same transaction as the order.
+        // The row is locked so concurrent checkouts cannot both take the last
+        // unit. A paid order is never dropped: any shortage is recorded as a
+        // preorder (if the variant allows it) or a backorder for staff.
+        const locationId = warehouseByVariant.get(item.variantId);
+        let taken = 0;
+        if (locationId) {
+          const rows = await tx.$queryRaw<Array<{ available: number }>>`
+            SELECT (on_hand - reserved)::int AS available
+            FROM inventory_management.inventory_stocks
+            WHERE variant_id = ${item.variantId}::uuid AND location_id = ${locationId}::uuid
+            FOR UPDATE`;
+          taken = Math.min(item.qty, Math.max(0, rows[0]?.available ?? 0));
+          if (taken > 0) {
+            await tx.inventoryStock.update({
+              where: { variantId_locationId: { variantId: item.variantId, locationId } },
+              data: { onHand: { decrement: taken } },
+            });
+            await tx.inventoryTransaction.create({
+              data: {
+                variantId: item.variantId,
+                locationId,
+                qtyDelta: -taken,
+                reason: "order",
+                referenceType: "order",
+                referenceId: order.id,
+              },
+            });
+            stockTaken.push({ variantId: item.variantId, locationId, quantity: taken });
+          }
+        }
+        if (taken < item.qty) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: item.variantId },
+            select: { allowPreorder: true, restockEta: true },
+          });
+          if (variant?.allowPreorder) {
+            await tx.preorder.create({
+              data: { orderItemId: orderItem.id, releaseDate: variant.restockEta },
+            });
+          } else {
+            await tx.backorder.create({
+              data: { orderItemId: orderItem.id, promisedEta: variant?.restockEta ?? null },
+            });
           }
         }
       }
@@ -269,44 +310,13 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         });
       }
 
-      // 5. Complete checkout
-      await tx.checkout.update({
-        where: { id: data.checkoutId },
-        data: {
-          status: "completed",
-          totalAmount: data.totals.total,
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+      // 5. Checkout completion is claimed in step 0.
 
       // 6. Mark order as paid
       await tx.order.update({
         where: { id: order.id },
         data: { status: "paid" },
       });
-
-      // 7. Record analytics (best-effort, don't fail order)
-      try {
-        await tx.analyticsEvent.create({
-          data: {
-            eventType: "purchase",
-            userId: data.userId || undefined,
-            guestToken: data.guestToken || undefined,
-            sessionId: `purchase-${order.id}`,
-            eventTimestamp: new Date(),
-            eventData: {
-              orderId: order.id,
-              orderNo: data.orderNo,
-              amount: data.totals.total,
-              currency: data.currency,
-              itemCount: data.items.length,
-            },
-          },
-        });
-      } catch {
-        // Analytics failure must not abort the order
-      }
 
       // 8. Record order status history
       await tx.orderStatusHistory.create({
@@ -330,69 +340,6 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
           } as unknown as Prisma.InputJsonValue,
         },
       });
-
-      // Create Admin In-App Notifications
-      try {
-        // 1. New Order Commissioned Notification
-        await (tx as unknown as ExtendedPrismaTransaction).adminNotification.create({
-          data: {
-            type: "ORDER_CREATED",
-            title: "New Boutique Order Commissioned",
-            message: `Order #${order.orderNo} placed for a total of $${Number(data.totals.total).toFixed(2)}.`,
-            targetUrl: `/orders/${order.id}`,
-          },
-        });
-
-        // 2. Low Stock Alerts
-        for (const item of data.stockAdjustments) {
-          const stock = await tx.inventoryStock.findUnique({
-            where: {
-              variantId_locationId: {
-                variantId: item.variantId,
-                locationId: item.warehouseId,
-              },
-            },
-            include: {
-              variant: {
-                include: {
-                  product: true,
-                },
-              },
-            },
-          });
-
-          if (stock) {
-            const quantitySubtracted = Math.abs(item.quantity);
-            const remaining = (stock.onHand - stock.reserved) - quantitySubtracted;
-
-            if (remaining >= 0 && remaining <= 3) {
-              const productTitle = stock.variant.product?.title || "Item";
-              const sizeStr = stock.variant.size ? ` (Size: ${stock.variant.size})` : "";
-              
-              await (tx as unknown as ExtendedPrismaTransaction).adminNotification.create({
-                data: {
-                  type: "LOW_STOCK",
-                  title: `Low Stock: ${productTitle}${sizeStr}`,
-                  message: `Only ${remaining} units remaining in boutique inventory. Consider restocking.`,
-                  targetUrl: `/products/${stock.variant.productId}/variants`,
-                },
-              });
-            }
-          }
-        }
-      } catch (err: unknown) {
-        console.error("Failed to create admin notification:", err);
-        try {
-          const fs = require("fs");
-          const path = require("path");
-          const logPath = path.join(__dirname, "../../../../../checkout-notification-error.log");
-          const errMessage = err instanceof Error ? err.message : String(err);
-          const errStack = err instanceof Error ? err.stack : "";
-          fs.appendFileSync(logPath, `${new Date().toISOString()} - Failed to create admin notification: ${errMessage}\n${errStack}\n\n`);
-        } catch (logErr) {
-          console.error("Failed to write checkout notification error to file:", logErr);
-        }
-      }
 
       // 10. Clear cart items
       await tx.cartItem.deleteMany({
@@ -439,5 +386,68 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
         items: orderItems,
       };
     });
+
+    // Analytics and staff notifications must never undo a paid order, so they
+    // run after the commit and their failures are only logged.
+    await this.recordAfterCommit(result, data, stockTaken).catch((error: unknown) => {
+      console.error("Post-checkout analytics/notifications failed:", result.orderId, error);
+    });
+    return result;
+  }
+
+  private async recordAfterCommit(
+    order: CheckoutOrderResult,
+    data: PersistCheckoutOrderData,
+    stockTaken: Array<{ variantId: string; locationId: string; quantity: number }>,
+  ): Promise<void> {
+    await this.prisma.analyticsEvent.create({
+      data: {
+        eventType: "purchase",
+        userId: data.userId || undefined,
+        // Never the raw token: it is the guest's cart and order credential.
+        guestToken: pseudonymizeGuestToken(data.guestToken),
+        sessionId: `purchase-${order.orderId}`,
+        eventTimestamp: new Date(),
+        eventData: {
+          orderId: order.orderId,
+          orderNo: data.orderNo,
+          amount: data.totals.total,
+          currency: data.currency,
+          itemCount: data.items.length,
+        },
+      },
+    });
+
+    await this.prisma.adminNotification.create({
+      data: {
+        type: "ORDER_CREATED",
+        title: "New Boutique Order Commissioned",
+        message: `Order #${order.orderNo} placed for a total of $${Number(data.totals.total).toFixed(2)}.`,
+        targetUrl: `/orders/${order.orderId}`,
+      },
+    });
+
+    for (const taken of stockTaken) {
+      const stock = await this.prisma.inventoryStock.findUnique({
+        where: {
+          variantId_locationId: { variantId: taken.variantId, locationId: taken.locationId },
+        },
+        include: { variant: { include: { product: true } } },
+      });
+      if (!stock) continue;
+      const remaining = stock.onHand - stock.reserved;
+      if (remaining <= 3) {
+        const productTitle = stock.variant.product?.title || "Item";
+        const sizeStr = stock.variant.size ? ` (Size: ${stock.variant.size})` : "";
+        await this.prisma.adminNotification.create({
+          data: {
+            type: "LOW_STOCK",
+            title: `Low Stock: ${productTitle}${sizeStr}`,
+            message: `Only ${remaining} units remaining in boutique inventory. Consider restocking.`,
+            targetUrl: `/products/${stock.variant.productId}/variants`,
+          },
+        });
+      }
+    }
   }
 }

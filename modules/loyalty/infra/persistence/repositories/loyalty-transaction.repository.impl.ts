@@ -16,6 +16,23 @@ import { Points } from "../../../domain/value-objects/points.vo";
 import { LoyaltyTransactionReasonValue } from "../../../domain/value-objects/loyalty-reason.vo";
 import { PaginatedResult } from "../../../../../packages/core/src/domain/interfaces/paginated-result.interface";
 
+export function loyaltyTransactionData(transaction: LoyaltyTransaction) {
+  return {
+    transactionId: transaction.id.getValue(),
+    accountId: transaction.accountId,
+    type: transaction.type,
+    points: BigInt(transaction.points.getValue()),
+    reason: transaction.reason,
+    description: transaction.description,
+    referenceId: transaction.referenceId,
+    orderId: transaction.orderId,
+    createdBy: transaction.createdBy,
+    expiresAt: transaction.expiresAt,
+    balanceAfter: BigInt(transaction.balanceAfter),
+    createdAt: transaction.createdAt,
+  };
+}
+
 export class LoyaltyTransactionRepositoryImpl
   extends PrismaRepository<LoyaltyTransaction>
   implements ILoyaltyTransactionRepository
@@ -139,19 +156,7 @@ export class LoyaltyTransactionRepositoryImpl
   }
 
   private toPersistence(transaction: LoyaltyTransaction) {
-    return {
-      transactionId: transaction.id.getValue(),
-      accountId: transaction.accountId,
-      type: transaction.type,
-      points: BigInt(transaction.points.getValue()),
-      reason: transaction.reason,
-      description: transaction.description,
-      referenceId: transaction.referenceId,
-      orderId: transaction.orderId,
-      createdBy: transaction.createdBy,
-      expiresAt: transaction.expiresAt,
-      balanceAfter: BigInt(transaction.balanceAfter),
-      createdAt: transaction.createdAt,
-    };
+    return loyaltyTransactionData(transaction);
   }
+
 }

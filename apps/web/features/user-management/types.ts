@@ -150,7 +150,6 @@ export interface PaymentMethodRequest {
   expYear?: number;
   billingAddressId?: string;
   isDefault?: boolean;
-  providerRef?: string;
 }
 
 export interface Wishlist {

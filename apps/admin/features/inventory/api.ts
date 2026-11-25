@@ -192,5 +192,18 @@ export const inventoryApi = {
       throw new Error((res.error as any).message || "Failed to create location");
     }
     return res.data?.data;
+  },
+
+  /**
+   * Fetch waitlist reminders for a variant
+   */
+  async getVariantReminders(variantId: string) {
+    const res = await api.GET("/api/v1/engagement/variants/{variantId}/reminders", {
+      params: { path: { variantId }, query: { limit: 100, offset: 0 } }
+    });
+    if (res.data?.success && res.data.data) {
+      return res.data.data;
+    }
+    return { items: [], total: 0 };
   }
 };

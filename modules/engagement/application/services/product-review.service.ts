@@ -51,7 +51,15 @@ export class ProductReviewService {
       body: data.body,
     });
 
-    await this.reviewRepository.save(review);
+    try {
+      await this.reviewRepository.save(review);
+    } catch (error) {
+      // Two simultaneous submissions: the database keeps one review per customer and product.
+      if ((error as { code?: string }).code === "P2002") {
+        throw new ProductReviewAlreadyExistsError(data.productId, data.userId);
+      }
+      throw error;
+    }
     return ProductReview.toDTO(review);
   }
 

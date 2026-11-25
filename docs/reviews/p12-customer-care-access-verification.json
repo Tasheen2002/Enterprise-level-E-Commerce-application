@@ -1,0 +1,59 @@
+{
+  "date": "2026-11-25",
+  "phase": "P12 (batch 1: customer care identity, roles and listings; module not registered in the API)",
+  "baseline_commit": "2d47a2ac",
+  "scope": [
+    "customer-care routes (all 38), support ticket, chat session and feedback controllers, commands and services",
+    "all seven customer-care listing queries and their controllers"
+  ],
+  "registration_decision": "Not registered. The module has no customer-facing read routes (customers cannot see their own tickets or returns), so enabling it also needs a product decision on self-service.",
+  "reviewed_without_change": [
+    "Agent management, goodwill creation and all deletes are admin-only.",
+    "Return item creation already checks that the order item belongs to the return's order (quantity limits are batch 2)."
+  ],
+  "findings": [
+    {
+      "id": "P12-01",
+      "severity": "P1",
+      "file": "support-ticket, chat-session and customer-feedback controllers; create-support-ticket and add-customer-feedback commands",
+      "problem": "The public ticket, chat and feedback routes (anonymous allowed) created records under the userId in the request body, so anyone could open tickets, chats or feedback as any customer.",
+      "change": "Records are created for the signed-in user; only customer care staff may create them for a named customer.",
+      "verification": "Reviewed with the controllers; the service-level rules below are unit tested."
+    },
+    {
+      "id": "P12-02",
+      "severity": "P1",
+      "file": "support-ticket.service.ts; customer-feedback.service.ts; customer-care-access.ts",
+      "problem": "Tickets could reference any order, and feedback ownership checks were fail-open: skipped without a body userId, skipped when the lookups were not wired, and guest orders accepted for anyone.",
+      "change": "One fail-closed rule: customers may reference only their own orders and tickets, anonymous callers none, staff any; a missing lookup refuses.",
+      "verification": "Unit customer-care-access: baseline 8 of 11 cases failed (all refusals accepted); fixed refusals hold and owner, staff and order-less tickets still work."
+    },
+    {
+      "id": "P12-03",
+      "severity": "P2",
+      "file": "modules/customer-care/infra/http/routes.ts",
+      "problem": "Seven write routes (ticket updates and messages, ending chats and chat messages, creating returns, return items and repairs) allowed every staff role, including the read-only ANALYST and INVENTORY_STAFF roles.",
+      "change": "These writes require ADMIN or CUSTOMER_SERVICE; reads remain staff-level.",
+      "verification": "Route definitions reviewed (module not registered)."
+    },
+    {
+      "id": "P12-04",
+      "severity": "P2",
+      "file": "seven list-*.query.ts handlers and their controllers; application/queries/paging.ts",
+      "problem": "Every customer-care listing ignored its query and loaded the whole table (no default limit in the repositories).",
+      "change": "Listings are always paged: 50 per page by default, at most 100, with limit/offset taken from the request.",
+      "verification": "Unit list-paging: bounds cases and the handler case; baseline the handler called the service with no limit."
+    }
+  ],
+  "tests": {
+    "new": "unit customer-care-access (11), unit list-paging (6)",
+    "baseline": "customer-care-access 8 of 11 failed (the 3 allowed cases passed by design); list-paging handler case failed.",
+    "database_suites": "Not rerun for this batch: no registered code changed (module not wired into the API); last full run 167 tests in 48 files at 2d47a2ac. Rerun with batch 2.",
+    "final": "1544 unit tests in 121 files; root/tooling tsc; 7/7 workspace type-checks; customer-care ESLint (no errors)"
+  },
+  "follow_ups": [
+    "Owner decision on registering the module and on customer self-service routes.",
+    "Return integrity (status transitions, quantity limits, Prisma order port) is P12 batch 2.",
+    "Controllers use their own response envelope and untyped route handlers (as any)."
+  ]
+}

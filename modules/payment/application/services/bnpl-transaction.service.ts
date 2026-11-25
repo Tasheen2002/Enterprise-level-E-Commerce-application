@@ -29,19 +29,18 @@ export class BnplTransactionService {
     private readonly bnplTxnRepo: IBnplTransactionRepository,
   ) {}
 
+  // Fail-closed for customers (userId given): the payment must belong to an
+  // order they own. Staff and internal callers pass no userId.
   private async assertIntentOwnership(intentId: PaymentIntentId, userId?: string): Promise<void> {
-    if (!userId) return;
+    if (userId === undefined) return;
 
     const intent = await this.paymentIntentRepo.findById(intentId);
     if (!intent) {
       throw new PaymentIntentNotFoundError(intentId.getValue());
     }
 
-    const orderId = intent.orderId;
-    if (!orderId) return;
-
-    const order = await this.orderQueryPort.findOrderOwner(orderId);
-    if (order?.userId && order.userId !== userId) {
+    const order = intent.orderId ? await this.orderQueryPort.findOrderOwner(intent.orderId) : null;
+    if (!order || order.userId !== userId) {
       throw new InvalidOperationError(
         "Forbidden: BNPL transaction does not belong to this user",
       );

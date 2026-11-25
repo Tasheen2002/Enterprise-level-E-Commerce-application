@@ -53,6 +53,9 @@ import {
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 
 const authRateLimiter = createRateLimiter(RateLimitPresets.auth);
+// Stricter cap for endpoints that send email, so they cannot be used to
+// flood a victim's inbox.
+const authEmailRateLimiter = createRateLimiter(RateLimitPresets.authEmail);
 
 // Pre-compute JSON Schemas from Zod (single source of truth — no drift).
 const registerBodyJson = toJsonSchema(registerSchema);
@@ -244,6 +247,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/forgot-password",
     {
+      onRequest: [authEmailRateLimiter],
       preHandler: [validateBody(forgotPasswordSchema)],
       schema: {
         tags: ["Authentication"],
@@ -313,6 +317,7 @@ export async function authRoutes(
   fastify.post(
     "/auth/resend-verification",
     {
+      onRequest: [authEmailRateLimiter],
       preHandler: [validateBody(resendVerificationSchema)],
       schema: {
         tags: ["Authentication"],

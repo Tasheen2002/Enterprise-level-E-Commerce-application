@@ -1,0 +1,174 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "c632322199b68ac4bd10487bb66f804ce4fa93e7",
+  "findings": [
+    {
+      "id": "P01-21",
+      "severity": "P2",
+      "problem": "Mutable options.scope could reset the captured policy; concatenated scope/identity strings collided.",
+      "change": "Snapshot all options and serialize scope/identity tuples; freeze nested presets and retain compatible user/IP alias.",
+      "limit": "Scope mutation is an application-state invariant, not a demonstrated external exploit. Existing numerical quotas unchanged."
+    },
+    {
+      "id": "P01-22",
+      "severity": "P2",
+      "problem": "No bound on active keys; expiry cleanup could not bound high-cardinality active traffic.",
+      "change": "Default 10,000 active buckets per policy/owner, configurable maxKeys. At capacity new keys receive 503 RATE_LIMIT_UNAVAILABLE with Retry-After; preserve existing counters. Expiry heap supports deadline order independently of insertion order.",
+      "limit": "Per-policy/owner cardinality bound, not a byte/process-wide bound. Fail-closed capacity can temporarily deny new clients; deployment sizing remains required."
+    },
+    {
+      "id": "P01-23",
+      "severity": "P2",
+      "problem": "Two clock reads could emit Retry-After=0; unsafe integer/configuration values were accepted.",
+      "change": "One request time snapshot; positive Retry-After; validate safe positive counters/window/capacity and expiry arithmetic, status range, header/message/key/scope contracts. Reject invalid generated keys before storage. Saturate denied counters."
+    }
+  ],
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/shared/middleware/rate-limiter.middleware.ts",
+      "apps/api/test/unit/rate-limiter.spec.ts"
+    ],
+    "caller_trace": "Static limiter/preset/keyer callers traced across modules; actual global scope/owner/onClose in server and representative cart, checkout and newsletter hooks read. This is not every route/module review.",
+    "storage": "Weak owner registry, one bounded store per policy; expiry min-heap, no interval/sweeper handle; prune on requests, explicit idempotent owner disposal. Expired entries can remain idle until next request/disposal, still bounded.",
+    "preserved": "Fixed-window quotas, route/method or explicit scope, IP/user identity names, custom quota message/status and optional headers retained. Authentication credential 401 falls back to IP; infrastructure failure still propagates. Frozen preset values unchanged."
+  },
+  "baseline": {
+    "passed": 17,
+    "failed": 21,
+    "failed_cases": [
+      "rate limiter policy validation and snapshots rejects malformed policy 'windowMs=9007199254740992' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'windowMs=9007199254740991' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'maxRequests=9007199254740992' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'statusCode=200' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'statusCode=399' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'statusCode=600' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'statusCode=429.5' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'headers=\"false\"' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'message=12' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'keyGenerator=\"ip\"' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'scope=\"\"' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'scope=\" \"' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'maxKeys=0' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'maxKeys=-1' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'maxKeys=1.5' before handling traffic",
+      "rate limiter policy validation and snapshots rejects malformed policy 'maxKeys=Infinity' before handling traffic",
+      "rate limiter policy validation and snapshots captures scope along with the other policy settings",
+      "rate limiter policy validation and snapshots keeps presets and their nested policy objects immutable",
+      "fixed-window keys, time and disposal uses one time snapshot even if the clock moves during a rejection",
+      "fixed-window keys, time and disposal keeps scope/identity tuples distinct even when both contain colons",
+      "bounded active-bucket storage rejects new buckets at capacity without resetting existing counters and frees expired capacity"
+    ],
+    "fixture_corrections": "Initial baseline 16 pass/22 fail included a fallback URL fixture default-argument error, corrected before definitive 17/21 baseline. First post-fix run 37 pass/1 fail exposed an expiry fixture that advanced time enough to expire a bucket before checking it; timestamps now stay within the same window until deliberate expiry. Two readonly synthetic request assignments were corrected after initial root compiler errors; final root compiler passes."
+  },
+  "verification": {
+    "new_runtime_cases": 44,
+    "focused_cases": 44,
+    "focused_files": 1,
+    "full_unit_cases": 1241,
+    "full_unit_files": 99,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 89,
+          "covered": 89,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 96,
+          "covered": 96,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 11,
+          "covered": 11,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 76,
+          "covered": 76,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": "Unknown"
+        }
+      },
+      "apps/api/src/shared/middleware/rate-limiter.middleware.ts": {
+        "lines": {
+          "total": 89,
+          "covered": 89,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 11,
+          "covered": 11,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 96,
+          "covered": 96,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 76,
+          "covered": 76,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only rate-limiter.middleware.ts: 89 lines, 96 statements, 11 functions, 76 branches at 100%. Broad backend coverage not remeasured.",
+    "cases": "25 malformed-policy cases; snapshot/preset immutability; quota/reset/clock; key tuple and route/method/owner isolation; explicit disposal; configurable status/headers; saturation/expiry; 1,500-request seeded reference-model replay with varied clocks; actual Fastify 429/503 serialization; invalid generated keys/runtime expiry; 10,000-key default boundary and independent policy capacity; identity compatibility/forwarded-header input; 401 versus 503 early authentication.",
+    "checks": {
+      "root_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "diff_check": "passed"
+    },
+    "commands": [
+      "Focused Vitest with --testTimeout=15000 and one exact coverage include",
+      "Full Vitest unit subset excluding test/integration and test/e2e, unchanged default timeout",
+      "Root tsc --noEmit",
+      "Focused ESLint and Prettier",
+      "Static baseline and compiler membership maps refreshed; these maps are not execution proof"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/shared/middleware/rate-limiter.middleware.ts": "b52b7ed8a0cc8829db1fd38fb59f694a26135d2a3853c53a93f86f9afd532a6c",
+    "apps/api/test/unit/rate-limiter.spec.ts": "0dc894dde1e4a85947a6f1b08aff9327b40f6451de1f0da51ef8d66549f7f2d4"
+  },
+  "dependency_sha256": {
+    "apps/api/src/server.ts": "0cb839bb5ae185737e4cb125ca561e4e8eb0ecc6186113907a787f64be6c8473",
+    "apps/api/src/shared/http/authentication.ts": "f5dd329000db45b77eed319dfdf78a19e421f2a91da04f2e70e56d1004111601",
+    "apps/api/src/shared/middleware/index.ts": "0655a820f6f99cf774c339df0dc23c26bd60a585a6dce8f57358896e0a11fe3d",
+    "apps/api/src/plugins/error.ts": "0002211a85fa586f584cf26df138be600a3f7ddfc97291d32a8f13f4693a352e",
+    "modules/cart/infra/http/routes/cart.routes.ts": "4b3837b311bf3259d4ffaf4aed08dbb7cfebd487ddd2293828ed326183cbeb4f",
+    "modules/cart/infra/http/routes/checkout.routes.ts": "63c6fa862189f18bb5c969c729fa1ee71ec95bbbe45bc65557c6205400fe7fd5",
+    "modules/engagement/infra/http/routes/newsletter.routes.ts": "239b3ecdde83615be11e817af8fff5a4165678b60fb387efd84a77fc67eeeb89"
+  },
+  "open_followups": [
+    {
+      "id": "P01-RATE-DEPLOYMENT",
+      "scope": "Process-local state resets on restart and is not shared across replicas. Trusted proxy/IP behavior, actual route policy ordering/coverage, owner cleanup through encapsulated child servers, workload capacity sizing and bootstrap/config integration require deployment/composition and owning-route review."
+    },
+    {
+      "id": "P01-AUTH-REAL-DB",
+      "scope": "No live DB/provider involved; early-auth tests use synthetic authenticate. Prior database evidence remains historical. Owning route authentication/session/authorization checks still require real persistence."
+    }
+  ],
+  "limits": [
+    "100% targeted coverage is not complete endpoint/deployment or whole-backend certification. P01 remains open.",
+    "Source remains partially reviewed/open for actual route and lifecycle/deployment gates. Only new test file closes at its current hash.",
+    "No live load, database or provider checks run; no business quota, schema, credential, token format or provider configuration changes."
+  ]
+}

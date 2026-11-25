@@ -17,7 +17,14 @@ export const updateProfileRequestSchema = z.object({
   lastName: z.string().max(100).optional(),
   phone: z.string().max(20).optional(),
   title: z.string().max(50).optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.iso
+    .datetime({ offset: true })
+    .or(z.iso.date())
+    .refine((value) => {
+      const date = new Date(value);
+      return date.getTime() < Date.now() && date.getUTCFullYear() >= 1900;
+    }, "Date of birth must be in the past and after 1900")
+    .optional(),
   residentOf: z.string().max(100).optional(),
   nationality: z.string().max(100).optional(),
   locale: z
@@ -30,6 +37,13 @@ export const updateProfileRequestSchema = z.object({
     .optional(),
   defaultAddressId: z.string().uuid().optional(),
   defaultPaymentMethodId: z.string().uuid().optional(),
+  avatarUrl: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((value) => value.startsWith("https://"), "Avatar URL must use https")
+    .nullable()
+    .optional(),
   prefs: z.record(z.string(), z.unknown()).optional(),
   stylePreferences: z.record(z.string(), z.unknown()).optional(),
   preferredSizes: z.record(z.string(), z.string().optional()).optional(),
@@ -37,7 +51,7 @@ export const updateProfileRequestSchema = z.object({
 
 // ─── Address ────────────────────────────────────────────────────────────────
 
-export const addressTypeEnum = z.enum(["SHIPPING", "BILLING"]);
+export const addressTypeEnum = z.enum(["billing", "shipping"]);
 
 export const addAddressRequestSchema = z.object({
   type: addressTypeEnum,
@@ -58,15 +72,14 @@ export const updateAddressRequestSchema = addAddressRequestSchema.partial();
 
 // ─── Payment method ─────────────────────────────────────────────────────────
 
-export const paymentMethodTypeEnum = z.enum([
-  "CARD",
-  "WALLET",
-  "BANK_TRANSFER",
-  "COD",
-]);
+export const paymentMethodTypeEnum = z.enum(["card", "wallet", "bank", "cod", "gift_card"]);
 
+// Cards and processor references (e.g. Stripe `pm_` ids) come only from the
+// Stripe card setup flow, never from this generic request.
 export const addPaymentMethodRequestSchema = z.object({
-  type: paymentMethodTypeEnum,
+  type: paymentMethodTypeEnum.refine((type) => type !== "card", {
+    message: "Cards must be added through the secure card setup flow",
+  }),
   brand: z.string().max(50).optional(),
   last4: z
     .string()
@@ -75,7 +88,6 @@ export const addPaymentMethodRequestSchema = z.object({
   expMonth: z.number().int().min(1).max(12).optional(),
   expYear: z.number().int().min(2000).max(2100).optional(),
   billingAddressId: z.string().uuid().optional(),
-  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -83,7 +95,6 @@ export const updatePaymentMethodRequestSchema = z.object({
   billingAddressId: z.string().uuid().optional(),
   expMonth: z.number().int().min(1).max(12).optional(),
   expYear: z.number().int().min(2000).max(2100).optional(),
-  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -92,11 +103,7 @@ export const updatePaymentMethodRequestSchema = z.object({
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
 export type AddAddressRequest = z.infer<typeof addAddressRequestSchema>;
 export type UpdateAddressRequest = z.infer<typeof updateAddressRequestSchema>;
-export type AddPaymentMethodRequest = z.infer<
-  typeof addPaymentMethodRequestSchema
->;
-export type UpdatePaymentMethodRequest = z.infer<
-  typeof updatePaymentMethodRequestSchema
->;
+export type AddPaymentMethodRequest = z.infer<typeof addPaymentMethodRequestSchema>;
+export type UpdatePaymentMethodRequest = z.infer<typeof updatePaymentMethodRequestSchema>;
 export type AddressType = z.infer<typeof addressTypeEnum>;
 export type PaymentMethodType = z.infer<typeof paymentMethodTypeEnum>;

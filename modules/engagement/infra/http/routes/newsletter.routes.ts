@@ -10,6 +10,7 @@ import {
   actionSuccessResponse,
 } from "@/api/src/shared/http/response-schemas";
 import { NewsletterController } from "../controllers/newsletter.controller";
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { validateBody, validateQuery, toJsonSchema } from "../validation/validator";
 import {
   subscribeNewsletterSchema,
@@ -63,11 +64,12 @@ export async function newsletterRoutes(
     (request, reply) => controller.unsubscribeViaLink(request as AuthenticatedRequest, reply),
   );
 
-  // GET /engagement/newsletter/subscription — Get newsletter subscription (public)
+  // GET /engagement/newsletter/subscription — Own subscription (signed in) or any (customer care)
   fastify.get(
     "/engagement/newsletter/subscription",
     {
       preValidation: [validateQuery(getSubscriptionQuerySchema)],
+      preHandler: [optionalAuth],
       schema: {
         description: "Get newsletter subscription by ID or email",
         summary: "Get Newsletter Subscription",
@@ -99,11 +101,12 @@ export async function newsletterRoutes(
     (request, reply) => controller.subscribe(request as AuthenticatedRequest, reply),
   );
 
-  // POST /engagement/newsletter/unsubscribe — Unsubscribe from newsletter (public)
+  // POST /engagement/newsletter/unsubscribe — With the link token, as the signed-in owner, or customer care
   fastify.post(
     "/engagement/newsletter/unsubscribe",
     {
       preValidation: [validateBody(unsubscribeNewsletterSchema)],
+      preHandler: [optionalAuth],
       schema: {
         description: "Unsubscribe from newsletter",
         summary: "Unsubscribe From Newsletter",

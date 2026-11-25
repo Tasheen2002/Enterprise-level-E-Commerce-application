@@ -158,7 +158,6 @@ export class PickupReservationService {
       throw new StockNotFoundError(`${reservation.variantId} at ${reservation.locationId}`);
     }
     stock.fulfillReservation(reservation.qty);
-    await this.stockRepository.save(stock);
 
     const transaction = InventoryTransaction.create({
       variantId: reservation.variantId,
@@ -166,7 +165,7 @@ export class PickupReservationService {
       qtyDelta: -reservation.qty,
       reason: "order",
     });
-    await this.transactionRepository.save(transaction);
+    await this.stockRepository.saveWithTransactions([stock], [transaction]);
 
     reservation.fulfill();
     await this.pickupReservationRepository.save(reservation);

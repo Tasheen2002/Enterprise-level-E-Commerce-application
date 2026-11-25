@@ -4,7 +4,7 @@ import { UserId } from '../../domain/value-objects/user-id.vo';
 import { UserRole } from '../../domain/value-objects/user-role.vo';
 import { UserStatus } from '../../domain/value-objects/user-status.vo';
 import { PaginatedResult } from '../../../../packages/core/src/domain/interfaces/paginated-result.interface';
-import { UserNotFoundError } from '../../domain/errors/user-management.errors';
+import { AdminSafetyError, UserNotFoundError } from '../../domain/errors/user-management.errors';
 
 interface ListUsersParams {
   search?: string;
@@ -38,15 +38,23 @@ export class UserService {
     });
   }
 
-  async updateUserRole(userId: string, role: UserRole): Promise<UserDTO> {
+  async updateUserRole(userId: string, role: UserRole, actingUserId: string): Promise<UserDTO> {
     const user = await this.getUserEntity(userId);
+    if (role !== UserRole.ADMIN) await this.assertAdminAccessRemovable(user, actingUserId, 'demote');
     user.updateRole(role);
     await this.userRepository.save(user);
     return User.toDTO(user);
   }
 
-  async updateUserStatus(userId: string, status: UserStatus): Promise<UserDTO> {
+  async updateUserStatus(
+    userId: string,
+    status: UserStatus,
+    actingUserId: string,
+  ): Promise<UserDTO> {
     const user = await this.getUserEntity(userId);
+    if (status !== UserStatus.ACTIVE) {
+      await this.assertAdminAccessRemovable(user, actingUserId, 'deactivate');
+    }
     switch (status) {
       case UserStatus.ACTIVE: user.activate(); break;
       case UserStatus.INACTIVE: user.deactivate(); break;
@@ -63,12 +71,41 @@ export class UserService {
     return User.toDTO(user);
   }
 
-  async deleteUser(userId: string): Promise<void> {
+  async deleteUser(userId: string, actingUserId: string): Promise<void> {
     const user = await this.getUserEntity(userId);
+    if (user.id.getValue() === actingUserId) {
+      throw new AdminSafetyError('You cannot delete your own account from the admin panel');
+    }
+    await this.assertAdminAccessRemovable(user, actingUserId, 'delete');
     await this.userRepository.delete(user.id);
   }
 
   // --- Private helpers ---
+
+  // Refuses an action that would remove admin access from the acting admin
+  // themselves or from the last active administrator.
+  private async assertAdminAccessRemovable(
+    target: User,
+    actingUserId: string,
+    action: 'demote' | 'deactivate' | 'delete',
+  ): Promise<void> {
+    if (target.role !== UserRole.ADMIN) return;
+    if (target.id.getValue() === actingUserId) {
+      throw new AdminSafetyError(`You cannot ${action} your own administrator account`);
+    }
+    if (target.status !== UserStatus.ACTIVE) return;
+    const activeAdmins = await this.userRepository.findAllWithFilters({
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+      page: 1,
+      limit: 1,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+    if (activeAdmins.total <= 1) {
+      throw new AdminSafetyError(`Cannot ${action} the last active administrator`);
+    }
+  }
 
   private async getUserEntity(userId: string): Promise<User> {
     const user = await this.userRepository.findById(UserId.fromString(userId));

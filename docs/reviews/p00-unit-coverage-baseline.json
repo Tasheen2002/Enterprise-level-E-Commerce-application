@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-17",
+  "test_files": 62,
+  "tests_passed": 329,
+  "timing": "before P00 guard correction; broad runtime scope",
+  "coverage": {
+    "lines": {
+      "total": 22337,
+      "covered": 2627,
+      "skipped": 0,
+      "pct": 11.76
+    },
+    "statements": {
+      "total": 23335,
+      "covered": 2674,
+      "skipped": 0,
+      "pct": 11.45
+    },
+    "functions": {
+      "total": 8249,
+      "covered": 1275,
+      "skipped": 0,
+      "pct": 15.45
+    },
+    "branches": {
+      "total": 10650,
+      "covered": 835,
+      "skipped": 0,
+      "pct": 7.84
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  }
+}

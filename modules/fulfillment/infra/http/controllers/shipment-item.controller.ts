@@ -134,15 +134,19 @@ export class ShipmentItemController {
           .send({ success: false, error: "qty must be greater than 0" });
       }
 
-      const item = await this.shipmentItemService.updateShipmentItemQuantity(
+      const item = await this.shipmentService.updateItemQuantity(
         shipmentId,
         orderItemId,
         Number(qty)
       );
       return reply.code(200).send({ success: true, data: item });
     } catch (error) {
-      request.log.error(error, "Failed to update shipment item quantity");
-      return reply.code(500).send({ success: false, error: "Internal server error" });
+      // Rule violations (shipped parcel, more than ordered) are the caller's to fix.
+      request.log.warn(error, "Failed to update shipment item quantity");
+      return reply.code(400).send({
+        success: false,
+        error: error instanceof Error ? error.message : "Could not update quantity",
+      });
     }
   }
 

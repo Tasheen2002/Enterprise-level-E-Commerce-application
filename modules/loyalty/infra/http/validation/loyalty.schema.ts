@@ -45,7 +45,8 @@ export const adjustPointsSchema = z.object({
   points: z.number().int().positive(),
   isAddition: z.boolean(),
   reason: z.string().min(1),
-  createdBy: z.string().min(1),
+  /** Ignored: the adjustment is attributed to the signed-in staff member. */
+  createdBy: z.string().min(1).optional(),
 });
 
 export const getAccountQuerySchema = z.object({

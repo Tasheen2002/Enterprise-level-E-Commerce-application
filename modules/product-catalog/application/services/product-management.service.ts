@@ -152,6 +152,7 @@ export class ProductManagementService {
         brand,
         categoryId: categoryIdVo,
         status: statusVo,
+        liveOnly: !effectiveIncludeDrafts,
       }),
     ]);
 
@@ -224,6 +225,19 @@ export class ProductManagementService {
         sanitized.seoTitle ?? null,
         sanitized.seoDescription ?? null,
       );
+    }
+
+    if (sanitized.price !== undefined) {
+      product.updatePrice(sanitized.price);
+    }
+    if (sanitized.priceSgd !== undefined) {
+      product.updatePriceSgd(sanitized.priceSgd);
+    }
+    if (sanitized.priceUsd !== undefined) {
+      product.updatePriceUsd(sanitized.priceUsd);
+    }
+    if (sanitized.compareAtPrice !== undefined) {
+      product.updateCompareAtPrice(sanitized.compareAtPrice);
     }
 
     if (data.status !== undefined) {
@@ -378,7 +392,7 @@ export class ProductManagementService {
   }
 
   private async resolveUniqueSlug(baseSlug: Slug, excludeId?: string): Promise<Slug> {
-    let slugStr = baseSlug.getValue();
+    const slugStr = baseSlug.getValue();
     let uniqueSlug = baseSlug;
     let counter = 1;
 

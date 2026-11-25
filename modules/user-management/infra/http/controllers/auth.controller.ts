@@ -291,6 +291,7 @@ export class AuthController {
         userId: request.user.userId,
         currentPassword: request.body.currentPassword,
         newPassword: request.body.newPassword,
+        currentSessionId: request.user.sessionId,
       });
 
       if (!result.success) {
@@ -322,8 +323,8 @@ export class AuthController {
 
       return ResponseHelper.ok(
         reply,
-        'Email has been changed successfully. Please verify your new email address.',
-        { action: 'email_changed' },
+        'We sent a confirmation link to your new email address. Your email changes once you open it.',
+        { action: 'email_change_requested' },
       );
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

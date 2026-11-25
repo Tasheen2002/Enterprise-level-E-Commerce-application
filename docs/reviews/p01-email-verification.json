@@ -1,0 +1,214 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "4bc0c2c267365e6810599cc6b2d4baf546b9a01c",
+  "findings": [
+    {
+      "id": "P01-13",
+      "severity": "P1",
+      "problem": "Development adapter printed password-reset, verification and invitation token links, recipient/account identifiers and preview links.",
+      "change": "Remove adapter console output and preview URL lookup; keep security links only in composed messages."
+    },
+    {
+      "id": "P01-14",
+      "severity": "P2",
+      "problem": "Development SMTP send failures were swallowed; partial rejected-recipient results resolved as complete success.",
+      "change": "Reject send failures in every mode and nonempty rejected-recipient reports. Do not retry sends automatically because accepted recipients may already have the message."
+    },
+    {
+      "id": "P01-15",
+      "severity": "P2",
+      "problem": "Invitation role/URL values interpolated into HTML; unsupported URL schemes accepted; raw configured frontend paths/query strings produced malformed action URLs.",
+      "change": "Validate HTTP(S) URLs without embedded credentials, escape HTML contexts, encode action tokens and derive app links from the configured primary origin. Preserve text links and existing welcome-admin sentinel semantics.",
+      "impact_scope": "Synthetic adapter-contract reproductions; no demonstrated public endpoint HTML-injection exploit. Invitation role/URL normally originate in server-controlled enum/configuration."
+    },
+    {
+      "id": "P01-16",
+      "severity": "P2",
+      "problem": "Concurrent first-use development sends could create multiple Ethereal accounts/transports and observe different initialization results.",
+      "change": "Cache one initialization promise, share its success/failure and reset it on initialization failure so a later call can retry."
+    },
+    {
+      "id": "P01-17",
+      "severity": "P2",
+      "problem": "Non-development sends without SMTP_HOST constructed a transport with implicit host fallback.",
+      "change": "Require a nonblank trimmed SMTP host before transport construction. Full SMTP configuration validation remains open."
+    }
+  ],
+  "baseline": {
+    "passed": 7,
+    "failed": 17,
+    "cases": 24,
+    "failed_cases": [
+      "shared email adapter transport lifecycle rejects delivery failures in development",
+      "shared email adapter transport lifecycle shares first-use development initialization across concurrent sends",
+      "shared email adapter transport lifecycle shares an initialization failure then allows a new attempt",
+      "shared email adapter transport lifecycle rejects a partial recipient rejection rather than reporting complete submission",
+      "shared email adapter transport lifecycle rejects an absent SMTP host (undefined) before constructing a transport",
+      "shared email adapter transport lifecycle rejects an absent SMTP host () before constructing a transport",
+      "shared email adapter transport lifecycle rejects an absent SMTP host ( ) before constructing a transport",
+      "email template boundaries does not log reset messages or preview URLs in development",
+      "email template boundaries does not log verification messages or preview URLs in development",
+      "email template boundaries does not log invitation messages or preview URLs in development",
+      "email template boundaries does not log welcome messages or preview URLs in development",
+      "email template boundaries uses the primary frontend origin and encoded token for reset",
+      "email template boundaries uses the primary frontend origin and encoded token for verification",
+      "email template boundaries normalizes the admin welcome origin and escapes invitation HTML values",
+      "email template boundaries rejects unsupported invitation URLs: javascript:alert(1)",
+      "email template boundaries rejects unsupported invitation URLs: file:///private",
+      "email template boundaries rejects unsupported invitation URLs: not a url"
+    ]
+  },
+  "review": {
+    "complete_target_reads": [
+      "modules/shared/domain/ports/email.service.port.ts",
+      "modules/user-management/application/services/iemail.service.ts",
+      "modules/user-management/infra/security/nodemailer-email.adapter.ts",
+      "modules/engagement/application/services/newsletter.service.ts",
+      "modules/shared/test/email-adapter.spec.ts",
+      "modules/shared/test/email-contracts.typecheck.ts"
+    ],
+    "caller_reads": "Complete registration/reset/resend/invite/accept command files and newsletter service read; inspected actual container mailer construction and newsletter injection and complete configuration plugin. Container as a whole, auth workflows and newsletter business rules are not certified.",
+    "port_design": "IEmailSender exposes generic submission. Existing IEmailService extends it with existing authentication templates and optional invitation method. Legacy user-management type export remains compatible. Newsletter now imports only IEmailSender from modules/shared instead of depending on user-management capabilities.",
+    "newsletter_runtime": {
+      "file": "modules/engagement/application/services/newsletter.service.ts",
+      "emitted_javascript_unchanged": true,
+      "typescript": "5.9.3"
+    },
+    "installed_dependency": "Nodemailer 8.0.7: inspected local smtp-connection implementation showing accepted/rejected lists and successful callback when only a subset rejects. No unverified global/latest-version claim.",
+    "provider_execution": "All createTransport/createTestAccount/sendMail operations in the new suite are inert mocks. No live email, Ethereal account or SMTP connection created. Existing registration test uses its fake email service."
+  },
+  "verification": {
+    "new_runtime_cases": 29,
+    "focused_cases": 35,
+    "focused_files": 3,
+    "full_unit_cases": 1124,
+    "full_unit_files": 97,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 36,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 38,
+          "covered": 38,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 12,
+          "covered": 12,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 25,
+          "covered": 25,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": "Unknown"
+        }
+      },
+      "modules/user-management/infra/security/nodemailer-email.adapter.ts": {
+        "lines": {
+          "total": 36,
+          "covered": 36,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 12,
+          "covered": 12,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 38,
+          "covered": 38,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 25,
+          "covered": 25,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only nodemailer-email.adapter.ts: 36 lines, 38 statements, 12 functions, 25 branches at 100%. No library, SMTP protocol, newsletter business, auth workflow or broad backend coverage claim.",
+    "compile_only_fixture": "modules/shared/test/email-contracts.typecheck.ts",
+    "checks": {
+      "root_tsc": "passed including port segregation, legacy alias compatibility and negative incomplete-auth-service contract",
+      "focused_eslint": "passed for port, facade, adapter, newsletter and both fixtures",
+      "focused_prettier": "passed for the same paths"
+    },
+    "instrumentation_attempt": {
+      "initial_passed": 34,
+      "initial_failed": 1,
+      "initial_failures": [
+        {
+          "name": "access authentication boundary rejects wrong token kinds, malformed claims and blacklisted tokens",
+          "duration_ms": 5980.212100000001
+        }
+      ],
+      "resolution": "Existing authentication case exceeded the default five-second budget during the first coverage run (about 5980ms). Repeated instrumented run uses explicit --testTimeout=15000 and passes all 35 cases; default global/test configuration unchanged. Final complete unit run passes all 1124 tests with the default timeout."
+    },
+    "runtime_cases": "Success/configured sender, lazy reuse, prod/test/dev rejection, concurrent initialization, shared failure/retry, constructor recovery, no automatic resend, missing rejection metadata, partial rejection, missing host, no log/preview calls across four templates, safe origins/tokens, welcome/defaults, HTML encoding and invalid/credentialed URLs; actual resend command observes failures and bypasses verified users.",
+    "commands": [
+      "Vitest modules/shared/test plus auth-boundary.spec.ts and register-user.spec.ts with adapter-only coverage and --testTimeout=15000",
+      "Full default Vitest unit subset excluding test/integration and test/e2e, default timeout unchanged",
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "Focused ESLint --ext .ts and Prettier for all six target files",
+      "Normalized before/after TypeScript transpilation verifies newsletter JavaScript unchanged"
+    ]
+  },
+  "verified_source_sha256": {
+    "modules/shared/domain/ports/email.service.port.ts": "d611c61bc76de072028e5dd209e539ed1bcec8e88857cfd0d2b06376046a8de2",
+    "modules/user-management/application/services/iemail.service.ts": "6fdb351493739f0d31442b47d8f6cb3d5560cbdeff5a116c4c312e82418e9e7a",
+    "modules/user-management/infra/security/nodemailer-email.adapter.ts": "62ae7a041c1bbe15ef4e0cde380cb6c0ab5147a0c95e8d1e34b427566c540589",
+    "modules/engagement/application/services/newsletter.service.ts": "e678caa566143da7eb5ca3ed85a51bceb2584c588a54ebb2cf2cc251909e859d",
+    "modules/shared/test/email-adapter.spec.ts": "85c2b8e42fa0cb31365e4b5b0e591ebd92a7417b7503adf247fc8fe6ea7e3108",
+    "modules/shared/test/email-contracts.typecheck.ts": "12961cf4d89744f09d0dda13d638447420f2ce78deec1961a86e64faac91298e"
+  },
+  "dependency_sha256": {
+    "apps/api/src/container.ts": "ade13b0a254390f720567e6f5ceb7bbdff1fd9067a7d87095ac7601b1138146f",
+    "apps/api/src/plugins/config.ts": "bb79026f84672b2a01bf149acdd0539f6dd3ffca11d40e50ce57e8d24c1b9d0c",
+    "modules/user-management/application/commands/register-user.command.ts": "99c2fce0cedc2fa695721de74c74d03f3d5e5a7d09990bbbb820b34602c3cf44",
+    "modules/user-management/application/commands/initiate-password-reset.command.ts": "5d614a7ae98a090b9e4cea9c7b8a608e0a0e00085d3debea3cb5274094ee56a6",
+    "modules/user-management/application/commands/resend-verification.command.ts": "a77a4854a577acb95b975bae852bfaa8a385ebefcc00eae20e94c75942b0ead8",
+    "modules/user-management/application/commands/invite-admin.command.ts": "2fab5b4b93ccb8717c5e59193370898fd505883bd98d6ea96add9f33b040dda9",
+    "modules/user-management/application/commands/accept-admin-invitation.command.ts": "d71f917ab22e2f988d7ed469101db86d7143b51ad7b7314f1c7f32504adc0d77"
+  },
+  "open_followups": [
+    {
+      "id": "P01-SMTP-CONFIG",
+      "scope": "SMTP port/secure/auth/sender inputs still read raw process.env; Number(port)||587 can hide invalid configuration. Config plugin omits these keys. Review explicit TLS/timeouts, environment defaults and typed composition during API plugin/container review. Adapter source stays open."
+    },
+    {
+      "id": "P03-TC-012",
+      "scope": "Real local SMTP capture/provider execution remains planned, not executed. Mocked submission and composition tests do not replace this lane or prove inbox delivery."
+    },
+    {
+      "id": "P03/P10-email-workflows",
+      "scope": "Register/invite/accept use background sends or catches; newsletter catches send errors after subscription/promotion persistence. Those workflows, outbox/retry policy, coupon generation/customer logging and raw provider-error logging remain owning-module work."
+    }
+  ],
+  "limits": [
+    "No auto-resend or durable/outbox/exactly-once guarantee. Initialization retries differ from delivery retries. Partial rejection can follow successful submissions for other recipients.",
+    "Promises model transport submission only; successful transport responses do not prove delivery to an inbox.",
+    "Only adapter logging is removed. Caller logging and SMTP-provider error redaction are not globally certified.",
+    "Development still lazily uses Ethereal by existing mode policy; tests never contact it. Production/test now require configured SMTP_HOST for actual sends.",
+    "App links normalize to root routes on the configured primary HTTP(S) origin; invitation URLs preserve their provided path/query after URL normalization. No frontend deployment/base-path or complete authentication endpoint test.",
+    "Four port/facade/test files close; adapter and newsletter remain open for configuration/capture and owning-module policy. P01 remains open.",
+    "No DB/schema/provider execution or broad backend coverage remeasurement. Prior PostgreSQL 47-group evidence remains historical; P15 build/bootstrap checks remain open."
+  ]
+}

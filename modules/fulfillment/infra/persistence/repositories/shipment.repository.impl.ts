@@ -65,11 +65,23 @@ export class ShipmentRepositoryImpl implements IShipmentRepository {
   async save(shipment: Shipment): Promise<void> {
     const data = this.fromEntity(shipment);
 
+    // The shipment and its items are created in one statement, so a failure
+    // never leaves a shipment with only some of its items.
     await (this.prisma as any).shipment.create({
       data: {
         ...data,
         createdAt: shipment.getCreatedAt(),
         updatedAt: shipment.getUpdatedAt(),
+        items: {
+          create: shipment.getItems().map((item) => ({
+            orderItemId: item.getOrderItemId(),
+            qty: item.getQty(),
+            giftWrap: item.isGiftWrapped(),
+            giftMessage: item.getGiftMessage() || null,
+            createdAt: item.getCreatedAt(),
+            updatedAt: item.getUpdatedAt(),
+          })),
+        },
       },
     });
   }

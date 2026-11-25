@@ -111,6 +111,13 @@ export interface StockDTO {
 // ── Entity ─────────────────────────────────────────────────────────────
 
 export class Stock extends AggregateRoot {
+  /**
+   * Quantities as last read from / written to the database. The repository
+   * persists the difference from these, so concurrent changes are added up
+   * instead of overwriting each other. Null for stock not yet persisted.
+   */
+  private persisted: { onHand: number; reserved: number } | null = null;
+
   private constructor(private props: StockProps) {
     super();
   }
@@ -136,7 +143,28 @@ export class Stock extends AggregateRoot {
   }
 
   static fromPersistence(props: StockProps): Stock {
-    return new Stock(props);
+    const stock = new Stock(props);
+    stock.persisted = {
+      onHand: props.stockLevel.onHand,
+      reserved: props.stockLevel.reserved,
+    };
+    return stock;
+  }
+
+  get persistedLevel(): { onHand: number; reserved: number } | null {
+    return this.persisted;
+  }
+
+  /** Called by the repository with the quantities the database now holds. */
+  markPersisted(onHand: number, reserved: number): void {
+    const level = this.props.stockLevel;
+    this.props.stockLevel = StockLevel.create(
+      onHand,
+      reserved,
+      level.lowStockThreshold,
+      level.safetyStock,
+    );
+    this.persisted = { onHand, reserved };
   }
 
   // ── Getters ────────────────────────────────────────────────────────

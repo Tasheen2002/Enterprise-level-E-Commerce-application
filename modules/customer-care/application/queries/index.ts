@@ -1,12 +1,5 @@
 // Barrel for queries
 
-// Base Query Types (exported once from get-support-ticket.query.js)
-export {
-  IQuery,
-  IQueryHandler,
-  QueryResult,
-} from "./get-support-ticket.query.js";
-
 // Support Ticket Queries
 export {
   GetSupportTicketQuery,
@@ -29,10 +22,7 @@ export {
   SupportAgentDto,
   GetSupportAgentHandler,
 } from "./get-support-agent.query.js";
-export {
-  ListSupportAgentsQuery,
-  ListSupportAgentsHandler,
-} from "./list-support-agents.query.js";
+export { ListSupportAgentsQuery, ListSupportAgentsHandler } from "./list-support-agents.query.js";
 
 // Chat Session Queries
 export {
@@ -40,10 +30,7 @@ export {
   ChatSessionDto,
   GetChatSessionHandler,
 } from "./get-chat-session.query.js";
-export {
-  ListChatSessionsQuery,
-  ListChatSessionsHandler,
-} from "./list-chat-sessions.query.js";
+export { ListChatSessionsQuery, ListChatSessionsHandler } from "./list-chat-sessions.query.js";
 export {
   GetChatMessagesQuery,
   ChatMessageDto,
@@ -69,11 +56,7 @@ export {
 } from "./get-return-items.query.js";
 
 // Repair Queries
-export {
-  GetRepairQuery,
-  RepairDto,
-  GetRepairHandler,
-} from "./get-repair.query.js";
+export { GetRepairQuery, RepairDto, GetRepairHandler } from "./get-repair.query.js";
 export { ListRepairsQuery, ListRepairsHandler } from "./list-repairs.query.js";
 
 // Goodwill Queries

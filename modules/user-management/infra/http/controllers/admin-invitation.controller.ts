@@ -45,10 +45,9 @@ export class AdminInvitationController {
 
       if (result.success && result.data) {
         return ResponseHelper.created(reply, 'Invitation sent successfully', {
+          // The invitation token is never returned: the emailed link is the only
+          // channel, otherwise the inviter could accept on the invitee's behalf.
           invitation: result.data.invitation,
-          // In production you would NOT return the token — the email link has it.
-          // Included here for dev/testing convenience.
-          ...(process.env.NODE_ENV !== 'production' && { token: result.data.plainToken }),
         });
       }
 

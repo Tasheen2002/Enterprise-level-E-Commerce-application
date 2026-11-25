@@ -1,7 +1,4 @@
-export const successResponse = (
-  dataSchema: object,
-  statusCode: number = 200,
-) =>
+export const successResponse = (dataSchema: object, statusCode: number = 200) =>
   ({
     type: "object",
     required: ["success", "statusCode", "message", "data"],

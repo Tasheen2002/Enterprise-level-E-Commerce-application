@@ -14,6 +14,7 @@ export interface CompleteCheckoutWithOrderCommand extends ICommand {
   readonly userId?: string;
   readonly guestToken?: string;
   readonly promoCode?: string;
+  readonly pointsToRedeem?: number;
   readonly shippingAddress: {
     readonly firstName: string;
     readonly lastName: string;
@@ -57,6 +58,7 @@ export class CompleteCheckoutWithOrderHandler implements ICommandHandler<
       shippingAddress: command.shippingAddress,
       billingAddress: command.billingAddress,
       promoCode: command.promoCode,
+      pointsToRedeem: command.pointsToRedeem,
     });
     return CommandResult.success<OrderResult>(result);
   }

@@ -1,0 +1,335 @@
+{
+  "date": "2026-10-26",
+  "phase": "P01",
+  "baseline_commit": "f428c8fd62cd6f1fe125d565181229b92f855c12",
+  "inventory": "14 existing apps/api/src/shared files inventoried, not all semantically closed. Added one HTTP auth helper; this bounded task reviews access middleware and supporting identity/plugin contracts. Rate-limiter implementation was read but only duplicate unauthorized classification changed; detailed policy review remains next.",
+  "findings": [
+    {
+      "id": "P01-18",
+      "severity": "P2",
+      "problem": "Bearer parsing required exact capitalization/single-space prefix, rejecting valid scheme casing and multiple-space forms; protected 401 replies omitted the authentication challenge.",
+      "change": "Case-insensitive scheme matching with ASCII space separation and bearer-token character grammar; retain token bytes/JWT verification. Add static Bearer realm=api challenge for required-auth/unauthenticated role 401 replies.",
+      "references": [
+        {
+          "url": "https://www.rfc-editor.org/rfc/rfc9110.html#section-11.1",
+          "supports": "Authentication scheme identifiers are case-insensitive."
+        },
+        {
+          "url": "https://www.rfc-editor.org/rfc/rfc6750#section-2.1",
+          "supports": "Bearer header credentials use one or more SP separators and b64token syntax."
+        },
+        {
+          "url": "https://www.rfc-editor.org/rfc/rfc6750#section-3",
+          "supports": "Protected-resource missing/invalid bearer credentials require WWW-Authenticate."
+        }
+      ],
+      "limit": "This addresses selected transport requirements, not complete OAuth/TLS/deployment conformance."
+    },
+    {
+      "id": "P01-19",
+      "severity": "P2",
+      "problem": "requireRole closed over the mutable caller array and exported role tuples were mutable at runtime, permitting application code to alter later policy behavior.",
+      "change": "Capture a policy snapshot, accept readonly role lists, freeze exported catalogs and preset object, reuse ADMIN_ONLY for requireAdmin. Existing role memberships/case sensitivity unchanged.",
+      "limit": "Synthetic application-state mutation reproducer; no unauthenticated client capability or production mutation caller was demonstrated."
+    },
+    {
+      "id": "P01-20",
+      "severity": "P2",
+      "problem": "Duplicated plugin/shared/ambient request identity types drifted: sessionId existed on plugin payload but not shared/ambient user; readonly exported role lists were rejected by role utility signatures.",
+      "change": "One shared JWTPayload including optional sessionId, compatible plugin type export and AuthenticatedUser alias; ambient request user is that same type or null. Readonly policy/query parameters accepted."
+    }
+  ],
+  "baseline": {
+    "passed": 48,
+    "failed": 17,
+    "cases": 65,
+    "failed_cases": [
+      "required and optional authentication transport accepts HTTP bearer scheme form bearer ",
+      "required and optional authentication transport accepts HTTP bearer scheme form BEARER ",
+      "required and optional authentication transport accepts HTTP bearer scheme form bEaReR ",
+      "required and optional authentication transport accepts HTTP bearer scheme form Bearer   ",
+      "required and optional authentication transport rejects missing/malformed credentials undefined with a challenge",
+      "required and optional authentication transport rejects missing/malformed credentials Basic credentials with a challenge",
+      "required and optional authentication transport rejects missing/malformed credentials Bearer with a challenge",
+      "required and optional authentication transport rejects missing/malformed credentials Bearer  with a challenge",
+      "required and optional authentication transport rejects missing/malformed credentials Bearer invalid with a challenge",
+      "required and optional authentication transport rejects missing/malformed credentials Bearer a b with a challenge",
+      "role authorization policies captures an allowlist without permitting later caller mutation to widen access",
+      "role authorization policies keeps the 'admin' role catalog immutable",
+      "role authorization policies keeps the 'staff' role catalog immutable",
+      "role authorization policies keeps the 'care' role catalog immutable",
+      "role authorization policies keeps the 'vendor' role catalog immutable",
+      "role authorization policies keeps the 'authenticated' role catalog immutable",
+      "role authorization policies retains facade identity and common role-query behavior"
+    ],
+    "type_diagnostics": {
+      "identity_equality_TS2344": 2,
+      "missing_session_metadata_TS2339": 2,
+      "readonly_policy_TS2345": 2
+    },
+    "quality_assertion_note": "One baseline failure asserts the desired requireAdmin alias identity (deduplication), rather than claiming its previously equivalent separate closure denied/allowed different roles.",
+    "initial_cold_attempt": {
+      "passed": 47,
+      "failed": 18,
+      "timing_failures": [
+        {
+          "name": "required and optional authentication transport accepts HTTP bearer scheme form Bearer ",
+          "duration_ms": 7400.694500000001
+        }
+      ],
+      "resolution": "Initial cold Fastify setup exceeded the default five-second case budget (about 7401ms). Definitive before/after focused runs use explicit --testTimeout=15000; final complete unit run uses unchanged defaults."
+    }
+  },
+  "review": {
+    "complete_target_reads": [
+      "apps/api/src/plugins/auth.ts",
+      "apps/api/src/shared/http/authentication.ts",
+      "apps/api/src/shared/middleware/authenticate.middleware.ts",
+      "apps/api/src/shared/middleware/optional-auth.middleware.ts",
+      "apps/api/src/shared/middleware/role-authorization.middleware.ts",
+      "apps/api/src/shared/middleware/rate-limiter.middleware.ts",
+      "apps/api/src/shared/interfaces/authenticated-request.interface.ts",
+      "apps/api/src/types/fastify.d.ts",
+      "apps/api/test/unit/access-middleware.spec.ts",
+      "apps/api/test/unit/access-contracts.typecheck.ts"
+    ],
+    "dependency_reads": "Complete auth plugin, JWT service/port and in-memory blacklist, actual server plugin ordering and representative order staff/ownership controller read. Selected cart/checkout optional-hook sections and static role/optional-auth callers traced. Not a complete module/route/blacklist review.",
+    "preserved_security": "Existing HS256 verification, access/refresh/pending-token separation, schema/expiry checks, blacklist enforcement and current-session query remain in place. No roles, account-status policy, secrets or token expiry settings changed.",
+    "session_query": "Inert Prisma tests assert sessionId/userId/isRevoked=false/expiresAt>now/active-user/current-role filter and requery per request. Missing rows reject required auth or become anonymous under optional auth; persistence exceptions remain redacted 500 responses. This does not prove real SQL/model behavior.",
+    "deduplication": "Central numeric-401 classifier used by required/optional middleware and early rate-limit authentication. Only credential rejections can downgrade; infrastructure errors propagate. One identity declaration replaces drifted parallel shapes.",
+    "scope": "Realm challenge static; no credential/token values placed in headers or errors. Unknown roles/missing identity remain denied; optional public routes retain anonymous behavior."
+  },
+  "verification": {
+    "new_runtime_cases": 73,
+    "focused_cases": 97,
+    "focused_files": 3,
+    "full_unit_cases": 1197,
+    "full_unit_files": 98,
+    "coverage": {
+      "total": {
+        "lines": {
+          "total": 62,
+          "covered": 62,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 68,
+          "covered": 68,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 11,
+          "covered": 11,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 32,
+          "covered": 32,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/plugins/auth.ts": {
+        "lines": {
+          "total": 35,
+          "covered": 35,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 5,
+          "covered": 5,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 38,
+          "covered": 38,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 16,
+          "covered": 16,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/http/authentication.ts": {
+        "lines": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 1,
+          "covered": 1,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/middleware/authenticate.middleware.ts": {
+        "lines": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 1,
+          "covered": 1,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 5,
+          "covered": 5,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/middleware/optional-auth.middleware.ts": {
+        "lines": {
+          "total": 4,
+          "covered": 4,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 1,
+          "covered": 1,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 5,
+          "covered": 5,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 2,
+          "covered": 2,
+          "skipped": 0,
+          "pct": 100
+        }
+      },
+      "apps/api/src/shared/middleware/role-authorization.middleware.ts": {
+        "lines": {
+          "total": 17,
+          "covered": 17,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 3,
+          "covered": 3,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 18,
+          "covered": 18,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 8,
+          "covered": 8,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "coverage_scope": "Only auth plugin, required/optional/role middleware and shared auth HTTP helper: 62 lines, 68 statements, 11 functions, 32 branches at 100%. No full rate-limiter, JWT-service, blacklist, endpoint, DB or whole-backend coverage claim.",
+    "role_matrix": "Five presets x six supported roles = 30 independently expected allow/deny cases using actual signed JWT/plugin/hooks and inert persistence. Additional missing/unknown/lowercase roles, caller-list mutation, five catalog mutations and helper/alias checks.",
+    "token_matrix": "Valid scheme variants; missing/malformed headers and challenge; refresh/pending/expired/wrong-key/wrong-algorithm/malformed-claim/sessionless/blacklisted tokens; request isolation, null session transitions, DB exceptions, no-config failure, configured secret/default signing and existing no-Prisma verifier compatibility.",
+    "checks": {
+      "root_tsc": "passed including actual consumers and compile-only fixture",
+      "focused_contract_tsc": "six baseline diagnostics corrected",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed"
+    },
+    "commands": [
+      "Vitest access-middleware.spec.ts, auth-boundary.spec.ts and shared-foundation.spec.ts with --testTimeout=15000 and five explicit coverage include paths",
+      "Full default Vitest unit subset excluding test/integration and test/e2e; no timeout override",
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "Strict focused type-contract program under root options plus actual Fastify declarations/config/db plugin types",
+      "Focused ESLint and Prettier across ten source/test files"
+    ]
+  },
+  "verified_source_sha256": {
+    "apps/api/src/plugins/auth.ts": "86d7a6cb71ae2bae138bf0bf56d1c42f223dcffc60486a49821def29328165c2",
+    "apps/api/src/shared/http/authentication.ts": "f5dd329000db45b77eed319dfdf78a19e421f2a91da04f2e70e56d1004111601",
+    "apps/api/src/shared/middleware/authenticate.middleware.ts": "74941fcf06827c82bea126fcf1e479c85cec0f2f02fa8844d8693d3d68739180",
+    "apps/api/src/shared/middleware/optional-auth.middleware.ts": "7defea12ad6f2a6f4e87fc3a0d306b2a1cfd07b51f1e6c2d04da57e868f678ee",
+    "apps/api/src/shared/middleware/role-authorization.middleware.ts": "028e8fad520c9389699a2acffa617bfa12f34215f6071a799ca5c16fa9eefb83",
+    "apps/api/src/shared/middleware/rate-limiter.middleware.ts": "3546bbe85264df437e45c186f0605837e5bb3514140a9e1f377d2202ef9f0a72",
+    "apps/api/src/shared/interfaces/authenticated-request.interface.ts": "bc0db64fdf527be5d3234f9bcdceef3e488d84412964b6e4f558129d3880af77",
+    "apps/api/src/types/fastify.d.ts": "8ddec634bc6cd336ad274ad3b9fd73ffdeaacbeddf3f75e95cf84bb74e7621ac",
+    "apps/api/test/unit/access-middleware.spec.ts": "b820d3f395ac877401970157bf4cb203a826e835e98b98e25ab005594cf16538",
+    "apps/api/test/unit/access-contracts.typecheck.ts": "09a6dac6d665e12148bff532eb4cb76dd8e57bbecaa4700d7075c984ae900b87"
+  },
+  "dependency_sha256": {
+    "apps/api/src/server.ts": "0cb839bb5ae185737e4cb125ca561e4e8eb0ecc6186113907a787f64be6c8473",
+    "apps/api/src/shared/middleware/index.ts": "0655a820f6f99cf774c339df0dc23c26bd60a585a6dce8f57358896e0a11fe3d",
+    "apps/api/src/plugins/error.ts": "0002211a85fa586f584cf26df138be600a3f7ddfc97291d32a8f13f4693a352e",
+    "modules/user-management/infra/http/security/jwt.service.ts": "a9f34080fc01a22c53930e74dda4443f7e2c1b7aea480635359ea8246ae0a4fb",
+    "modules/user-management/infra/http/security/token-blacklist.ts": "147759aecb2f064cbf4302356799465d996c3197121479b28587a389b341c28c",
+    "modules/user-management/application/services/ijwt.service.ts": "d77b98918beee6500047d6bd17106455e4246b960de1ca0248178a81c146da33",
+    "modules/order-management/infra/http/controllers/order-status-history.controller.ts": "f75223325e264cdfeb90cba3e32c591b32a24637f74f5377e0f3847866daaa16"
+  },
+  "open_followups": [
+    {
+      "id": "P01-AUTH-REAL-DB",
+      "scope": "Protected and optional route/model state checks still require owned PostgreSQL HTTP tests for revocation/expiry/account/role changes and outages. Inert query/result checks do not close those strict gates or all registered endpoint policies."
+    },
+    {
+      "id": "P01-REQUEST-GENERIC-TYPING",
+      "scope": "AuthenticatedRequest still defaults its route generic to any. Broader body/query/params typing requires tracing/migrating actual route/controller contracts; identity metadata correction is not that migration."
+    },
+    {
+      "id": "P01-RATE-LIMITER",
+      "scope": "Detailed rate-limit key/store/window/configuration/memory/lifecycle review is next; this task only reused the shared unauthorized classifier there."
+    },
+    {
+      "id": "P03/P15-auth-state-and-composition",
+      "scope": "In-memory blacklist/restart/multi-instance behavior and no-Prisma verifier compatibility remain explicit. Production server statically registers DB before auth; full bootstrap/deployment/session lifecycle and owning module authorization remain open."
+    }
+  ],
+  "limits": [
+    "No live/real DB or provider execution; prior PostgreSQL 47-group baseline remains historical. No data/schema/token-format/secret migrations.",
+    "HTTP tests mount synthetic routes with actual hooks/plugin and inert Prisma; no full endpoint-prefix/role/ownership matrix certification.",
+    "Role immutability is an internal policy construction invariant; it is not claimed as an externally exploitable privilege-escalation finding.",
+    "Signature/claim checks are exercised as dependencies, not a complete JWT/blacklist/authentication-service review. Token-state durability is not added.",
+    "Only helper/ambient-type/two fixture files close; middleware/plugin remain open for real-DB/composition gates and request interface remains open for generic typing. P01 remains open."
+  ]
+}

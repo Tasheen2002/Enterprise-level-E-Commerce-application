@@ -31,7 +31,12 @@ export interface IOrderRepository {
     order: Order,
     statusHistory: OrderStatusHistory,
   ): Promise<void>;
-  delete(orderId: OrderId): Promise<void>;
+  // Deletes the order only while it is still 'created' and nothing else
+  // references it (payments, gift card/loyalty/BNPL transactions, returns,
+  // shipments, pickup reservations, support history). The check and delete
+  // run in one transaction with the order row locked. Returns the blocking
+  // reasons; an empty list means the order was deleted.
+  deleteIfUnprocessed(orderId: OrderId): Promise<string[]>;
 
   // Finders
   findById(orderId: OrderId): Promise<Order | null>;

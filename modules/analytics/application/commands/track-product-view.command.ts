@@ -1,34 +1,14 @@
 import {
+  type ICommand,
+  type ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
+import {
   AnalyticsTrackingService,
   TrackProductViewDto,
-} from '../services/analytics-tracking.service';
+} from "../services/analytics-tracking.service";
 
 // Base interfaces (shared pattern from cart module)
-export interface ICommand {
-  readonly commandId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface ICommandHandler<TCommand extends ICommand, TResult = void> {
-  handle(command: TCommand): Promise<TResult>;
-}
-
-export class CommandResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): CommandResult<T> {
-    return new CommandResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): CommandResult<T> {
-    return new CommandResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface TrackProductViewCommand extends ICommand {
   productId: string;
@@ -40,7 +20,7 @@ export interface TrackProductViewCommand extends ICommand {
   ipAddress?: string;
   referrer?: string;
   context?: {
-    source?: 'search' | 'category' | 'recommendation' | 'direct';
+    source?: "search" | "category" | "recommendation" | "direct";
     searchQuery?: string;
     categoryId?: string;
   };
@@ -49,32 +29,24 @@ export interface TrackProductViewCommand extends ICommand {
 export class TrackProductViewHandler
   implements ICommandHandler<TrackProductViewCommand, CommandResult<void>>
 {
-  constructor(
-    private readonly analyticsTrackingService: AnalyticsTrackingService
-  ) {}
+  constructor(private readonly analyticsTrackingService: AnalyticsTrackingService) {}
 
-  async handle(
-    command: TrackProductViewCommand
-  ): Promise<CommandResult<void>> {
+  async handle(command: TrackProductViewCommand): Promise<CommandResult<void>> {
     try {
       // Validation
       if (!command.productId) {
-        return CommandResult.failure<void>('Product ID is required', [
-          'productId',
-        ]);
+        return CommandResult.failure<void>("Product ID is required", ["productId"]);
       }
 
       if (!command.sessionId) {
-        return CommandResult.failure<void>('Session ID is required', [
-          'sessionId',
-        ]);
+        return CommandResult.failure<void>("Session ID is required", ["sessionId"]);
       }
 
       if (!command.userId && !command.guestToken) {
-        return CommandResult.failure<void>(
-          'Either userId or guestToken is required',
-          ['userId', 'guestToken']
-        );
+        return CommandResult.failure<void>("Either userId or guestToken is required", [
+          "userId",
+          "guestToken",
+        ]);
       }
 
       // Track product view
@@ -93,13 +65,11 @@ export class TrackProductViewHandler
       return CommandResult.success<void>();
     } catch (error) {
       if (error instanceof Error) {
-        return CommandResult.failure<void>('Failed to track product view', [
-          error.message,
-        ]);
+        return CommandResult.failure<void>("Failed to track product view", [error.message]);
       }
 
       return CommandResult.failure<void>(
-        'An unexpected error occurred while tracking product view'
+        "An unexpected error occurred while tracking product view",
       );
     }
   }

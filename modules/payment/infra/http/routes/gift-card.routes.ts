@@ -26,6 +26,8 @@ const redeemGiftCardBodyJson = toJsonSchema(redeemGiftCardSchema);
 const giftCardIdParamsJson = toJsonSchema(giftCardIdParamsSchema);
 const giftCardBalanceQueryJson = toJsonSchema(giftCardBalanceQuerySchema);
 
+const balanceLookupRateLimiter = createRateLimiter(RateLimitPresets.auth);
+
 const writeRateLimiter = createRateLimiter({
   ...RateLimitPresets.writeOperations,
   keyGenerator: userOrIpKeyGenerator,
@@ -65,7 +67,7 @@ export async function registerGiftCardRoutes(
     "/gift-cards/:giftCardId/redeem",
     {
       preValidation: [validateParams(giftCardIdParamsSchema)],
-      preHandler: [authenticate, RolePermissions.AUTHENTICATED, validateBody(redeemGiftCardSchema)],
+      preHandler: [authenticate, RolePermissions.CUSTOMER_CARE, validateBody(redeemGiftCardSchema)],
       schema: {
         description: "Redeem a gift card towards an order.",
         tags: ["Gift Cards"],
@@ -85,9 +87,11 @@ export async function registerGiftCardRoutes(
   fastify.get(
     "/gift-cards/balance",
     {
+      // Codes are secrets: cap lookups per IP so they cannot be guessed.
+      onRequest: [balanceLookupRateLimiter],
       preValidation: [validateQuery(giftCardBalanceQuerySchema)],
       schema: {
-        description: "Get gift card balance by code or ID.",
+        description: "Get gift card balance by code.",
         tags: ["Gift Cards"],
         summary: "Get Gift Card Balance",
         querystring: giftCardBalanceQueryJson,

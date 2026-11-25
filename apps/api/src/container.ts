@@ -1,5 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Category } from "@prisma/client";
+import type { IPaymentRefundGateway } from "../../../modules/payment/domain/external-services";
+import type { IPaymentConfirmationPort } from "../../../modules/cart/domain/ports/external-services";
+import { ProductVisibilityPolicy } from "../../../modules/product-catalog/application/services/product-visibility.policy";
 import { InMemoryEventBus } from "../../../packages/core/src/domain/events/in-memory-event-bus";
+import { DomainEvent } from "../../../packages/core/src/domain/events/domain-event";
+import { ReminderStatusValue } from "../../../modules/engagement/domain/value-objects/reminder-status.vo";
 
 // ============================================================
 // User Management — Imports
@@ -386,7 +391,7 @@ import { CheckoutController } from "../../../modules/cart/infra/http/controllers
 // ============================================================
 // Admin — Imports (SettingsService used by Cart)
 // ============================================================
-import { SettingsService } from "../../../modules/admin/application/services/settings.service";
+import { SettingsServiceImpl } from "../../../modules/cart/infra/persistence/repositories/settings.service.impl";
 
 // ============================================================
 // Order Management — Imports
@@ -524,7 +529,7 @@ import {
 } from "../../../modules/payment/infra/http/controllers";
 import { StripeCardSetupService } from "../../../modules/payment/application/services/stripe-card-setup.service";
 import { createStripeProvider } from "../../../modules/payment/infra/payment-providers/stripe.provider";
-import { getStripeConfig, isStripeConfigured } from "../../../modules/payment/infra/config/stripe.config";
+import type { StripeConfig } from "../../../modules/payment/infra/config/stripe.config";
 import type { IExternalOrderQueryPort } from "../../../modules/payment/domain/external-services";
 
 // ============================================================
@@ -613,6 +618,189 @@ import { NotificationService } from "../../../modules/engagement/application/ser
 import { AppointmentService } from "../../../modules/engagement/application/services/appointment.service";
 import { ProductReviewService } from "../../../modules/engagement/application/services/product-review.service";
 import { NewsletterService } from "../../../modules/engagement/application/services/newsletter.service";
+import {
+  MediaAssetNotFoundError,
+  ProductNotFoundError,
+  ProductVariantNotFoundError,
+} from "../../../modules/product-catalog/domain/errors/product-catalog.errors";
+import type { FedExConfig } from "../../../modules/order-management/infra/shipping/fedex-shipping.service";
+
+/**
+ * Everything the composition root needs from the environment. The server builds
+ * it from validated configuration; the container never reads process.env.
+ */
+export interface ContainerConfig {
+  jwtSecret: string;
+  /** Refresh-token lifetime (access tokens are fixed at 15 minutes). */
+  jwtExpiresIn: string;
+  fedex?: FedExConfig;
+  firebaseAdmin?: {
+    projectId: string;
+    clientEmail: string;
+    privateKey: string;
+  };
+  stripe?: StripeConfig;
+  imageKit?: { publicKey: string; privateKey: string };
+  webhookSecrets?: { stripe?: string; paypal?: string; razorpay?: string };
+  defaultStockLocation?: string;
+}
+
+const serviceUnavailable = (message: string) =>
+  Object.assign(new Error(message), { statusCode: 503 });
+
+/** Used when Firebase Admin credentials are absent: dependent endpoints answer 503. */
+export const unconfiguredFirebaseVerifier: IFirebaseAuthVerifier = {
+  async verifyIdToken() {
+    throw serviceUnavailable("Google sign-in is not configured on this server");
+  },
+  async verifyPhoneIdToken() {
+    throw serviceUnavailable("Phone verification is not configured on this server");
+  },
+};
+
+type ErrorClass = abstract new (...args: never[]) => Error;
+
+/** Resolve a lookup's documented not-found error to a fallback; rethrow everything else. */
+async function unlessNotFound<T, F>(
+  lookup: () => Promise<T>,
+  notFound: ErrorClass,
+  fallback: F,
+): Promise<T | F> {
+  try {
+    return await lookup();
+  } catch (error) {
+    if (error instanceof notFound) return fallback;
+    throw error;
+  }
+}
+
+interface CatalogLookups {
+  variantManagementService: Pick<VariantManagementService, "getVariantById">;
+  productManagementService: Pick<ProductManagementService, "getProductById">;
+  productMediaManagementService: Pick<ProductMediaManagementService, "getProductMedia">;
+  mediaManagementService: Pick<MediaManagementService, "getAssetById">;
+}
+
+/**
+ * Cart's catalog ports. Only catalog not-found errors mean "absent"; database
+ * and other failures propagate instead of being reported as missing products.
+ */
+export function createCartCatalogPorts(catalog: CatalogLookups): {
+  variants: IExternalProductVariantRepository;
+  products: IExternalProductRepository;
+  productMedia: IExternalProductMediaRepository;
+  mediaAssets: IExternalMediaAssetRepository;
+} {
+  return {
+    variants: {
+      findById: (variantId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.variantManagementService.getVariantById(variantId.getValue());
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getProductId: () => ({ getValue: () => dto.productId }),
+              getSku: () => ({ getValue: () => dto.sku }),
+              getSize: () => dto.size,
+              getColor: () => dto.color,
+              getWeightG: () => dto.weightG,
+              getAllowPreorder: () => dto.allowPreorder,
+              getAllowBackorder: () => dto.allowBackorder,
+              getRestockEta: () => (dto.restockEta ? new Date(dto.restockEta) : null),
+              getInventory: () => dto.inventory ?? 0,
+            };
+          },
+          ProductVariantNotFoundError,
+          null,
+        ),
+    },
+    products: {
+      findById: (productId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.productManagementService.getProductById(productId.getValue());
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getTitle: () => dto.title,
+              getSlug: () => ({ getValue: () => dto.slug }),
+              getPrice: () => ({ getValue: () => dto.price }),
+              getCategoryIds: () => dto.categoryIds || [],
+            };
+          },
+          ProductNotFoundError,
+          null,
+        ),
+    },
+    productMedia: {
+      findByProductId: (productId) =>
+        unlessNotFound(
+          async () => {
+            const summary = await catalog.productMediaManagementService.getProductMedia(
+              productId.getValue(),
+            );
+            return summary.mediaAssets.map((asset) => ({
+              getAssetId: () => ({ getValue: () => asset.assetId }),
+            }));
+          },
+          ProductNotFoundError,
+          [],
+        ),
+    },
+    mediaAssets: {
+      findById: (assetId) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.mediaManagementService.getAssetById(assetId.getValue());
+            return { getStorageKey: () => dto.storageKey, getAltText: () => dto.altText ?? null };
+          },
+          MediaAssetNotFoundError,
+          null,
+        ),
+    },
+  };
+}
+
+/** Order management's catalog ports, with the same not-found-only mapping. */
+export function createOrderCatalogPorts(
+  catalog: Pick<CatalogLookups, "variantManagementService" | "productManagementService">,
+): { variants: IExternalVariantService; products: IExternalProductService } {
+  return {
+    variants: {
+      getVariantById: (variantId: string) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.variantManagementService.getVariantById(variantId);
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getProductId: () => ({ getValue: () => dto.productId }),
+              getSku: () => ({ getValue: () => dto.sku }),
+              getSize: () => dto.size,
+              getColor: () => dto.color,
+              getWeightG: () => dto.weightG,
+              getDims: () => dto.dims as Record<string, unknown> | null,
+            };
+          },
+          ProductVariantNotFoundError,
+          null,
+        ),
+    },
+    products: {
+      getProductById: (productId: string) =>
+        unlessNotFound(
+          async () => {
+            const dto = await catalog.productManagementService.getProductById(productId);
+            return {
+              getId: () => ({ getValue: () => dto.id }),
+              getTitle: () => dto.title,
+              getPrice: () => ({ getValue: () => dto.price }),
+            };
+          },
+          ProductNotFoundError,
+          null,
+        ),
+    },
+  };
+}
 
 /**
  * Dependency Injection Container
@@ -620,13 +808,61 @@ import { NewsletterService } from "../../../modules/engagement/application/servi
  * Modules are registered in dependency order:
  *   User Management → Product Catalog → Inventory Management →
  *   Cart → Order Management → Payment → Loyalty → Engagement
+ *
+ * Each server creates its own container; `register` runs once per instance.
  */
+/** Issues refunds through Stripe; undefined when Stripe is not configured. */
+function createStripeRefundGateway(
+  stripe: StripeConfig | undefined,
+): IPaymentRefundGateway | undefined {
+  if (!stripe) return undefined;
+  const provider = createStripeProvider(stripe);
+  return {
+    async refund({ provider: name, providerReference, amount }) {
+      if (name !== "stripe") throw new Error(`No refund gateway for provider '${name}'`);
+      const result = await provider.refundPayment(providerReference, amount);
+      if (!result.success || !result.refundId) {
+        throw new Error(result.error ?? "Stripe refund failed");
+      }
+      return { reference: result.refundId };
+    },
+  };
+}
+
+/**
+ * Confirms checkout payments with Stripe itself: the intent must have
+ * succeeded (or be authorised for capture) and the amount reported is what
+ * Stripe will settle. Without Stripe configuration nothing is confirmed.
+ */
+function createStripePaymentConfirmation(
+  stripe: StripeConfig | undefined,
+): IPaymentConfirmationPort {
+  const provider = stripe ? createStripeProvider(stripe) : null;
+  return {
+    async confirm(payment) {
+      const unconfirmed = { succeeded: false, amount: 0, currency: "" };
+      if (!provider || payment.provider !== "stripe" || !payment.providerReference) {
+        return unconfirmed;
+      }
+      const intent = await provider.retrievePaymentIntent(payment.providerReference);
+      if (!intent.success) return unconfirmed;
+      const succeeded = intent.status === "succeeded" || intent.status === "requires_capture";
+      const amount = intent.status === "succeeded" ? intent.amountReceived : intent.amount;
+      return {
+        succeeded,
+        amount: succeeded ? (amount ?? 0) : 0,
+        currency: intent.currency ?? "",
+      };
+    },
+  };
+}
+
 export class Container {
   private static instance: Container;
   private services: Map<string, unknown> = new Map();
+  private registered = false;
 
-  private constructor() {}
-
+  /** Process-wide instance kept for standalone operational utilities. */
   static getInstance(): Container {
     if (!Container.instance) {
       Container.instance = new Container();
@@ -634,18 +870,11 @@ export class Container {
     return Container.instance;
   }
 
-  register(
-    prisma: PrismaClient,
-    config: {
-      jwtSecret: string;
-      jwtExpiresIn: string;
-      firebaseAdmin?: {
-        projectId: string;
-        clientEmail: string;
-        privateKey: string;
-      };
-    },
-  ): void {
+  register(prisma: PrismaClient, config: ContainerConfig): void {
+    if (this.registered) {
+      throw new Error("Container is already registered; create a new Container per server");
+    }
+    this.registered = true;
 
     // ============================================================
     // Shared Infrastructure — Event Bus
@@ -722,22 +951,7 @@ export class Container {
     // When unset, /auth/google returns 503 via the unconfigured stub below.
     const firebaseVerifier: IFirebaseAuthVerifier = config.firebaseAdmin
       ? new FirebaseAuthVerifierAdapter(config.firebaseAdmin)
-      : {
-          async verifyIdToken() {
-            const err: Error & { statusCode?: number } = new Error(
-              "Google sign-in is not configured on this server",
-            );
-            err.statusCode = 503;
-            throw err;
-          },
-          async verifyPhoneIdToken() {
-            const err: Error & { statusCode?: number } = new Error(
-              "Phone verification is not configured on this server",
-            );
-            err.statusCode = 503;
-            throw err;
-          },
-        };
+      : unconfiguredFirebaseVerifier;
 
     const authController = new AuthController(
       new RegisterUserHandler(authService, TokenBlacklistService, emailService),
@@ -745,7 +959,7 @@ export class Container {
       new LogoutHandler(authService, TokenBlacklistService),
       new RefreshTokenHandler(authService, TokenBlacklistService),
       new ChangePasswordHandler(authService),
-      new ChangeEmailHandler(authService),
+      new ChangeEmailHandler(authService, TokenBlacklistService, emailService),
       new InitiatePasswordResetHandler(authService, TokenBlacklistService, emailService),
       new ResetPasswordHandler(authService, TokenBlacklistService),
       new VerifyEmailHandler(authService, TokenBlacklistService),
@@ -757,19 +971,15 @@ export class Container {
       new Enable2FAHandler(authService),
       new Disable2FAHandler(authService),
       new RegenerateBackupCodesHandler(authService),
-      new Verify2FALoginHandler(authService),
+      new Verify2FALoginHandler(authService, TokenBlacklistService),
       authService,
     );
     // ImageKit upload-token issuer — only wired when both server-side
     // ImageKit credentials are present. The avatar-upload route returns
     // 503 when this is null.
-    const imageKitUploadAuth =
-      process.env.IMAGEKIT_PUBLIC_KEY && process.env.IMAGEKIT_PRIVATE_KEY
-        ? new ImageKitUploadAuthService({
-            publicKey: process.env.IMAGEKIT_PUBLIC_KEY,
-            privateKey: process.env.IMAGEKIT_PRIVATE_KEY,
-          })
-        : null;
+    const imageKitUploadAuth = config.imageKit
+      ? new ImageKitUploadAuthService(config.imageKit)
+      : null;
 
     const profileController = new ProfileController(
       new GetUserProfileHandler(profileService),
@@ -867,12 +1077,14 @@ export class Container {
       new ListCategoriesHandler(categoryManagementService),
       new GetCategoryHierarchyHandler(categoryManagementService),
     );
+    const productVisibility = new ProductVisibilityPolicy(productRepository);
     const variantController = new VariantController(
       new CreateProductVariantHandler(variantManagementService),
       new UpdateProductVariantHandler(variantManagementService),
       new DeleteProductVariantHandler(variantManagementService),
       new ListVariantsHandler(variantManagementService),
       new GetVariantHandler(variantManagementService),
+      productVisibility,
     );
     const mediaController = new MediaController(
       new CreateMediaAssetHandler(mediaManagementService),
@@ -895,6 +1107,7 @@ export class Container {
       new GetProductMediaAssetUsageCountHandler(productMediaManagementService),
       new ValidateProductMediaHandler(productMediaManagementService),
       new GetProductMediaStatisticsHandler(productMediaManagementService),
+      productVisibility,
     );
     const productTagController = new ProductTagController(
       new CreateProductTagHandler(productTagManagementService),
@@ -912,6 +1125,7 @@ export class Container {
       new ValidateProductTagHandler(productTagManagementService),
       new GetProductTagsHandler(productTagManagementService),
       new GetTagProductsHandler(productTagManagementService),
+      productVisibility,
     );
     const searchController = new SearchController(
       new SearchProductsHandler(productSearchService),
@@ -968,6 +1182,7 @@ export class Container {
       new GetEditorialLookStatsHandler(editorialLookManagementService),
       new GetPopularEditorialLookProductsHandler(editorialLookManagementService),
       new ValidateEditorialLookForPublicationHandler(editorialLookManagementService),
+      productVisibility,
     );
     const variantMediaController = new VariantMediaController(
       new AddMediaToVariantHandler(variantMediaManagementService),
@@ -1028,7 +1243,11 @@ export class Container {
     const pickupReservationRepository = new PickupReservationRepositoryImpl(prisma, eventBus);
 
     const stockManagementService = new StockManagementService(stockRepository, inventoryTransactionRepository);
-    const locationManagementService = new LocationManagementService(locationRepository);
+    const locationManagementService = new LocationManagementService(
+      locationRepository,
+      stockRepository,
+      pickupReservationRepository,
+    );
     const supplierManagementService = new SupplierManagementService(supplierRepository);
     const purchaseOrderManagementService = new PurchaseOrderManagementService(purchaseOrderRepository, stockRepository, inventoryTransactionRepository);
     const stockAlertService = new StockAlertService(stockAlertRepository, stockRepository);
@@ -1117,7 +1336,7 @@ export class Container {
     const cartRepository = new CartRepositoryImpl(prisma, eventBus);
     const checkoutRepository = new CheckoutRepositoryImpl(prisma, eventBus);
     const checkoutCompletionPort = new CheckoutCompletionPortImpl(prisma);
-    const settingsService = new SettingsService();
+    const settingsService = new SettingsServiceImpl();
 
     // Cross-module port adapters: bridge inventory & product-catalog into cart's external port interfaces
     const stockServiceAdapter: IExternalStockService = {
@@ -1131,67 +1350,17 @@ export class Container {
 
     const reservationRepository = new ReservationRepositoryImpl(prisma, stockServiceAdapter, eventBus);
 
-    const externalProductVariantRepository: IExternalProductVariantRepository = {
-      findById: async (variantId) => {
-        try {
-          const dto = await variantManagementService.getVariantById(variantId.getValue());
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getProductId: () => ({ getValue: () => dto.productId }),
-            getSku: () => ({ getValue: () => dto.sku }),
-            getSize: () => dto.size,
-            getColor: () => dto.color,
-            getWeightG: () => dto.weightG,
-            getAllowPreorder: () => dto.allowPreorder,
-            getAllowBackorder: () => dto.allowBackorder,
-            getRestockEta: () => dto.restockEta ? new Date(dto.restockEta) : null,
-            getInventory: () => dto.inventory ?? 0,
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductRepository: IExternalProductRepository = {
-      findById: async (productId) => {
-        try {
-          const dto = await productManagementService.getProductById(productId.getValue());
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getTitle: () => dto.title,
-            getSlug: () => ({ getValue: () => dto.slug }),
-            getPrice: () => ({ getValue: () => dto.price }),
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductMediaRepository: IExternalProductMediaRepository = {
-      findByProductId: async (productId) => {
-        try {
-          const summary = await productMediaManagementService.getProductMedia(productId.getValue());
-          return summary.mediaAssets.map((asset) => ({
-            getAssetId: () => ({ getValue: () => asset.assetId }),
-          }));
-        } catch {
-          return [];
-        }
-      },
-    };
-
-    const externalMediaAssetRepository: IExternalMediaAssetRepository = {
-      findById: async (assetId) => {
-        try {
-          const dto = await mediaManagementService.getAssetById(assetId.getValue());
-          return dto ? { getStorageKey: () => dto.storageKey, getAltText: () => dto.altText ?? null } : null;
-        } catch {
-          return null;
-        }
-      },
-    };
+    const {
+      variants: externalProductVariantRepository,
+      products: externalProductRepository,
+      productMedia: externalProductMediaRepository,
+      mediaAssets: externalMediaAssetRepository,
+    } = createCartCatalogPorts({
+      variantManagementService,
+      productManagementService,
+      productMediaManagementService,
+      mediaManagementService,
+    });
 
     const reservationOrchestrator = new ReservationOrchestrator(reservationRepository);
     const cartManagementService = new CartManagementService(
@@ -1216,8 +1385,24 @@ export class Container {
       externalProductRepository,
       externalProductVariantRepository,
       { create: (data) => ProductSnapshot.create(data) } satisfies IProductSnapshotFactory,
-      { defaultStockLocation: process.env.DEFAULT_STOCK_LOCATION },
+      { defaultStockLocation: config.defaultStockLocation },
       loyaltyService,
+      createStripePaymentConfirmation(config.stripe),
+      {
+        // Resolved at request time; both services are created later in register().
+        promotionDiscount: async ({ promoCode, subtotal, productIds, userId, email }) => {
+          const result = await promotionService.applyPromotion({
+            promoCode,
+            orderAmount: subtotal,
+            products: productIds,
+            userId,
+            email,
+          });
+          return result.valid ? (result.discountAmount ?? 0) : 0;
+        },
+        loyaltyBalance: async (userId) =>
+          (await loyaltyService.getAccountDetails(userId)).currentBalance,
+      },
     );
 
     const cartController = new CartController(
@@ -1288,39 +1473,8 @@ export class Container {
     const preorderRepository = new PreorderRepositoryImpl(prisma, eventBus);
 
     // Cross-module port adapters: bridge product-catalog & inventory into order's external port interfaces
-    const externalVariantService: IExternalVariantService = {
-      getVariantById: async (variantId: string) => {
-        try {
-          const dto = await variantManagementService.getVariantById(variantId);
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getProductId: () => ({ getValue: () => dto.productId }),
-            getSku: () => ({ getValue: () => dto.sku }),
-            getSize: () => dto.size,
-            getColor: () => dto.color,
-            getWeightG: () => dto.weightG,
-            getDims: () => dto.dims as Record<string, unknown> | null,
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
-
-    const externalProductService: IExternalProductService = {
-      getProductById: async (productId: string) => {
-        try {
-          const dto = await productManagementService.getProductById(productId);
-          return {
-            getId: () => ({ getValue: () => dto.id }),
-            getTitle: () => dto.title,
-            getPrice: () => ({ getValue: () => dto.price }),
-          };
-        } catch {
-          return null;
-        }
-      },
-    };
+    const { variants: externalVariantService, products: externalProductService } =
+      createOrderCatalogPorts({ variantManagementService, productManagementService });
 
     const externalStockService: IOrderExternalStockService = {
       getStock: async (variantId: string, locationId: string) => {
@@ -1331,15 +1485,11 @@ export class Container {
       adjustStock: (...args) => stockManagementService.adjustStock(...args),
       reserveStock: (...args) => stockManagementService.reserveStock(...args),
       releaseStock: (...args) => stockManagementService.releaseStock(...args),
+      returnStockForOrder: (orderId) => stockManagementService.returnStockForOrder(orderId),
     };
 
     const orderEventService = new OrderEventService(orderEventRepository);
-    const fedexShippingService = new FedExShippingService({
-      apiKey: process.env.FEDEX_API_KEY ?? "l747befc81f4f94ab285631a2148503751",
-      secretKey: process.env.FEDEX_SECRET_KEY ?? "512d30a91889472fb4d3335c06b96f03",
-      accountNumber: process.env.FEDEX_ACCOUNT_NUMBER ?? "740561073",
-      baseUrl: process.env.FEDEX_URL ?? "https://apis-sandbox.fedex.com",
-    });
+    const fedexShippingService = config.fedex ? new FedExShippingService(config.fedex) : undefined;
 
     const orderManagementService = new OrderManagementService(
       orderRepository,
@@ -1349,7 +1499,7 @@ export class Container {
       externalVariantService,
       externalProductService,
       externalStockService,
-      process.env.DEFAULT_STOCK_LOCATION ?? "",
+      config.defaultStockLocation ?? "",
       fedexShippingService,
       loyaltyService,
     );
@@ -1447,17 +1597,27 @@ export class Container {
         const order = await orderRepository.findById(OrderId.fromString(orderId));
         return order ? { userId: order.userId ?? null } : null;
       },
+      async findCheckoutOwner(checkoutId: string) {
+        return prisma.checkout.findUnique({
+          where: { id: checkoutId },
+          select: { userId: true, guestToken: true, status: true },
+        });
+      },
     };
 
-    const paymentService = new PaymentService(orderQueryPort, paymentIntentRepository, paymentTransactionRepository);
+    const paymentService = new PaymentService(
+      orderQueryPort,
+      paymentIntentRepository,
+      paymentTransactionRepository,
+      createStripeRefundGateway(config.stripe),
+    );
     const bnplTransactionService = new BnplTransactionService(paymentIntentRepository, orderQueryPort, bnplTransactionRepository);
     const giftCardService = new GiftCardService(orderQueryPort, giftCardRepository, giftCardTransactionRepository);
     const promotionService = new PromotionService(promotionRepository, promotionUsageRepository);
-    const paymentWebhookService = new PaymentWebhookService(paymentWebhookEventRepository, {
-      stripe: process.env.STRIPE_WEBHOOK_SECRET,
-      paypal: process.env.PAYPAL_WEBHOOK_SECRET,
-      razorpay: process.env.RAZORPAY_WEBHOOK_SECRET,
-    });
+    const paymentWebhookService = new PaymentWebhookService(
+      paymentWebhookEventRepository,
+      config.webhookSecrets ?? {},
+    );
 
     const paymentIntentController = new PaymentIntentController(
       new CreatePaymentIntentHandler(paymentService),
@@ -1489,18 +1649,18 @@ export class Container {
       new RecordPromotionUsageHandler(promotionService),
       new GetPromotionUsageHandler(promotionService),
     );
-    const stripeController = isStripeConfigured()
-      ? new StripeWebhookController(paymentService)
+    const stripeController = config.stripe
+      ? new StripeWebhookController(paymentService, config.stripe)
       : null;
 
     // Stripe card-setup feature: SetupIntent flow + persisting confirmed
     // PaymentMethods. Only wires up when Stripe is configured; otherwise
     // the corresponding routes are skipped at registration.
-    const stripeCardSetupController = isStripeConfigured()
+    const stripeCardSetupController = config.stripe
       ? new StripeCardSetupController(
           new StripeCardSetupService(
             prisma,
-            createStripeProvider(getStripeConfig()),
+            createStripeProvider(config.stripe),
             paymentMethodService,
           ),
         )
@@ -1596,6 +1756,126 @@ export class Container {
       new GetNewsletterSubscriptionHandler(newsletterService),
     );
 
+    // ============================================================
+    // Restock Alerts Listener
+    // ============================================================
+    eventBus.subscribe("stock.added", {
+      eventType: "stock.added",
+      handle: async (event: DomainEvent) => {
+        try {
+          const payload = event.getPayload();
+          const variantId = payload.variantId as string;
+          const quantity = payload.quantity as number;
+
+          if (quantity <= 0) return;
+
+          // Fetch pending reminders for this variant
+          const pendingResult = await reminderRepository.findWithFilters({
+            variantId,
+            status: ReminderStatusValue.PENDING,
+          });
+
+          const reminders = pendingResult.items;
+          if (reminders.length === 0) return;
+
+          // Fetch variant and product details with categories
+          const variant = await prisma.productVariant.findUnique({
+            where: { id: variantId },
+            include: {
+              product: {
+                include: {
+                  categories: {
+                    include: {
+                      category: true,
+                    },
+                  },
+                },
+              },
+            },
+          });
+
+          if (!variant || !variant.product) return;
+
+          const productName = variant.product.title || "Bespoke Selection";
+          const size = variant.size || "Default";
+          const color = variant.color || "Default";
+          const sku = variant.sku;
+
+          // Dynamically construct product details page URL based on its categories
+          let productHref = `http://localhost:3000/catalog/women/heeled-sandals/${variant.product.slug}`;
+          if (variant.product.categories && variant.product.categories.length > 0) {
+            for (const pc of variant.product.categories) {
+              const chain: Category[] = [];
+              let currentCat: Category | null = pc.category;
+              let depth = 0;
+              while (currentCat && depth < 10) {
+                chain.push(currentCat);
+                if (currentCat.parentId) {
+                  currentCat = await prisma.category.findUnique({
+                    where: { id: currentCat.parentId },
+                  });
+                } else {
+                  currentCat = null;
+                }
+                depth++;
+              }
+              if (chain.length > 0) {
+                const root = chain[chain.length - 1];
+                const leaf = chain[0];
+                if (root && leaf) {
+                  const gender = root.parentId === null ? root.slug : "women";
+                  const category = leaf.slug;
+                  if (leaf.id === root.id) {
+                    productHref = `http://localhost:3000/catalog/${gender}/${gender}/${variant.product.slug}`;
+                  } else {
+                    productHref = `http://localhost:3000/catalog/${gender}/${category}/${variant.product.slug}`;
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
+          for (const reminder of reminders) {
+            try {
+              let recipientContact: string | null = null;
+              if (reminder.userId) {
+                const user = await prisma.user.findUnique({
+                  where: { id: reminder.userId },
+                  select: { email: true, phone: true },
+                });
+                if (user) {
+                  recipientContact = reminder.channel.getValue() === "email" ? user.email : user.phone;
+                }
+              }
+
+              if (!recipientContact) {
+                console.warn(`[RESTOCK ALERT WORKER] No contact info found for reminder ID ${reminder.id.getValue()} (userId: ${reminder.userId})`);
+                // Mark it as sent anyway to avoid infinite retry loops
+                reminder.markAsSent();
+                await reminderRepository.save(reminder);
+                continue;
+              }
+
+              if (reminder.channel.getValue() === "email") {
+                console.log(`[EMAIL ALERT] Sending simulated restock email to ${recipientContact} for SKU ${sku} (${productName}). Link: ${productHref}`);
+              } else {
+                console.log(`[SMS/WHATSAPP ALERT] Sending simulated restock message to ${recipientContact} via ${reminder.channel.getValue()} for SKU ${sku}`);
+              }
+
+              // Update status to SENT
+              reminder.markAsSent();
+              await reminderRepository.save(reminder);
+            } catch (err) {
+              console.error(`[RESTOCK ALERT WORKER] Failed to process reminder for ID ${reminder.id.getValue()}:`, err);
+            }
+          }
+        } catch (err) {
+          console.error("[RESTOCK ALERT WORKER] Error processing StockAddedEvent:", err);
+        }
+      }
+    });
+
     this.services.set("wishlistController", wishlistController);
     this.services.set("reminderController", reminderController);
     this.services.set("notificationController", notificationController);
@@ -1606,11 +1886,11 @@ export class Container {
   }
 
   get<T>(name: string): T {
-    const service = this.services.get(name);
-    if (!service) {
+    // Optional features are registered as null; only an absent key is an error.
+    if (!this.services.has(name)) {
       throw new Error(`Service "${name}" not found in container`);
     }
-    return service as T;
+    return this.services.get(name) as T;
   }
 
   getUserManagementServices() {
@@ -1690,14 +1970,6 @@ export class Container {
   getLoyaltyServices() {
     return {
       loyaltyController: this.get<LoyaltyController>("loyaltyController"),
-    };
-  }
-
-  /** Combined getter for registerPaymentRoutes — which owns both payment and loyalty routes. */
-  getPaymentLoyaltyServices() {
-    return {
-      ...this.getPaymentServices(),
-      ...this.getLoyaltyServices(),
     };
   }
 

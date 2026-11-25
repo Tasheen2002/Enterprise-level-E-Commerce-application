@@ -1,6 +1,9 @@
 import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { hasRole, STAFF_ROLES } from "@/api/src/shared/middleware/role-authorization.middleware";
+
+const isStaff = (request: AuthenticatedRequest) => hasRole(request, [...STAFF_ROLES]);
 import {
   CreateProductReviewHandler,
   UpdateReviewStatusHandler,
@@ -65,6 +68,9 @@ export class ProductReviewController {
   ) {
     try {
       const { userId } = request.params;
+      if (request.user.userId !== userId && !isStaff(request)) {
+        return ResponseHelper.forbidden(reply, "You can only view your own reviews");
+      }
       const { limit, offset } = request.query;
       const result = await this.getUserReviewsHandler.handle({ userId, limit, offset });
       return ResponseHelper.ok(reply, "User reviews retrieved successfully", result);
@@ -78,7 +84,10 @@ export class ProductReviewController {
     reply: FastifyReply,
   ) {
     try {
-      const dto = await this.getProductReviewHandler.handle({ reviewId: request.params.reviewId });
+      const dto = await this.getProductReviewHandler.handle({
+        reviewId: request.params.reviewId,
+        viewer: { userId: request.user?.userId, isStaff: isStaff(request) },
+      });
       return ResponseHelper.ok(reply, "Product review retrieved successfully", dto);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -92,10 +101,11 @@ export class ProductReviewController {
     reply: FastifyReply,
   ) {
     try {
-      const { productId, userId, rating, title, body } = request.body;
+      // Reviews are always posted as the signed-in customer.
+      const { productId, rating, title, body } = request.body;
       const result = await this.createProductReviewHandler.handle({
         productId,
-        userId,
+        userId: request.user.userId,
         rating,
         title,
         body,
@@ -125,7 +135,10 @@ export class ProductReviewController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.deleteProductReviewHandler.handle({ reviewId: request.params.reviewId });
+      const result = await this.deleteProductReviewHandler.handle({
+        reviewId: request.params.reviewId,
+        actor: { userId: request.user.userId, isAdmin: hasRole(request, ["ADMIN"]) },
+      });
       return ResponseHelper.fromCommand(reply, result, "Product review deleted successfully", undefined, 204);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

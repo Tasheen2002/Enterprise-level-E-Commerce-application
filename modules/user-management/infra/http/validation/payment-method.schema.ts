@@ -22,14 +22,21 @@ const MAX_EXP_YEAR = 2100;
 // Request body schemas
 // ============================================================================
 
+// Cards (and every processor reference such as a Stripe `pm_` id) are only
+// created by the Stripe setup flow, which reads brand/last4/expiry from Stripe.
+// The generic routes therefore cannot add cards or set `providerRef`; unknown
+// keys are stripped by validation.
 export const addPaymentMethodSchema = z.object({
-  type: z.enum(PAYMENT_METHOD_TYPES),
+  type: z
+    .enum(PAYMENT_METHOD_TYPES)
+    .refine((type) => type !== PaymentMethodType.CARD, {
+      message: "Cards must be added through the secure card setup flow",
+    }),
   brand: z.string().max(50).optional(),
   last4: z.string().regex(/^\d{4}$/).optional(),
   expMonth: z.number().int().min(1).max(12).optional(),
   expYear: z.number().int().min(MIN_EXP_YEAR).max(MAX_EXP_YEAR).optional(),
   billingAddressId: z.uuid().optional(),
-  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -37,7 +44,6 @@ export const updatePaymentMethodSchema = z.object({
   billingAddressId: z.uuid().optional(),
   expMonth: z.number().int().min(1).max(12).optional(),
   expYear: z.number().int().min(MIN_EXP_YEAR).max(MAX_EXP_YEAR).optional(),
-  providerRef: z.string().max(100).optional(),
   isDefault: z.boolean().optional(),
 });
 

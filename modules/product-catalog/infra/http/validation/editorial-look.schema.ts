@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import {
   MIN_PAGE,
   MIN_LIMIT,
@@ -28,12 +29,12 @@ export const heroAssetParamsSchema = z.object({
 export const listEditorialLooksSchema = z.object({
   page: z.coerce.number().int().min(MIN_PAGE).optional().default(MIN_PAGE),
   limit: z.coerce.number().int().min(MIN_LIMIT).max(MAX_PAGE_SIZE).optional().default(20),
-  published: z.coerce.boolean().optional(),
-  scheduled: z.coerce.boolean().optional(),
-  draft: z.coerce.boolean().optional(),
-  hasContent: z.coerce.boolean().optional(),
-  hasHeroImage: z.coerce.boolean().optional(),
-  includeUnpublished: z.coerce.boolean().optional(),
+  published: queryBoolean().optional(),
+  scheduled: queryBoolean().optional(),
+  draft: queryBoolean().optional(),
+  hasContent: queryBoolean().optional(),
+  hasHeroImage: queryBoolean().optional(),
+  includeUnpublished: queryBoolean().optional(),
   sortBy: z.enum(["title", "publishedAt", "id"]).optional().default("publishedAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });

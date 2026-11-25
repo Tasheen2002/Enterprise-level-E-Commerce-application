@@ -19,6 +19,51 @@ export class ReturnItemService {
     private readonly orderQueryPort: IExternalOrderQueryPort,
   ) {}
 
+  /**
+   * A return may only contain items of its own order, never more of an item
+   * than was ordered across all returns that were not rejected, and only
+   * until the goods have arrived.
+   */
+  private async assertReturnable(
+    rmaId: string,
+    orderItemId: string,
+    quantity: number
+  ): Promise<void> {
+    const returnRequest = await this.returnRequestRepository.findById(RmaId.create(rmaId));
+    if (!returnRequest) {
+      throw new Error("Return request not found");
+    }
+    if (!returnRequest.getStatus().allowsItemChanges()) {
+      throw new Error(
+        `Items cannot be changed once a return is ${returnRequest.getStatus().getValue()}`
+      );
+    }
+    const orderId = returnRequest.getOrderId();
+    const ordered = await this.orderQueryPort.findOrderItemQuantities(orderId);
+    if (!ordered) {
+      throw new Error("Order not found");
+    }
+    if (!(orderItemId in ordered)) {
+      throw new Error(
+        `Order item ${orderItemId} does not belong to order ${orderId}. This action is not allowed.`
+      );
+    }
+    let returnedElsewhere = 0;
+    for (const other of await this.itemRepository.findByOrderItemId(orderItemId)) {
+      if (other.getRmaId() === rmaId) continue;
+      const otherReturn = await this.returnRequestRepository.findById(RmaId.create(other.getRmaId()));
+      if (otherReturn && !otherReturn.getStatus().isRejected()) {
+        returnedElsewhere += other.getQuantity();
+      }
+    }
+    const available = ordered[orderItemId] - returnedElsewhere;
+    if (quantity > available) {
+      throw new Error(
+        `Only ${Math.max(available, 0)} of order item ${orderItemId} can still be returned`
+      );
+    }
+  }
+
   async createItem(data: {
     rmaId: string;
     orderItemId: string;
@@ -28,29 +73,11 @@ export class ReturnItemService {
     fees?: number;
     currency?: string;
   }): Promise<ReturnItem> {
-    // Convert string to RmaId value object
-    const rmaId = RmaId.create(data.rmaId);
-
-    // First, validate that the RMA exists and get the associated order
-    const returnRequest = await this.returnRequestRepository.findById(rmaId);
-    if (!returnRequest) {
-      throw new Error("Return request not found");
+    if (await this.itemRepository.findById(data.rmaId, data.orderItemId)) {
+      throw new Error(`Order item ${data.orderItemId} is already in this return`);
     }
+    await this.assertReturnable(data.rmaId, data.orderItemId, data.quantity);
 
-    // Get the order ID associated with this return request
-    const orderId = returnRequest.getOrderId();
-
-    // Validate that the orderItemId belongs to the order associated with this RMA
-    const orderItemIds = await this.orderQueryPort.findOrderItemIds(orderId);
-    if (!orderItemIds) {
-      throw new Error("Order not found");
-    }
-
-    if (!orderItemIds.includes(data.orderItemId)) {
-      throw new Error(
-        `Order item ${data.orderItemId} does not belong to order ${orderId}. This action is not allowed.`
-      );
-    }
     const item = ReturnItem.create({
       rmaId: data.rmaId,
       orderItemId: data.orderItemId,
@@ -94,6 +121,7 @@ export class ReturnItemService {
     }
 
     if (data.quantity !== undefined) {
+      await this.assertReturnable(rmaId, orderItemId, data.quantity);
       item.updateQuantity(data.quantity);
     }
     if (data.condition) {

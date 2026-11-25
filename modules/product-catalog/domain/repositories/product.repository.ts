@@ -111,6 +111,8 @@ export interface ProductSearchOptions extends ProductQueryOptions {
 
 export interface ProductCountOptions {
   status?: ProductStatus;
+  /** Count only products live on the storefront (storefront listings). */
+  liveOnly?: boolean;
   brand?: string;
   categoryId?: CategoryId;
 }

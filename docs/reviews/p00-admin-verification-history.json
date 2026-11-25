@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-19",
+  "initial_unit_run": {
+    "passed": 490,
+    "failed": 2,
+    "failures": [
+      {
+        "file": "apps/api/test/unit/auth-boundary.spec.ts",
+        "title": "access authentication boundary rejects wrong token kinds, malformed claims and blacklisted tokens",
+        "duration_ms": 5563.885300000002,
+        "diagnostic": "Vitest STACK_TRACE_ERROR from timeout path; default timeout settings retained"
+      },
+      {
+        "file": "apps/api/test/unit/shared-foundation.spec.ts",
+        "title": "rate limit boundaries shares an explicit global policy across encapsulated modules",
+        "duration_ms": 10543.8609,
+        "diagnostic": "Vitest STACK_TRACE_ERROR from timeout path; default timeout settings retained"
+      }
+    ]
+  },
+  "targeted_recheck": {
+    "passed": 24,
+    "failed": 0
+  },
+  "database_attempts": [
+    "Initial setup run failed before admin checks; cause not captured; owned-container role verified restricted and no p00_cli test databases remained",
+    "Full retry passed account-state checks; three-column permission check failed because Prisma also reads the primary key; isolated query-column probe verified required fields and no password/MFA privileges",
+    "Complete final operational run passed missing/active/CUSTOMER/inactive/blocked cases, secret-column-restricted read and total SELECT denial; snapshots unchanged; temporary database removed"
+  ],
+  "final_full_run": {
+    "passed": 492,
+    "failed": 0,
+    "files": 71,
+    "mode": "Standalone full unit run with default unchanged timeout settings; no application/test changes made to address earlier timeout-path failures"
+  }
+}

@@ -1,4 +1,6 @@
 import { FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
+import { isUnauthorizedError } from "../http/authentication";
 
 export interface RateLimitOptions {
   windowMs: number;
@@ -7,49 +9,88 @@ export interface RateLimitOptions {
   message?: string;
   statusCode?: number;
   headers?: boolean;
+  scope?: string;
+  /** Active buckets per policy/owner. At capacity, new keys receive 503; counters are not evicted. */
+  maxKeys?: number;
 }
 
 interface RateLimitEntry {
+  key: string;
   count: number;
   resetAt: number;
 }
 
 class RateLimitStore {
   private store: Map<string, RateLimitEntry> = new Map();
-  private cleanupInterval: NodeJS.Timeout;
+  private expirations: RateLimitEntry[] = [];
 
-  constructor() {
-    this.cleanupInterval = setInterval(() => {
-      const now = Date.now();
-      for (const [key, entry] of this.store.entries()) {
-        if (now >= entry.resetAt) {
-          this.store.delete(key);
-        }
-      }
-    }, 60000);
+  constructor(private readonly maxKeys: number) {}
+
+  increment(key: string, windowMs: number, maxRequests: number, now: number) {
+    this.pruneExpired(now);
+    const entry = this.store.get(key);
+    if (entry) {
+      const limited = entry.count >= maxRequests;
+      if (!limited) entry.count++;
+      return { kind: "window" as const, entry, limited };
+    }
+    if (this.store.size >= this.maxKeys) {
+      return { kind: "capacity" as const, resetAt: this.expirations[0]!.resetAt };
+    }
+    const newEntry: RateLimitEntry = { key, count: 1, resetAt: now + windowMs };
+    this.store.set(key, newEntry);
+    this.addExpiration(newEntry);
+    return { kind: "window" as const, entry: newEntry, limited: false };
   }
 
-  increment(key: string, windowMs: number): RateLimitEntry {
-    const now = Date.now();
-    const entry = this.store.get(key);
-    if (!entry || now >= entry.resetAt) {
-      const newEntry: RateLimitEntry = { count: 1, resetAt: now + windowMs };
-      this.store.set(key, newEntry);
-      return newEntry;
+  // An expiry heap keeps capacity rejection O(1) and removes each expired bucket once.
+  private addExpiration(entry: RateLimitEntry): void {
+    let index = this.expirations.length;
+    this.expirations.push(entry);
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      if (this.expirations[parent]!.resetAt <= entry.resetAt) break;
+      this.expirations[index] = this.expirations[parent]!;
+      index = parent;
     }
-    entry.count++;
-    return entry;
+    this.expirations[index] = entry;
+  }
+
+  private pruneExpired(now: number): void {
+    while (this.expirations.length > 0 && this.expirations[0]!.resetAt <= now) {
+      const expired = this.expirations[0]!;
+      const last = this.expirations.pop()!;
+      if (this.expirations.length > 0) {
+        let index = 0;
+        while (true) {
+          const left = index * 2 + 1;
+          if (left >= this.expirations.length) break;
+          const right = left + 1;
+          const child =
+            right < this.expirations.length &&
+            this.expirations[right]!.resetAt < this.expirations[left]!.resetAt
+              ? right
+              : left;
+          if (this.expirations[child]!.resetAt >= last.resetAt) break;
+          this.expirations[index] = this.expirations[child]!;
+          index = child;
+        }
+        this.expirations[index] = last;
+      }
+      this.store.delete(expired.key);
+    }
   }
 
   destroy(): void {
-    clearInterval(this.cleanupInterval);
     this.store.clear();
+    this.expirations = [];
   }
 }
 
-const store = new RateLimitStore();
+const stores = new WeakMap<FastifyInstance, Map<string, RateLimitStore>>();
+let policySequence = 0;
 
-export function createRateLimiter(options: RateLimitOptions) {
+export function createRateLimiter(options: RateLimitOptions, storeOwner?: FastifyInstance) {
   const {
     windowMs,
     maxRequests,
@@ -57,16 +98,70 @@ export function createRateLimiter(options: RateLimitOptions) {
     message = "Too many requests, please try again later.",
     statusCode = 429,
     headers = true,
+    scope,
+    maxKeys = 10_000,
   } = options;
-
+  if (
+    !Number.isSafeInteger(windowMs) ||
+    windowMs <= 0 ||
+    !Number.isSafeInteger(Date.now() + windowMs) ||
+    !Number.isSafeInteger(maxRequests) ||
+    maxRequests <= 0 ||
+    !Number.isSafeInteger(maxKeys) ||
+    maxKeys <= 0 ||
+    !Number.isInteger(statusCode) ||
+    statusCode < 400 ||
+    statusCode > 599 ||
+    typeof headers !== "boolean" ||
+    typeof message !== "string" ||
+    typeof keyGenerator !== "function" ||
+    (scope !== undefined && (typeof scope !== "string" || scope.trim().length === 0))
+  )
+    throw new Error("Invalid rate limit policy");
+  const policyId = `policy-${++policySequence}`;
   return async (request: FastifyRequest, reply: FastifyReply) => {
-    // Disable rate limiting in tests
-    if (process.env.NODE_ENV === "test") {
-      return;
+    if (keyGenerator === userKeyGenerator && !request.user && request.headers.authorization) {
+      try {
+        await request.server.authenticate(request);
+      } catch (error) {
+        if (!isUnauthorizedError(error)) throw error;
+      }
     }
-
-    const key = keyGenerator(request);
-    const entry = store.increment(key, windowMs);
+    const identity = keyGenerator(request);
+    if (typeof identity !== "string" || identity.length === 0)
+      throw new Error("Invalid rate limit key");
+    const now = Date.now();
+    if (!Number.isSafeInteger(now + windowMs)) throw new Error("Invalid rate limit expiry");
+    const owner = storeOwner ?? request.server;
+    let policies = stores.get(owner);
+    if (!policies) {
+      policies = new Map();
+      stores.set(owner, policies);
+    }
+    let store = policies.get(policyId);
+    if (!store) {
+      store = new RateLimitStore(maxKeys);
+      policies.set(policyId, store);
+    }
+    const requestScope =
+      scope ?? `${request.method}:${request.routeOptions.url ?? request.url.split("?")[0]}`;
+    const result = store.increment(
+      JSON.stringify([requestScope, identity]),
+      windowMs,
+      maxRequests,
+      now,
+    );
+    if (result.kind === "capacity") {
+      const retryAfter = Math.max(1, Math.ceil((result.resetAt - now) / 1000));
+      return reply.header("Retry-After", retryAfter).status(503).send({
+        success: false,
+        statusCode: 503,
+        code: "RATE_LIMIT_UNAVAILABLE",
+        message: "Service temporarily unavailable. Please try again later.",
+        retryAfter,
+      });
+    }
+    const { entry, limited } = result;
     const remaining = Math.max(0, maxRequests - entry.count);
     const resetTime = Math.ceil(entry.resetAt / 1000);
 
@@ -76,10 +171,13 @@ export function createRateLimiter(options: RateLimitOptions) {
       reply.header("X-RateLimit-Reset", resetTime);
     }
 
-    if (entry.count > maxRequests) {
-      const retryAfter = Math.ceil((entry.resetAt - Date.now()) / 1000);
+    if (limited) {
+      const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
       reply.header("Retry-After", retryAfter);
       return reply.status(statusCode).send({
+        success: false,
+        statusCode,
+        code: "RATE_LIMITED",
         error: "Too Many Requests",
         message,
         retryAfter,
@@ -88,59 +186,59 @@ export function createRateLimiter(options: RateLimitOptions) {
   };
 }
 
+export function disposeRateLimits(server: FastifyInstance): void {
+  stores.get(server)?.forEach((store) => store.destroy());
+  stores.delete(server);
+}
+
 function defaultKeyGenerator(request: FastifyRequest): string {
-  const forwarded = request.headers["x-forwarded-for"];
-  const ip =
-    typeof forwarded === "string" ? forwarded.split(",")[0].trim() : request.ip;
-  return `rate_limit:${ip}`;
+  return `rate_limit:ip:${request.ip}`;
 }
 
 export function userKeyGenerator(request: FastifyRequest): string {
   const user = request.user as { id?: string; userId?: string } | undefined;
-  const userId = user?.userId || user?.id || "anonymous";
-  return `rate_limit:user:${userId}`;
+  const userId = user?.userId || user?.id;
+  return userId ? `rate_limit:user:${userId}` : defaultKeyGenerator(request);
 }
 
-// Hybrid keyer for routes that mix authenticated and unauthenticated traffic
-// (e.g. optionalAuth-gated guest checkout). Authenticated callers get a per-
-// user bucket; anonymous callers fall back to a per-IP bucket. Avoids the
-// "anonymous" collision that userKeyGenerator alone would cause for guests.
-export function userOrIpKeyGenerator(request: FastifyRequest): string {
-  const user = request.user as { id?: string; userId?: string } | undefined;
-  const userId = user?.userId || user?.id;
-  if (userId) return `rate_limit:user:${userId}`;
-  const forwarded = request.headers["x-forwarded-for"];
-  const ip =
-    typeof forwarded === "string" ? forwarded.split(",")[0].trim() : request.ip;
-  return `rate_limit:ip:${ip}`;
-}
+// Compatibility alias for routes that mix authenticated and anonymous traffic.
+export const userOrIpKeyGenerator = userKeyGenerator;
 
 // Preset configurations for athletic shoes e-commerce
-export const RateLimitPresets = {
-  auth: {
+export const RateLimitPresets = Object.freeze({
+  // Per IP and per route. Per-account lockouts (login, 2FA) provide the
+  // targeted protection; this caps bulk guessing from one address while
+  // leaving headroom for users behind shared NAT.
+  auth: Object.freeze({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 1000,
+    maxRequests: 100,
     message: "Too many authentication attempts. Please try again in 15 minutes.",
-  },
-  api: {
+  }),
+  // Endpoints that send email (password reset, verification resend).
+  authEmail: Object.freeze({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    maxRequests: 10,
+    message: "Too many email requests. Please try again in 15 minutes.",
+  }),
+  api: Object.freeze({
     windowMs: 60 * 1000,
     maxRequests: 5000,
-  },
-  readOperations: {
+  }),
+  readOperations: Object.freeze({
     windowMs: 60 * 1000,
     maxRequests: 5000,
-  },
-  writeOperations: {
+  }),
+  writeOperations: Object.freeze({
     windowMs: 60 * 1000,
     maxRequests: 2000,
-  },
-  checkout: {
+  }),
+  checkout: Object.freeze({
     windowMs: 60 * 1000,
     maxRequests: 1000,
     message: "Too many checkout attempts. Please wait before trying again.",
-  },
-  productSearch: {
+  }),
+  productSearch: Object.freeze({
     windowMs: 60 * 1000,
     maxRequests: 5000,
-  },
-};
+  }),
+});

@@ -1,0 +1,143 @@
+{
+  "date": "2026-10-23",
+  "finding": "P00-23",
+  "baseline_commit": "7190c95e9cf3fe6274537b49b5ad4d4914c0ffa8",
+  "pre_fix_seed_sha256": "96a2bfdb4bb6b1d6e98fbd1dc9c4373b5ba9c14b656ecb7c916b8df5ebe7a301",
+  "baseline": {
+    "passed": 7,
+    "expected_failed": 4,
+    "failed_cases": [
+      "disposable catalog seed CLI seeds the catalog in one bounded transaction and reports success after disconnect",
+      "disposable catalog seed CLI fails safely on variant without announcing fixture success",
+      "disposable catalog seed CLI fails safely on stock without announcing fixture success",
+      "disposable catalog seed CLI fails safely on disconnect without announcing fixture success"
+    ]
+  },
+  "changes": [
+    "Reuse the existing guarded lifecycle to preserve transaction and disconnect failures without duplicated finally logic.",
+    "Final success is emitted after transaction and disconnect complete; interim messages describe transaction preparation.",
+    "Existing 60-second transaction, fixture data, stable category identifiers and test-destination guards retained.",
+    "Real rollback verification compares ordered full-row snapshots of all 15 seed-touched tables and rejects success output on failure."
+  ],
+  "new_cli_cases": 11,
+  "focused_tests": 43,
+  "focused_files": 3,
+  "full_unit_tests": 673,
+  "full_unit_files": 81,
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 138,
+        "covered": 136,
+        "skipped": 0,
+        "pct": 98.55
+      },
+      "statements": {
+        "total": 142,
+        "covered": 140,
+        "skipped": 0,
+        "pct": 98.59
+      },
+      "functions": {
+        "total": 13,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 84.61
+      },
+      "branches": {
+        "total": 10,
+        "covered": 10,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scratch/seed-development-db.ts": {
+      "lines": {
+        "total": 120,
+        "covered": 120,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 122,
+        "covered": 122,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-inspection.ts": {
+      "lines": {
+        "total": 18,
+        "covered": 16,
+        "skipped": 0,
+        "pct": 88.88
+      },
+      "functions": {
+        "total": 6,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 66.66
+      },
+      "statements": {
+        "total": 20,
+        "covered": 18,
+        "skipped": 0,
+        "pct": 90
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "coverage_scope": "Seed script itself has 100% line/statement/function/branch coverage. Combined two-file coverage is lower because unrelated inspection/maintenance wrapper functions are outside this focused suite. Broad backend coverage not remeasured.",
+  "verified_source_sha256": {
+    "scratch/seed-development-db.ts": "11375a9a1e5255ce8619f821025259d576adcfd869133c312e9d016dbd61f350",
+    "apps/api/test/unit/catalog-seed-cli.spec.ts": "07305a5f4a35db0de10764b935ce84c842439a80e227d79907b9ea571999ad18",
+    "scripts/testing/database-inspection.ts": "fe932a7f9faa4b8fb1454ba90bbf02d6f7043e78113294e0c61fe195f8609c0f",
+    "scripts/review/check-operational-database.ts": "077c139d2c221c3ccf1b35757d374f2adacd21e3732d28ef1c8a0530a8b9f9cf"
+  },
+  "checks": {
+    "root_tsc": "passed after snapshot correction",
+    "tooling_tsc": "passed after snapshot correction",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed",
+    "operational_refusals": "18 passed before Prisma construction",
+    "postgres": "46 groups passed; full 15-table rollback snapshots preserved; temporary database absent"
+  },
+  "reviewed_contracts": [
+    "All seed source and fixture declarations, frontend fixed-category mapping, ImageKit key construction, related Prisma models and constraints, shared lifecycle and operational callers.",
+    "CLI tests cover guard refusal, constructor/transaction/delete/variant/stock/disconnect/combined failures, asset creation/reuse, JPEG/PNG metadata, cover ordering, 24 categories/28 products/97 variants, key uniqueness and valid category/product/stock references."
+  ],
+  "followups": [
+    "P14-SEED-ASSET-DELIVERY: storage keys feed ImageKit; provider existence, MIME responses and browser rendering remain unverified. Fifteen laptop sleeve JPG keys have local PNG counterparts, which is a drift candidate rather than proof that CDN keys are wrong. No remote assets or credentials accessed.",
+    "Seed is a destructive disposable-test fixture reset; it does not implement production provisioning, exchange-rate conversion or preservation of arbitrary business histories. Foreign-key rejection must roll back rather than delete unrelated histories.",
+    "Mock failures prove CLI orchestration; real rollback is demonstrated separately by the variant-insert trigger. Exhaustive database fault states, migration replay, business modules and full operational harness coverage remain open."
+  ],
+  "initial_harness_failure": {
+    "result": "failed during new snapshot queries before seed failure injection",
+    "reason": "New harness used id rather than WishlistItem composite key, InventoryTransaction.invTxnId and StockAlert.alertId; both compiler and real run rejected it.",
+    "cleanup": "Harness drop/drop-missing/existence checks completed; corrected compilers and full PostgreSQL rerun pass.",
+    "application_source": "No application or seed fixture data changed to resolve the harness query error."
+  }
+}

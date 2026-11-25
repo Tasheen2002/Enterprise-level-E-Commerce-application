@@ -1,0 +1,8 @@
+"file","line","dependency","status"
+"modules/cart/application/commands/calculate-checkout-tax.command.ts","1","stripe","static-provider-candidate"
+"modules/cart/application/services/checkout-order.service.ts","2","stripe","static-provider-candidate"
+"modules/payment/application/services/stripe-card-setup.service.ts","2","stripe","static-provider-candidate"
+"modules/payment/infra/payment-providers/stripe.provider.ts","1","stripe","static-provider-candidate"
+"modules/user-management/infra/security/firebase-auth-verifier.adapter.ts","1","firebase-admin/app","static-provider-candidate"
+"modules/user-management/infra/security/firebase-auth-verifier.adapter.ts","7","firebase-admin/auth","static-provider-candidate"
+"modules/user-management/infra/security/nodemailer-email.adapter.ts","1","nodemailer","static-provider-candidate"

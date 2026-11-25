@@ -22,7 +22,11 @@ import {
   EmailAlreadyVerifiedError,
   DomainValidationError,
   InvalidOperationError,
+  EmailNotVerifiedError,
 } from "../../domain/errors/user-management.errors";
+
+// Lifetimes of the persisted session row; the refresh JWT carries the same choice.
+const SESSION_DAYS = { remembered: 30, standard: 7 } as const;
 
 // ============================================================================
 // Local param types
@@ -224,6 +228,19 @@ export class AuthenticationService {
     return await this.buildAuthResult(user, payload.rememberMe, sessionMeta);
   }
 
+  /**
+   * The user a 2FA pending token belongs to, or null when the token is
+   * invalid or expired. Lets the command handler apply per-user attempt
+   * limits before any code is checked.
+   */
+  twoFactorPendingUserId(pendingToken: string): string | null {
+    try {
+      return this.jwtService.verifyTwoFactorPending(pendingToken).userId;
+    } catch {
+      return null;
+    }
+  }
+
   // --- Two-factor enrolment lifecycle ---
 
   /**
@@ -407,6 +424,11 @@ export class AuthenticationService {
     emailVerified: boolean;
     name: string | null;
   }, sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }): Promise<AuthResult> {
+    // Only a provider-verified address proves ownership. Firebase also issues
+    // tokens for unverified addresses (e.g. email/password sign-ups); trusting
+    // those would let anyone sign in to, or pre-create, another person's account.
+    if (!identity.emailVerified) throw new EmailNotVerifiedError();
+
     const emailVo = Email.create(identity.email);
     let user = await this.userRepository.findByEmail(emailVo);
 
@@ -435,9 +457,7 @@ export class AuthenticationService {
       }
 
       // Google has already verified the email; skip our own verification flow.
-      if (identity.emailVerified) {
-        user.setEmailVerified(true);
-      }
+      user.setEmailVerified(true);
 
       await this.userRepository.save(user);
     }
@@ -471,6 +491,16 @@ export class AuthenticationService {
   }
 
   async logout(userId: string, accessToken?: string, refreshToken?: string): Promise<void> {
+    // Persist revocation even when the client only sends its access token.
+    // The signed identity binds the session to the user requesting logout.
+    if (accessToken) {
+      let payload;
+      try { payload = this.jwtService.verifyAccess(accessToken); }
+      catch { /* Logout remains idempotent for an already expired token. */ }
+      if (payload?.sessionId && payload.userId === userId) {
+        await this.sessionRepository.revoke(payload.sessionId);
+      }
+    }
     if (refreshToken) {
       const hash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       const session = await this.sessionRepository.findByTokenHash(hash);
@@ -515,6 +545,7 @@ export class AuthenticationService {
     );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
     const base = {
       userId: user.id.getValue(),
@@ -524,12 +555,17 @@ export class AuthenticationService {
       createdAt: user.createdAt.toISOString(),
     };
 
-    const accessToken = this.jwtService.signAccess(base);
-    const newRefreshToken = this.jwtService.signRefresh(base, true); // Assume persistent if they have a refresh token
+    const accessToken = this.jwtService.signAccess({ ...base, sessionId: session.id });
+    // Keep the lifetime chosen at sign-in (tokens issued before the claim
+    // existed are treated as standard sessions).
+    const rememberMe = payload.rememberMe === true;
+    const newRefreshToken = this.jwtService.signRefresh({ ...base, sessionId: session.id }, rememberMe);
     const newTokenHash = crypto.createHash('sha256').update(newRefreshToken).digest('hex');
 
     const newExpiresAt = new Date();
-    newExpiresAt.setDate(newExpiresAt.getDate() + 30);
+    newExpiresAt.setDate(
+      newExpiresAt.getDate() + (rememberMe ? SESSION_DAYS.remembered : SESSION_DAYS.standard),
+    );
 
     session.rotateToken(newTokenHash, newExpiresAt);
     
@@ -570,6 +606,7 @@ export class AuthenticationService {
     );
     if (!user) throw new UserNotFoundError(payload.userId);
     if (user.status === UserStatus.BLOCKED) throw new UserBlockedError();
+    if (user.status === UserStatus.INACTIVE) throw new UserInactiveError();
 
     return User.toDTO(user);
   }
@@ -580,10 +617,15 @@ export class AuthenticationService {
 
   // --- Credential management ---
 
+  /**
+   * Changes the password and signs out every other session, so a session
+   * an attacker may hold does not survive the user securing their account.
+   */
   async changePassword(
     userId: string,
     currentPassword: string,
     newPassword: string,
+    currentSessionId?: string,
   ): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
@@ -614,13 +656,20 @@ export class AuthenticationService {
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
+    await this.sessionRepository.revokeAllForUser(user.id, currentSessionId);
   }
 
-  async changeEmail(
+  /**
+   * Starts an email change. Nothing changes yet: the new address only takes
+   * effect when its owner opens the confirmation link sent to it (see
+   * verifyEmail), so nobody can move an account onto an address they do not
+   * control.
+   */
+  async requestEmailChange(
     userId: string,
     newEmail: string,
     password: string,
-  ): Promise<void> {
+  ): Promise<{ verificationToken: string; currentEmail: string; newEmail: string }> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
     if (user.isGuest) {
@@ -637,13 +686,19 @@ export class AuthenticationService {
     if (!isPasswordValid) throw new InvalidCredentialsError();
 
     const emailVo = Email.create(newEmail);
+    if (user.email.equals(emailVo)) {
+      throw new InvalidOperationError("This is already your email address");
+    }
     const existingUser = await this.userRepository.findByEmail(emailVo);
     if (existingUser && existingUser.id.getValue() !== userId) {
       throw new UserAlreadyExistsError(newEmail);
     }
 
-    user.updateEmail(newEmail);
-    await this.userRepository.save(user);
+    return {
+      verificationToken: crypto.randomBytes(32).toString("hex"),
+      currentEmail: user.email.getValue(),
+      newEmail: emailVo.getValue(),
+    };
   }
 
   async initiatePasswordReset(
@@ -657,10 +712,14 @@ export class AuthenticationService {
     return { exists: true, resetToken, userId: user.id.getValue() };
   }
 
-  async resetPassword(email: string, newPassword: string): Promise<void> {
-    const emailVo = Email.create(email);
-    const user = await this.userRepository.findByEmail(emailVo);
-    if (!user) throw new UserNotFoundError(email);
+  /**
+   * Completes a password reset for the account the reset token was issued
+   * to (by id, so a later change of email ownership cannot redirect it) and
+   * signs out all of that account's sessions.
+   */
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    const user = await this.userRepository.findById(UserId.fromString(userId));
+    if (!user) throw new UserNotFoundError(userId);
     if (user.isGuest) {
       throw new InvalidOperationError("Guest users cannot reset password");
     }
@@ -679,14 +738,37 @@ export class AuthenticationService {
 
     user.updatePassword(newPasswordHash);
     await this.userRepository.save(user);
+    await this.sessionRepository.revokeAllForUser(user.id);
   }
 
   // --- Email verification & lookups ---
 
-  async verifyEmail(userId: string): Promise<void> {
+  /**
+   * Confirms that the holder of a verification token controls `email`, the
+   * address the token was issued for. Verifies the account's current address,
+   * or completes a requested change to a new one. A token never verifies any
+   * other address.
+   */
+  async verifyEmail(userId: string, email: string): Promise<void> {
     const user = await this.userRepository.findById(UserId.fromString(userId));
     if (!user) throw new UserNotFoundError(userId);
-    if (user.emailVerified) throw new EmailAlreadyVerifiedError();
+    const confirmed = Email.create(email);
+
+    if (user.email.equals(confirmed)) {
+      if (user.emailVerified) throw new EmailAlreadyVerifiedError();
+      user.verifyEmail();
+      await this.userRepository.save(user);
+      return;
+    }
+
+    if (user.isGuest) {
+      throw new InvalidOperationError("Guest users cannot change email");
+    }
+    const owner = await this.userRepository.findByEmail(confirmed);
+    if (owner && owner.id.getValue() !== user.id.getValue()) {
+      throw new UserAlreadyExistsError(confirmed.getValue());
+    }
+    user.updateEmail(confirmed.getValue());
     user.verifyEmail();
     await this.userRepository.save(user);
   }
@@ -813,10 +895,12 @@ export class AuthenticationService {
     rememberMe: boolean = false,
     sessionMeta?: { ipAddress?: string; userAgent?: string; deviceType?: string }
   ): Promise<AuthResult> {
+    const sessionId = crypto.randomUUID();
     const base = {
       userId: user.id.getValue(),
       email: user.email.getValue(),
       role: user.role,
+      sessionId,
       updatedAt: user.updatedAt.toISOString(),
       createdAt: user.createdAt.toISOString(),
     };
@@ -830,11 +914,14 @@ export class AuthenticationService {
     // Refresh tokens typically live for 30 days (or 7 days if not rememberMe, based on your jwtService)
     // We'll use a standard 30-day expiry for the DB record for simplicity, the JWT signature enforces the exact expiry.
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + (rememberMe ? 30 : 7));
+    expiresAt.setDate(
+      expiresAt.getDate() + (rememberMe ? SESSION_DAYS.remembered : SESSION_DAYS.standard),
+    );
 
     const uaInfo = parseUserAgent(sessionMeta?.userAgent);
 
     const session = MemberSession.create({
+      id: sessionId,
       userId: user.id,
       refreshTokenHash,
       ipAddress: sessionMeta?.ipAddress,

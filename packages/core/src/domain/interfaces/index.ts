@@ -1,1 +1,1 @@
-export * from './paginated-result.interface';
+export * from "./paginated-result.interface";

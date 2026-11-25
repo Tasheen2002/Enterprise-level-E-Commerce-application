@@ -11,7 +11,11 @@ export interface ITokenBlacklistService {
   getPasswordResetToken(
     token: string,
   ): { userId: string; email: string } | null;
-  recordFailedAttempt(identifier: string): void;
+  /** Counts a failure; the identifier locks after `maxAttempts` failures inside the lockout window. */
+  recordFailedAttempt(identifier: string, maxAttempts?: number): void;
   isAccountLocked(identifier: string): boolean;
   clearFailedAttempts(identifier: string): void;
+  /** Records a one-time code as spent so it cannot be replayed within `ttlMs`. */
+  markOneTimeCodeUsed(key: string, ttlMs: number): void;
+  isOneTimeCodeUsed(key: string): boolean;
 }

@@ -1,0 +1,8 @@
+source_module,target_module,import_occurrences,example,status
+cart,loyalty,1,modules/cart/application/services/checkout-order.service.ts -> ../../../loyalty/application/services/loyalty.service,discovery-only-not-a-finding
+cart,product-catalog,11,modules/cart/application/services/cart-management.service.ts -> ../../../product-catalog/domain/value-objects/variant-id.vo,discovery-only-not-a-finding
+engagement,user-management,1,modules/engagement/application/services/newsletter.service.ts -> ../../../user-management/application/services/iemail.service,discovery-only-not-a-finding
+inventory-management,order-management,3,modules/inventory-management/application/services/pickup-reservation.service.ts -> ../../../order-management/domain/value-objects/order-id.vo,discovery-only-not-a-finding
+inventory-management,product-catalog,14,modules/inventory-management/application/services/pickup-reservation.service.ts -> ../../../product-catalog/domain/value-objects/variant-id.vo,discovery-only-not-a-finding
+order-management,loyalty,1,modules/order-management/application/services/order-management.service.ts -> ../../../loyalty/application/services/loyalty.service,discovery-only-not-a-finding
+payment,user-management,3,modules/payment/application/services/stripe-card-setup.service.ts -> ../../../user-management/application/services/payment-method.service,discovery-only-not-a-finding

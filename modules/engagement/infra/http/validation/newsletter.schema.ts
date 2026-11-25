@@ -11,14 +11,18 @@ export const subscribeNewsletterSchema = z.object({
 });
 
 export const unsubscribeNewsletterSchema = z.object({
+  /** Staff only. */
   subscriptionId: z.uuid().optional(),
   email: z.email().optional(),
+  /** The signed token from the newsletter's unsubscribe link (not needed when signed in with this email). */
+  token: z.string().min(1).max(200).optional(),
 }).refine((data) => data.subscriptionId || data.email, {
   message: "Either subscriptionId or email is required",
 });
 
 export const unsubscribeViaLinkSchema = z.object({
   email: z.email(),
+  token: z.string().min(1).max(200),
 });
 
 export const getSubscriptionQuerySchema = z.object({

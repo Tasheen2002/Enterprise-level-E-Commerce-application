@@ -175,6 +175,19 @@ export class OrderNotEditableError extends DomainError {
   }
 }
 
+// Orders are financial records. Only an order that never progressed past
+// 'created' and has no payment, return, shipment or support history may be
+// deleted; anything else must be cancelled or refunded instead.
+export class OrderDeletionError extends DomainError {
+  constructor(reason: string) {
+    super(
+      `Cannot delete order: ${reason}. Cancel or refund the order instead.`,
+      "ORDER_NOT_DELETABLE",
+      409,
+    );
+  }
+}
+
 export class OrderCancellationError extends DomainError {
   constructor(reason: string) {
     super(`Cannot cancel order: ${reason}`, "ORDER_CANCELLATION_FAILED", 422);

@@ -135,11 +135,10 @@ export class OrderController {
     reply: FastifyReply,
   ) {
     try {
-      // optionalAuth route — request.user may be absent for guest checkout.
-      const authenticatedUserId = request.user?.userId;
-
+      // Staff-only: storefront orders are created by checkout. The order
+      // belongs to the customer named in the request, never to the staff member.
       const result = await this.createOrderHandler.handle({
-        userId: authenticatedUserId,
+        userId: request.body.customerId,
         guestToken: request.body.guestToken,
         items: request.body.items,
         shippingAddress: request.body.shippingAddress,

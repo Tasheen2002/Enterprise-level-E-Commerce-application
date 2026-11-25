@@ -16,6 +16,11 @@ import { imageKitUrl } from "@/lib/imagekit";
 import { buildProductHref } from "@/features/product-catalog/api";
 
 // Re-use same guest token generator
+// Guest wishlists are read and changed with the guest token (signed-in calls use the session).
+function guestHeaders(guestToken: string): RequestInit {
+  return { headers: { "x-guest-token": guestToken } };
+}
+
 function getOrCreateGuestToken(): string {
   if (typeof window === "undefined") return "";
   let token = localStorage.getItem("ts_guest_token");
@@ -91,13 +96,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   /**
    * Fetch and enrich all items from the active wishlist.
    */
-  const getWishlistItems = useCallback(async (): Promise<WishlistProduct[]> => {
+  const getWishlistItems = useCallback(async (retryCount = 0): Promise<WishlistProduct[]> => {
     setIsLoading(true);
     try {
       const guestToken = getOrCreateGuestToken();
       const wishlistId = await getOrCreateWishlistId(guestToken);
 
-      const res = await api.get<any>(`/engagement/wishlists/${wishlistId}/items`);
+      const res = await api.get<any>(`/engagement/wishlists/${wishlistId}/items`, guestHeaders(guestToken));
       const items = res?.items || [];
 
       if (items.length === 0) {
@@ -160,6 +165,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return validItems;
     } catch (err: any) {
       console.error("Failed to load wishlist items:", err);
+      const is404 = err instanceof ApiCallError && err.statusCode === 404;
+      const isNotFoundMsg = err?.message?.toLowerCase().includes("not found");
+      if ((is404 || isNotFoundMsg) && retryCount === 0) {
+        console.warn("Wishlist not found. Clearing cached wishlist ID and retrying...");
+        localStorage.removeItem("ts_wishlist_id");
+        return getWishlistItems(1);
+      }
       return [];
     } finally {
       setIsLoading(false);
@@ -201,7 +213,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
             // 1. Check if the guest wishlist actually has items
             let guestItems: any[] = [];
             try {
-              const res = await api.get<any>(`/engagement/wishlists/${guestWishlistId}/items`);
+              const res = await api.get<any>(
+                `/engagement/wishlists/${guestWishlistId}/items`,
+                guestHeaders(guestToken),
+              );
               guestItems = res?.items || [];
             } catch {
               // Guest wishlist doesn't exist or can't be read — skip transfer
@@ -299,7 +314,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       const guestToken = getOrCreateGuestToken();
       const wishlistId = await getOrCreateWishlistId(guestToken);
 
-      await api.delete(`/engagement/wishlists/${wishlistId}/items/${variantId}`);
+      await api.delete(`/engagement/wishlists/${wishlistId}/items/${variantId}`, guestHeaders(guestToken));
       toast.success("Removed item from your wishlist.");
       
       // Optimistically update local state for absolute responsive feel!

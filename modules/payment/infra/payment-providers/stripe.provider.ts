@@ -18,6 +18,9 @@ export interface StripePaymentIntentResult {
   stripeIntentId?: string;
   status?: string;
   error?: string;
+  amount?: number;
+  amountReceived?: number;
+  currency?: string;
 }
 
 export interface StripeRefundResult {
@@ -87,6 +90,10 @@ export class StripeProvider {
         clientSecret: intent.client_secret ?? undefined,
         stripeIntentId: intent.id,
         status: intent.status,
+        // Major units; amountReceived is what was actually collected.
+        amount: intent.amount / 100,
+        amountReceived: intent.amount_received / 100,
+        currency: intent.currency,
       };
     } catch (error: unknown) {
       return {

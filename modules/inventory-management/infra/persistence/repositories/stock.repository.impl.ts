@@ -8,6 +8,14 @@ import { StockLevel } from "../../../domain/value-objects/stock-level.vo";
 import { LocationId } from "../../../domain/value-objects/location-id.vo";
 import { StockId } from "../../../domain/value-objects/stock-id.vo";
 import { IStockRepository } from "../../../domain/repositories/stock.repository";
+import { InventoryTransaction } from "../../../domain/entities/inventory-transaction.entity";
+import { StockUnavailableError } from "../../../domain/errors/inventory-management.errors";
+import { inventoryTransactionData } from "./inventory-transaction.repository.impl";
+
+function isStockConstraintViolation(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /inventory_stocks_(on_hand|reserved)_/.test(message) || /23514/.test(message);
+}
 
 export class StockRepositoryImpl
   extends PrismaRepository<Stock>
@@ -36,32 +44,72 @@ export class StockRepositoryImpl
   }
 
   async save(stock: Stock): Promise<void> {
-    const stockLevel = stock.stockLevel;
+    await this.persist(() => this.writeStock(this.prisma, stock), [stock]);
+    await this.dispatchEvents(stock);
+  }
 
-    await this.prisma.inventoryStock.upsert({
+  async saveWithTransactions(
+    stocks: Stock[],
+    transactions: InventoryTransaction[],
+  ): Promise<void> {
+    // Rows are locked in a fixed order so opposite transfers cannot deadlock.
+    const ordered = [...stocks].sort((a, b) =>
+      `${a.variantId}|${a.locationId}`.localeCompare(`${b.variantId}|${b.locationId}`),
+    );
+    await this.persist(
+      () =>
+        this.prisma.$transaction(async (tx) => {
+          for (const stock of ordered) await this.writeStock(tx, stock);
+          for (const transaction of transactions) {
+            await tx.inventoryTransaction.create({ data: inventoryTransactionData(transaction) });
+          }
+        }),
+      ordered,
+    );
+    for (const stock of ordered) await this.dispatchEvents(stock);
+  }
+
+  // Applies the change since the stock was read as an atomic increment, so
+  // concurrent writers add up instead of overwriting each other. The
+  // database CHECK constraints (no negative stock, reserved <= on hand)
+  // reject a change that concurrent activity has made impossible.
+  private async writeStock(
+    client: Prisma.TransactionClient | PrismaClient,
+    stock: Stock,
+  ): Promise<void> {
+    const level = stock.stockLevel;
+    const base = stock.persistedLevel ?? { onHand: 0, reserved: 0 };
+    const row = await client.inventoryStock.upsert({
       where: {
-        variantId_locationId: {
-          variantId: stock.variantId,
-          locationId: stock.locationId,
-        },
+        variantId_locationId: { variantId: stock.variantId, locationId: stock.locationId },
       },
       create: {
         variantId: stock.variantId,
         locationId: stock.locationId,
-        onHand: stockLevel.onHand,
-        reserved: stockLevel.reserved,
-        lowStockThreshold: stockLevel.lowStockThreshold,
-        safetyStock: stockLevel.safetyStock,
+        onHand: level.onHand,
+        reserved: level.reserved,
+        lowStockThreshold: level.lowStockThreshold,
+        safetyStock: level.safetyStock,
       },
       update: {
-        onHand: stockLevel.onHand,
-        reserved: stockLevel.reserved,
-        lowStockThreshold: stockLevel.lowStockThreshold,
-        safetyStock: stockLevel.safetyStock,
+        onHand: { increment: level.onHand - base.onHand },
+        reserved: { increment: level.reserved - base.reserved },
+        lowStockThreshold: level.lowStockThreshold,
+        safetyStock: level.safetyStock,
       },
     });
+    stock.markPersisted(row.onHand, row.reserved);
+  }
 
-    await this.dispatchEvents(stock);
+  private async persist(write: () => Promise<unknown>, stocks: Stock[]): Promise<void> {
+    try {
+      await write();
+    } catch (error) {
+      if (isStockConstraintViolation(error) && stocks[0]) {
+        throw new StockUnavailableError(stocks[0].variantId, stocks[0].locationId);
+      }
+      throw error;
+    }
   }
 
   async findByStockId(stockId: StockId): Promise<Stock | null> {
@@ -266,7 +314,7 @@ export class StockRepositoryImpl
       Array<{ variantId: string; locationId: string }>
     >`
       SELECT variant_id AS "variantId", location_id AS "locationId"
-      FROM inventory_management.inventory_stock
+      FROM inventory_management.inventory_stocks
       WHERE low_stock_threshold IS NOT NULL
         AND on_hand <= low_stock_threshold
     `;
@@ -334,13 +382,13 @@ export class StockRepositoryImpl
       this.prisma.inventoryStock.aggregate({ _sum: { onHand: true } }),
       this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*)::bigint AS count
-        FROM inventory_management.inventory_stock
+        FROM inventory_management.inventory_stocks
         WHERE low_stock_threshold IS NOT NULL
           AND on_hand <= low_stock_threshold
       `,
       this.prisma.$queryRaw<Array<{ count: bigint }>>`
         SELECT COUNT(*)::bigint AS count
-        FROM inventory_management.inventory_stock
+        FROM inventory_management.inventory_stocks
         WHERE on_hand <= reserved
       `,
     ]);

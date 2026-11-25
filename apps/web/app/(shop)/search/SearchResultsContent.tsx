@@ -566,7 +566,7 @@ export function SearchResultsContent() {
               >
                 {/* Skeletons on initial load */}
                 {isLoading && displayedProducts.length === 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-12">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-10 sm:gap-x-6 sm:gap-y-12">
                     {[1, 2, 3, 4, 5, 6].map((n) => (
                       <div key={n} className="space-y-4">
                         <div className="aspect-[3/4] bg-stone-100 animate-pulse rounded-sm" />
@@ -579,7 +579,7 @@ export function SearchResultsContent() {
                   <>
                     <div
                       className={cn(
-                        "grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-12 pb-16 animate-in fade-in duration-[1500ms]",
+                        "grid grid-cols-2 gap-x-4 gap-y-10 sm:gap-x-8 sm:gap-y-12 pb-16 animate-in fade-in duration-[1500ms]",
                         showSidebar ? "md:grid-cols-3" : "md:grid-cols-4"
                       )}
                     >
@@ -630,7 +630,7 @@ export function SearchResultsContent() {
                           </p>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                           {fallbackProducts.map((product) => (
                             <ProductCard key={product.id} product={product} />
                           ))}

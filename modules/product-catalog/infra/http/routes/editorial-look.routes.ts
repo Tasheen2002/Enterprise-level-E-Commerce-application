@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { EditorialLookController } from "../controllers/editorial-look.controller";
@@ -84,6 +85,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(listEditorialLooksSchema)],
       schema: {
         description: "Get paginated list of editorial looks with filtering options",
@@ -141,6 +143,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/popular-products",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateQuery(popularProductsQuerySchema)],
       schema: {
         description: "Get products most frequently featured in editorial looks",
@@ -160,6 +163,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/:id",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(editorialLookParamsSchema)],
       schema: {
         description: "Get editorial look by ID",
@@ -179,6 +183,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/editorial-looks/:id/products",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(editorialLookParamsSchema)],
       schema: {
         description: "Get all products featured in an editorial look",
@@ -198,6 +203,7 @@ export async function editorialLookRoutes(
   fastify.get(
     "/products/:productId/editorial-looks",
     {
+      preHandler: [optionalAuth],
       preValidation: [validateParams(productLooksParamsSchema)],
       schema: {
         description: "Get editorial looks that feature a specific product",

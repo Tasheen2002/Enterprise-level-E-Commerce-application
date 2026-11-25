@@ -31,6 +31,10 @@ import {
   ValidateEditorialLookForPublicationHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { isEditorialLookLive } from "../../../domain/policies/storefront-visibility";
+import { ProductVisibilityPolicy } from "../../../application/services/product-visibility.policy";
+import { EditorialLookNotFoundError } from "../../../domain/errors/product-catalog.errors";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   EditorialLookParams,
   EditorialLookProductParams,
@@ -80,6 +84,7 @@ export class EditorialLookController {
     private readonly getEditorialLookStatsHandler: GetEditorialLookStatsHandler,
     private readonly getPopularEditorialLookProductsHandler: GetPopularEditorialLookProductsHandler,
     private readonly validateEditorialLookForPublicationHandler: ValidateEditorialLookForPublicationHandler,
+    private readonly productVisibility: ProductVisibilityPolicy,
   ) {}
 
   // ── Reads ──────────────────────────────────────────────────────────────
@@ -89,7 +94,17 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const result = await this.listEditorialLooksHandler.handle(request.query);
+      // Shoppers only see published looks; status filters are for staff.
+      const query = canViewUnpublished(request)
+        ? request.query
+        : {
+            page: request.query.page,
+            limit: request.query.limit,
+            sortBy: request.query.sortBy,
+            sortOrder: request.query.sortOrder,
+            published: true,
+          };
+      const result = await this.listEditorialLooksHandler.handle(query);
       return ResponseHelper.ok(reply, "Editorial looks retrieved successfully", result);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -102,6 +117,9 @@ export class EditorialLookController {
   ) {
     try {
       const look = await this.getEditorialLookHandler.handle({ id: request.params.id });
+      if (!canViewUnpublished(request) && !isEditorialLookLive(look.publishedAt)) {
+        throw new EditorialLookNotFoundError(request.params.id);
+      }
       return ResponseHelper.ok(reply, "Editorial look retrieved successfully", look);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -134,7 +152,17 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const productIds = await this.getEditorialLookProductsHandler.handle({ id: request.params.id });
+      const staff = canViewUnpublished(request);
+      if (!staff) {
+        const look = await this.getEditorialLookHandler.handle({ id: request.params.id });
+        if (!isEditorialLookLive(look.publishedAt)) {
+          throw new EditorialLookNotFoundError(request.params.id);
+        }
+      }
+      const productIds = await this.productVisibility.filterVisible(
+        await this.getEditorialLookProductsHandler.handle({ id: request.params.id }),
+        staff,
+      );
       return ResponseHelper.ok(reply, "Editorial look products retrieved successfully", productIds);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -146,7 +174,21 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const lookIds = await this.getProductEditorialLooksHandler.handle({ productId: request.params.productId });
+      const staff = canViewUnpublished(request);
+      await this.productVisibility.assertVisible(request.params.productId, staff);
+      const allLookIds = await this.getProductEditorialLooksHandler.handle({
+        productId: request.params.productId,
+      });
+      const lookIds = staff
+        ? allLookIds
+        : (
+            await Promise.all(
+              allLookIds.map(async (id) => {
+                const look = await this.getEditorialLookHandler.handle({ id });
+                return isEditorialLookLive(look.publishedAt) ? id : null;
+              }),
+            )
+          ).filter((id): id is string => id !== null);
       return ResponseHelper.ok(reply, "Product looks retrieved successfully", lookIds);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -190,7 +232,14 @@ export class EditorialLookController {
     reply: FastifyReply,
   ) {
     try {
-      const popularProducts = await this.getPopularEditorialLookProductsHandler.handle(request.query);
+      const ranked = await this.getPopularEditorialLookProductsHandler.handle(request.query);
+      const visible = new Set(
+        await this.productVisibility.filterVisible(
+          ranked.map((entry) => entry.productId),
+          canViewUnpublished(request),
+        ),
+      );
+      const popularProducts = ranked.filter((entry) => visible.has(entry.productId));
       return ResponseHelper.ok(reply, "Popular products retrieved successfully", popularProducts);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);

@@ -16,6 +16,8 @@ import {
   GetProductMediaStatisticsHandler,
 } from "../../../application";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
+import { ProductVisibilityPolicy } from "../../../application/services/product-visibility.policy";
+import { canViewUnpublished } from "../catalog-viewer";
 import {
   ProductMediaParams,
   ProductMediaAssetParams,
@@ -43,6 +45,7 @@ export class ProductMediaController {
     private readonly getProductMediaAssetUsageCountHandler: GetProductMediaAssetUsageCountHandler,
     private readonly validateProductMediaHandler: ValidateProductMediaHandler,
     private readonly getProductMediaStatisticsHandler: GetProductMediaStatisticsHandler,
+    private readonly productVisibility: ProductVisibilityPolicy,
   ) {}
 
   // ── Reads ──────────────────────────────────────────────────────────────
@@ -52,6 +55,10 @@ export class ProductMediaController {
     reply: FastifyReply,
   ) {
     try {
+      await this.productVisibility.assertVisible(
+        request.params.productId,
+        canViewUnpublished(request),
+      );
       const productMedia = await this.getProductMediaHandler.handle({
         productId: request.params.productId,
         options: request.query,

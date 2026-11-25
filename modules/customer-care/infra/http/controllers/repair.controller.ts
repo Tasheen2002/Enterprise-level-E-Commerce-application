@@ -1,3 +1,4 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreateRepairCommand,
@@ -181,7 +182,7 @@ export class RepairController {
 
   async listRepairs(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListRepairsQuery = {};
+      const query: ListRepairsQuery = pageFromRequest(request.query);
       const result = await this.listRepairsHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

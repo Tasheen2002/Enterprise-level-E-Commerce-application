@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-16",
+  "phase": "P01",
+  "baseline_commit": "864198f0",
+  "scope": [
+    "packages/api-client (package.json, tsconfig.json, src/index.ts, src/generated/schema.ts, test/unit/index.spec.ts)",
+    "apps/web/app/api/auth/sync/route.ts, apps/web/app/api/auth/clear/route.ts, apps/web/middleware.ts, apps/web/lib/api-server.ts and auth.ts callers",
+    "apps/api/Dockerfile, .dockerignore, .github/workflows/ci-cd.yml",
+    "packages/config (package.json, presets, tsconfigs)",
+    "apps/api/src/shared/application/index.ts, apps/api/src/shared/middleware/index.ts",
+    "Root package.json/pnpm-lock.yaml runtime dependency declarations"
+  ],
+  "findings": [
+    {
+      "id": "P01-52",
+      "severity": "P2",
+      "file": "packages/api-client/src/generated/schema.ts; packages/api-client/package.json",
+      "problem": "The committed client was stale against registered routes: 5 operations were missing (GET /api/v1/notifications, PATCH /api/v1/notifications/{id}/read, POST /api/v1/notifications/read-all, POST /api/v1/checkout/{checkoutId}/calculate-tax, GET /ready) and 1,133 lines differed, including loose [key: string]: unknown shapes and pre-fix required pagination parameters. The admin app called the notification routes through 'as any'. Generation required a running server at /docs/json (disabled in production since P01-41) and nothing detected drift.",
+      "change": "scripts/maintenance/generate-api-client.ts builds the API in-process with an explicit synthetic environment (createServer now accepts an environment), runs openapi-typescript, and writes or --check compares the committed client. Root scripts generate:api-client/check:api-client; CI runs the check after type-check. Client regenerated.",
+      "verification": "Operation-level diff before regeneration; --check fails before and passes after; generation is deterministic (generate then check); all 7 workspace type-check tasks pass before and after regeneration."
+    },
+    {
+      "id": "P01-53",
+      "severity": "P2",
+      "file": "apps/web/app/api/auth/sync/route.ts; apps/web/app/api/auth/clear/route.ts; apps/web/lib/auth.ts",
+      "problem": "/api/auth/sync parsed any body as JSON and checked neither Origin nor Content-Type, so a cross-site text/plain form could plant another account's access token (login CSRF); Server Components then prefetch /auth/me and the profile with that cookie. /api/auth/clear allowed cross-site logout. A 30-day refresh-token cookie was set although no server code reads it. Token type/size were not validated.",
+      "change": "New isSameOriginRequest guard (Sec-Fetch-Site same-origin, or Origin matching X-Forwarded-Host/Host for browsers without Fetch Metadata) on both routes; sync also requires application/json and a non-empty string token up to 4,096 characters; refresh-token cookie no longer set (still cleared for old cookies); client no longer sends the refresh token.",
+      "verification": "14 route-handler cases: baseline 4 pass/10 fail (cross-site text/plain accepted with 200); final 14 pass. Web type-check and next lint pass."
+    },
+    {
+      "id": "P01-54",
+      "severity": "P2",
+      "file": "apps/api/Dockerfile; .github/workflows/ci-cd.yml",
+      "problem": "The image ran Node.js 20 (end of life April 2026) as root with no HEALTHCHECK, under three wrapper processes (npm exec -> tsx CLI -> node). CI also used Node 20 while development uses Node 24.",
+      "change": "node:24-alpine for all stages and CI; USER node with root-owned read-only files; HEALTHCHECK on /health; CMD node --import tsx so Node is PID 1; pnpm exec prisma generate.",
+      "verification": "Both images built and probed with an unreachable datasource. Baseline: root, v20.20.2, npm exec as PID 1, no health check; SIGTERM still produced graceful shutdown (the suspected signal-forwarding defect did not reproduce). Fixed: node user, v24.22.3, node as PID 1, /health 200, Docker health 'healthy', SIGTERM graceful exit 0, short production JWT secret exits 1 naming only JWT_SECRET."
+    },
+    {
+      "id": "P01-55",
+      "severity": "P2",
+      "file": "package.json; pnpm-lock.yaml",
+      "problem": "fastify-plugin (7 runtime files) was not declared and @prisma/client (80 runtime files) was only a devDependency. The API resolved fastify-plugin solely through the NODE_PATH that pnpm's .bin/tsx shim injects; plain node resolution failed in both images, so the corrected Docker CMD initially crashed with 'Cannot find module fastify-plugin'.",
+      "change": "Declare fastify-plugin ^5.1.0 (installed 5.1.0) and move @prisma/client ^6.16.1 to dependencies; lockfile updated offline with no version changes (pnpm also re-serialised eslint-plugin-import peer suffixes).",
+      "verification": "Backend-wide bare-import scan against declared dependencies; frozen offline install passes; fixed image boots under plain node."
+    },
+    {
+      "id": "P01-56",
+      "severity": "P3",
+      "file": "packages/config/eslint.preset.cjs; apps/api/src/shared/application/index.ts",
+      "problem": "The shared ESLint preset had no consumer (apps use next lint with .eslintrc.json) and could not load (eslint-config-prettier is not installed). The shared/application compatibility barrel had no importer.",
+      "change": "Removed both and the preset's package exports.",
+      "verification": "Repository-wide consumer search; root, tooling and workspace compilers pass after removal."
+    }
+  ],
+  "reviewed_without_change": [
+    "apps/web/middleware.ts: presence-only cookie gate is documented; the API validates tokens.",
+    "apps/api/src/shared/middleware/index.ts: barrel with 11 importers.",
+    "packages/config prettier preset and tsconfig presets: consumed and consistent.",
+    "packages/api-client/src/index.ts and its tests: retry/refresh/unwrap behaviour unchanged."
+  ],
+  "final": {
+    "full_unit": "1428 tests in 108 files passed (one earlier run reported a ~33-hour duration timeout during host sleep; the test passes in isolation and in the final run)",
+    "workspace_type_check": "7/7 turbo type-check tasks pass; root and tooling tsc pass; tooling lint passes",
+    "api_client_drift": "pnpm run check:api-client passes"
+  },
+  "follow_ups": [
+    "Admin app still calls notification routes with 'as any' casts that the regenerated client now makes unnecessary (frontend/P14).",
+    "Runtime image is about 2 GB because it copies the whole workspace node_modules (frontend and dev tooling included) and runs TypeScript via tsx; a pruned production install or compiled build is a separate decision.",
+    "Prisma schema uses the deprecated multiSchema preview flag (P02).",
+    "No real HTTPS/proxy deployment verified Secure cookie or X-Forwarded-Host behaviour."
+  ]
+}

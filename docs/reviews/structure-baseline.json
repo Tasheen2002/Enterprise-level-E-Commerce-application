@@ -1,0 +1,253 @@
+{
+  "date": "2026-10-17",
+  "commit": "c8de2c22931d20418d35809f0b7060d99c936815",
+  "inventory_files": 1353,
+  "areas": {
+    ".github/workflows": {
+      "files": 1,
+      "lines": 92,
+      "layers": {
+        "configuration": 1
+      }
+    },
+    "apps/api": {
+      "files": 25,
+      "lines": 3117,
+      "layers": {
+        "api-config": 1,
+        "src": 4,
+        "src/plugins": 6,
+        "src/shared": 1,
+        "src/shared/application": 1,
+        "src/shared/http": 2,
+        "src/shared/infrastructure/persistence": 3,
+        "src/shared/interfaces": 1,
+        "src/shared/middleware": 5,
+        "src/types": 1
+      }
+    },
+    "modules/analytics": {
+      "files": 23,
+      "lines": 2296,
+      "layers": {
+        "application": 9,
+        "domain": 10,
+        "infra": 3,
+        "test": 1
+      }
+    },
+    "modules/cart": {
+      "files": 109,
+      "lines": 13124,
+      "layers": {
+        "application": 49,
+        "domain": 25,
+        "infra": 20,
+        "test": 15
+      }
+    },
+    "modules/customer-care": {
+      "files": 132,
+      "lines": 16581,
+      "layers": {
+        "application": 59,
+        "domain": 46,
+        "infra": 25,
+        "module-entry": 1,
+        "test": 1
+      }
+    },
+    "modules/engagement": {
+      "files": 130,
+      "lines": 12538,
+      "layers": {
+        "application": 47,
+        "domain": 39,
+        "infra": 29,
+        "module-entry": 1,
+        "test": 14
+      }
+    },
+    "modules/fulfillment": {
+      "files": 25,
+      "lines": 3171,
+      "layers": {
+        "application": 10,
+        "domain": 7,
+        "infra": 7,
+        "test": 1
+      }
+    },
+    "modules/inventory-management": {
+      "files": 144,
+      "lines": 10741,
+      "layers": {
+        "application": 61,
+        "domain": 41,
+        "infra": 36,
+        "module-entry": 1,
+        "test": 5
+      }
+    },
+    "modules/loyalty": {
+      "files": 53,
+      "lines": 3944,
+      "layers": {
+        "application": 13,
+        "domain": 20,
+        "infra": 10,
+        "module-entry": 1,
+        "test": 9
+      }
+    },
+    "modules/order-management": {
+      "files": 143,
+      "lines": 13374,
+      "layers": {
+        "application": 54,
+        "domain": 34,
+        "infra": 42,
+        "module-entry": 1,
+        "test": 12
+      }
+    },
+    "modules/payment": {
+      "files": 122,
+      "lines": 9211,
+      "layers": {
+        "application": 30,
+        "domain": 45,
+        "infra": 35,
+        "module-entry": 1,
+        "test": 11
+      }
+    },
+    "modules/product-catalog": {
+      "files": 226,
+      "lines": 20654,
+      "layers": {
+        "application": 134,
+        "domain": 40,
+        "infra": 46,
+        "module-entry": 1,
+        "test": 5
+      }
+    },
+    "modules/shared": {
+      "files": 2,
+      "lines": 134,
+      "layers": {
+        "domain": 1,
+        "infra": 1
+      }
+    },
+    "modules/user-management": {
+      "files": 155,
+      "lines": 14138,
+      "layers": {
+        "application": 59,
+        "domain": 41,
+        "infra": 38,
+        "module-entry": 1,
+        "test": 16
+      }
+    },
+    "packages/api-client": {
+      "files": 4,
+      "lines": 22581,
+      "layers": {
+        "configuration": 2,
+        "src": 1,
+        "src/generated": 1
+      }
+    },
+    "packages/config": {
+      "files": 7,
+      "lines": 193,
+      "layers": {
+        "configuration": 7
+      }
+    },
+    "packages/core": {
+      "files": 19,
+      "lines": 589,
+      "layers": {
+        "configuration": 2,
+        "src": 1,
+        "src/application": 4,
+        "src/domain": 3,
+        "src/domain/events": 3,
+        "src/domain/interfaces": 2,
+        "src/domain/value-objects": 4
+      }
+    },
+    "packages/types": {
+      "files": 3,
+      "lines": 72,
+      "layers": {
+        "configuration": 2,
+        "src": 1
+      }
+    },
+    "packages/validation": {
+      "files": 6,
+      "lines": 332,
+      "layers": {
+        "configuration": 2,
+        "src": 1,
+        "src/auth": 1,
+        "src/common": 1,
+        "src/user": 1
+      }
+    },
+    "prisma/indexes-to-add.sql": {
+      "files": 1,
+      "lines": 334,
+      "layers": {
+        "configuration": 1
+      }
+    },
+    "prisma/migrations": {
+      "files": 11,
+      "lines": 2316,
+      "layers": {
+        "20260106110138_init": 1,
+        "20260218065648_add_user_profile_fields": 1,
+        "20260308122950_add_performance_indexes": 1,
+        "20260410000000_add_pickup_reservation_status": 1,
+        "20260506041957_final_ecommerce_migration": 1,
+        "20260509120000_add_stripe_customer_id": 1,
+        "20260510000000_add_user_profile_avatar_url": 1,
+        "20260510120000_add_two_factor_auth": 1,
+        "20260510182415_add_member_sessions": 1,
+        "20260512091123_add_admin_invitations": 1,
+        "configuration": 1
+      }
+    },
+    "prisma/schema.prisma": {
+      "files": 1,
+      "lines": 1777,
+      "layers": {
+        "configuration": 1
+      }
+    },
+    "root-config": {
+      "files": 11,
+      "lines": 353,
+      "layers": {
+        "configuration": 11
+      }
+    }
+  },
+  "models": 72,
+  "enums": 31,
+  "test_files": 90,
+  "test_file_categories": {
+    "other": 3,
+    "http-e2e-named": 13,
+    "integration": 18,
+    "unit": 56
+  },
+  "module_import_pairs": 7,
+  "scope_note": "Tracked backend source/config/contracts/migrations; excludes frontend implementations, scratch scripts, secrets, lockfile contents and generated runtime dependencies. Every file is pending detailed review."
+}

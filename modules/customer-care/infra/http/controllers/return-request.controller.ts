@@ -1,3 +1,4 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreateReturnRequestCommand,
@@ -132,7 +133,7 @@ export class ReturnRequestController {
 
   async listReturnRequests(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListReturnRequestsQuery = {};
+      const query: ListReturnRequestsQuery = pageFromRequest(request.query);
       const result = await this.listReturnRequestsHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

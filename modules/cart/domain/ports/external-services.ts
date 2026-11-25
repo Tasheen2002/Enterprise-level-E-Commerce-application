@@ -24,6 +24,7 @@ export interface ExternalProductData {
   getTitle(): string;
   getSlug(): { getValue(): string };
   getPrice(): { getValue(): number };
+  getCategoryIds?: () => string[];
 }
 
 export interface IExternalProductRepository {
@@ -132,6 +133,8 @@ export interface PersistCheckoutOrderData {
   email?: string;
   cartId: string;
   promoCode?: string;
+  /** Promotion discount only (loyalty redemptions are not promotion usage). */
+  promoDiscount?: number;
   stockAdjustments: Array<{
     variantId: string;
     warehouseId: string;
@@ -185,6 +188,39 @@ export interface PaymentIntentInfo {
   intentId: string;
   status: string;
   amount: number;
+  provider: string;
+  /** Provider-side id (e.g. Stripe `pi_...`), stored when the intent was created. */
+  providerReference: string | null;
+  checkoutId: string | null;
+  orderId: string | null;
+}
+
+/**
+ * Confirms with the payment provider (never the client or a local status)
+ * that money was actually collected or authorised for a payment intent.
+ */
+export interface IPaymentConfirmationPort {
+  confirm(payment: PaymentIntentInfo): Promise<{
+    /** True when the provider reports the payment succeeded or is authorised for capture. */
+    succeeded: boolean;
+    /** Amount the provider will settle, in major units. */
+    amount: number;
+    currency: string;
+  }>;
+}
+
+/** Server-side price adjustments a checkout total may include. */
+export interface ICheckoutPricingPort {
+  /** Discount for a promotion code, recomputed on the server (0 if invalid). */
+  promotionDiscount(params: {
+    promoCode: string;
+    subtotal: number;
+    productIds: string[];
+    userId?: string;
+    email?: string;
+  }): Promise<number>;
+  /** Loyalty points the user can redeem right now. */
+  loyaltyBalance(userId: string): Promise<number>;
 }
 
 /**

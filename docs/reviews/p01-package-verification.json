@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-23",
+  "phase": "P01",
+  "baseline_commit": "bb9825faa5584c4d37a15dfc5fa106bd6b84a4a5",
+  "finding": {
+    "id": "P01-08",
+    "severity": "P2",
+    "file": "packages/core/tsconfig.json",
+    "trigger": "A type-invalid source is present during the core package build.",
+    "observed": "The installed TypeScript compiler reports TS2322 but emitSkipped is false with the original package options.",
+    "expected": "A failed core type check must not produce new build artifacts.",
+    "baseline": {
+      "passed": 2,
+      "failed": 1,
+      "diagnostic": 2322,
+      "failed_case": "does not emit build artifacts when a source has a type error"
+    },
+    "correction": "Enable noEmitOnError in the core package compiler configuration."
+  },
+  "review": {
+    "complete_bounded_files": [
+      "packages/core/package.json",
+      "packages/core/tsconfig.json",
+      "packages/core/src/index.ts",
+      "packages/core/src/domain/index.ts",
+      "packages/core/src/domain/events/index.ts",
+      "packages/core/src/domain/interfaces/index.ts",
+      "packages/core/src/domain/interfaces/paginated-result.interface.ts",
+      "packages/core/test/package-contracts.spec.ts",
+      "packages/core/test/pagination-contracts.spec.ts",
+      "packages/core/test/pagination-contracts.typecheck.ts"
+    ],
+    "dependency_scope": "Core/root/compiler/config task graph and representative actual loyalty account repository read; pagination reference candidates scanned across modules. No claim that all 108 pagination-reference module files or complete business modules were reviewed.",
+    "exports": "Root/domain/application/events/value-object runtime identities and root type-only exports verified. Internal result-error helper remains outside the root export surface. Legacy deep imports retained.",
+    "package_design": "Private source-first package: main/types point to src/index.ts; build emits CommonJS JavaScript, consumers use source types. No distribution/declaration policy migration made. Root and core resolve installed TypeScript 5.9.3. The config devDependency is retained; the core compiler currently extends root tsconfig.base.json, not the config-package presets.",
+    "pagination": "The shared interfaces are compile-time shapes, not runtime validators. Actual repository mapping tested for empty/unbounded, bounded first/final and beyond-total pages; generic item and required metadata contracts checked by compiler. No universal maximum/default/sort policy invented."
+  },
+  "verification": {
+    "new_runtime_cases": 8,
+    "focused_cases": 187,
+    "focused_files": 7,
+    "full_unit_cases": 906,
+    "full_unit_files": 92,
+    "compile_only_fixture": "packages/core/test/pagination-contracts.typecheck.ts",
+    "checks": {
+      "root_tsc": "passed, including positive/negative type fixtures",
+      "core_tsc": "passed",
+      "focused_eslint": "passed",
+      "focused_prettier": "passed",
+      "build_runtime": "Actual core source/config compiled using installed TypeScript API to a unique temporary directory; CommonJS entry loaded and exercised; temporary output removed.",
+      "invalid_build": "In-memory invalid source produces TS2322; emitSkipped true and zero write callbacks after correction. No invalid source or output written to repository."
+    },
+    "commands": [
+      "node node_modules/vitest/vitest.mjs run packages/core/test --reporter=json --outputFile=coverage/p01-package-focused.json",
+      "node node_modules/vitest/vitest.mjs run --exclude **/test/integration/** --exclude **/test/e2e/** --reporter=json --outputFile=coverage/p01-package-full-unit.json",
+      "node node_modules/typescript/bin/tsc --noEmit",
+      "node node_modules/typescript/bin/tsc --project packages/core/tsconfig.json --noEmit",
+      "Focused ESLint and Prettier for three new fixtures and core tsconfig"
+    ],
+    "runtime": {
+      "node": "24.15.0",
+      "typescript": "5.9.3"
+    },
+    "coverage": "Not remeasured: compiler configuration and erased interfaces use build/compiler/contract evidence. Historical broad backend coverage remains unchanged."
+  },
+  "verified_source_sha256": {
+    "packages/core/package.json": "27d439ed70ef0b9904199afb75bb379aa9a6a6545e1582bc98660c043679d5c5",
+    "packages/core/tsconfig.json": "d66eb31084d6f57b861d7174bc6bdbdf494bdc3cc3add15fe625af28d962c461",
+    "packages/core/src/index.ts": "602e72d0c7b7d14f9eeb9d62ba1375257f673338463c0b189329b6b4841b6399",
+    "packages/core/src/domain/index.ts": "9a156a0b78af5bca7c07d872d54cf0f7c01fe94ff0607f88d8979b75bd0dc185",
+    "packages/core/src/domain/events/index.ts": "ad52203412772fe0ff85b0a57097c8510a817299de3c5d450c79e338185d4dfa",
+    "packages/core/src/domain/interfaces/index.ts": "bec5a8587e8fcee1707e434a2287ef52dd3c4a21ef9ca6aa903293413caab8c4",
+    "packages/core/src/domain/interfaces/paginated-result.interface.ts": "f2d230c4deaa0ffe55b3e04278bd7acd45ce9e5e8837dfa2164b2db50b914265",
+    "packages/core/test/package-contracts.spec.ts": "f34117e9fd35db5bbc73e3ab720517d698da57bad7c788ab6761d6c6f151124a",
+    "packages/core/test/pagination-contracts.spec.ts": "00cce1dfacce728d38faafcb60bb5722011e6523e35e98eb6df63ee4b7c2dcb1",
+    "packages/core/test/pagination-contracts.typecheck.ts": "9347ea86c2b611918eb5b571e3c44cdb1e7057b332b0623dd0e79714969c47c7"
+  },
+  "dependency_sha256": {
+    "tsconfig.base.json": "def5843aeb21c22739a35626d96acb54b2a43c8b26b4b8a8b68dc2067173d827",
+    "tsconfig.json": "1feb691d6da7c49b162044aa116761349045d904f4114902881b1f6c2a8676f1",
+    "turbo.json": "5a04f8a0ac7806e4442574597ebdbce414efcb0a6d6d86f9e8f42904fefa75cd",
+    "packages/config/package.json": "cee8b9a93e40e758d7ebe1e8b66c10b0d268fc990d02e2d5d6659b02be7f2e33",
+    "packages/config/tsconfig.base.json": "947cdd7ad626917fdeee00f4b8583b8e9739875271815e457bfb5d8717278e49",
+    "packages/config/tsconfig.lib.json": "4e58967e161cde5e4af3b5bbe34a0f007804644adc2ec64cbdb3d1c30db84f11",
+    "modules/loyalty/infra/persistence/repositories/loyalty-account.repository.impl.ts": "0a3da3b7d6735cdb1516bd1439d7ba60cf501fb86d8e4eb723a97b3af25b7a2d",
+    "modules/loyalty/domain/repositories/loyalty-account.repository.ts": "28b8256f457a17d9fff91285b13916803030962298d5d6715153b86404596730"
+  },
+  "limits": [
+    "noEmitOnError prevents new emission; it does not remove stale pre-existing output. TypeScript CLI already reports nonzero on type errors; this correction prevents accompanying artifact production.",
+    "Repository adapter is inert and proves mapping/argument forwarding only, not SQL/count snapshot consistency or live pagination. Each module still requires runtime input bounds, sorting allowlists, stable ordering and concurrency review.",
+    "No clean frozen installation, whole-monorepo build, hosted Node 20 equivalence, browser bundling or deployable API artifact certification. P15-FOLLOWUP-001 remains open.",
+    "No DB/provider rerun. Historical 47-group PostgreSQL evidence remains at the earlier event-delivery commit.",
+    "P01 remains open: nominal UUID typing, HTTP field-detail policy, event composition and remaining shared packages/host infrastructure."
+  ]
+}

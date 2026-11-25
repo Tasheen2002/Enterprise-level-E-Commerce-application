@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { queryBoolean } from "@/api/src/shared/http/validation";
 import { ProductStatus } from "../../../domain/value-objects";
 import {
   MIN_PAGE,
@@ -36,10 +37,16 @@ export const listProductsSchema = z.object({
   status: z.enum(ALL_PRODUCT_STATUSES).optional(),
   categoryId: z.uuid().optional(),
   brand: z.string().optional(),
-  includeDrafts: z.coerce.boolean().optional(),
+  includeDrafts: queryBoolean().optional(),
   sortBy: z.enum(["title", "createdAt", "updatedAt", "publishAt"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
+
+// Product images are rendered on the storefront; only https URLs are accepted.
+const productImageUrl = z
+  .string()
+  .url()
+  .refine((value) => value.startsWith("https://"), "Image URLs must use https");
 
 export const createProductSchema = z.object({
   title: z.string().min(1),
@@ -59,7 +66,7 @@ export const createProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(productImageUrl).optional(),
 });
 
 export const updateProductSchema = z.object({
@@ -80,7 +87,7 @@ export const updateProductSchema = z.object({
   currency: z.string().length(3).optional(),
   categoryIds: z.array(z.uuid()).optional(),
   tags: z.array(z.string()).optional(),
-  images: z.array(z.string()).optional(),
+  images: z.array(productImageUrl).optional(),
 });
 
 // ── Inferred Types ────────────────────────────────────────────────────────────

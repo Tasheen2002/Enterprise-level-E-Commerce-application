@@ -1,0 +1,174 @@
+{
+  "date": "2026-10-22",
+  "finding": "P00-21",
+  "baseline_commit": "7190c95e9cf3fe6274537b49b5ad4d4914c0ffa8",
+  "baseline": {
+    "passed": 16,
+    "expected_failed": 4,
+    "failed_cases": [
+      "create database CLI uses guarded maintenance credentials and reports success after disconnect",
+      "create database CLI fails safely for disconnect errors",
+      "drop database CLI uses guarded maintenance credentials and reports success after disconnect",
+      "drop database CLI fails safely for disconnect errors"
+    ]
+  },
+  "changes": [
+    "Existing cleanup core extracted into a private client lifecycle. Operational and maintenance entry points retain distinct guards before construction; maintenance passes the validated database identifier explicitly.",
+    "Create/drop commands await operation and disconnect before success output, preserving primary and disconnect errors together. DDL quoting, parameterized catalog lookup and refusal to terminate active sessions remain unchanged."
+  ],
+  "new_cases": 26,
+  "focused_tests": 84,
+  "focused_files": 5,
+  "full_unit_tests": 641,
+  "full_unit_files": 79,
+  "coverage_scope": "Three explicit paths only: common lifecycle and create/drop CLIs; guards and read-only caller also exercised. No application-wide coverage claim.",
+  "coverage": {
+    "total": {
+      "lines": {
+        "total": 34,
+        "covered": 34,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 36,
+        "covered": 36,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 14,
+        "covered": 14,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scratch/create-test-db.ts": {
+      "lines": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 9,
+        "covered": 9,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 2,
+        "covered": 2,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scratch/drop-test-db.ts": {
+      "lines": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 7,
+        "covered": 7,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "scripts/testing/database-inspection.ts": {
+      "lines": {
+        "total": 18,
+        "covered": 18,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 6,
+        "covered": 6,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 20,
+        "covered": 20,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      }
+    }
+  },
+  "verified_source_sha256": {
+    "scripts/testing/database-inspection.ts": "fe932a7f9faa4b8fb1454ba90bbf02d6f7043e78113294e0c61fe195f8609c0f",
+    "scratch/create-test-db.ts": "5e1e4d72df05b70039130dad5604a3140bbbdf1ea09d74933f09fafe70d49fe5",
+    "scratch/drop-test-db.ts": "60db6a525a63fc4285982847084e2eaff37538306d425ee12f982f6bae9d4697",
+    "apps/api/test/unit/database-admin-cli.spec.ts": "8c4bb223a5ac0b5fe7134ee17221f5f9670a5380c2fa733ffda4cb529edb0fa7",
+    "apps/api/test/unit/database-operation.spec.ts": "d76dcfcf7adeeac8492becde7926885ae756157af21e9ceee1949f069cb54dd3",
+    "scripts/review/check-operational-database.ts": "c719a8abaa41abf046fe409414cb812bca6773a90e39816619888a9472f29b8a"
+  },
+  "checks": {
+    "root_tsc": "passed",
+    "tooling_tsc": "passed",
+    "focused_eslint": "passed",
+    "focused_prettier": "passed",
+    "refusal_tripwires": "18 passed before construction",
+    "postgres": "45 scenario groups pass, including refusal of connected test database; existing client stays usable; final DB confirmed absent"
+  },
+  "history": [
+    "Pre-fix actual CLI imports with inert Prisma: 16 pass/4 expected failures.",
+    "Initial 70-case focused subset covered maintenance/operational entries but omitted existing read-only inspection wrapper (94.11% lines/85.71% functions); adding its existing 14-case caller suite produced 84 passing cases and 100% three-path coverage. No source exclusions or artificial adapter calls."
+  ],
+  "limits": [
+    "This is one bounded part of the administrative utility review; seed-admin, catalog seeding and clear-database CLI lifecycle gaps remain for the next step.",
+    "Whole operational harness fault/teardown branches and test/build/CI/bootstrap reproducibility remain open; migration replay and live providers are not certified.",
+    "Earlier lifecycle/Stripe records keep their committed source snapshots. Current shared-lifecycle source/coverage is this record; current runtime DB evidence is p00-operational-database-check.json.",
+    "Broad backend coverage was not remeasured."
+  ],
+  "latest_full_unit_recheck": {
+    "date": "2026-10-23",
+    "passed_tests": 662,
+    "passed_files": 80,
+    "evidence": "p00-unit-results.json"
+  },
+  "latest_admin_identity_revalidation": {
+    "date": "2026-10-23",
+    "evidence": "p00-seed-admin-verification.json",
+    "note": "Original source hashes/coverage remain historical; current configured-email helper and seed/inspector source are verified by 103 focused tests, 662 unit tests and the 46-scenario PG run. Operational verifier source also changed; current fingerprints are in the new evidence."
+  }
+}

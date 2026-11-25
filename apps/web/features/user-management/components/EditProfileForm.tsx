@@ -31,7 +31,7 @@ export function EditProfileForm() {
       lastName: profile?.lastName || "",
       phone: profile?.phone || "",
       title: profile?.title || "",
-      dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.split("T")[0] : "",
+      dateOfBirth: profile?.dateOfBirth ? profile.dateOfBirth.split("T")[0] : undefined,
       nationality: profile?.nationality || "",
       residentOf: profile?.residentOf || "",
       currency: profile?.currency || "GBP",
@@ -148,7 +148,7 @@ export function EditProfileForm() {
                   type="date"
                   variant="boxed"
                   hasError={Boolean(errors.dateOfBirth)}
-                  {...register("dateOfBirth")}
+                  {...register("dateOfBirth", { setValueAs: value => value === "" ? undefined : value })}
                 />
               </FormField>
             </div>

@@ -22,12 +22,14 @@ export const listPurchaseOrdersSchema = z.object({
 
 export const createPurchaseOrderSchema = z.object({
   supplierId: z.uuid(),
-  eta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  // Optional applied after the transform so the route schema keeps eta optional.
+  eta: z.string().datetime().transform((v) => new Date(v)).optional(),
 });
 
 export const createPurchaseOrderWithItemsSchema = z.object({
   supplierId: z.uuid(),
-  eta: z.string().datetime().optional().transform((v) => v ? new Date(v) : undefined),
+  // Optional applied after the transform so the route schema keeps eta optional.
+  eta: z.string().datetime().transform((v) => new Date(v)).optional(),
   items: z.array(
     z.object({
       variantId: z.uuid(),

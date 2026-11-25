@@ -1,31 +1,10 @@
+import {
+  type ICommand,
+  type ICommandHandler,
+  CommandResult,
+} from "../../../../packages/core/src/application/cqrs";
 import { GoodwillRecordService } from "../services/goodwill-record.service.js";
 import { GoodwillType, Money } from "../../domain/value-objects/index.js";
-
-export interface ICommand {
-  readonly commandId?: string;
-  readonly timestamp?: Date;
-}
-
-export interface ICommandHandler<TCommand extends ICommand, TResult = void> {
-  handle(command: TCommand): Promise<TResult>;
-}
-
-export class CommandResult<T = any> {
-  constructor(
-    public success: boolean,
-    public data?: T,
-    public error?: string,
-    public errors?: string[]
-  ) {}
-
-  static success<T>(data?: T): CommandResult<T> {
-    return new CommandResult(true, data);
-  }
-
-  static failure<T>(error: string, errors?: string[]): CommandResult<T> {
-    return new CommandResult<T>(false, undefined, error, errors);
-  }
-}
 
 export interface CreateGoodwillRecordCommand extends ICommand {
   userId?: string;
@@ -48,28 +27,19 @@ export interface GoodwillRecordResult {
 }
 
 export class CreateGoodwillRecordHandler
-  implements
-    ICommandHandler<
-      CreateGoodwillRecordCommand,
-      CommandResult<GoodwillRecordResult>
-    >
+  implements ICommandHandler<CreateGoodwillRecordCommand, CommandResult<GoodwillRecordResult>>
 {
   constructor(private readonly goodwillService: GoodwillRecordService) {}
 
-  async handle(
-    command: CreateGoodwillRecordCommand
-  ): Promise<CommandResult<GoodwillRecordResult>> {
+  async handle(command: CreateGoodwillRecordCommand): Promise<CommandResult<GoodwillRecordResult>> {
     try {
       if (!command.type) {
-        return CommandResult.failure<GoodwillRecordResult>("Type is required", [
-          "type",
-        ]);
+        return CommandResult.failure<GoodwillRecordResult>("Type is required", ["type"]);
       }
       if (!command.value || command.value <= 0) {
-        return CommandResult.failure<GoodwillRecordResult>(
-          "Value must be greater than zero",
-          ["value"]
-        );
+        return CommandResult.failure<GoodwillRecordResult>("Value must be greater than zero", [
+          "value",
+        ]);
       }
 
       const record = await this.goodwillService.createRecord({
@@ -94,14 +64,13 @@ export class CreateGoodwillRecordHandler
       return CommandResult.success<GoodwillRecordResult>(result);
     } catch (error) {
       if (error instanceof Error) {
-        return CommandResult.failure<GoodwillRecordResult>(
-          "Failed to create goodwill record",
-          [error.message]
-        );
+        return CommandResult.failure<GoodwillRecordResult>("Failed to create goodwill record", [
+          error.message,
+        ]);
       }
 
       return CommandResult.failure<GoodwillRecordResult>(
-        "An unexpected error occurred while creating goodwill record"
+        "An unexpected error occurred while creating goodwill record",
       );
     }
   }

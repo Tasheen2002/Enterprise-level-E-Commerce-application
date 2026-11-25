@@ -1,3 +1,4 @@
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
 import { FastifyInstance } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ProductMediaController } from "../controllers/product-media.controller";
@@ -68,6 +69,7 @@ export async function productMediaRoutes(
   fastify.get(
     "/products/:productId/media",
     {
+      preHandler: [optionalAuth],
       preValidation: [
         validateParams(productMediaParamsSchema),
         validateQuery(getProductMediaQuerySchema),

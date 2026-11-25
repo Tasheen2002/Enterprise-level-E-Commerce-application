@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-16",
+  "phase": "P01 (with P08 webhook boundary pulled forward for severity)",
+  "baseline_commit": "38d4528d",
+  "scope": [
+    "apps/api/src/shared/http/{error-response,validation,authentication}.ts, apps/api/src/shared/response.helper.ts",
+    "apps/api/src/shared/infrastructure/persistence/{prisma-repository.base,prisma-repository.helper}.ts",
+    "apps/api/src/shared/interfaces/authenticated-request.interface.ts and shared/middleware/{authenticate,optional-auth,role-authorization}.middleware.ts",
+    "packages/core/src/domain/{aggregate-root,domain-error}.ts and events/{domain-event,in-memory-event-bus}.ts",
+    "Traced: UserRole enum vs role presets; every event-bus subscription vs raised event types; ResponseHelper.unauthorized callers; Stripe webhook controller/route/provider/raw-body declaration"
+  ],
+  "reviewed_without_change": [
+    "error-response/validation/authentication helpers: consistent with prior P01-24..26 contracts; Prisma codes outside P2002/P2025/P2003 map to redacted 500 (policy for P2000/P2034 left to owning phases).",
+    "Role presets match all non-GUEST UserRole enum values.",
+    "Persistence base/helper: unchanged contracts from P01-27/28.",
+    "Event bus: the only production subscription ('stock.added') matches StockAddedEvent.eventType and the stock repository dispatches through the bus."
+  ],
+  "findings": [
+    {
+      "id": "P01-57",
+      "severity": "P0",
+      "file": "modules/payment/infra/http/controllers/stripe-webhook.controller.ts",
+      "problem": "When STRIPE_WEBHOOK_SECRET was absent (allowed by configuration whenever STRIPE_SECRET_KEY is set), the webhook skipped signature verification and trusted the request body. Any caller sending any Stripe-Signature value and a payment_intent.succeeded body could authorize and capture a payment intent; customers receive their own Stripe intent ID from create-intent.",
+      "change": "Fail closed: with no signing secret every event is refused with 503 WEBHOOK_NOT_CONFIGURED before any payment lookup. Stripe configuration is injected from validated config (ContainerConfig.stripe) instead of getStripeConfig()/process.env.",
+      "verification": "Controller baseline: forged event returned 200 and captured; fixed: 503 with no payment calls, also when a signing secret exists only in the ambient environment. Real createServer route: 503."
+    },
+    {
+      "id": "P01-58",
+      "severity": "P1",
+      "file": "apps/api/src/plugins/raw-body.ts (new); apps/api/src/server.ts",
+      "problem": "The webhook route requested config.rawBody, but nothing populated request.rawBody (only a type declaration existed). Signature verification therefore received undefined and every genuine signed Stripe event was rejected, so payments were never captured through the webhook.",
+      "change": "Raw-body plugin replaces the default JSON parser with Fastify's own getDefaultJsonParser('error','error') and additionally keeps the exact buffer on routes with config.rawBody; registered right after config.",
+      "verification": "Real createServer route baseline: correctly signed event 401; fixed: 200. Parser cases: exact bytes kept (incl. charset), no raw body on other routes, prototype/constructor poisoning and invalid JSON 400, empty body 400, body limit 413."
+    },
+    {
+      "id": "P01-59",
+      "severity": "P3",
+      "file": "modules/payment/infra/http/controllers/stripe-webhook.controller.ts; apps/api/src/shared/response.helper.ts",
+      "problem": "Signature failures returned 401 without an authentication challenge (Stripe expects 400 for verification failure); ResponseHelper.unauthorized omitted the WWW-Authenticate header required on every 401 by RFC 9110 section 15.5.2; non-JSON payloads reached verification without raw bytes.",
+      "change": "Signature failure and missing raw payload return 400; ResponseHelper.unauthorized (now used only by checkout bearer checks) sends the Bearer challenge.",
+      "verification": "Forged, wrong-secret and wrong-bytes signatures 400 with no WWW-Authenticate; text/plain payload 400; helper challenge asserted (baseline failed)."
+    }
+  ],
+  "tests": {
+    "new": "apps/api/test/unit/raw-body.spec.ts (7), modules/payment/test/unit/infra/stripe-webhook.controller.spec.ts (17); http-contracts helper assertion extended",
+    "baseline": "With a no-op raw-body stand-in: 7 of 13 initial cases failed (valid signature 401; forged unsigned event 200 + capture). Helper challenge assertion failed before the fix. One later test assumed text/plain would be rejected with 415; Fastify parses text/plain, so the expectation was corrected to the controller's 400 guard.",
+    "coverage": "raw-body.ts 100%; response.helper.ts 100% lines / 97.29% branches; stripe-webhook.controller.ts webhook path covered, createIntent (provider network call) left for P08",
+    "full_unit": "1451 tests in 110 files passed; root/tooling tsc, focused ESLint, Prettier and API client drift check pass"
+  },
+  "follow_ups": [
+    "P08: createIntent stores the Stripe intent ID in the clientSecret column and returns stripeIntentId to clients; review naming, idempotency and duplicate/reordered event handling (event IDs are not recorded for replay protection).",
+    "P08: decide whether STRIPE_WEBHOOK_SECRET should be mandatory whenever STRIPE_SECRET_KEY is configured (currently the webhook fails closed at runtime).",
+    "Prisma reloads the root .env into process.env on client construction; the webhook no longer depends on it, but other module consumers listed in P01-49 still read process.env."
+  ]
+}

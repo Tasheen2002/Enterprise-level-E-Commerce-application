@@ -2,6 +2,17 @@ import { FastifyReply } from "fastify";
 import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
 import { ResponseHelper } from "@/api/src/shared/response.helper";
 import {
+  hasRole,
+  CUSTOMER_CARE_ROLES,
+  STAFF_ROLES,
+} from "@/api/src/shared/middleware/role-authorization.middleware";
+import { ReminderNotFoundError } from "../../../domain/errors/engagement.errors";
+
+// Reminders hold a customer's contact preferences: customers see and change
+// only their own; staff may read any and customer care may change any.
+const isStaff = (request: AuthenticatedRequest) => hasRole(request, [...STAFF_ROLES]);
+const isCustomerCare = (request: AuthenticatedRequest) => hasRole(request, [...CUSTOMER_CARE_ROLES]);
+import {
   CreateReminderHandler,
   MarkReminderAsSentHandler,
   UnsubscribeReminderHandler,
@@ -29,6 +40,19 @@ export class ReminderController {
     private readonly getVariantRemindersHandler: GetVariantRemindersHandler,
   ) {}
 
+  private async loadReminder(
+    request: AuthenticatedRequest,
+    reminderId: string,
+    access: "read" | "write",
+  ) {
+    const dto = await this.getReminderHandler.handle({ reminderId });
+    const staffAllowed = access === "read" ? isStaff(request) : isCustomerCare(request);
+    if (!staffAllowed && dto.userId !== request.user.userId) {
+      throw new ReminderNotFoundError(reminderId);
+    }
+    return dto;
+  }
+
   // ── Reads (queries) ────────────────────────────────────────────────
 
   async getUserReminders(
@@ -37,6 +61,9 @@ export class ReminderController {
   ) {
     try {
       const { userId } = request.params;
+      if (request.user.userId !== userId && !isStaff(request)) {
+        return ResponseHelper.forbidden(reply, "You can only view your own reminders");
+      }
       const { limit, offset } = request.query;
       const result = await this.getUserRemindersHandler.handle({ userId, limit, offset });
       return ResponseHelper.ok(reply, "User reminders retrieved successfully", result);
@@ -64,7 +91,7 @@ export class ReminderController {
     reply: FastifyReply,
   ) {
     try {
-      const dto = await this.getReminderHandler.handle({ reminderId: request.params.reminderId });
+      const dto = await this.loadReminder(request, request.params.reminderId, "read");
       return ResponseHelper.ok(reply, "Reminder retrieved successfully", dto);
     } catch (error: unknown) {
       return ResponseHelper.error(reply, error);
@@ -110,6 +137,7 @@ export class ReminderController {
     reply: FastifyReply,
   ) {
     try {
+      await this.loadReminder(request, request.params.reminderId, "write");
       const result = await this.unsubscribeReminderHandler.handle({ reminderId: request.params.reminderId });
       return ResponseHelper.fromCommand(reply, result, "Reminder unsubscribed successfully");
     } catch (error: unknown) {
@@ -122,6 +150,7 @@ export class ReminderController {
     reply: FastifyReply,
   ) {
     try {
+      await this.loadReminder(request, request.params.reminderId, "write");
       const result = await this.deleteReminderHandler.handle({ reminderId: request.params.reminderId });
       return ResponseHelper.fromCommand(reply, result, "Reminder deleted successfully", undefined, 204);
     } catch (error: unknown) {
