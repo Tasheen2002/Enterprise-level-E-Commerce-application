@@ -114,12 +114,15 @@ export class PaymentService {
     const promise = this.doCreatePaymentIntent(params);
 
     if (params.checkoutId) {
-      this.activeCreates.set(params.checkoutId, promise);
-      promise.finally(() => {
-        if (params.checkoutId) {
-          this.activeCreates.delete(params.checkoutId);
-        }
-      });
+      const checkoutId = params.checkoutId;
+      this.activeCreates.set(checkoutId, promise);
+      // Clean up on both outcomes without creating a second promise that
+      // rejects unobserved: promise.finally() would, and Node treats an
+      // unhandled rejection as fatal, so a refused request could stop the API.
+      const clear = () => {
+        this.activeCreates.delete(checkoutId);
+      };
+      promise.then(clear, clear);
     }
 
     return promise;
