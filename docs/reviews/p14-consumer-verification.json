@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-25",
+  "phase": "P14 (system and consumer verification)",
+  "baseline_commit": "a80def9e",
+  "scope": [
+    "Every API call in apps/web and apps/admin compared with the registered route table (generated API client, kept in sync by check:api-client)",
+    "Storefront calls to routes whose access changed during P02-P13",
+    "Cross-module guest purchase journey over HTTP (cart, checkout, payment confirmation, order, stock)"
+  ],
+  "route_reconciliation": {
+    "registered_paths": 277,
+    "frontend_calls_found": 187,
+    "unmatched_backend_calls": 0,
+    "method_mismatches": 0,
+    "notes": "Paths not found in the route table were the storefront's own Next.js routes (/api/auth/sync, /api/auth/clear) and a page link (/sign-in). Detection covers calls with literal or template-string paths; calls built from variables are not detected."
+  },
+  "reviewed_without_change": [
+    "The storefront and admin only call routes their users may use after the audit's role changes (admin users are ADMIN; storefront customer calls all target customer-allowed routes).",
+    "Completing a checkout with an unconfirmed or made-up payment creates no order, moves no stock and leaves the checkout open (P06 rules verified end to end over HTTP)."
+  ],
+  "findings": [
+    {
+      "id": "P14-01",
+      "severity": "P2",
+      "file": "modules/cart/infra/http/routes/checkout.routes.ts; checkout controller, command and service",
+      "problem": "POST /checkout/:id/complete marked a customer's checkout completed without verifying any payment or creating an order (the payment id was ignored). Neither frontend uses it; a client calling it after paying would leave the customer charged with no order and a checkout that could no longer be completed.",
+      "change": "The route is admin-only (closing a checkout without an order); customers complete checkouts with /complete-with-order. Staff closing bypasses the customer ownership rule explicitly.",
+      "verification": "E2E: baseline a guest and a customer closed their checkout without payment (200); fixed 401/403, admin close 200."
+    },
+    {
+      "id": "P14-02",
+      "severity": "P3",
+      "file": "apps/web/features/orders/api.ts, hooks/useOrders.ts, types.ts; apps/web/features/user-management/api.ts, hooks/useLoyalty.ts",
+      "problem": "The storefront kept unused helpers for creating orders directly and redeeming loyalty points, routes now reserved for staff (orders are created and points redeemed by checkout).",
+      "change": "Removed createOrder/useCreateOrder/CreateOrderRequest and redeemLoyaltyPoints/useRedeemLoyaltyPoints.",
+      "verification": "No remaining references; storefront type-check passes and its lint results are unchanged (6 pre-existing problems)."
+    }
+  ],
+  "tests": {
+    "new": "E2E guest-purchase-journey (1); cart E2E checkout case now checks customer refusal and admin close",
+    "baseline": "Both cases failed against the previous code (checkout closed without payment).",
+    "database_suites": "All E2E and integration suites: 173 tests in 51 files pass",
+    "final": "1547 unit tests in 122 files; root/tooling tsc; 7/7 workspace type-checks (forced); cart ESLint (no errors); API client check passes; route reconciliation 187/187 calls matched"
+  },
+  "follow_ups": [
+    "A full HTTP purchase with a confirmed Stripe payment needs a Stripe test-mode key or an injectable payment confirmation in the server factory; it is covered at the persistence level by the CheckoutCompletion integration suite.",
+    "Route reconciliation does not see paths built from variables; a typed client for all storefront calls (packages/api-client) would make this check exhaustive."
+  ]
+}

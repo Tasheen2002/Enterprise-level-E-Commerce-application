@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  createOrder,
   getOrder,
   getOrderByNumber,
   trackOrder,
@@ -11,7 +10,6 @@ import {
   ListOrdersParams,
   TrackOrderParams,
 } from "../api";
-import type { CreateOrderRequest } from "../types";
 
 export function useOrder(orderId: string) {
   return useQuery({
@@ -42,19 +40,6 @@ export function useTrackOrder(params: TrackOrderParams, enabled = false) {
     queryFn: () => trackOrder(params),
     enabled: enabled && (!!params.trackingNumber || (!!params.orderNumber && !!params.contact)),
     retry: false,
-  });
-}
-
-export function useCreateOrder() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (request: CreateOrderRequest) => createOrder(request),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user-orders"] });
-      queryClient.setQueryData(["order", data.id], data);
-      queryClient.setQueryData(["order-by-number", data.orderNumber], data);
-    },
   });
 }
 

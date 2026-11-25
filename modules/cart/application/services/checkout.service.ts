@@ -32,6 +32,8 @@ interface CompleteCheckoutDto {
   checkoutId: string;
   userId?: string;
   guestToken?: string;
+  /** Staff closing a customer's checkout; the HTTP route restricts this to admins. */
+  asStaff?: boolean;
 }
 
 /**
@@ -145,7 +147,9 @@ export class CheckoutService {
       throw new CheckoutNotFoundError(dto.checkoutId);
     }
 
-    assertOwnership(checkout, dto.userId, dto.guestToken);
+    if (!dto.asStaff) {
+      assertOwnership(checkout, dto.userId, dto.guestToken);
+    }
 
     if (checkout.isExpired) {
       throw new InvalidCheckoutStateError("Checkout has expired");

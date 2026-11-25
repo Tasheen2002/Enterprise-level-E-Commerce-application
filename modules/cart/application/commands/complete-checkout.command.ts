@@ -9,6 +9,7 @@ export interface CompleteCheckoutCommand extends ICommand {
   readonly checkoutId: string;
   readonly userId?: string;
   readonly guestToken?: string;
+  readonly asStaff?: boolean;
 }
 
 export class CompleteCheckoutHandler implements ICommandHandler<
@@ -24,6 +25,7 @@ export class CompleteCheckoutHandler implements ICommandHandler<
       checkoutId: command.checkoutId,
       userId: command.userId,
       guestToken: command.guestToken,
+      asStaff: command.asStaff,
     });
     return CommandResult.success<CheckoutDTO>(checkout);
   }

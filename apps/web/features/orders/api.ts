@@ -2,7 +2,6 @@ import { api, ApiCallError } from "@/lib/api-client";
 export { ApiCallError };
 import type {
   Order,
-  CreateOrderRequest,
   TrackOrderResult,
   ListOrdersResult,
   AddressSnapshot,
@@ -73,10 +72,6 @@ export async function createStripePaymentIntent(input: CreateStripePaymentIntent
 
 export async function completeCheckoutWithOrder(checkoutId: string, input: CompleteCheckoutWithOrderRequest): Promise<CompleteCheckoutWithOrderResponse> {
   return api.post<CompleteCheckoutWithOrderResponse>(`/checkout/${checkoutId}/complete-with-order`, input, getHeaders());
-}
-
-export async function createOrder(input: CreateOrderRequest): Promise<Order> {
-  return api.post<Order>("/orders", input);
 }
 
 export async function getOrder(orderId: string): Promise<Order> {

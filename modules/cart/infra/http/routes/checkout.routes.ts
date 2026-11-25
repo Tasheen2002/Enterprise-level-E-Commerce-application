@@ -7,6 +7,8 @@ import {
   userOrIpKeyGenerator,
 } from "@/api/src/shared/middleware/rate-limiter.middleware";
 import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
 import {
   extractGuestToken,
   requireCartAuth,
@@ -94,12 +96,15 @@ export async function checkoutRoutes(
       checkoutController.get(request as AuthenticatedRequest, reply),
   );
 
-  // POST /checkout/:checkoutId/complete — Complete checkout
+  // POST /checkout/:checkoutId/complete — Close a checkout without an order (admin only).
+  // It neither verifies a payment nor creates an order, so a customer calling
+  // it after paying would be charged with no order and could not complete the
+  // checkout any more; customers complete checkouts with /complete-with-order.
   fastify.post(
     "/checkout/:checkoutId/complete",
     {
       preValidation: [validateParams(checkoutIdParamsSchema)],
-      preHandler: [validateBody(completeCheckoutSchema), optionalAuth, extractGuestToken, requireCartAuth],
+      preHandler: [validateBody(completeCheckoutSchema), authenticate, RolePermissions.ADMIN_ONLY],
       schema: {
         description: "Complete checkout with payment intent.",
         tags: ["Checkout"],

@@ -416,16 +416,3 @@ export async function getLoyaltyTransactions(accountId?: string, orderId?: strin
     method: "GET",
   });
 }
-
-export async function redeemLoyaltyPoints(input: {
-  userId: string;
-  points: number;
-  orderId?: string;
-  reason?: string;
-}): Promise<LoyaltyTransaction> {
-  return request<LoyaltyTransaction>("/loyalty/points/redeem", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-

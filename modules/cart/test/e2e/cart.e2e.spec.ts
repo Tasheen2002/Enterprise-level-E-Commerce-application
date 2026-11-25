@@ -322,11 +322,21 @@ describe("Cart Module E2E API Tests", () => {
       expect(getCheckoutRes.statusCode).toBe(200);
       expect(getCheckoutRes.json().data.status).toBe("pending");
 
-      // 5. Complete Checkout
-      const completeCheckoutRes = await app.inject({
+      // 5. Closing a checkout without an order is an admin action: it takes no
+      // payment, so customers complete checkouts with /complete-with-order.
+      const customerCompleteRes = await app.inject({
         method: "POST",
         url: `/api/v1/checkout/${checkoutId}/complete`,
         headers: { authorization: `Bearer ${customerToken}` },
+        payload: {
+          paymentIntentId: "pi_mock_12345",
+        },
+      });
+      expect(customerCompleteRes.statusCode).toBe(403);
+      const completeCheckoutRes = await app.inject({
+        method: "POST",
+        url: `/api/v1/checkout/${checkoutId}/complete`,
+        headers: { authorization: `Bearer ${adminToken}` },
         payload: {
           paymentIntentId: "pi_mock_12345",
         },
