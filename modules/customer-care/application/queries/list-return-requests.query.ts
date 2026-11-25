@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -7,7 +8,7 @@ import { ReturnRequestService } from "../services/return-request.service.js";
 
 // Base interfaces
 
-export interface ListReturnRequestsQuery extends IQuery {}
+export interface ListReturnRequestsQuery extends IQuery, PageQuery {}
 
 export interface ReturnRequestDto {
   rmaId: string;
@@ -26,7 +27,7 @@ export class ListReturnRequestsHandler
 
   async handle(query: ListReturnRequestsQuery): Promise<QueryResult<ReturnRequestDto[]>> {
     try {
-      const requests = await this.returnRequestService.getAllReturnRequests();
+      const requests = await this.returnRequestService.getAllReturnRequests(pageOf(query));
       const result: ReturnRequestDto[] = requests.map((request) => ({
         rmaId: request.getRmaId().getValue(),
         orderId: request.getOrderId(),

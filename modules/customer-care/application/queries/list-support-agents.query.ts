@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -5,7 +6,7 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { SupportAgentService } from "../services/support-agent.service.js";
 
-export interface ListSupportAgentsQuery extends IQuery {}
+export interface ListSupportAgentsQuery extends IQuery, PageQuery {}
 
 export interface SupportAgentDto {
   agentId: string;
@@ -21,7 +22,7 @@ export class ListSupportAgentsHandler
 
   async handle(query: ListSupportAgentsQuery): Promise<QueryResult<SupportAgentDto[]>> {
     try {
-      const agents = await this.supportAgentService.getAllAgents();
+      const agents = await this.supportAgentService.getAllAgents(pageOf(query));
       const result: SupportAgentDto[] = agents.map((agent) => ({
         agentId: agent.getAgentId().getValue(),
         name: agent.getName(),

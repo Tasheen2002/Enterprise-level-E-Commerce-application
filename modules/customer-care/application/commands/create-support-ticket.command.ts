@@ -1,3 +1,4 @@
+import { CustomerCareActor } from "../services/customer-care-access.js";
 import {
   type ICommand,
   type ICommandHandler,
@@ -7,6 +8,8 @@ import { SupportTicketService } from "../services/support-ticket.service.js";
 import { TicketPriority, TicketSource } from "../../domain/value-objects/index.js";
 
 export interface CreateSupportTicketCommand extends ICommand {
+  /** The caller; decides which orders the ticket may reference. */
+  actor: CustomerCareActor;
   userId?: string;
   orderId?: string;
   source: string;
@@ -46,7 +49,7 @@ export class CreateSupportTicketHandler
         source: TicketSource.fromString(command.source),
         subject: command.subject,
         priority: command.priority ? TicketPriority.fromString(command.priority) : undefined,
-      });
+      }, command.actor);
 
       const result: SupportTicketResult = {
         ticketId: ticket.getTicketId().getValue(),

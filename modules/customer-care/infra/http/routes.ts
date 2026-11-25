@@ -27,6 +27,8 @@ import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middlewa
 
 const authenticateAdmin = [authenticate, RolePermissions.ADMIN_ONLY];
 const authenticateStaff = [authenticate, RolePermissions.STAFF_LEVEL];
+// Changing tickets, chats, returns and repairs is customer care work; other staff read only.
+const authenticateCustomerCare = [authenticate, RolePermissions.CUSTOMER_CARE];
 
 // Standard error responses for Swagger/OpenAPI
 const errorResponses = {
@@ -290,7 +292,7 @@ export async function registerCustomerCareRoutes(
   fastify.patch(
     "/customer-care/tickets/:ticketId",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Update support ticket details",
         tags: ["Customer Care - Tickets"],
@@ -381,7 +383,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/tickets/:ticketId/messages",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Add a message to a support ticket",
         tags: ["Customer Care - Tickets"],
@@ -773,7 +775,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/chat-sessions/:sessionId/end",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "End a chat session",
         tags: ["Customer Care - Chat"],
@@ -840,7 +842,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/chat-sessions/:sessionId/messages",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Add a message to a chat session",
         tags: ["Customer Care - Chat"],
@@ -935,7 +937,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/returns",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Create a new return request",
         tags: ["Customer Care - Returns"],
@@ -1139,7 +1141,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/returns/:rmaId/items",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Add an item to a return request",
         tags: ["Customer Care - Returns"],
@@ -1278,7 +1280,7 @@ export async function registerCustomerCareRoutes(
   fastify.post(
     "/customer-care/repairs",
     {
-      preHandler: authenticateStaff as any,
+      preHandler: authenticateCustomerCare as any,
       schema: {
         description: "Create a new repair request",
         tags: ["Customer Care - Repairs"],

@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -7,7 +8,7 @@ import { RepairService } from "../services/repair.service.js";
 
 // Base interfaces
 
-export interface ListRepairsQuery extends IQuery {}
+export interface ListRepairsQuery extends IQuery, PageQuery {}
 
 export interface RepairDto {
   repairId: string;
@@ -23,7 +24,7 @@ export class ListRepairsHandler
 
   async handle(query: ListRepairsQuery): Promise<QueryResult<RepairDto[]>> {
     try {
-      const repairs = await this.repairService.getAllRepairs();
+      const repairs = await this.repairService.getAllRepairs(pageOf(query));
       const result: RepairDto[] = repairs.map((repair) => ({
         repairId: repair.getRepairId().getValue(),
         orderItemId: repair.getOrderItemId(),

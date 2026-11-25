@@ -1,4 +1,18 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
+import { hasRole, CUSTOMER_CARE_ROLES } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { CustomerCareActor } from "../../../application/services/customer-care-access";
+
+// Customers act as themselves; customer care staff may act for a named customer.
+function actorOf(request: FastifyRequest): CustomerCareActor {
+  return {
+    userId: (request as AuthenticatedRequest).user?.userId,
+    isStaff: hasRole(request, [...CUSTOMER_CARE_ROLES]),
+  };
+}
+const subjectUserId = (actor: CustomerCareActor, requested?: string) =>
+  actor.isStaff ? (requested ?? actor.userId) : actor.userId;
 import {
   CreateChatSessionCommand,
   CreateChatSessionHandler,
@@ -46,7 +60,11 @@ export class ChatSessionController {
   ) {
     try {
       const { userId, topic, priority } = request.body;
-      const command: CreateChatSessionCommand = { userId, topic, priority };
+      const command: CreateChatSessionCommand = {
+        userId: subjectUserId(actorOf(request), userId),
+        topic,
+        priority,
+      };
       const result = await this.createChatSessionHandler.handle(command);
       if (result.success && result.data) {
         return reply.code(201).send({
@@ -152,7 +170,7 @@ export class ChatSessionController {
 
   async listSessions(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListChatSessionsQuery = {};
+      const query: ListChatSessionsQuery = pageFromRequest(request.query);
       const result = await this.listChatSessionsHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

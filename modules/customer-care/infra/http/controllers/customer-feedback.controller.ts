@@ -1,4 +1,18 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
+import { hasRole, CUSTOMER_CARE_ROLES } from "@/api/src/shared/middleware/role-authorization.middleware";
+import { AuthenticatedRequest } from "@/api/src/shared/interfaces/authenticated-request.interface";
+import { CustomerCareActor } from "../../../application/services/customer-care-access";
+
+// Customers act as themselves; customer care staff may act for a named customer.
+function actorOf(request: FastifyRequest): CustomerCareActor {
+  return {
+    userId: (request as AuthenticatedRequest).user?.userId,
+    isStaff: hasRole(request, [...CUSTOMER_CARE_ROLES]),
+  };
+}
+const subjectUserId = (actor: CustomerCareActor, requested?: string) =>
+  actor.isStaff ? (requested ?? actor.userId) : actor.userId;
 import {
   AddCustomerFeedbackCommand,
   AddCustomerFeedbackHandler,
@@ -48,8 +62,10 @@ export class CustomerFeedbackController {
     try {
       const { userId, ticketId, orderId, npsScore, csatScore, comment } =
         request.body;
+      const actor = actorOf(request);
       const command: AddCustomerFeedbackCommand = {
-        userId,
+        actor,
+        userId: subjectUserId(actor, userId),
         ticketId,
         orderId,
         npsScore,
@@ -124,7 +140,7 @@ export class CustomerFeedbackController {
 
   async listFeedback(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListCustomerFeedbackQuery = {};
+      const query: ListCustomerFeedbackQuery = pageFromRequest(request.query);
       const result = await this.listCustomerFeedbackHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

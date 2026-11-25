@@ -1,3 +1,4 @@
+import { pageFromRequest } from "../../../application/queries/paging";
 import { FastifyRequest, FastifyReply } from "fastify";
 import {
   CreateSupportAgentCommand,
@@ -181,7 +182,7 @@ export class SupportAgentController {
 
   async listAgents(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const query: ListSupportAgentsQuery = {};
+      const query: ListSupportAgentsQuery = pageFromRequest(request.query);
       const result = await this.listSupportAgentsHandler.handle(query);
       if (result.success && result.data) {
         return reply.code(200).send({

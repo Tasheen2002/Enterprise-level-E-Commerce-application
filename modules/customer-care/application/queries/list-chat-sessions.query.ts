@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -5,7 +6,7 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { ChatSessionService } from "../services/chat-session.service.js";
 
-export interface ListChatSessionsQuery extends IQuery {}
+export interface ListChatSessionsQuery extends IQuery, PageQuery {}
 
 export interface ChatSessionDto {
   sessionId: string;
@@ -25,7 +26,7 @@ export class ListChatSessionsHandler
 
   async handle(query: ListChatSessionsQuery): Promise<QueryResult<ChatSessionDto[]>> {
     try {
-      const sessions = await this.chatSessionService.getAllSessions();
+      const sessions = await this.chatSessionService.getAllSessions(pageOf(query));
       const result: ChatSessionDto[] = sessions.map((session) => ({
         sessionId: session.getSessionId().getValue(),
         userId: session.getUserId(),

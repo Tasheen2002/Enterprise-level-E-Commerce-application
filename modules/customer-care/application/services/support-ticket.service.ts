@@ -10,9 +10,14 @@ import {
   TicketSource,
   TicketPriority,
 } from "../../domain/value-objects/index.js";
+import { IExternalOrderQueryPort } from "../../domain/external-services.js";
+import { CustomerCareActor, assertCanReferenceOrder } from "./customer-care-access.js";
 
 export class SupportTicketService {
-  constructor(private readonly ticketRepository: ISupportTicketRepository) {}
+  constructor(
+    private readonly ticketRepository: ISupportTicketRepository,
+    private readonly orderQueryPort?: IExternalOrderQueryPort,
+  ) {}
 
   async createTicket(data: {
     userId?: string;
@@ -20,7 +25,10 @@ export class SupportTicketService {
     source: TicketSource;
     subject: string;
     priority?: TicketPriority;
-  }): Promise<SupportTicket> {
+  }, actor: CustomerCareActor): Promise<SupportTicket> {
+    if (data.orderId) {
+      await assertCanReferenceOrder(this.orderQueryPort, data.orderId, actor);
+    }
     const ticket = SupportTicket.create({
       userId: data.userId,
       orderId: data.orderId,

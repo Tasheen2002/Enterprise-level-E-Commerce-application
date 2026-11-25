@@ -1,3 +1,4 @@
+import { CustomerCareActor } from "../services/customer-care-access.js";
 import {
   type ICommand,
   type ICommandHandler,
@@ -6,6 +7,8 @@ import {
 import { CustomerFeedbackService } from "../services/customer-feedback.service.js";
 
 export interface AddCustomerFeedbackCommand extends ICommand {
+  /** The caller; decides which tickets and orders the feedback may reference. */
+  actor: CustomerCareActor;
   userId?: string;
   ticketId?: string;
   orderId?: string;
@@ -48,7 +51,7 @@ export class AddCustomerFeedbackHandler
         npsScore: command.npsScore,
         csatScore: command.csatScore,
         comment: command.comment,
-      });
+      }, command.actor);
 
       const result: CustomerFeedbackResult = {
         feedbackId: feedback.getFeedbackId().getValue(),

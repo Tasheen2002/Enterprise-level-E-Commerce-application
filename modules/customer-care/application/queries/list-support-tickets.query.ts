@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -5,7 +6,7 @@ import {
 } from "../../../../packages/core/src/application/cqrs";
 import { SupportTicketService } from "../services/support-ticket.service.js";
 
-export interface ListSupportTicketsQuery extends IQuery {}
+export interface ListSupportTicketsQuery extends IQuery, PageQuery {}
 
 export interface SupportTicketDto {
   ticketId: string;
@@ -25,7 +26,7 @@ export class ListSupportTicketsHandler
 
   async handle(query: ListSupportTicketsQuery): Promise<QueryResult<SupportTicketDto[]>> {
     try {
-      const tickets = await this.supportTicketService.getAllTickets();
+      const tickets = await this.supportTicketService.getAllTickets(pageOf(query));
       const result: SupportTicketDto[] = tickets.map((ticket) => ({
         ticketId: ticket.getTicketId().getValue(),
         userId: ticket.getUserId(),

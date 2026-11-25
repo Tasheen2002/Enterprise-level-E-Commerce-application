@@ -7,6 +7,7 @@ import { CustomerFeedback } from "../../domain/entities/customer-feedback.entity
 import { FeedbackId } from "../../domain/value-objects/index.js";
 import { SupportTicketService } from "./support-ticket.service.js";
 import { IExternalOrderQueryPort } from "../../domain/external-services.js";
+import { CustomerCareActor, assertCanReferenceOrder } from "./customer-care-access.js";
 
 export class CustomerFeedbackService {
   constructor(
@@ -22,40 +23,19 @@ export class CustomerFeedbackService {
     npsScore?: number;
     csatScore?: number;
     comment?: string;
-  }): Promise<CustomerFeedback> {
-    // Validation: If userId is provided with ticketId or orderId, validate ownership
-    if (data.userId && data.ticketId && this.supportTicketService) {
-      const ticket = await this.supportTicketService.getTicket(data.ticketId);
-      if (!ticket) {
+  }, actor: CustomerCareActor): Promise<CustomerFeedback> {
+    // Feedback may only point at the caller's own ticket and order (staff: any).
+    if (data.ticketId) {
+      const ticket = this.supportTicketService
+        ? await this.supportTicketService.getTicket(data.ticketId)
+        : null;
+      if (!ticket || (!actor.isStaff && (!actor.userId || ticket.getUserId() !== actor.userId))) {
         throw new Error(`Ticket with ID ${data.ticketId} not found`);
-      }
-
-      // Check if the ticket belongs to the user
-      const userTickets = await this.supportTicketService.getTicketsByUser(
-        data.userId
-      );
-      const ticketBelongsToUser = userTickets.some(
-        (t) => t.getTicketId().getValue() === data.ticketId
-      );
-
-      if (!ticketBelongsToUser) {
-        throw new Error(
-          `Ticket ${data.ticketId} does not belong to user ${data.userId}`
-        );
       }
     }
 
-    if (data.userId && data.orderId && this.orderQueryPort) {
-      const order = await this.orderQueryPort.findOrderOwner(data.orderId);
-      if (!order) {
-        throw new Error(`Order with ID ${data.orderId} not found`);
-      }
-
-      if (order.userId && order.userId !== data.userId) {
-        throw new Error(
-          `Order ${data.orderId} does not belong to user ${data.userId}`
-        );
-      }
+    if (data.orderId) {
+      await assertCanReferenceOrder(this.orderQueryPort, data.orderId, actor);
     }
 
     // If both ticketId and orderId are provided, validate they are related

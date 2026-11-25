@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -7,7 +8,7 @@ import { GoodwillRecordService } from "../services/goodwill-record.service.js";
 
 // Base interfaces
 
-export interface ListGoodwillRecordsQuery extends IQuery {}
+export interface ListGoodwillRecordsQuery extends IQuery, PageQuery {}
 
 export interface GoodwillRecordDto {
   goodwillId: string;
@@ -26,7 +27,7 @@ export class ListGoodwillRecordsHandler
 
   async handle(query: ListGoodwillRecordsQuery): Promise<QueryResult<GoodwillRecordDto[]>> {
     try {
-      const records = await this.goodwillRecordService.getAllRecords();
+      const records = await this.goodwillRecordService.getAllRecords(pageOf(query));
       const result: GoodwillRecordDto[] = records.map((record) => ({
         goodwillId: record.getGoodwillId().getValue(),
         userId: record.getUserId(),

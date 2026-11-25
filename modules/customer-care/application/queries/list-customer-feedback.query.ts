@@ -1,3 +1,4 @@
+import { PageQuery, pageOf } from "./paging.js";
 import {
   type IQuery,
   type IQueryHandler,
@@ -7,7 +8,7 @@ import { CustomerFeedbackService } from "../services/customer-feedback.service.j
 
 // Base interfaces
 
-export interface ListCustomerFeedbackQuery extends IQuery {}
+export interface ListCustomerFeedbackQuery extends IQuery, PageQuery {}
 
 export interface CustomerFeedbackDto {
   feedbackId: string;
@@ -27,7 +28,7 @@ export class ListCustomerFeedbackHandler
 
   async handle(query: ListCustomerFeedbackQuery): Promise<QueryResult<CustomerFeedbackDto[]>> {
     try {
-      const feedbacks = await this.customerFeedbackService.getAllFeedback();
+      const feedbacks = await this.customerFeedbackService.getAllFeedback(pageOf(query));
       const result: CustomerFeedbackDto[] = feedbacks.map((feedback) => ({
         feedbackId: feedback.getFeedbackId().getValue(),
         userId: feedback.getUserId(),
