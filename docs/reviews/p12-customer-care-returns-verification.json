@@ -1,0 +1,44 @@
+{
+  "date": "2026-11-25",
+  "phase": "P12 (batch 2: returns, repairs, goodwill and refunds; module not registered in the API)",
+  "baseline_commit": "68d8f1df",
+  "scope": [
+    "return request entity, status value object and service",
+    "return item service and the order query port (new Prisma implementation)",
+    "repair, goodwill and process-refund command paths (reviewed)"
+  ],
+  "reviewed_without_change": [
+    "Return requests reference orders through a foreign key, so unknown orders are refused by the database.",
+    "Repairs and goodwill records are staff-created records only; goodwill store credit and points are recorded but not credited anywhere (see follow-ups)."
+  ],
+  "findings": [
+    {
+      "id": "P12-05",
+      "severity": "P2",
+      "file": "rma-status.vo.ts; return-request.entity.ts",
+      "problem": "A return could move from any status to any other until it was final, e.g. straight from the request to refunded without approval or receipt of the goods.",
+      "change": "Return lifecycle enforced: requested -> approved -> in transit -> received -> refunded; in-store returns may be received after approval; rejection before receipt or after a failed inspection; refunded and rejected are final.",
+      "verification": "Integration ReturnIntegrity: baseline requested -> refunded accepted; fixed refused and the full lifecycle works."
+    },
+    {
+      "id": "P12-06",
+      "severity": "P2",
+      "file": "return-item.service.ts; external-services.ts; infra/persistence/order-query.prisma.ts",
+      "problem": "Return items had no quantity limit (any number of an item, also across several returns), the same item could be added twice (database error), items could change after the goods were received, and the order lookup port had no implementation.",
+      "change": "Items must belong to the order, appear once per return, total no more than the ordered quantity across returns that were not rejected (rejected returns free their quantity), and change only before the goods arrive. A Prisma implementation of the order lookup port is provided for wiring.",
+      "verification": "Integration: baseline over-return and post-receipt changes accepted; fixed refused, rejected returns free quantity, items of other orders refused."
+    }
+  ],
+  "tests": {
+    "new": "integration ReturnIntegrity (3)",
+    "baseline": "All 3 failed against the previous code.",
+    "database_suites": "All E2E and integration suites on a fresh disposable database: 170 tests in 49 files pass",
+    "final": "1544 unit tests in 121 files; root/tooling tsc; 7/7 workspace type-checks; customer-care ESLint (no errors); API client check passes"
+  },
+  "follow_ups": [
+    "ProcessRefund only marks a return refunded; no payment refund is issued. Before enabling, connect it to the payment refund gateway (shared with the order refund linkage follow-up from P07/P08).",
+    "Goodwill store credit and points are records only; nothing credits the customer's balance.",
+    "Return item quantity is checked before writing, so two simultaneous additions for the same item could both pass; a lock or constraint is needed before enabling.",
+    "Owner decision on registering the module (see P12 batch 1)."
+  ]
+}

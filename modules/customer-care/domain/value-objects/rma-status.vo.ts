@@ -49,6 +49,29 @@ export class RmaStatus {
     return this.value;
   }
 
+  /**
+   * Return lifecycle: requested (eligibility) -> approved -> in transit ->
+   * received -> refunded. In-store returns may be received straight after
+   * approval; a return can be rejected before it is received or after a
+   * failed inspection. Refunded and rejected are final.
+   */
+  canTransitionTo(next: RmaStatus): boolean {
+    const allowed: Record<string, string[]> = {
+      eligibility: ["approved", "rejected"],
+      approved: ["in_transit", "received", "rejected"],
+      in_transit: ["received"],
+      received: ["refunded", "rejected"],
+      refunded: [],
+      rejected: [],
+    };
+    return (allowed[this.value] ?? []).includes(next.value);
+  }
+
+  /** Items can be added or changed until the goods arrive. */
+  allowsItemChanges(): boolean {
+    return this.value === "eligibility" || this.value === "approved";
+  }
+
   isEligibility(): boolean {
     return this.value === "eligibility";
   }

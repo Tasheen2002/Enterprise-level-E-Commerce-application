@@ -8,4 +8,6 @@
 export interface IExternalOrderQueryPort {
   findOrderOwner(orderId: string): Promise<{ userId: string | null } | null>;
   findOrderItemIds(orderId: string): Promise<string[] | null>;
+  /** Ordered quantity per order item id, or null when the order does not exist. */
+  findOrderItemQuantities(orderId: string): Promise<Record<string, number> | null>;
 }
