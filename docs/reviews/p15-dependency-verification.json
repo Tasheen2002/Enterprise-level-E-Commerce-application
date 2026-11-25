@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-25",
+  "phase": "P15 (dependency security updates)",
+  "baseline_commit": "256d9c75",
+  "audit_command": "pnpm audit --prod",
+  "before": { "critical": 6, "high": 68, "moderate": 63, "low": 13 },
+  "after": { "critical": 4, "high": 57, "moderate": 50, "low": 13 },
+  "updated_within_existing_ranges": {
+    "fastify": "5.8.5 -> 5.12.8 (validation and authentication bypass advisories)",
+    "find-my-way": "9.5.0 -> 9.10.2 (via fastify)",
+    "@fastify/jwt": "10.0.0 -> 10.2.9",
+    "fast-jwt": "6.2.4 -> 6.3.7 (unsigned tokens accepted in some configurations; expired tokens from the verifier cache)",
+    "sanitize-html": "2.17.3 -> 2.18.2 (several XSS bypasses; used for product descriptions, look stories and size guides)",
+    "nodemailer": "8.0.7 -> 8.0.11 (TLS validation, CRLF injection)",
+    "zod": "4.4.1 -> 4.6.7"
+  },
+  "verification": [
+    "1547 unit tests in 122 files pass",
+    "All E2E and integration suites: 173 tests in 51 files pass",
+    "root/tooling tsc and 7/7 workspace type-checks (forced) pass",
+    "pnpm run lint passes (0 errors); format:check passes; API client check passes",
+    "Production build (pnpm run build) passes: 3/3 tasks",
+    "API boots against the migrated test database: /health 200, /ready 200; /users/me refuses no token, an unsigned alg=none admin token and a malformed token with 401",
+    "@fastify/jwt resolves fast-jwt 6.3.7 at runtime"
+  ],
+  "remaining_backend_advisories": [
+    "firebase-admin 13.9.0 transitive (grpc-js, protobufjs, websocket-driver, node-forge, form-data, fast-xml-parser): needs a firebase-admin release or pnpm overrides",
+    "nodemailer: remaining advisories are fixed in 9.x/10.x (major upgrade, API review needed)",
+    "@prisma/client 6.19.3 transitive deepmerge-ts/effect: fixed in Prisma 7 (major upgrade)",
+    "@fastify/swagger / @fastify/swagger-ui transitive fast-uri and @fastify/static: API documentation only; keep API_DOCS_ENABLED off in production until updated",
+    "pino-pretty transitive fast-copy (development logging)"
+  ],
+  "remaining_frontend_advisories": [
+    "next 15.5.15 in apps/web and apps/admin: upgrade to 15.5.21 or later (middleware bypass, SSRF, DoS, XSS advisories)",
+    "firebase 12.13.0 in apps/web transitive grpc-js/protobufjs/websocket-driver"
+  ]
+}
