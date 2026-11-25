@@ -1,4 +1,4 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyRequest, FastifyReply, RouteGenericInterface } from "fastify";
 import {
   AnalyticsTrackingController,
   TrackProductViewRequest,
@@ -16,6 +16,36 @@ import {
   TrackAddShippingInfoHandler,
   TrackAddPaymentInfoHandler,
 } from "../../application/commands";
+import { optionalAuth } from "@/api/src/shared/middleware/optional-auth.middleware";
+import { authenticate } from "@/api/src/shared/middleware/authenticate.middleware";
+import { RolePermissions } from "@/api/src/shared/middleware/role-authorization.middleware";
+import {
+  createRateLimiter,
+  RateLimitPresets,
+  userOrIpKeyGenerator,
+} from "@/api/src/shared/middleware/rate-limiter.middleware";
+
+const trackingRateLimiter = createRateLimiter({
+  ...RateLimitPresets.writeOperations,
+  keyGenerator: userOrIpKeyGenerator,
+});
+
+// Public tracking is rate limited and events are attributed to the signed-in
+// user (if any), never to a userId sent in the body.
+async function trackAsCaller<T extends RouteGenericInterface>(
+  request: FastifyRequest<T>,
+  reply: FastifyReply,
+): Promise<void> {
+  await trackingRateLimiter(request, reply);
+  if (reply.sent) return;
+  if (!request.user) {
+    await optionalAuth(request, reply);
+  }
+  const body = request.body as { userId?: string } | undefined;
+  if (body && typeof body === "object") {
+    body.userId = (request.user as { userId?: string } | undefined)?.userId;
+  }
+}
 
 export async function registerAnalyticsRoutes(
   fastify: FastifyInstance,
@@ -39,9 +69,10 @@ export async function registerAnalyticsRoutes(
   );
 
   // Public tracking endpoints (no auth required)
-  fastify.post(
+  fastify.post<{ Body: TrackProductViewRequest }>(
     "/events/capture-view",
     {
+      preHandler: trackAsCaller,
       schema: {
         description: "Track product view event for analytics",
         tags: ["Analytics"],
@@ -94,9 +125,11 @@ export async function registerAnalyticsRoutes(
   );
 
   // Internal endpoint (typically called from backend after order creation)
-  fastify.post(
+  fastify.post<{ Body: TrackPurchaseRequest }>(
     "/events/capture-purchase",
     {
+      // Purchases are recorded by checkout itself; admin-only so revenue cannot be fabricated.
+      preHandler: [authenticate, RolePermissions.ADMIN_ONLY, trackAsCaller],
       schema: {
         description: "Track purchase event for analytics",
         tags: ["Analytics"],
@@ -150,9 +183,10 @@ export async function registerAnalyticsRoutes(
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: TrackAddToCartRequest }>(
     "/events/capture-add-to-cart",
     {
+      preHandler: trackAsCaller,
       schema: {
         description: "Track add to cart event for analytics",
         tags: ["Analytics"],
@@ -206,9 +240,10 @@ export async function registerAnalyticsRoutes(
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: TrackBeginCheckoutRequest }>(
     "/events/capture-begin-checkout",
     {
+      preHandler: trackAsCaller,
       schema: {
         description: "Track begin checkout event for analytics",
         tags: ["Analytics"],
@@ -260,9 +295,10 @@ export async function registerAnalyticsRoutes(
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: TrackAddShippingInfoRequest }>(
     "/events/capture-add-shipping-info",
     {
+      preHandler: trackAsCaller,
       schema: {
         description: "Track add shipping info event for analytics",
         tags: ["Analytics"],
@@ -317,9 +353,10 @@ export async function registerAnalyticsRoutes(
     }
   );
 
-  fastify.post(
+  fastify.post<{ Body: TrackAddPaymentInfoRequest }>(
     "/events/capture-add-payment-info",
     {
+      preHandler: trackAsCaller,
       schema: {
         description: "Track add payment info event for analytics",
         tags: ["Analytics"],

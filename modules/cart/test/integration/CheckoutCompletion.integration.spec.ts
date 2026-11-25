@@ -76,6 +76,16 @@ describe("Checkout completion persistence", () => {
     );
   });
 
+  it("never stores a guest's token in analytics", async () => {
+    // The guest token opens the guest's cart and orders; analytics keeps a keyed hash.
+    const guestToken = `guest_${randomUUID()}`;
+    const result = await port.persistCheckoutOrder({ ...completion(`ORD-AN-${randomUUID()}`), guestToken });
+    const events = await prisma.analyticsEvent.findMany({ where: { sessionId: `purchase-${result.orderId}` } });
+    expect(events).toHaveLength(1);
+    expect(events[0].guestToken).toMatch(/^gt_/);
+    expect(events[0].guestToken).not.toContain(guestToken);
+  });
+
   it("refuses to complete a checkout that is no longer pending", async () => {
     await prisma.checkout.update({ where: { id: checkoutId }, data: { status: "expired" } });
     await expect(

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { pseudonymizeGuestToken } from "@/api/src/shared/utils/analytics-pseudonym";
 import { AnalyticsEvent } from "../../../domain/entities/analytics-event.entity";
 import { AnalyticsEventRepository } from "../../../domain/repositories/analytics-event.repository";
 
@@ -13,7 +14,7 @@ export class AnalyticsEventRepositoryImpl implements AnalyticsEventRepository {
         id: data.event_id,
         eventType: data.event_type,
         userId: data.user_id,
-        guestToken: data.guest_token,
+        guestToken: pseudonymizeGuestToken(data.guest_token),
         sessionId: data.session_id,
         productId: data.product_id,
         variantId: data.variant_id,
@@ -37,7 +38,7 @@ export class AnalyticsEventRepositoryImpl implements AnalyticsEventRepository {
         id: row.event_id,
         eventType: row.event_type,
         userId: row.user_id,
-        guestToken: row.guest_token,
+        guestToken: pseudonymizeGuestToken(row.guest_token),
         sessionId: row.session_id,
         productId: row.product_id,
         variantId: row.variant_id,
@@ -179,7 +180,7 @@ export class AnalyticsEventRepositoryImpl implements AnalyticsEventRepository {
     startDate?: Date,
     endDate?: Date
   ): Promise<AnalyticsEvent[]> {
-    const where: any = { guestToken: guestToken };
+    const where: any = { guestToken: pseudonymizeGuestToken(guestToken) };
 
     if (startDate) {
       where.eventTimestamp = { ...where.eventTimestamp, gte: startDate };

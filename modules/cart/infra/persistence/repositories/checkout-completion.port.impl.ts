@@ -1,3 +1,4 @@
+import { pseudonymizeGuestToken } from "@/api/src/shared/utils/analytics-pseudonym";
 import { PrismaClient, Prisma } from "@prisma/client";
 
 import {
@@ -403,7 +404,8 @@ export class CheckoutCompletionPortImpl implements ICheckoutCompletionPort {
       data: {
         eventType: "purchase",
         userId: data.userId || undefined,
-        guestToken: data.guestToken || undefined,
+        // Never the raw token: it is the guest's cart and order credential.
+        guestToken: pseudonymizeGuestToken(data.guestToken),
         sessionId: `purchase-${order.orderId}`,
         eventTimestamp: new Date(),
         eventData: {
