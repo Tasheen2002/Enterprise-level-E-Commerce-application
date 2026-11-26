@@ -44,6 +44,12 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      # Generate the Prisma client explicitly: relying on @prisma/client's
+      # install script is not reliable when pnpm restores packages from cache,
+      # and every later step (lint, type-check, tests) imports its types.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
       - name: Run Linter & Formatter
         run: pnpm run lint
 
