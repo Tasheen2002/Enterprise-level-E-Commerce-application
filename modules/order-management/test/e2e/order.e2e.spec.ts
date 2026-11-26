@@ -1,4 +1,11 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+
+// Shipping through FedEx is registered only when FedEx is configured. The
+// service is mocked below, so synthetic credentials are enough; they keep this
+// suite independent of a developer's local .env (CI has none).
+vi.stubEnv("FEDEX_API_KEY", process.env.FEDEX_API_KEY || "synthetic-key");
+vi.stubEnv("FEDEX_SECRET_KEY", process.env.FEDEX_SECRET_KEY || "synthetic-secret");
+vi.stubEnv("FEDEX_ACCOUNT_NUMBER", process.env.FEDEX_ACCOUNT_NUMBER || "000000000");
 import { createServer } from "@/api/src/server";
 import { PrismaClient } from "@prisma/client";
 import { FastifyInstance } from "fastify";

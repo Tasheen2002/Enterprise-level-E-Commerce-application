@@ -1,4 +1,10 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+
+// Stripe routes are registered only when Stripe is configured. The provider is
+// mocked below, so synthetic keys are enough; they keep this suite independent
+// of a developer's local .env (CI has none).
+vi.stubEnv("STRIPE_SECRET_KEY", process.env.STRIPE_SECRET_KEY || "sk_test_synthetic");
+vi.stubEnv("STRIPE_WEBHOOK_SECRET", process.env.STRIPE_WEBHOOK_SECRET || "whsec_synthetic");
 import { createServer } from "@/api/src/server";
 import { PrismaClient } from "@prisma/client";
 import { FastifyInstance } from "fastify";
